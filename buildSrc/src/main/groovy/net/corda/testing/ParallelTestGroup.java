@@ -15,6 +15,8 @@ public class ParallelTestGroup extends DefaultTask {
     private int gbOfMemory = 4;
     private boolean printToStdOut = true;
     private PodLogLevel logLevel = PodLogLevel.INFO;
+    private String sidecarImage;
+    private List<String> additionalArgs = new ArrayList<>();
 
     public DistributeTestsBy getDistribution() {
         return distribution;
@@ -43,6 +45,10 @@ public class ParallelTestGroup extends DefaultTask {
     public PodLogLevel getLogLevel() {
         return logLevel;
     }
+
+    public String getSidecarImage() { return sidecarImage; }
+
+    public List<String> getAdditionalArgs() { return additionalArgs; }
 
     public void numberOfShards(int shards) {
         this.shardCount = shards;
@@ -75,6 +81,18 @@ public class ParallelTestGroup extends DefaultTask {
 
     private void testGroups(List<String> group) {
         groups.addAll(group);
+    }
+
+    public void sidecarImage(String sidecarImage) {
+        this.sidecarImage = sidecarImage;
+    }
+
+    public void additionalArgs(String... additionalArgs) {
+        additionalArgs(Arrays.asList(additionalArgs));
+    }
+
+    private void additionalArgs(List<String> additionalArgs) {
+        this.additionalArgs.addAll(additionalArgs);
     }
 
 }

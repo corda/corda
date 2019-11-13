@@ -68,7 +68,9 @@ public class KubesTest extends DefaultTask {
     String dockerTag;
     String fullTaskToExecutePath;
     String taskToExecuteName;
+    String sidecarImage;
     Boolean printOutput = false;
+    List<String> additionalArgs;
 
     Integer numberOfCoresPerFork = 4;
     Integer memoryGbPerFork = 6;
@@ -226,7 +228,7 @@ public class KubesTest extends DefaultTask {
                         }
                     }
                     getProject().getLogger().lifecycle("creating pod: " + podName);
-                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc, sidecarImage != null));
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
@@ -282,20 +284,27 @@ public class KubesTest extends DefaultTask {
         String[] buildCommand = getBuildCommand(numberOfPods, podIdx);
         getProject().getLogger().quiet("About to execute " + Arrays.stream(buildCommand).reduce("", (s, s2) -> s + " " + s2) + " on pod " + podName);
         client.pods().inNamespace(namespace).withName(podName)
+                .inContainer(podName)
                 .writingOutput(stdOutOs)
                 .writingErrorChannel(errChannelStream)
                 .usingListener(execListener)
-                .exec(getBuildCommand(numberOfPods, podIdx));
+                .exec(buildCommand);
 
         return startLogPumping(stdOutIs, podIdx, podLogsDirectory, printOutput);
     }
 
-    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc, boolean withDb) {
+        if (withDb) {
+            return buildPodRequestWithWorkerNodeAndDbContainer(podName, pvc);
+        } else {
+            return buildPodRequestWithOnlyWorkerNode(podName, pvc);
+        }
+    }
+
+    private Pod buildPodRequestWithOnlyWorkerNode(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
-
                 .withNewSpec()
-
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
@@ -322,18 +331,76 @@ public class KubesTest extends DefaultTask {
                 .withName(podName)
                 .withNewResources()
                 .addToRequests("cpu", new Quantity(numberOfCoresPerFork.toString()))
-                .addToRequests("memory", new Quantity(memoryGbPerFork.toString() + "Gi"))
+                .addToRequests("memory", new Quantity(memoryGbPerFork.toString()))
+                .endResources()
+                .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
+                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
+                .endContainer()
+                .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
+                .withRestartPolicy("Never")
+                .endSpec()
+                .build();
+    }
+
+    private Pod buildPodRequestWithWorkerNodeAndDbContainer(String podName, PersistentVolumeClaim pvc) {
+        return new PodBuilder()
+                .withNewMetadata().withName(podName).endMetadata()
+                .withNewSpec()
+
+                .addNewVolume()
+                .withName("gradlecache")
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/gradle")
+                .endHostPath()
+                .endVolume()
+                .addNewVolume()
+                .withName("testruns")
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.getMetadata().getName())
+                .endPersistentVolumeClaim()
+                .endVolume()
+
+                .addNewContainer()
+                .withImage(dockerTag)
+                .withCommand("bash")
+                .withArgs("-c", "sleep 3600")
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
+                .withName(podName)
+                .withNewResources()
+                .addToRequests("cpu", new Quantity(Integer.valueOf(numberOfCoresPerFork - 1).toString()))
+                .addToRequests("memory", new Quantity(Integer.valueOf(memoryGbPerFork - 1).toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
                 .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
 
+                .addNewContainer()
+                .withImage(sidecarImage)
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
+                .withName(podName + "-pg")
+                .withNewResources()
+                .addToRequests("cpu", new Quantity("1"))
+                .addToRequests("memory", new Quantity("1Gi"))
+                .endResources()
+                .endContainer()
+
                 .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
                 .withRestartPolicy("Never")
-
                 .endSpec()
                 .build();
     }
+
 
     private File startLogPumping(InputStream stdOutIs, int podIdx, File podLogsDirectory, boolean printOutput) throws IOException {
         File outputFile = new File(podLogsDirectory, "container-" + podIdx + ".log");
@@ -400,6 +467,7 @@ public class KubesTest extends DefaultTask {
             client.pods()
                     .inNamespace(namespace)
                     .withName(podName)
+                    .inContainer(podName)
                     .dir(resultsInContainerPath)
                     .copy(tempDir);
         }
@@ -411,6 +479,7 @@ public class KubesTest extends DefaultTask {
         final String gitTargetBranch = " -Dgit.target.branch=" + Properties.getTargetGitBranch();
         final String artifactoryUsername = " -Dartifactory.username=" + Properties.getUsername() + " ";
         final String artifactoryPassword = " -Dartifactory.password=" + Properties.getPassword() + " ";
+        final String additionalArgs = this.additionalArgs.isEmpty() ? "" : String.join(" ", this.additionalArgs);
 
         String shellScript = "(let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ) && "
                 + " cd /tmp/source && " +
@@ -420,7 +489,7 @@ public class KubesTest extends DefaultTask {
                 gitTargetBranch +
                 artifactoryUsername +
                 artifactoryPassword +
-                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1) ; " +
+                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + additionalArgs + " " + getLoggingLevel() + " 2>&1) ; " +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
     }

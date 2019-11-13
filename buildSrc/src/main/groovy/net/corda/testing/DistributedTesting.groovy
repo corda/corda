@@ -117,6 +117,8 @@ class DistributedTesting implements Plugin<Project> {
                     podLogLevel = testGrouping.getLogLevel()
                     doFirst {
                         dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
+                        sidecarImage = testGrouping.sidecarImage
+                        additionalArgs = testGrouping.additionalArgs
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.getName().capitalize()}", KubesReporting) {
