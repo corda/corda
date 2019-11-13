@@ -74,6 +74,7 @@ public class KubesTest extends DefaultTask {
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
+    private final List<String> remainingPods = Collections.synchronizedList(new ArrayList());
 
     public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
@@ -227,6 +228,7 @@ public class KubesTest extends DefaultTask {
                     }
                     getProject().getLogger().lifecycle("creating pod: " + podName);
                     createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                    remainingPods.add(podName);
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
@@ -256,6 +258,11 @@ public class KubesTest extends DefaultTask {
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
+                    synchronized (remainingPods) {
+                        remainingPods.remove(podName);
+                        getLogger().lifecycle("Remaining Pods: ");
+                        remainingPods.forEach(pod -> getLogger().lifecycle("\t" + pod));
+                    }
                 }
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
