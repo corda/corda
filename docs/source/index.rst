@@ -100,5 +100,4 @@ We look forward to seeing what you can do with Corda!
 
    contributing-index.rst
    deterministic-modules.rst
-   design/design-docs-index.rst
    changelog

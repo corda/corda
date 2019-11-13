@@ -100,5 +100,3 @@ being Corda flows or services.
 
 .. important:: The ``versionId`` specified for the JAR manifest is checked by the platform and is used for informative purposes only.
  See ":ref:`app_versioning_with_signature_constraints`" for more information.
-
-.. note:: You can read the original design doc here: :doc:`design/targetversion/design`.

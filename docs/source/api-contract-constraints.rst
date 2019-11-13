@@ -88,8 +88,6 @@ logic provided by the apps.
 Hash and zone whitelist constraints are left over from earlier Corda versions before Signature Constraints were
 implemented. They make it harder to upgrade applications than when using signature constraints, so they're best avoided.
 
-Further information into the design of Signature Constraints can be found in its :doc:`design document <design/data-model-upgrades/signature-constraints>`.
-
 Signing CorDapps for use with Signature Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
