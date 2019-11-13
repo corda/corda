@@ -471,3 +471,9 @@ buildScan {
     termsOfServiceUrl = 'https://gradle.com/terms-of-service'
     termsOfServiceAgree = 'yes'
 }
+
+task detekt() {}
+
+tasks.register('compileAll') { task ->
+    task.dependsOn tasks.withType(AbstractCompile)
+}
