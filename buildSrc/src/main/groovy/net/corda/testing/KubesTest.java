@@ -246,9 +246,16 @@ public class KubesTest extends DefaultTask {
                 if (!podLogsDirectory.exists()) {
                     podLogsDirectory.mkdirs();
                 }
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
-                int resCode = waiter.join();
+                int resCode = 1;
+                File podOutput = null;
+                int failedTestsRetry = 0;
+                while(resCode != 0 && failedTestsRetry < numberOfRetries) {
+                    podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+                    resCode = waiter.join();
+                    failedTestsRetry++;
+                }
+
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");

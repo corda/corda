@@ -256,8 +256,6 @@ class DistributedTesting implements Plugin<Project> {
                     executedTestsFile.withWriterAppend { writer ->
                         writer.writeLine(desc.getClassName() + "." + desc.getName())
                     }
-                } else {
-                    includeTestsMatching desc.getClassName() + "." + desc.getName()
                 }
             }
         }
