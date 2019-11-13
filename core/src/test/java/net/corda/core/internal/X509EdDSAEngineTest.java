@@ -17,7 +17,6 @@ import java.security.SignatureException;
 import java.util.Random;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * JDK11 upgrade: rewritten in Java to gain access to private internal JDK classes via module directives (not available to Kotlin compiler):
@@ -79,7 +78,6 @@ public class X509EdDSAEngineTest {
         engine.initVerify(publicKey);
         engine.update(randomBytes);
         assertTrue(engine.verify(signature));
-        fail();
     }
 
     /**

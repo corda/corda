@@ -25,6 +25,7 @@ import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledExecutorService
 import kotlin.streams.toList
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 class DriverTests {
     private companion object {
@@ -51,6 +52,7 @@ class DriverTests {
             nodeMustBeUp(node)
         }
         nodeMustBeDown(handle)
+        fail()
     }
 
     @Test
