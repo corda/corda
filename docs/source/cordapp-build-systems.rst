@@ -10,6 +10,9 @@ Building and installing a CorDapp
 .. contents::
 
 CorDapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
+
+Applications on Corda (CorDapps) can be written in any language targeting the JVM. However, Corda itself and most of the samples are written in Kotlin. Kotlin is an `official Android language <https://developer.android.com/kotlin/index.html>`_, and you can read more about why Kotlin is a strong successor to Java `here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_. If you're unfamiliar with Kotlin, there is an official `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_
+
 To learn what a CorDapp is, please read :doc:`cordapp-overview`.
 
 CorDapp format
@@ -26,12 +29,12 @@ JAR will contain:
 Build tools
 -----------
 In the instructions that follow, we assume you are using Gradle and the ``cordapp`` plugin to build your
-CorDapp. You can find examples of building a CorDapp using these tools in the 
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
+CorDapp. You can find examples of building a CorDapp using these tools in the
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the
 `Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
 
 To ensure you are using the correct version of Gradle, you should use the provided Gradle Wrapper by copying across
-the following folder and files from the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the 
+the following folder and files from the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
 `Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_ to the root of your project:
 
 * ``gradle/``
@@ -331,7 +334,7 @@ Once your dependencies are set correctly, you can build your CorDapp JAR(s) usin
 
 * Windows: ``gradlew.bat jar``
 
-Each of the project's modules will be compiled into its own CorDapp JAR. You can find these CorDapp JARs in the ``build/libs`` 
+Each of the project's modules will be compiled into its own CorDapp JAR. You can find these CorDapp JARs in the ``build/libs``
 folders of each of the project's modules.
 
 .. warning:: The hash of the generated CorDapp JAR is not deterministic, as it depends on variables such as the
@@ -352,8 +355,8 @@ Installing the CorDapp JAR
 .. note:: Before installing a CorDapp, you must create one or more nodes to install it on. For instructions, please see
    :doc:`generating-a-node`.
 
-At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. In order to install a CorDapp on a node, the 
-CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which the node's JAR 
+At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. In order to install a CorDapp on a node, the
+CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which the node's JAR
 and configuration files are stored) and the node restarted.
 
 .. _cordapp_configuration_files_ref:
@@ -556,6 +559,3 @@ and subsequently retry the failed flow (currently this requires a node re-start)
 
 .. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
    Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
-
-
-
