@@ -481,3 +481,7 @@ buildScan {
 }
 
 task detekt() {}
+
+tasks.register('compileAll') { task ->
+    task.dependsOn tasks.withType(AbstractCompile)
+}
