@@ -246,30 +246,28 @@ public class KubesTest extends DefaultTask {
                     podLogsDirectory.mkdirs();
                 }
 
-                return Retry.fixed(numberOfRetries).run(() -> {
-                    File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-                    int resCode = waiter.join();
-                    getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
-                    //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
-                    if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
-                        getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
-                        throw new RuntimeException("There are test failures in this pod");
-                    }
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+                int resCode = waiter.join();
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+                //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
+                if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
+                    getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
+                    throw new RuntimeException("There are test failures in this pod");
+                }
 
-                    Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
-                    getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
+                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
+                getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
 
-                    try (KubernetesClient client = getKubernetesClient()) {
-                        client.pods().delete(createdPod);
-                        client.persistentVolumeClaims().delete(pvc);
-                        synchronized (remainingPods) {
-                            remainingPods.remove(podName);
-                            getLogger().lifecycle("Remaining Pods: ");
-                            remainingPods.forEach(pod -> getLogger().lifecycle("\t" + pod));
-                        }
+                try (KubernetesClient client = getKubernetesClient()) {
+                    client.pods().delete(createdPod);
+                    client.persistentVolumeClaims().delete(pvc);
+                    synchronized (remainingPods) {
+                        remainingPods.remove(podName);
+                        getLogger().lifecycle("Remaining Pods: ");
+                        remainingPods.forEach(pod -> getLogger().lifecycle("\t" + pod));
                     }
-                    return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
-                });
+                }
+                return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
             Pod pod = getKubernetesClient().pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
