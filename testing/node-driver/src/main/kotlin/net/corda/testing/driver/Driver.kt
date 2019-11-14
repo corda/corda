@@ -522,6 +522,6 @@ data class DriverParameters(
             // These fields have been added in v4.4
             djvmBootstrapSource = djvmBootstrapSource,
             djvmCordaSource = djvmCordaSource,
-            environmentVariables = emptyMap()
+            environmentVariables = environmentVariables
     )
 }

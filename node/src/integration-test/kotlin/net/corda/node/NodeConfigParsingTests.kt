@@ -1,5 +1,6 @@
 package net.corda.node
 
+import junit.framework.Assert.assertTrue
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
@@ -8,7 +9,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
 
 class NodeConfigParsingTests {
 
@@ -26,7 +26,7 @@ class NodeConfigParsingTests {
                     .readLines()
                     .filter { it.contains("SSH server listening on port") }
                     .any { it.contains(sshPort.toString()) }
-            assert(hasSsh)
+            assertTrue(hasSsh)
         }
     }
 
@@ -44,7 +44,7 @@ class NodeConfigParsingTests {
                     .readLines()
                     .filter { it.contains("SSH server listening on port") }
                     .any { it.contains(sshPort.toString()) }
-            assert(hasSsh)
+            assertTrue(hasSsh)
         }
     }
 
@@ -63,7 +63,7 @@ class NodeConfigParsingTests {
                     .readLines()
                     .filter { it.contains("SSH server listening on port") }
                     .any { it.contains(sshPort.toString()) }
-            assert(hasSsh)
+            assertTrue(hasSsh)
         }
     }
 
@@ -103,7 +103,7 @@ class NodeConfigParsingTests {
                         .any {
                             it.contains("(property or environment variable) cannot be mapped to an existing Corda")
                         }
-                assert(hasWarning)
+                assertTrue(hasWarning)
         }
     }
 }
