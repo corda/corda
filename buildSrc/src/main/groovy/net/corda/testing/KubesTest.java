@@ -211,7 +211,7 @@ public class KubesTest extends DefaultTask {
         });
 
         int podNumber = podIdx + 1;
-
+        final AtomicInteger testRetries = new AtomicInteger(0);
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -246,7 +246,6 @@ public class KubesTest extends DefaultTask {
                     podLogsDirectory.mkdirs();
                 }
 
-                final AtomicInteger testRetries = new AtomicInteger(0);
                 return Retry.fixed(numberOfRetries).run(() -> {
                     File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
                     int resCode = waiter.join();
