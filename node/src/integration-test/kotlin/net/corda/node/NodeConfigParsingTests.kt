@@ -1,6 +1,6 @@
 package net.corda.node
 
-import junit.framework.Assert.assertTrue
+import org.junit.Assert.assertTrue
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
