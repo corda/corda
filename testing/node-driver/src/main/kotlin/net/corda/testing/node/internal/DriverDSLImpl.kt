@@ -1120,25 +1120,25 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val serializationEnv = setDriverSerialization()
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
-                    portAllocation = defaultParameters.portAllocation,
-                    debugPortAllocation = defaultParameters.debugPortAllocation,
-                    systemProperties = defaultParameters.systemProperties,
-                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
-                    useTestClock = defaultParameters.useTestClock,
-                    isDebug = defaultParameters.isDebug,
-                    startNodesInProcess = defaultParameters.startNodesInProcess,
-                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-                    extraCordappPackagesToScan = @Suppress("DEPRECATION") defaultParameters.extraCordappPackagesToScan,
-                    jmxPolicy = defaultParameters.jmxPolicy,
-                    notarySpecs = defaultParameters.notarySpecs,
-                    compatibilityZone = null,
-                    networkParameters = defaultParameters.networkParameters,
-                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                    inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
-                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
-                    djvmCordaSource = defaultParameters.djvmCordaSource,
-            environmentVariables = defaultParameters.environmentVariables
+                portAllocation = defaultParameters.portAllocation,
+                debugPortAllocation = defaultParameters.debugPortAllocation,
+                systemProperties = defaultParameters.systemProperties,
+                driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
+                useTestClock = defaultParameters.useTestClock,
+                isDebug = defaultParameters.isDebug,
+                startNodesInProcess = defaultParameters.startNodesInProcess,
+                waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                extraCordappPackagesToScan = @Suppress("DEPRECATION") defaultParameters.extraCordappPackagesToScan,
+                jmxPolicy = defaultParameters.jmxPolicy,
+                notarySpecs = defaultParameters.notarySpecs,
+                compatibilityZone = null,
+                networkParameters = defaultParameters.networkParameters,
+                notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
+                inMemoryDB = defaultParameters.inMemoryDB,
+                cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                djvmCordaSource = defaultParameters.djvmCordaSource,
+                environmentVariables = defaultParameters.environmentVariables
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)

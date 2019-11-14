@@ -23,8 +23,6 @@ import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
-import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
@@ -80,25 +78,25 @@ object ConfigHelper {
         return ConfigFactory.parseMap(
                 toProperties()
                 .mapKeys {
-                    val newKey = (it.key as String)
-                                .replace("_", ".")
+                    var newKey = (it.key as String)
+                                .replace('_', '.')
                                 .replace(UPPERCASE_PROPERTY_PREFIX, CORDA_PROPERTY_PREFIX)
 
-                    if (newKey.startsWith(CORDA_PROPERTY_PREFIX)
-                            && cordaPropOccurrences.contains(newKey
-                                    .removePrefix(CORDA_PROPERTY_PREFIX)))
-                    {
-                            throw ShadowingException(it.key.toString(), newKey)
+                    if (!newKey.startsWith(CORDA_PROPERTY_PREFIX)) {
+                        return@mapKeys newKey
                     }
 
-                    cordaPropOccurrences.add(newKey.removePrefix(CORDA_PROPERTY_PREFIX))
+                    newKey = newKey.substring(CORDA_PROPERTY_PREFIX.length)
+
+                    if (cordaPropOccurrences.contains(newKey))
+                    {
+                        throw ShadowingException(it.key.toString(), newKey)
+                    }
+
+                    cordaPropOccurrences.add(newKey)
+
                     newKey.let { key ->
-                        if (!key.startsWith(CORDA_PROPERTY_PREFIX))
-                            return@let key
-
-                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
-
-                        val cfg = ConfigFactory.parseString("$nodeConfKey=${it.value}")
+                        val cfg = ConfigFactory.parseString("$key=${it.value}")
                         val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
 
                         val isInvalidProperty = result.errors.any { err -> err is Configuration.Validation.Error.Unknown }
@@ -108,13 +106,13 @@ object ConfigHelper {
                                             " config property and thus won't be used as a config override!" +
                                             " It won't be passed as a config override! If that was the intention " +
                                             " double check the spelling and ensure there is such config key.")
-                            badKeyConversions.add(nodeConfKey)
+                            badKeyConversions.add(key)
                         }
 
-                        CORDA_PROPERTY_PREFIX + nodeConfKey
+                        CORDA_PROPERTY_PREFIX + key
                     }
                 }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { it.key.substring(CORDA_PROPERTY_PREFIX.length) }
                 .filterKeys { !badKeyConversions.contains(it) })
     }
 }

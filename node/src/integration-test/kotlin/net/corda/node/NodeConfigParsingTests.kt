@@ -1,6 +1,5 @@
 package net.corda.node
 
-import org.junit.Assert.assertTrue
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
@@ -9,6 +8,8 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import org.junit.Assert.assertTrue
+
 
 class NodeConfigParsingTests {
 
