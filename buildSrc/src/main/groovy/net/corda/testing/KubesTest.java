@@ -18,7 +18,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import net.corda.testing.retry.Retry;
 import okhttp3.Response;
-import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +26,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,17 +33,18 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -74,7 +72,7 @@ public class KubesTest extends DefaultTask {
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
-    private final List<String> remainingPods = Collections.synchronizedList(new ArrayList());
+    private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet());
 
     public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
@@ -247,23 +245,18 @@ public class KubesTest extends DefaultTask {
                     podLogsDirectory.mkdirs();
                 }
 
-//                int resCode = 1;
-//                File podOutput = null;
-//                int failedTestsRetry = 0;
-//                while(resCode != 0 && failedTestsRetry < numberOfRetries) {
-//                    podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-//                    resCode = waiter.join();
-//                    failedTestsRetry++;
-//                }
-
+                final int[] testRetries = {0};
                 return Retry.fixed(numberOfRetries).run(() -> {
                     File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
                     int resCode = waiter.join();
-                    if (resCode != 0) {
-                        throw new RuntimeException("There are test failures in this pod. Retrying!!!");
+                    getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+                    //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
+                    if (resCode != 0 && testRetries[0] < numberOfRetries - 1) {
+                        getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
+                        testRetries[0]++;
+                        throw new RuntimeException("There are test failures in this pod");
                     }
 
-                    getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                     Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                     getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
 
