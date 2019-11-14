@@ -16,6 +16,7 @@ import net.corda.djvm.execution.ExecutionSummary
 import net.corda.djvm.execution.IsolatedTask
 import net.corda.djvm.execution.SandboxException
 import net.corda.djvm.messages.Message
+import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ClassSource
 import net.corda.node.djvm.LtxFactory
 
@@ -27,6 +28,18 @@ class DeterministicVerifier(
 
     override fun verifyContracts() {
         val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run {
+            (classLoader.parent as? SandboxClassLoader)?.apply {
+                /**
+                 * We don't need to add either Java APIs or Corda's own classes
+                 * into the external cache because these are already being cached
+                 * more efficiently inside the [SandboxConfiguration].
+                 *
+                 * The external cache is for this Nodes's CorDapps, where classes
+                 * with the same names may appear in multiple different jars.
+                 */
+                externalCaching = false
+            }
+
             val taskFactory = classLoader.createRawTaskFactory()
             val sandboxBasicInput = classLoader.createBasicInput()
 

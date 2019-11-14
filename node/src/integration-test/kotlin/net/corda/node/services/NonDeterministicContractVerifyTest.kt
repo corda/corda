@@ -25,12 +25,9 @@ import org.junit.ClassRule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
-import org.junit.rules.TemporaryFolder
 
+@Suppress("FunctionName")
 class NonDeterministicContractVerifyTest {
-
-
-
     companion object {
         val logger = loggerFor<NonDeterministicContractVerifyTest>()
 
@@ -38,28 +35,21 @@ class NonDeterministicContractVerifyTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
-        @ClassRule
-        @JvmField
-        val tempFolder = TemporaryFolder()
-
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
-            tempFolder.root.toPath().let { path ->
-                return DriverParameters(
-                        portAllocation = incrementalPortAllocation(),
-                        startNodesInProcess = false,
-                        notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                        cordappsForAllNodes = listOf(
-                                cordappWithPackages("net.corda.flows.djvm.broken"),
-                                CustomCordapp(
-                                        packages = setOf("net.corda.contracts.djvm.broken"),
-                                        name = "nondeterministic-contract",
-                                        signingInfo = CustomCordapp.SigningInfo(path, 1, "RSA")
-                                )
-                        ),
-                        djvmBootstrapSource = djvmSources.bootstrap,
-                        djvmCordaSource = djvmSources.corda
-                )
-            }
+            return DriverParameters(
+                portAllocation = incrementalPortAllocation(),
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
+                cordappsForAllNodes = listOf(
+                    cordappWithPackages("net.corda.flows.djvm.broken"),
+                    CustomCordapp(
+                        packages = setOf("net.corda.contracts.djvm.broken"),
+                        name = "nondeterministic-contract"
+                    ).signed()
+                ),
+                djvmBootstrapSource = djvmSources.bootstrap,
+                djvmCordaSource = djvmSources.corda
+            )
         }
     }
 
@@ -72,7 +62,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                    .hasMessageStartingWith("NoSuchMethodError: sandbox.java.time.Instant.now()Lsandbox/java/time/Instant;, ")
+                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.time.Instant.now()Lsandbox/java/time/Instant;, ")
         }
     }
 
@@ -85,7 +75,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                    .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.currentTimeMillis()J, ")
+                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.currentTimeMillis()J, ")
         }
     }
 
@@ -98,7 +88,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                    .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.nanoTime()J, ")
+                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.nanoTime()J, ")
         }
     }
 
@@ -111,7 +101,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                    .hasMessageStartingWith("NoSuchMethodError: sandbox.java.util.UUID.randomUUID()Lsandbox/java/util/UUID;, ")
+                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.util.UUID.randomUUID()Lsandbox/java/util/UUID;, ")
         }
     }
 
@@ -124,7 +114,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex).hasMessageStartingWith(
-                    "RuleViolationError: Disallowed reference to API; java.lang.Class.getDeclaredConstructor(Class[]), "
+                "RuleViolationError: Disallowed reference to API; java.lang.Class.getDeclaredConstructor(Class[]), "
             )
         }
     }
