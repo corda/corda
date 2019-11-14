@@ -99,9 +99,9 @@ abstract class TestBase(type: SandboxType) {
         thread(start = false) {
             UserPathSource(classPaths).use { userSource ->
                 SandboxRuntimeContext(parentConfiguration.createChild(userSource, Consumer {
-                    it.withNewMinimumSeverityLevel(minimumSeverityLevel)
-                        .withSandboxOnlyAnnotations(sandboxOnlyAnnotations)
-                        .withVisibleAnnotations(visibleAnnotations)
+                    it.setMinimumSeverityLevel(minimumSeverityLevel)
+                    it.setSandboxOnlyAnnotations(sandboxOnlyAnnotations)
+                    it.setVisibleAnnotations(visibleAnnotations)
                 })).use {
                     action(this)
                 }

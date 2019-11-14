@@ -36,16 +36,13 @@ data class NodeConfig(
         /** Pass-through for generating node.conf with external DB */
         val dataSourceProperties: Properties? = null,
         val database: Properties? = null,
+        val systemProperties: Map<String, Any?>,
         private val devMode: Boolean = true,
         private val detectPublicIp: Boolean = false,
         private val useTestClock: Boolean = true
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
-        val systemProperties: Map<String, Any> = mapOf(
-                "net.corda.djvm" to true,
-                "co.paralleluniverse.fibers.verifyInstrumentation" to false
-        )
         val defaultUser = user("guest")
         const val CORDAPP_DIR_NAME = "cordapps"
     }
@@ -143,6 +140,7 @@ fun String.toKey() = filter { !it.isWhitespace() }.toLowerCase()
 
 fun <T> valueFor(any: T): ConfigValue = ConfigValueFactory.fromAnyRef(any)
 
+@Suppress("unused")
 private fun Config.withOptionalValue(path: String, obj: ConfigObject): Config {
-    return if (obj.isEmpty()) this else this.withValue(path, obj)
+    return if (obj.isEmpty()) this else withValue(path, obj)
 }

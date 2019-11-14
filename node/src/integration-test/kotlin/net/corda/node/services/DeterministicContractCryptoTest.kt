@@ -22,6 +22,7 @@ import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.security.KeyPairGenerator
 
+@Suppress("FunctionName")
 class DeterministicContractCryptoTest {
     companion object {
         const val MESSAGE = "Very Important Data! Do Not Change!"
@@ -40,9 +41,8 @@ class DeterministicContractCryptoTest {
                     cordappWithPackages("net.corda.flows.djvm.crypto"),
                     CustomCordapp(
                         packages = setOf("net.corda.contracts.djvm.crypto"),
-                        name = "deterministic-crypto-contract",
-                        signingInfo = CustomCordapp.SigningInfo()
-                    )
+                        name = "deterministic-crypto-contract"
+                    ).signed()
                 ),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda

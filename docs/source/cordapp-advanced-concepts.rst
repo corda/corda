@@ -10,7 +10,7 @@ Advanced CorDapp Concepts
 
 .. Preamble.
 
-At the heart of the Corda design and security model is the idea that a transaction is valid if and only if all the `verify()` functions in
+At the heart of the Corda design and security model is the idea that a transaction is valid if and only if all the ``verify()`` functions in
 the contract code associated with each state in the transaction succeed. The contract constraints features in Corda provide a rich set
 of tools for specifying and constraining which verify functions out of the universe of possibilities can legitimately be used in (attached to) a transaction.
 
@@ -39,20 +39,20 @@ Corda does not embed the actual verification bytecode in transactions. The logic
 The basic threat model and security requirement.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Being a decentralized system, anyone who can build transactions can create `.java` files, compile and bundle them in a JAR, and then reference
+Being a decentralized system, anyone who can build transactions can create ``.java`` files, compile and bundle them in a JAR, and then reference
 this code in the transaction he created. If it were possible to do this without any restrictions, an attacker seeking to steal your money,
-for example, might create a transaction that transitions a `Cash` contract owned by you to one owned by the attacker.
-The only thing that is protecting your `Cash` is the contract verification code, so all the attacker has to do is attach a version of the
-`net.corda.finance.contracts.asset.Cash` contract class that permits this transition to occur.
+for example, might create a transaction that transitions a ``Cash`` contract owned by you to one owned by the attacker.
+The only thing that is protecting your ``Cash`` is the contract verification code, so all the attacker has to do is attach a version of the
+``net.corda.finance.contracts.asset.Cash`` contract class that permits this transition to occur.
 So we clearly need a way to ensure that the actual code attached to a transaction purporting to implement any given contract is constrained in some way.
-For example, perhaps we wish to ensure that only the specific implementation of `net.corda.finance.contracts.asset.Cash` that was specified by the initial issuer of the cash is used.
+For example, perhaps we wish to ensure that only the specific implementation of ``net.corda.finance.contracts.asset.Cash`` that was specified by the initial issuer of the cash is used.
 Or perhaps we wish to constrain it in some other way.
 
 To prevent the types of attacks that can arise if there were no restrictions on which
 implementations of Contract classes were attached to transactions, we provide the contract constraints mechanism to complement the class name.
 This mechanism allows the state to specify exactly what code can be attached.
-In Corda 4, for example, the state can say: "I'm ok to be spent if the transaction is verified by a class: `com.megacorp.megacontract.MegaContract` as
-long as the JAR containing this contract is signed by `Mega Corp`".
+In Corda 4, for example, the state can say: "I'm ok to be spent if the transaction is verified by a class: ``com.megacorp.megacontract.MegaContract`` as
+long as the JAR containing this contract is signed by ``Mega Corp``".
 
 .. Introduce the `LedgerTransaction` abstraction and how it relates to the transaction chain. Introduce the state serialization/deserialization and Classloaders.
 
@@ -61,8 +61,8 @@ The LedgerTranscation
 ^^^^^^^^^^^^^^^^^^^^^
 
 Another relevant aspect to remember is that because states are serialised binary objects, to perform any useful operation on them they need to
-be deserialized into instances of Java objects. All these instances are made available to the contract code as the `LedgerTransaction` parameter
-passed to the `verify` method. The `LedgerTransaction` class abstracts away a lot of complexity and offers contracts a usable data structure where
+be deserialized into instances of Java objects. All these instances are made available to the contract code as the ``LedgerTransaction`` parameter
+passed to the ``verify`` method. The ``LedgerTransaction`` class abstracts away a lot of complexity and offers contracts a usable data structure where
 all objects are loaded in the same classloader and can be freely used and filtered by class. This way, the contract developer can focus on the business logic.
 
 Behind the scenes, the matter is more complex. As can be seen in this illustration:
@@ -75,7 +75,7 @@ Behind the scenes, the matter is more complex. As can be seen in this illustrati
 
 .. note:: Corda's design is based on the UTXO model. In a serialized transaction the input and reference states are `StateRefs` - only references
           to output states from previous transactions (see :doc:`api-transactions`).
-          When building the `LedgerTransaction`, the `inputs` and `references` are resolved to Java objects created by deserialising blobs of data
+          When building the ``LedgerTransaction``, the ``inputs`` and ``references`` are resolved to Java objects created by deserialising blobs of data
           fetched from previous transactions that were in turn serialized in that context (within the classloader of that transaction - introduced here: :ref:`attachments_classloader`).
           This model has consequences when it comes to how states can be evolved. Removing a field from a newer version of a state would mean
           that when deserialising that state in the context of a transaction using the more recent code, that field could just disappear.
@@ -85,11 +85,11 @@ Behind the scenes, the matter is more complex. As can be seen in this illustrati
 Simple example of transaction verification.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's consider a very simple case, a transaction swapping `Apples` for `Oranges`. Each of the states that need to be swapped is the output of a previous transaction.
-Similar to the above image the `Apples` state is the output of some previous transaction, through which it came to be possessed by the party now paying it away in return for some oranges.
-The `Apples` and `Oranges` states that will be consumed in this new transaction exist as serialised `TransactionState`s.
-It is these `TransactionState`s that specify the fully qualified names of the contract code that should be run to verify their consumption as well as,
-importantly, the governing `constraint`s on which specific implementations of that class name can be used.
+Let's consider a very simple case, a transaction swapping ``Apples`` for ``Oranges``. Each of the states that need to be swapped is the output of a previous transaction.
+Similar to the above image the ``Apples`` state is the output of some previous transaction, through which it came to be possessed by the party now paying it away in return for some oranges.
+The ``Apples`` and ``Oranges`` states that will be consumed in this new transaction exist as serialised ``TransactionState``\s.
+It is these ``TransactionState``\s that specify the fully qualified names of the contract code that should be run to verify their consumption as well as,
+importantly, the governing ``constraint``\s on which specific implementations of that class name can be used.
 The swap transaction would contain the two input states, the two output states with the new owners of the fruit and the code to be used to deserialize and
 verify the transaction as two attachment IDs - which are SHA-256 hashes of the apples and oranges CorDapps (more specifically, the contracts JAR).
 
@@ -133,16 +133,16 @@ Contract execution in the AttachmentsClassloader and the no-overlap rule.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 After ensuring that the contract code is correct the node needs to execute it to verify the business rules of the transaction.
-This is done by creating an `AttachmentsClassloader` from all the attachments listed by the transaction, then deserialising the binary
-representation of the transaction inside this classloader, creating the `LedgerTransaction` and then running the contract verification code
+This is done by creating an ``AttachmentsClassloader`` from all the attachments listed by the transaction, then deserialising the binary
+representation of the transaction inside this classloader, creating the ``LedgerTransaction`` and then running the contract verification code
 in this classloader.
 
 Corda transactions can combine any states, which makes it possible that 2 different transaction attachments contain the same class name (they overlap).
 This can happen legitimately or it can be a malicious party attempting to break the contract rules. Due to how Java classloaders work,
 this would cause ambiguity as to what code will be executed, so an attacker could attempt to exploit this and trick other nodes that a transaction that
-should be invalid is actually valid. To address this vulnerability, Corda introduces the `no-overlap` rule:
+should be invalid is actually valid. To address this vulnerability, Corda introduces the *no-overlap* rule:
 
-.. note:: The `no-overlap rule` is applied to the `AttachmentsClassloader` that is build for each transaction. If a file with the same path but different content exists
+.. note:: The *no-overlap rule* is applied to the ``AttachmentsClassloader`` that is build for each transaction. If a file with the same path but different content exists
           in multiple attachments, the transaction is considered invalid. The reason for this is that these files provide different implementations
           of the same class and which one is loaded might depend on the implementation of the underlying JVM. This would break determinism, and
           would also open security problems. Even in the legitimate case, if a contract expects and was tested against a certain implementation,
@@ -159,11 +159,11 @@ be able to load the same code and calculate the exact same result.
 
 Another surprise might be the fact that if every state has its own governing code then why can't we just verify individual transitions independently?
 This would simplify a lot of things.
-The answer is that for a trivial case like swapping `Apples` for `Oranges` where the two contracts might not care about the other states in the
-transaction, this could be a valid solution. But Corda is designed to support complex business scenarios. For example the `Apples` contract logic
-can have a requirement to check that Pink Lady apples can only be traded against Valencia oranges. For this to be possible, the `Apples` contract needs to be able to find
-`Orange` states in the `LedgerTransaction`, understand their properties and run logic against them. If apples and oranges were loaded in
-separate classloaders then the `Apples` classloader would need to load code for `Oranges` anyway in order to perform those operations.
+The answer is that for a trivial case like swapping ``Apples`` for ``Oranges`` where the two contracts might not care about the other states in the
+transaction, this could be a valid solution. But Corda is designed to support complex business scenarios. For example the ``Apples`` contract logic
+can have a requirement to check that Pink Lady apples can only be traded against Valencia oranges. For this to be possible, the ``Apples`` contract needs to be able to find
+``Orange`` states in the ``LedgerTransaction``, understand their properties and run logic against them. If apples and oranges were loaded in
+separate classloaders then the ``Apples`` classloader would need to load code for ``Oranges`` anyway in order to perform those operations.
 
 
 CorDapp dependencies
@@ -173,21 +173,21 @@ CorDapp dependencies
 
 Exchanging Apples for Oranges is a contrived example, of course, but this pattern is not uncommon. And a common scenario is one where code
 that is common to a collection of state types is abstracted into a common library.
-For example, imagine Apples and Oranges both depended on a `Fruit` library developed by a third party as part of their verification logic.
+For example, imagine Apples and Oranges both depended on a ``Fruit`` library developed by a third party as part of their verification logic.
 
 This library must obviously be available to execute, since the verification logic depends on it, which in turn means it must be loaded by the Attachments Classloader.
 Since the classloader is constructed solely from code attached to the transaction, it means the library must be attached to the transaction.
 
 The question to consider as a developer of a CorDapp is: where and how should my dependencies be attached to transactions?
 
-There are 2 options to achieve this (given the hypothetical `Apples` for `Oranges` transaction):
+There are 2 options to achieve this (given the hypothetical ``Apples`` for ``Oranges`` transaction):
 
- 1. Bundle the `Fruit` library with the CorDapp. This means creating a Fat-JAR containing all the required code.
+ 1. Bundle the ``Fruit`` library with the CorDapp. This means creating a Fat-JAR containing all the required code.
  2. Add the dependency as another attachment to the transaction manually.
 
 These options have pros and cons, which are now discussed:
 
-The first approach is fairly straightforward and does not require any additional setup. Just declaring a `compile` dependency
+The first approach is fairly straightforward and does not require any additional setup. Just declaring a ``compile`` dependency
 will by default bundle the dependency with the CorDapp. One obvious drawback is that CorDapp JARs can grow quite large in case they depend on
 large libraries. Other more subtle drawbacks will be discussed below.
 
@@ -205,7 +205,7 @@ Basically, what this manual check does is extend the security umbrella provided 
 .. warning:: In Corda 4, it is the responsibility of the CorDapp developer to ensure that all dependencies are added in a secure way.
              Bundling the dependency together with the contract code is secure, so if there are no other factors it is the preferred approach.
              If the dependency is not bundled, just adding the attachment to the transaction is not enough. The contract code, that is guaranteed
-             to be correct by the constraints mechanism, must verify that all dependencies are available in the `attachments` and are not malicious.
+             to be correct by the constraints mechanism, must verify that all dependencies are available in the ``attachments`` and are not malicious.
 
 
 CorDapps depending on the same library.
@@ -214,13 +214,13 @@ CorDapps depending on the same library.
 It should be evident now that each CorDapp must add its own dependencies to the transaction, but what happens when two CorDapps depend on different versions of the same library?
 The node that is building the transaction must ensure that the attached JARs contain all code needed for all CorDapps and also do not break the `no-overlap` rule.
 
-In the above example, if the `Apples` code depends on `Fruit v3.2` and the `Oranges` code depends on `Fruit v3.4` that would be impossible to achieve,
+In the above example, if the ``Apples`` code depends on ``Fruit v3.2`` and the ``Oranges`` code depends on ``Fruit v3.4`` that would be impossible to achieve,
 because of the overlap over some of the fruit classes.
 
-A simple way to fix this problem is for CorDapps to shade this common dependency under their own namespace. This would avoid breaking the `no-overlap rule`.
+A simple way to fix this problem is for CorDapps to shade this common dependency under their own namespace. This would avoid breaking the *no-overlap rule*.
 The primary downside is that multiple apps using (and shading) this dependency may lose the ability in other contexts to carry out operations like casting to a common superclass.
-If this is the approach taken then `Apples` and `Oranges` could not be treated as just `com.fruitcompany.Fruit` but would actually be `com.applecompany.com.fruitcompany.Fruit` or
-`com.orangecompany.com.fruitcompany.Fruit`, which would not be ideal.
+If this is the approach taken then ``Apples`` and ``Oranges`` could not be treated as just ``com.fruitcompany.Fruit`` but would actually be ``com.applecompany.com.fruitcompany.Fruit`` or
+``com.orangecompany.com.fruitcompany.Fruit``, which would not be ideal.
 
 Also, currently, the Corda gradle plugin does not provide any tooling for shading.
 
@@ -237,7 +237,7 @@ and in case such a clash becomes a real problem, handle it in a case by case bas
 For example the authors of the two clashing CorDapps could decide to use a certain version of the dependency and thus not trigger the no-overlap rule
 
 .. note:: Currently the `cordapp` gradle plugin that ships with Corda only supports bundling a dependency fully unshaded, by declaring it as a `compile` dependency.
-          It also supports `cordaCompile`, which assumes the dependency is available so it does not bundle it. There is no current support for shading or partial bundling.
+          It also supports ``cordaCompile``, which assumes the dependency is available so it does not bundle it. There is no current support for shading or partial bundling.
 
 
 .. Introduce the most complex case.
@@ -247,20 +247,20 @@ CorDapp depending on other CorDapp(s)
 
 .. Present some reasonable examples. Why is FatJar not an option?
 
-We presented the "complex" business requirement earlier where the `Apples` contract has to check that it can't allow swapping Pink Lady apples for anything
-but Valencia Oranges. This requirement translates into the fact that the library that the `Apples` CorDapp depends on is itself a CorDapp (the `Oranges` CorDapp).
+We presented the "complex" business requirement earlier where the ``Apples`` contract has to check that it can't allow swapping Pink Lady apples for anything
+but Valencia Oranges. This requirement translates into the fact that the library that the ``Apples`` CorDapp depends on is itself a CorDapp (the ``Oranges`` CorDapp).
 
-Let's assume the `Apples` CorDapp bundles the `Oranges` CorDapp as a fat-jar.
+Let's assume the ``Apples`` CorDapp bundles the ``Oranges`` CorDapp as a fat-jar.
 If someone attempts to build a swap transaction they would find it impossible:
 
- - If the two attachments are added to the transaction, then the `com.orangecompany.Orange` class would be found in both, and that would breat the rule that states
+ - If the two attachments are added to the transaction, then the ``com.orangecompany.Orange`` class would be found in both, and that would breat the rule that states
    "There can be only one and precisely one attachment that is identified as the contract code that controls each state".
- - In case only the `Apples` CorDapp is attached then the constraint of the `Oranges` states would not pass, as the JAR would not be signed by the actual `OrangeCo`.
+ - In case only the ``Apples`` CorDapp is attached then the constraint of the ``Oranges`` states would not pass, as the JAR would not be signed by the actual ``OrangeCo``.
 
 
-Another example that shows that bundling is not an option when depending on another CorDapp is if the `Fruit` library contains a ready to use `Banana` contract.
-Also let's assume that the `Apples` and `Oranges` CorDapps bundle the `Fruit` library inside their distribution fat-jar.
-In this case `Apples` for `Oranges` swaps would work fine if the two CorDapps use the same version of `Fruit`, but what if someone attempts to swap `Apples` for `Bananas`?
+Another example that shows that bundling is not an option when depending on another CorDapp is if the ``Fruit`` library contains a ready to use ``Banana`` contract.
+Also let's assume that the ``Apples`` and ``Oranges`` CorDapps bundle the `Fruit` library inside their distribution fat-jar.
+In this case ``Apples`` for ``Oranges`` swaps would work fine if the two CorDapps use the same version of ``Fruit``, but what if someone attempts to swap ``Apples`` for ``Bananas``?
 They would face the same problem as described above and would not be able to build such a transaction.
 
 
@@ -274,16 +274,16 @@ The highly recommended solution for CorDapp to CorDapp dependency is to always m
 
 .. package ownership
 
-Another way to look at bundling third party CorDapps is from the point of view of identity. With the introduction of the `SignatureConstraint`, CorDapps will be signed
-by their creator, so the signature will become part of their identity: `com.fruitcompany.Banana` @SignedBy_TheFruitCo.
-But if another CorDapp developer, `OrangeCo` bundles the `Fruit` library, they must strip the signatures from `TheFruitCo` and sign the JAR themselves.
-This will create a `com.fruitcompany.Banana` @SignedBy_TheOrangeCo, so there could be two types of Banana states on the network,
-but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these `Banana` contracts from diverging.
-Parties on the network receiving a `com.fruitcompany.Banana` will need to explicitly check the constraint to understand what they received.
+Another way to look at bundling third party CorDapps is from the point of view of identity. With the introduction of the ``SignatureConstraint``, CorDapps will be signed
+by their creator, so the signature will become part of their identity: ``com.fruitcompany.Banana`` signed by the ``FruitCo``.
+But if another CorDapp developer, ``OrangeCo`` bundles the ``Fruit`` library, they must strip the signatures from the ``FruitCo`` and sign the JAR themselves.
+This will create a ``com.fruitcompany.Banana`` signed by the ``OrangeCo``, so there could be two types of Banana states on the network,
+but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these ``Banana`` contracts from diverging.
+Parties on the network receiving a ``com.fruitcompany.Banana`` will need to explicitly check the constraint to understand what they received.
 In Corda 4, to help avoid this type of confusion, we introduced the concept of Package Namespace Ownership (see ":doc:`design/data-model-upgrades/package-namespace-ownership`").
 Briefly, it allows companies to claim namespaces and anyone who encounters a class in that package that is not signed by the registered key knows is invalid.
 
-This new feature can be used to solve the above scenario. If `TheFruitCo` claims package ownership of `com.fruitcompany`, it will prevent anyone
+This new feature can be used to solve the above scenario. If ``FruitCo`` claims package ownership of ``com.fruitcompany``, it will prevent anyone
 from bundling its code because they will not be able to sign it with the right key.
 
 .. Other options.
@@ -347,7 +347,7 @@ In case the dependency has to be signed by a known public key the contract must 
 
 
 .. note:: Dependencies that are not Corda specific need to be imported using the `uploadAttachment` RPC command. The reason for this is that in Corda 4
-          only JARs containing contracts are automatically imported in the `AttachmentStorage`. It needs to be in the `AttachmentStorage` because
+          only JARs containing contracts are automatically imported in the ``AttachmentStorage``. It needs to be in the ``AttachmentStorage`` because
           that's the only way to attach JARs to a transaction.
 
 
@@ -357,14 +357,14 @@ Changes between version 3 and version 4 of Corda
 In Corda v3 transactions were verified inside the System Classloader that contained all the installed CorDapps.
 This was a temporary simplification and we explained above why it could only be short-lived.
 
-If we consider the example from above with the `Apples` contract that depends on `Fruit`, the `Apples` CorDapp developer could have just released
-the `Apples` specific code (without bundling in the dependency on `Fruit` or attaching it to the transaction ) and rely on the fact that
-`Fruit` would be on the classpath during verification.
+If we consider the example from above with the ``Apples`` contract that depends on ``Fruit``, the ``Apples`` CorDapp developer could have just released
+the ``Apples`` specific code (without bundling in the dependency on ``Fruit`` or attaching it to the transaction ) and rely on the fact that
+``Fruit`` would be on the classpath during verification.
 
-This means that in Corda 3 nodes could have formed `valid` transactions that were not entirely self-contained. In Corda 4, because we
-moved transaction verification inside the `AttachmentsClassloader` these transactions would fail with `ClassNotFound` exceptions.
+This means that in Corda 3 nodes could have formed valid transactions that were not entirely self-contained. In Corda 4, because we
+moved transaction verification inside the ``AttachmentsClassloader`` these transactions would fail with ``ClassNotFound`` exceptions.
 
-These incomplete transactions need to be considered valid in Corda 4 and beyond though, so the fix we added for this was to look for a `trusted` attachment
+These incomplete transactions need to be considered valid in Corda 4 and beyond though, so the fix we added for this was to look for a *trusted* attachment
 in the current node storage that contains the missing code and use that for validation.
 This fix is in the spirit of the original transaction and is secure because the chosen code must have been vetted and whitelisted first by the node operator.
 
@@ -384,13 +384,13 @@ This change also affects testing as the test classloader no longer contains the 
 The demo `finance` CorDapp
 --------------------------
 
-Corda ships with a `finance` CorDapp demo that brings some handy utilities that can be used by code in other CorDapps, some abstract base types like `OnLedgerAsset`,
-but also comes with its own ready-to-use contracts like: `Cash`, `Obligation` and `Commercial Paper`.
+Corda ships with a finance CorDapp demo that brings some handy utilities that can be used by code in other CorDapps, some abstract base types like ``OnLedgerAsset``,
+but also comes with its own ready-to-use contracts like: ``Cash``, ``Obligation`` and ``Commercial Paper``.
 
 As it is just a sample, it is signed by R3's development key, which the node is explicitly configured - but overridable - to blacklist
 by default in production. This was done in order to avoid you inadvertently going live without having first determined the right approach for your solution.
 
-Some CorDapps might depend on `finance` since Corda v3 when finance was not signed. Most likely `finance` was not bundled or attached to the transactions, but
+Some CorDapps might depend on the finance CorDapp since Corda v3, when it was not signed. Most likely the finance CorDapp was not bundled or attached to the transactions, but
 the transactions created just worked as described above.
 
 The path forward in this case is first of all to reconsider if depending on a sample is a good idea. If the decision is to go forward, then the CorDapp

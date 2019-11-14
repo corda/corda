@@ -1,5 +1,5 @@
-import net.corda.testing.DistributedTesting
 import net.corda.testing.DistributeTestsBy
+import net.corda.testing.DistributedTesting
 import net.corda.testing.ImageBuilding
 import net.corda.testing.ParallelTestGroup
 import net.corda.testing.PodLogLevel
@@ -254,6 +254,7 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
             // We cannot fail the build on compiler warnings because we have java warnings that you cannot disable:
             // Signal is internal proprietary API and may be removed in a future release
@@ -608,7 +609,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 5
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
@@ -645,5 +646,3 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 apply plugin: ImageBuilding
 apply plugin: DistributedTesting
-
-

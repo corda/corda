@@ -23,6 +23,7 @@ import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
+@Suppress("FunctionName")
 class SandboxAttachmentsTest {
     companion object {
         val logger = loggerFor<SandboxAttachmentsTest>()
@@ -40,9 +41,8 @@ class SandboxAttachmentsTest {
                     cordappWithPackages("net.corda.flows.djvm.attachment"),
                     CustomCordapp(
                         packages = setOf("net.corda.contracts.djvm.attachment"),
-                        name = "sandbox-attachment-contract",
-                        signingInfo = CustomCordapp.SigningInfo()
-                    )
+                        name = "sandbox-attachment-contract"
+                    ).signed()
                 ),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda
@@ -74,7 +74,7 @@ class SandboxAttachmentsTest {
             }
             assertThat(ex)
                 .hasMessageStartingWith("sandbox.net.corda.core.contracts.TransactionVerificationException\$ContractRejection -> ")
-                .hasMessageContaining(" Contract verification failed: does/not/Exist.class, " )
+                .hasMessageContaining(" Contract verification failed: does/not/Exist.class, ")
                 .hasMessageContaining(" contract: sandbox.net.corda.contracts.djvm.attachment.SandboxAttachmentContract, ")
         }
     }

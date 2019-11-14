@@ -93,6 +93,16 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Contract constraints failed for $contractClass", null)
 
     /**
+     * A constraint attached to a state was invalid, e.g. due to size limitations.
+     *
+     * @property contractClass The fully qualified class name of the failing contract.
+     * @property reason a message containing the reason the constraint is invalid included in thrown the exception.
+     */
+    @KeepForDJVM
+    class InvalidConstraintRejection(txId: SecureHash, val contractClass: String, val reason: String)
+        : TransactionVerificationException(txId, "Contract constraints failed for $contractClass. $reason", null)
+
+    /**
      * A state requested a contract class via its [TransactionState.contract] field that didn't appear in any attached
      * JAR at all. This usually implies the attachments were forgotten or a version mismatch.
      *

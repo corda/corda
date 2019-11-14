@@ -32,6 +32,7 @@ operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.p
 object ConfigHelper {
 
     private const val CORDA_PROPERTY_PREFIX = "corda."
+    private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
@@ -81,20 +82,21 @@ object ConfigHelper {
                 .mapKeys {
                     val newKey = (it.key as String)
                                 .replace("_", ".")
+                                .replace(UPPERCASE_PROPERTY_PREFIX, CORDA_PROPERTY_PREFIX)
 
-                    if (newKey.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX)
-                            && cordaPropOccurrences.contains(newKey.ignoreCase()
+                    if (newKey.startsWith(CORDA_PROPERTY_PREFIX)
+                            && cordaPropOccurrences.contains(newKey
                                     .removePrefix(CORDA_PROPERTY_PREFIX)))
                     {
                             throw ShadowingException(it.key.toString(), newKey)
                     }
 
-                    cordaPropOccurrences.add(newKey.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX))
+                    cordaPropOccurrences.add(newKey.removePrefix(CORDA_PROPERTY_PREFIX))
                     newKey.let { key ->
-                        if (!key.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX))
+                        if (!key.startsWith(CORDA_PROPERTY_PREFIX))
                             return@let key
 
-                        val nodeConfKey = key.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX)
+                        val nodeConfKey = key.removePrefix(CORDA_PROPERTY_PREFIX)
 
                         val cfg = ConfigFactory.parseString("$nodeConfKey=${it.value}")
                         val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
@@ -111,8 +113,8 @@ object ConfigHelper {
 
                         CORDA_PROPERTY_PREFIX + nodeConfKey
                     }
-                }.filterKeys { it.ignoreCase().startsWith(CORDA_PROPERTY_PREFIX) }
-                .mapKeys { it.key.ignoreCase().removePrefix(CORDA_PROPERTY_PREFIX) }
+                }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { it.key.removePrefix(CORDA_PROPERTY_PREFIX) }
                 .filterKeys { !badKeyConversions.contains(it) })
     }
 }
@@ -166,12 +168,3 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         }
     }
 }
-
-class CaseInsensitiveUtils(val target: String) {
-    fun startsWith(prefix: String) =
-            org.apache.commons.lang3.StringUtils.startsWithIgnoreCase(target, prefix)
-
-    fun removePrefix(toRemove: String) =
-            org.apache.commons.lang3.StringUtils.removeStartIgnoreCase(target, toRemove)!!
-}
-fun String.ignoreCase() = CaseInsensitiveUtils(this)

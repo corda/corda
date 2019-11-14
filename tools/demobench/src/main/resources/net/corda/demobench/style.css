@@ -52,6 +52,10 @@
     -fx-spacing: 5px;
 }
 
+.services-panel .separator {
+    -fx-padding: 15px;
+}
+
 .cordapps-panel {
     -fx-pref-width: 600px;
     -fx-spacing: 5px;

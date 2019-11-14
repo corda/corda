@@ -29,6 +29,7 @@ class DBCheckpointStorage : CheckpointStorage {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBCheckpoint(
             @Id
+            @Suppress("MagicNumber") // database column width
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 

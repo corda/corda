@@ -323,9 +323,11 @@ thread, however note that two separate Observables may invoke their respective c
 
 Error handling
 --------------
-If something goes wrong with the RPC infrastructure itself, an ``RPCException`` is thrown. If you call a method that
-requires a higher version of the protocol than the server supports, ``UnsupportedOperationException`` is thrown.
-Otherwise the behaviour depends on the ``devMode`` node configuration option.
+If something goes wrong with the RPC infrastructure itself, an ``RPCException`` is thrown.  If something
+goes wrong that needs a manual intervention to resolve (e.g. a configuration error), an
+``UnrecoverableRPCException`` is thrown. If you call a method that requires a higher version of the protocol
+than the server supports, ``UnsupportedOperationException`` is thrown. Otherwise the behaviour depends
+on the ``devMode`` node configuration option.
 
 If the server implementation throws an exception, that exception is serialised and rethrown on the client
 side as if it was thrown from inside the called RPC method. These exceptions can be caught as normal.

@@ -3,12 +3,17 @@ package net.corda.client.rpc
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.millis
+import net.corda.core.utilities.seconds
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.common.internal.eventually
@@ -16,11 +21,21 @@ import net.corda.testing.common.internal.succeeds
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.RPCDriverDSL
+import net.corda.testing.node.internal.RpcBrokerHandle
+import net.corda.testing.node.internal.RpcServerHandle
+import net.corda.testing.node.internal.poll
+import net.corda.testing.node.internal.rpcDriver
+import net.corda.testing.node.internal.rpcTestUser
+import net.corda.testing.node.internal.startRandomRpcClient
+import net.corda.testing.node.internal.startRpcClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -282,6 +297,31 @@ class RPCStabilityTests {
             } catch (e: Exception) {
                 assertTrue(e is RPCException)
             }
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+        }
+    }
+
+    @Test
+    fun `connection exits when bad config means the exception is unrecoverable`() {
+        rpcDriver {
+            val ops = object : ReconnectOps {
+                override val protocolVersion = 1000
+                override fun ping() = "pong"
+            }
+
+            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+            val clientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = PLATFORM_VERSION + 1)
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
+            try {
+                client.ping()
+            } catch (e: Exception) {
+                assertTrue(e is RPCException)
+                assertTrue(e.cause is UnrecoverableRPCException)
+                assertEquals(e.message, "Requested minimum protocol version " +
+                        "(${PLATFORM_VERSION}) is higher than the server's supported protocol version (${PLATFORM_VERSION +1})")
+            }
+            clientFollower.unfollow()
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }

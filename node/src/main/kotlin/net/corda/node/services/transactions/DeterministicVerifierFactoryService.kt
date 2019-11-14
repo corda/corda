@@ -11,12 +11,16 @@ import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.execution.ExecutionProfile
+import net.corda.djvm.rewiring.ByteCode
+import net.corda.djvm.rewiring.ByteCodeKey
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.UserPathSource
 import net.corda.djvm.source.UserSource
 import net.corda.node.internal.djvm.DeterministicVerifier
 import java.net.URL
 import java.net.URLClassLoader
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Consumer
 import java.util.function.UnaryOperator
 
 interface VerifierFactoryService : UnaryOperator<LedgerTransaction>, AutoCloseable
@@ -26,6 +30,7 @@ class DeterministicVerifierFactoryService(
     private val cordaSource: UserSource
 ) : SingletonSerializeAsToken(), VerifierFactoryService {
     private val baseSandboxConfiguration: SandboxConfiguration
+    private val cordappByteCodeCache = ConcurrentHashMap<ByteCodeKey, ByteCode>()
 
     init {
         val baseAnalysisConfiguration = AnalysisConfiguration.createRoot(
@@ -67,7 +72,9 @@ class DeterministicVerifierFactoryService(
     }
 
     private fun createSandbox(userSource: Array<URL>): SandboxConfiguration {
-        return baseSandboxConfiguration.createChild(UserPathSource(userSource))
+        return baseSandboxConfiguration.createChild(UserPathSource(userSource), Consumer {
+            it.setExternalCache(cordappByteCodeCache)
+        })
     }
 
     override fun close() {

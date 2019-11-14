@@ -2,12 +2,16 @@ package net.corda.node.services.identity
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.x500Matches
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
 import net.corda.core.internal.toSet
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -29,13 +33,18 @@ import org.hibernate.annotations.Type
 import org.hibernate.internal.util.collections.ArrayHelper.EMPTY_BYTE_ARRAY
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertPathValidatorException
+import java.security.cert.CertStore
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
+import java.security.cert.CollectionCertStoreParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import kotlin.IllegalStateException
 import kotlin.collections.HashSet
 import kotlin.streams.toList
 
@@ -147,6 +156,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     @javax.persistence.Table(name = NAME_TO_HASH_TABLE_NAME)
     class PersistentPartyToPublicKeyHash(
             @Id
+            @Suppress("MagicNumber") // database column width
             @Column(name = NAME_COLUMN_NAME, length = 128, nullable = false)
             var name: String = "",
 

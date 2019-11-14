@@ -10,48 +10,103 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import javax.persistence.PersistenceException
+import kotlin.concurrent.timerTask
 import kotlin.math.pow
 
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
  */
-class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val ourSenderUUID: String) {
-    private companion object {
+class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
+                          private val clock: Clock,
+                          private val ourSenderUUID: String) {
+    companion object {
         private val log = contextLogger()
         private val staff = listOf(
-                DeadlockNurse,
-                DuplicateInsertSpecialist,
-                DoctorTimeout,
-                FinalityDoctor,
-                TransientConnectionCardiologist
+            DeadlockNurse,
+            DuplicateInsertSpecialist,
+            DoctorTimeout,
+            FinalityDoctor,
+            TransientConnectionCardiologist,
+            DatabaseEndocrinologist,
+            TransitionErrorGeneralPractitioner
         )
+
+        @VisibleForTesting
+        val onFlowKeptForOvernightObservation = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
+        val onFlowDischarged = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
+        val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
     }
 
+    private val hospitalJobTimer = Timer("FlowHospitalJobTimer", true)
+
+    init {
+        // Register a task to log (at intervals) flows that are kept in hospital for overnight observation.
+        hospitalJobTimer.scheduleAtFixedRate(timerTask {
+            mutex.locked {
+                if (flowsInHospital.isNotEmpty()) {
+                    // Get patients whose last record in their medical records is Outcome.OVERNIGHT_OBSERVATION.
+                    val patientsUnderOvernightObservation =
+                            flowsInHospital.filter { flowPatients[it.key]?.records?.last()?.outcome == Outcome.OVERNIGHT_OBSERVATION }
+                    if (patientsUnderOvernightObservation.isNotEmpty())
+                        log.warn("There are ${patientsUnderOvernightObservation.count()} flows kept for overnight observation. " +
+                                "Affected flow ids: ${patientsUnderOvernightObservation.map { it.key.uuid.toString() }.joinToString()}")
+                }
+                if (treatableSessionInits.isNotEmpty()) {
+                    log.warn("There are ${treatableSessionInits.count()} erroneous session initiations kept for overnight observation. " +
+                            "Erroneous session initiation ids: ${treatableSessionInits.map { it.key.toString() }.joinToString()}")
+                }
+            }
+        }, 1.minutes.toMillis(), 1.minutes.toMillis())
+    }
+
+    /**
+     * Represents the flows that have been admitted to the hospital for treatment.
+     * Flows should be removed from [flowsInHospital] when they have completed a successful transition.
+     */
+    private val flowsInHospital = ConcurrentHashMap<StateMachineRunId, FlowFiber>()
+
     private val mutex = ThreadBox(object {
+        /**
+         * Contains medical history of every flow (a patient) that has entered the hospital. A flow can leave the hospital,
+         * but their medical history will be retained.
+         *
+         * Flows should be removed from [flowPatients] when they have completed successfully. Upon successful completion,
+         * the medical history of a flow is no longer relevant as that flow has been completely removed from the
+         * statemachine.
+         */
         val flowPatients = HashMap<StateMachineRunId, FlowMedicalHistory>()
         val treatableSessionInits = HashMap<UUID, InternalSessionInitRecord>()
         val recordsPublisher = PublishSubject.create<MedicalRecord>()
     })
     private val secureRandom = newSecureRandom()
 
-    private val delayedDischargeTimer = Timer("FlowHospitalDelayedDischargeTimer", true)
     /**
      * The node was unable to initiate the [InitialSessionMessage] from [sender].
      */
     fun sessionInitErrored(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent, error: Throwable) {
-        val time = Instant.now()
+        val time = clock.instant()
         val id = UUID.randomUUID()
         val outcome = if (error is SessionRejectException.UnknownClass) {
             // We probably don't have the CorDapp installed so let's pause the message in the hopes that the CorDapp is
@@ -104,11 +159,48 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     }
 
     /**
-     * The flow running in [flowFiber] has errored.
+     * Forces the flow to be kept in for overnight observation by the hospital. A flow must already exist inside the hospital
+     * and have existing medical records for it to be moved to overnight observation. If it does not meet these criteria then
+     * an [IllegalArgumentException] will be thrown.
+     *
+     * @param id The [StateMachineRunId] of the flow that you are trying to force into observation
+     * @param errors The errors to include in the new medical record
      */
-    fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
-        val time = Instant.now()
+    fun forceIntoOvernightObservation(id: StateMachineRunId, errors: List<Throwable>) {
+        mutex.locked {
+            // If a flow does not meet the criteria below, then it has moved into an invalid state or the function is being
+            // called from an incorrect location. The assertions below should error out the flow if they are not true.
+            requireNotNull(flowsInHospital[id]) { "Flow must already be in the hospital before forcing into overnight observation" }
+            val history = requireNotNull(flowPatients[id]) { "Flow must already have history before forcing into overnight observation" }
+            // Use the last staff member that last discharged the flow as the current staff member
+            val record = history.records.last().copy(
+                time = clock.instant(),
+                errors = errors,
+                outcome = Outcome.OVERNIGHT_OBSERVATION
+            )
+            onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(id, record.by.map { it.toString() }) }
+            history.records += record
+            recordsPublisher.onNext(record)
+        }
+    }
+
+
+    /**
+     * Request treatment for the [flowFiber]. A flow can only be added to the hospital if they are not already being
+     * treated.
+     */
+    fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+        // Only treat flows that are not already in the hospital
+        if (!currentState.isRemoved && flowsInHospital.putIfAbsent(flowFiber.id, flowFiber) == null) {
+            admit(flowFiber, currentState, errors)
+        }
+    }
+
+    @Suppress("ComplexMethod")
+    private fun admit(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+        val time = clock.instant()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
+        onFlowAdmitted.forEach { it.invoke(flowFiber.id) }
 
         val (event, backOffForChronicCondition) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
@@ -119,15 +211,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 Diagnosis.DISCHARGE -> {
                     val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
                     log.info("Flow error discharged from hospital (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
+                    onFlowDischarged.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
                     Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
+                    onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
-                Diagnosis.NOT_MY_SPECIALTY -> {
-                    // None of the staff care for these errors so we let them propagate
+                Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
+                    // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
                     log.info("Flow error allowed to propagate", report.error)
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
                 }
@@ -143,10 +237,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             if (backOffForChronicCondition.isZero) {
                 flowFiber.scheduleEvent(event)
             } else {
-                delayedDischargeTimer.schedule(object : TimerTask() {
-                    override fun run() {
-                        flowFiber.scheduleEvent(event)
-                    }
+                hospitalJobTimer.schedule(timerTask {
+                    flowFiber.scheduleEvent(event)
                 }, backOffForChronicCondition.toMillis())
             }
         }
@@ -185,10 +277,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)
 
     /**
-     * The flow has been removed from the state machine.
+     * Remove the flow's medical history from the hospital.
      */
-    fun flowRemoved(flowId: StateMachineRunId) {
+    fun removeMedicalHistory(flowId: StateMachineRunId) {
         mutex.locked { flowPatients.remove(flowId) }
+    }
+
+    /**
+     * Remove the flow from the hospital as it is not currently being treated.
+     */
+    fun leave(id: StateMachineRunId) {
+        flowsInHospital.remove(id)
     }
 
     // TODO MedicalRecord subtypes can expose the Staff class, something which we probably don't want when wiring this method to RPC
@@ -251,6 +350,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
     /** The order of the enum values are in priority order. */
     enum class Diagnosis {
+        /** The flow should not see other staff members */
+        TERMINAL,
         /** Retry from last safe point. */
         DISCHARGE,
         /** Park and await intervention. */
@@ -258,7 +359,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         /** Please try another member of staff. */
         NOT_MY_SPECIALTY
     }
-
 
     interface Staff {
         fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
@@ -288,7 +388,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (newError.mentionsThrowable(ConstraintViolationException::class.java) && history.notDischargedForTheSameThingMoreThan(3, this, currentState)) {
+            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)
+                && history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
                 Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
@@ -334,7 +435,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         private fun isErrorPropagatedFromCounterparty(error: Throwable): Boolean {
-            return when(error) {
+            return when (error) {
                 is UnexpectedFlowEndException -> {
                     val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
                     peer != null
@@ -358,17 +459,21 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             val strippedStacktrace = error.stackTrace
                     .filterNot { it?.className?.contains("counter-flow exception from peer") ?: false }
                     .filterNot { it?.className?.startsWith("net.corda.node.services.statemachine.") ?: false }
-            return strippedStacktrace.isNotEmpty() &&
-                    strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!! )
+            return strippedStacktrace.isNotEmpty()
+                    && strippedStacktrace.first().className.startsWith(ReceiveTransactionFlow::class.qualifiedName!!)
         }
-
     }
 
     /**
      * [SQLTransientConnectionException] detection that arise from failing to connect the underlying database/datasource
      */
     object TransientConnectionCardiologist : Staff {
-        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
+        override fun consult(
+                flowFiber: FlowFiber,
+                currentState: StateMachineState,
+                newError: Throwable,
+                history: FlowMedicalHistory
+        ): Diagnosis {
             return if (mentionsTransientConnection(newError)) {
                 if (history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
                     Diagnosis.DISCHARGE
@@ -384,6 +489,72 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
         }
     }
+
+    /**
+     * Hospitalise any database (SQL and Persistence) exception that wasn't handled otherwise, unless on the configurable whitelist
+     * Note that retry decisions from other specialists will not be affected as retries take precedence over hospitalisation.
+     */
+    object DatabaseEndocrinologist : Staff {
+        override fun consult(
+                flowFiber: FlowFiber,
+                currentState: StateMachineState,
+                newError: Throwable,
+                history: FlowMedicalHistory
+        ): Diagnosis {
+            return if ((newError is SQLException || newError is PersistenceException) && !customConditions.any { it(newError) }) {
+                Diagnosis.OVERNIGHT_OBSERVATION
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+
+        @VisibleForTesting
+        val customConditions = mutableSetOf<(t: Throwable) -> Boolean>()
+    }
+
+    /**
+     * Handles exceptions from internal state transitions that are not dealt with by the rest of the staff.
+     *
+     * [InterruptedException]s are diagnosed as [Diagnosis.TERMINAL] so they are never retried
+     * (can occur when a flow is killed - `killFlow`).
+     * [AsyncOperationTransitionException]s ares ignored as the error is likely to have originated in user async code rather than inside
+     * of a transition.
+     * All other exceptions are retried a maximum of 3 times before being kept in for observation.
+     */
+    object TransitionErrorGeneralPractitioner : Staff {
+        override fun consult(
+            flowFiber: FlowFiber,
+            currentState: StateMachineState,
+            newError: Throwable,
+            history: FlowMedicalHistory
+        ): Diagnosis {
+            return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
+                when {
+                    newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
+                    history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
+                    else -> Diagnosis.OVERNIGHT_OBSERVATION
+                }
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }.also { logDiagnosis(it, newError, flowFiber, history) }
+        }
+
+        private fun logDiagnosis(diagnosis: Diagnosis, newError: Throwable, flowFiber: FlowFiber, history: FlowMedicalHistory) {
+            if (diagnosis != Diagnosis.NOT_MY_SPECIALTY) {
+                log.debug {
+                    """
+                        Flow ${flowFiber.id} given $diagnosis diagnosis due to a transition error
+                        - Exception: ${newError.message}
+                        - History: $history
+                        ${(newError as? StateTransitionException)?.transitionAction?.let { "- Action: $it" }}
+                        ${(newError as? StateTransitionException)?.transitionEvent?.let { "- Event: $it" }}
+                        """.trimIndent()
+                }
+            }
+        }
+    }
+
 }
 
 private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
@@ -397,3 +568,4 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>
     }
     return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }
+

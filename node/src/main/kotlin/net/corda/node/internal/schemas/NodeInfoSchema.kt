@@ -29,6 +29,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id", nullable = false)
             var id: Int,
 
+            @Suppress("MagicNumber") // database column width
             @Column(name = "node_info_hash", length = 64, nullable = false)
             val hash: String,
 

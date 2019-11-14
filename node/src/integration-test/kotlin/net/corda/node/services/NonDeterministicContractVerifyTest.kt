@@ -26,6 +26,7 @@ import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
+@Suppress("FunctionName")
 class NonDeterministicContractVerifyTest {
     companion object {
         val logger = loggerFor<NonDeterministicContractVerifyTest>()
@@ -37,15 +38,14 @@ class NonDeterministicContractVerifyTest {
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess =false,
+                startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.djvm.broken"),
                     CustomCordapp(
                         packages = setOf("net.corda.contracts.djvm.broken"),
-                        name = "nondeterministic-contract",
-                        signingInfo = CustomCordapp.SigningInfo()
-                    )
+                        name = "nondeterministic-contract"
+                    ).signed()
                 ),
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda

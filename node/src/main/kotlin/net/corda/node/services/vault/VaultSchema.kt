@@ -26,6 +26,7 @@ object VaultSchema
 /**
  * First version of the Vault ORM schema
  */
+@Suppress("MagicNumber") // database column length
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(
         schemaFamily = VaultSchema.javaClass,

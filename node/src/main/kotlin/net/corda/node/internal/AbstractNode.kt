@@ -20,6 +20,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StartableByService
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -119,9 +120,11 @@ import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StateMachineManager
@@ -1190,6 +1193,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val deduplicationHandler: DeduplicationHandler
                 get() = this
 
+            override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
             override val flowLogic: FlowLogic<T>
                 get() = logic
             override val context: InvocationContext
@@ -1232,8 +1236,17 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     @Suppress("DEPRECATION")
     org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader)
+    return CordaPersistence(
+            databaseConfig,
+            schemaService.schemaOptions.keys,
+            jdbcUrl,
+            cacheFactory,
+            attributeConverters, customClassLoader,
+            errorHandler = { t ->
+                FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
+    })
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {

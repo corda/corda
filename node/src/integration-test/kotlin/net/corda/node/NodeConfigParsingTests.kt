@@ -36,7 +36,7 @@ class NodeConfigParsingTests {
         val sshPort = portAllocator.nextPort()
 
         driver(DriverParameters(
-                environmentVariables = mapOf("corda_sshd_port" to sshPort.toString()),
+                environmentVariables = mapOf("CORDA_sshd_port" to sshPort.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator)) {
             val hasSsh = startNode().get()
@@ -54,8 +54,8 @@ class NodeConfigParsingTests {
         val sshPort = portAllocator.nextPort()
 
         driver(DriverParameters(
-                environmentVariables = mapOf("cOrda.sshd.port" to sshPort.toString(),
-                                             "coRda.devMode" to true.toString()),
+                environmentVariables = mapOf("CORDA.sshd.port" to sshPort.toString(),
+                                             "corda.devMode" to true.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator)) {
             val hasSsh = startNode(NodeParameters()).get()
@@ -74,8 +74,8 @@ class NodeConfigParsingTests {
 
         driver(DriverParameters(
                 environmentVariables = mapOf(
-                        "cOrda_sshd_port" to sshPort.toString(),
-                        "cORda.sshd.port" to sshPort.toString()),
+                        "CORDA_sshd_port" to sshPort.toString(),
+                        "corda.sshd.port" to sshPort.toString()),
                 startNodesInProcess = false,
                 portAllocation = portAllocator,
                 notarySpecs = emptyList())) {
@@ -91,7 +91,7 @@ class NodeConfigParsingTests {
         val portAllocator = incrementalPortAllocation()
         driver(DriverParameters(
                 environmentVariables = mapOf(
-                        "cOrda_bad_key" to "2077"),
+                        "corda_bad_key" to "2077"),
                 startNodesInProcess = false,
                 portAllocation = portAllocator,
                 notarySpecs = emptyList())) {
