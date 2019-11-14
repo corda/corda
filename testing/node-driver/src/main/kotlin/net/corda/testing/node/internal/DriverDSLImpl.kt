@@ -26,6 +26,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
+import net.corda.core.internal.readText
 import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.writeText
