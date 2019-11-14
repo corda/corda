@@ -74,6 +74,7 @@ public class KubesTest extends DefaultTask {
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
+    private final List<String> remainingPods = Collections.synchronizedList(new ArrayList());
 
     public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
@@ -210,6 +211,8 @@ public class KubesTest extends DefaultTask {
             }
         });
 
+        int podNumber = podIdx + 1;
+
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -227,6 +230,7 @@ public class KubesTest extends DefaultTask {
                     }
                     getProject().getLogger().lifecycle("creating pod: " + podName);
                     createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                    remainingPods.add(podName);
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
@@ -238,29 +242,30 @@ public class KubesTest extends DefaultTask {
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
 
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-
-
-                int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
-                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
-                getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
                 if (!podLogsDirectory.exists()) {
                     podLogsDirectory.mkdirs();
                 }
-                File logFileToArchive = new File(podLogsDirectory, podName + ".log");
-                try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
-                    IOUtils.copy(logIn, logOut);
-                }
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+
+                int resCode = waiter.join();
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
+                getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
+
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
+                    synchronized (remainingPods) {
+                        remainingPods.remove(podName);
+                        getLogger().lifecycle("Remaining Pods: ");
+                        remainingPods.forEach(pod -> getLogger().lifecycle("\t" + pod));
+                    }
                 }
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
+            throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
 
@@ -269,6 +274,7 @@ public class KubesTest extends DefaultTask {
                               int numberOfPods,
                               int podIdx,
                               String podName,
+                              File podLogsDirectory,
                               boolean printOutput,
                               PipedOutputStream stdOutOs,
                               PipedInputStream stdOutIs,
@@ -286,7 +292,7 @@ public class KubesTest extends DefaultTask {
                 .usingListener(execListener)
                 .exec(getBuildCommand(numberOfPods, podIdx));
 
-        return startLogPumping(stdOutIs, podIdx, printOutput);
+        return startLogPumping(stdOutIs, podIdx, podLogsDirectory, printOutput);
     }
 
     private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
@@ -334,10 +340,11 @@ public class KubesTest extends DefaultTask {
                 .build();
     }
 
-    private File startLogPumping(InputStream stdOutIs, int podIdx, boolean printOutput) throws IOException {
-        File outputFile = Files.createTempFile("container", ".log").toFile();
+    private File startLogPumping(InputStream stdOutIs, int podIdx, File podLogsDirectory, boolean printOutput) throws IOException {
+        File outputFile = new File(podLogsDirectory, "container-" + podIdx + ".log");
+        outputFile.createNewFile();
         Thread loggingThread = new Thread(() -> {
-            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile));
+            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile, true));
                  BufferedReader br = new BufferedReader(new InputStreamReader(stdOutIs))) {
                 String line;
                 while ((line = br.readLine()) != null) {
