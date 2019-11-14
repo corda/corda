@@ -69,7 +69,7 @@ Unreleased
   of a contract without having to manually install that version, provided a newer version is installed. Similarly, non-contract attachments
   are whitelisted if another attachment is present on the node that is signed by the same public key.
 
-* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+* Package namespace ownership configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
 
 * Wildcards can now be used when specifying RPC permissions, for example ``StartFlow.foo.bar.*`` will allow users to start any flow in the
