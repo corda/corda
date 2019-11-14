@@ -203,12 +203,12 @@ public class KubesTest extends DefaultTask {
             boolean printOutput,
             int numberOfRetries,
             PersistentVolumeClaim pvc) {
-        addShutdownHook(() -> {
-            System.out.println("deleting pod: " + podName);
-            try (KubernetesClient client = getKubernetesClient()) {
-                client.pods().inNamespace(namespace).withName(podName).delete();
-            }
-        });
+//        addShutdownHook(() -> {
+//            System.out.println("deleting pod: " + podName);
+//            try (KubernetesClient client = getKubernetesClient()) {
+//                client.pods().inNamespace(namespace).withName(podName).delete();
+//            }
+//        });
 
         int podNumber = podIdx + 1;
 //        final AtomicInteger testRetries = new AtomicInteger(0);
@@ -249,9 +249,10 @@ public class KubesTest extends DefaultTask {
                 int resCode = 1;
                 File podOutput = null;
                 int failedTestsRetry = 0;
-                while(resCode != 0 && failedTestsRetry < numberOfRetries) {
+                while(resCode != 0 && failedTestsRetry < numberOfRetries - 1) {
                     podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
                     resCode = waiter.join();
+                    getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                     failedTestsRetry++;
                 }
 
@@ -279,8 +280,11 @@ public class KubesTest extends DefaultTask {
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            Pod pod = getKubernetesClient().pods().inNamespace(namespace).withName(podName).get();
+            KubernetesClient client = getKubernetesClient();
+            Pod pod = client.pods().inNamespace(namespace).withName(podName).get();
             downloadTestXmlFromPod(namespace, pod);
+            client.pods().delete(pod);
+            client.persistentVolumeClaims().delete(pvc);
             throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
