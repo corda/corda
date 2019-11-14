@@ -4,6 +4,274 @@ Release notes
 .. contents:: 
     :depth: 2
 
+Welcome to the Corda 4.3 release notes. Please read these carefully to understand what’s new in this release and how the features can help you. Just as prior releases have brought with them commitments to wire and API stability, Corda 4.3 comes with those same guarantees. States and apps valid in Corda 3.0 are transparently usable in Corda 4.3.
+
+.. _release_notes_v4_3:
+
+Corda 4.3
+=========
+
+Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
+
+We recommend you upgrade from Corda 4.1 to Corda 4.3 as soon as possible.
+
+Changes for developers in Corda 4.3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Introduction of Accounts
+++++++++++++++++++++++++
+
+With Corda 4.3 we are introducing the concept of “Accounts”. Vaults can be logically partitioned into subsets, each subset representing an account.  
+
+This is advantageous for several reasons:
+
+* Node operators can reduce costs by hosting multiple entities, as accounts, on one node
+* Node operators can partition the vault on a per entity basis
+* In many cases, node owners or operators will be maintaining balances of cash, assets, or agreements on behalf of others
+* Accounts allow network access to those who cannot (or do not want to) be first-class citizens on the network
+
+This new functionality allows hosts to take a custodial role over their nodes, supporting a broader range of use-cases.
+
+Please find more information on Accounts functionality in the `documentatation <https://github.com/corda/accounts/blob/master/docs.md>`_
+
+Confidential Identities
++++++++++++++++++++++++
+
+Confidential Identities have been revisited, and nodes no longer use or store X.500 certificates. Keys used for signing confidential transactions have been decoupled from the node's identity, and a nonce challenge is used to confirm a Confidential Identity belongs to the legal identity claiming it.
+
+This removes the requirement to serialize and store the certificate chain for each new key that is registered.
+
+In addition, confidential identities can now be shared without needing a transaction.
+
+Improved RPC client connectivity 
+++++++++++++++++++++++++++++++++
+
+The CordaRPCClient library has been improved in Corda 4.3 to address issues where the library does not automatically reconnect to the node if the RPC connection is broken.
+
+The improved library provides the following enhancements:
+
+* Reconnects to the node via RPC if the RPC connection to the node is broken
+* Reconnects any observables that have been created
+* Retries all operations on failure, except for flow start operations that die before receiving a valid `FlowHandle`, in which case a `CouldNotStartFlowException` is thrown
+
+We're confident in the improvements made to RPC client connectivity but would remind you that applications should be developed with contingencies in the event of an RPC connection failure. See :doc:`clientrpc` for details.
+
+Additional flexibility in recording transactions
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+In Corda 4.3, nodes can choose to record a transaction with three different levels of visibility:
+
+* Store only the relevant states in the transaction (the default)
+* Store every state in the transaction (used when observing a transaction, for example)
+* Store none of the states in the transaction (used during transaction resolution, for example)
+
+Previously, there was a limitation in that if a node initially records a transaction with a specific level of visibility, they cannot later record it with a different level of visibility.
+
+In Corda 4.3, an enhancement has been made to observer node functionality to allow observers to re-record transactions that have already been recorded at a lower visibility. 
+See :doc:`tutorial-observer-nodes` for details of how to work with observer nodes
+
+Changes for operators in Corda 4.3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Additional flexibility for RPC permissioning
+++++++++++++++++++++++++++++++++++++++++++++
+
+RPC permissions can now contain wildcards; for example: com.example.* matches both com.example.foo.ExampleFlow and com.example.bar.BogusFlow
+
+Security Upgrades
++++++++++++++++++
+
+There have been several security upgrades, including changes to the Corda webserver, dependency changes, changes to X509 extended key usage, and whitelisting attachments.
+
+* Extended key usage: Corda certificates previously defined the X509 'Extended Key Usage' as 'anyExtendedKeyUsage' which was too broad. Only the necessary key uses are included now. For example, for Corda TLS certificates, the only required extended key usages are 'Client Authentication' and 'Server Authentication'.
+* Corda webserver moved to testing module: The Corda webserver is deprecated and not suitable for production use. In Corda 4.3 it has been renamed test-server and moved to the testing module.
+* Enhancements to attachment whitelisting: Transactions referencing contracts that are not installed on a node can still be accepted if the contract is signed by a trusted party.
+* Updated vulnerable dependency: Jolokia 1.2 to 1.6.0 are vulnerable to system-wide cross-site-request-forgery attacks. Updated to Jolokia 1.6.1 
+
+Deprecations
+~~~~~~~~~~~~
+
+The Corda Finance library is now deprecated and has been superseded by the Corda Tokens SDK. While the finance library is not yet being removed, we are no longer improving or updating it. We strongly encourage users to transition from the Corda Finance library to the Corda Tokens SDK. Find more information and begin using the tokens SDK in the GitHub repository `here <https://github.com/corda/token-sdk>`_
+
+Any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
+
+Issued Fixed
+~~~~~~~~~~~~
+
+* Register custom serializers for jackson as well as amqp [`CORDA-3152 <https://r3-cev.atlassian.net/browse/CORDA-3152>`_]
+* Cleanup non-finalised, errored flows [`CORDA-3122 <https://r3-cev.atlassian.net/browse/CORDA-3122>`_]
+* Introduce max number of retries per invocation for reconnecting rpc [`CORDA-3304 <https://r3-cev.atlassian.net/browse/CORDA-3304>`_]
+* Fix for CORDA-3315 [`CORDA-3315 <https://r3-cev.atlassian.net/browse/CORDA-3315>`_]
+* Add a check for shutdown to avoid some of the errors ()" , (#5578) [`Revert "CORDA-3281 <https://r3-cev.atlassian.net/browse/Revert "CORDA-3281>`_]
+* RPC Invocation fails when calling classes with defaulted constructors O/S [`CORDA-3043 <https://r3-cev.atlassian.net/browse/CORDA-3043>`_]
+* Avoid flushing when inside a cascade [`CORDA-3303 <https://r3-cev.atlassian.net/browse/CORDA-3303>`_]
+* fix observables not being tagged with notUsed() [`CORDA-3236 <https://r3-cev.atlassian.net/browse/CORDA-3236>`_]
+* deployNodes doesn't use right version of Java [`ISSUE-246 <https://r3-cev.atlassian.net/browse/ISSUE-246>`_]
+* Remove quasarRPC client [`CORDA-2979 <https://r3-cev.atlassian.net/browse/CORDA-2979>`_]
+* Fix infinite loop [`CORDA-3306 <https://r3-cev.atlassian.net/browse/CORDA-3306>`_]
+* Add a check for shutdown to avoid some of the errors [`CORDA-3281 <https://r3-cev.atlassian.net/browse/CORDA-3281>`_]
+* Make Tx verification exceptions serializable [`CORDA-2965 <https://r3-cev.atlassian.net/browse/CORDA-2965>`_]
+* Node configuration doc change [`CORDA-2756 <https://r3-cev.atlassian.net/browse/CORDA-2756>`_]
+* Improve error handling for registering peer node [`CORDA-3263 <https://r3-cev.atlassian.net/browse/CORDA-3263>`_]
+* JDK11,  built and published artifacts to include classifier [`CORDA-3224 <https://r3-cev.atlassian.net/browse/CORDA-3224>`_]
+* Missing logs on shutdown [`CORDA-3246 <https://r3-cev.atlassian.net/browse/CORDA-3246>`_]
+* Improve CorDapp loading logic for duplicates [`CORDA-3243 <https://r3-cev.atlassian.net/browse/CORDA-3243>`_]
+* Publish checkpoint agent jar and allow for inclusion of version id in jar upon run-time execution
+* O/S version of fix for slow running in 4.3 [`CORDA-3235 <https://r3-cev.atlassian.net/browse/CORDA-3235>`_]
+* Enhance backwards compatibility logic to include Interâ€¦ [`CORDA-3274 <https://r3-cev.atlassian.net/browse/CORDA-3274>`_]
+* Prevent node startup failure upon cross-platform execution [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* Remove Gradle's evaluation dependency on node:capsule [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* New detekt rules based on feedback [`TM-44 <https://r3-cev.atlassian.net/browse/TM-44>`_]
+* Remove Gradle's evaluation dependency on node:capsule [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* Fix dba migration for PostgreSQL following changes in CORDA-3009 [`CORDA-3226 <https://r3-cev.atlassian.net/browse/CORDA-3226>`_]
+* Vault Query API enhancement, strict participants matching [`CORDA-3184 <https://r3-cev.atlassian.net/browse/CORDA-3184>`_]
+* Move executor thread management into CordaRPCConnection [`CORDA-3091 <https://r3-cev.atlassian.net/browse/CORDA-3091>`_]
+* Replace deprecated use of Class.newInstance() for sake of DJVM [`CORDA-3273 <https://r3-cev.atlassian.net/browse/CORDA-3273>`_]
+* Support of multiple interfaces for RPC calls [`CORDA-3232 <https://r3-cev.atlassian.net/browse/CORDA-3232>`_]
+* Rename the webserver [`CORDA-3024 <https://r3-cev.atlassian.net/browse/CORDA-3024>`_]
+* optional node.conf property not recognized when overridden [`CORDA-3240 <https://r3-cev.atlassian.net/browse/CORDA-3240>`_]
+* Add missing quasar classifier to web server capsule manifest [`CORDA-3266 <https://r3-cev.atlassian.net/browse/CORDA-3266>`_]
+* Revert back to quasar 0.7.10 (Java 8) [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* Ensure that ArraySerializer.elementType is resolved for GenericArray [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* backporting detekt config changes to OS 4.1 and rebaselining [`TM-32 <https://r3-cev.atlassian.net/browse/TM-32>`_]
+* Fix vault query for participants specified in common criteria [`CORDA-3209 <https://r3-cev.atlassian.net/browse/CORDA-3209>`_]
+* Do not add java.lang.Class fields and properties to local type cache [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* Fix Classgraph scanning lock type [`CORDA-3238 <https://r3-cev.atlassian.net/browse/CORDA-3238>`_]
+* Added exception handling for missing files that displays appropriate messages rather than defaulting to file names [`CORDA-2368 <https://r3-cev.atlassian.net/browse/CORDA-2368>`_]
+* new baseline for 4.3 since new debt has been added with the last few commits [`TM-29 <https://r3-cev.atlassian.net/browse/TM-29>`_]
+* Upgrade Corda to Java 11 (compatibility mode) [`CORDA-2050 <https://r3-cev.atlassian.net/browse/CORDA-2050>`_]
+* Add GracefulReconnect callbacks which allow logic to be performed when RPC disconnects unexpectedly [`CORDA-3141 <https://r3-cev.atlassian.net/browse/CORDA-3141>`_]
+* Checkpoints which cannot be deserialised no longer prevent the nodestarting up [`CORDA-1836 <https://r3-cev.atlassian.net/browse/CORDA-1836>`_]
+* Make set of serializer types considered suitable for object reference to be configurable [`CORDA-3218 <https://r3-cev.atlassian.net/browse/CORDA-3218>`_]
+* Notary logging improvements [`CORDA-3060 <https://r3-cev.atlassian.net/browse/CORDA-3060>`_]
+* Improve Notary loggingan operator/admins point of view [`CORDA-3060 <https://r3-cev.atlassian.net/browse/CORDA-3060>`_]
+* Make set of serializer types considered suitable for object reference to be configurable [`CORDA-3218 <https://r3-cev.atlassian.net/browse/CORDA-3218>`_]
+* Fix postgres oid/ bytea column issue [`CORDA-3200 <https://r3-cev.atlassian.net/browse/CORDA-3200>`_]
+* Load drivers directory automatically [`CORDA-3079 <https://r3-cev.atlassian.net/browse/CORDA-3079>`_]
+* Fixed bug where observable leaks on ctrl+c interrupt while waiting in stateMachinesFeed [`CORDA-3151 <https://r3-cev.atlassian.net/browse/CORDA-3151>`_]
+* Fail build on compiler warnings [`TM-23 <https://r3-cev.atlassian.net/browse/TM-23>`_]
+* (Version 2) [`CORDA-3133 <https://r3-cev.atlassian.net/browse/CORDA-3133>`_]
+* Prevent node running SwapIdentitiesFlowinitiating session with itself [`CORDA-2837 <https://r3-cev.atlassian.net/browse/CORDA-2837>`_]
+* Split migrations as per https://github.com/ENTerprisâ€¦ [`CORDA-3200 <https://r3-cev.atlassian.net/browse/CORDA-3200>`_]
+* Remove RPC exception obfuscation [`CORDA-2740 <https://r3-cev.atlassian.net/browse/CORDA-2740>`_]
+* Whitelisting attachments by public key, phase two tooling [`CORDA-3018 <https://r3-cev.atlassian.net/browse/CORDA-3018>`_]
+* Use PersistentIdentityMigrationBuilder instead of schema aâ€¦ [`CORDA-3200 <https://r3-cev.atlassian.net/browse/CORDA-3200>`_]
+* Add -XX:+HeapDumpOnOutOfMemoryError -XX:+CrashOnOutOfMemoryError to default JVM args for node [`CORDA-3187 <https://r3-cev.atlassian.net/browse/CORDA-3187>`_]
+* Ignore synthetic and static fields when searching for state pointers [`CORDA-3188 <https://r3-cev.atlassian.net/browse/CORDA-3188>`_]
+* Additional Back Chain Resolution performance enhancements [`CORDA-3177 <https://r3-cev.atlassian.net/browse/CORDA-3177>`_]
+* Close security manager after broker is shut down [`CORDA-2890 <https://r3-cev.atlassian.net/browse/CORDA-2890>`_]
+* Added additional property on VaultQueryCriteria for querying by account [`CORDA-3182 <https://r3-cev.atlassian.net/browse/CORDA-3182>`_]
+* Added ability to lookup the associated UUID for a public key to KeyManagementService [`CORDA-3180 <https://r3-cev.atlassian.net/browse/CORDA-3180>`_]
+* Remove dependency on 3rd party javax.xml.bind library for simple hex parsing/printing [`CORDA-3175 <https://r3-cev.atlassian.net/browse/CORDA-3175>`_]
+* FilterMyKeys now uses the key store as opposed to the cert store [`CORDA-3178 <https://r3-cev.atlassian.net/browse/CORDA-3178>`_]
+* Refine documentation around rpc reconnection [`CORDA-3106 <https://r3-cev.atlassian.net/browse/CORDA-3106>`_]
+* Rebase identity service changes onto 4.3 [`CORDA-2925 <https://r3-cev.atlassian.net/browse/CORDA-2925>`_]
+* Close previous connection after reconnection [`CORDA-3098 <https://r3-cev.atlassian.net/browse/CORDA-3098>`_]
+* Add wildcard RPC permissions [`CORDA-3022 <https://r3-cev.atlassian.net/browse/CORDA-3022>`_]
+* Migrate identity service to use to string short [`CORDA-3009 <https://r3-cev.atlassian.net/browse/CORDA-3009>`_]
+* Modify Corda's custom serialiser support for the DJVM [`CORDA-3157 <https://r3-cev.atlassian.net/browse/CORDA-3157>`_]
+* JacksonSupport, for CordaSerializable classes, improved to only uses those properties that are part of Corda serialisation [`CORDA-2919 <https://r3-cev.atlassian.net/browse/CORDA-2919>`_]
+* Update cache to check node identity keys in identity table [`CORDA-3149 <https://r3-cev.atlassian.net/browse/CORDA-3149>`_]
+* Removed InMemoryTransactionsResolver as it's not needed and other resolution cleanup [`CORDA-3138 <https://r3-cev.atlassian.net/browse/CORDA-3138>`_]
+* Update app upgrade notes to document source incompatibility [`CORDA-3082 <https://r3-cev.atlassian.net/browse/CORDA-3082>`_]
+* improvements to checkpoint dumper [`CORDA-3094 <https://r3-cev.atlassian.net/browse/CORDA-3094>`_]
+* Add a cache for looking up external UUIDspublic keys [`CORDA-3130 <https://r3-cev.atlassian.net/browse/CORDA-3130>`_]
+* Cater for port already bound scenario during port allocation [`CORDA-3139 <https://r3-cev.atlassian.net/browse/CORDA-3139>`_]
+* Update owasp scanner [`CORDA-3120 <https://r3-cev.atlassian.net/browse/CORDA-3120>`_]
+* Whitelisting attachments by public key, relax signer restrictions [`CORDA-3018 <https://r3-cev.atlassian.net/browse/CORDA-3018>`_]
+* Add failover listeners to terminate node process [`CORDA-2617 <https://r3-cev.atlassian.net/browse/CORDA-2617>`_]
+* Parallel node info download [`CORDA-3055 <https://r3-cev.atlassian.net/browse/CORDA-3055>`_]
+* Checkpoint agent tool [`CORDA-3071 <https://r3-cev.atlassian.net/browse/CORDA-3071>`_]
+* More information in log warning for Cordapps missing advised JAR manifest file entries [`CORDA-3012 <https://r3-cev.atlassian.net/browse/CORDA-3012>`_]
+* Restore CompositeKey support to core-deterministic [`CORDA-2871 <https://r3-cev.atlassian.net/browse/CORDA-2871>`_]
+* Restrict extended key usage of certificate types [`CORDA-2216 <https://r3-cev.atlassian.net/browse/CORDA-2216>`_]
+* Hash to Signature Constraint automatic propagation [`CORDA-2920 <https://r3-cev.atlassian.net/browse/CORDA-2920>`_]
+* Prevent connection threads leaking on reconnect [`CORDA-2923 <https://r3-cev.atlassian.net/browse/CORDA-2923>`_]
+* Exception is logged if flow session message can't be deserialised [`CORDA-3092 <https://r3-cev.atlassian.net/browse/CORDA-3092>`_]
+* Do not throw exception for missing fiber and log instead
+* Make the RPC client reconnect with gracefulReconnect param [`CORDA-2923 <https://r3-cev.atlassian.net/browse/CORDA-2923>`_]
+* Pass base directory when resolving relative paths [`CORDA-3068 <https://r3-cev.atlassian.net/browse/CORDA-3068>`_]
+* Add Node Diagnostics Info RPC Call, Update changelog [`CORDA-3028 <https://r3-cev.atlassian.net/browse/CORDA-3028>`_]
+* Add Node Diagnostics Info RPC Call, Backport a diff from [`CORDA-3028 <https://r3-cev.atlassian.net/browse/CORDA-3028>`_]
+* fix network builder [`CORDA-2998 <https://r3-cev.atlassian.net/browse/CORDA-2998>`_]
+* Add Node Diagnostics Info RPC Call [`CORDA-3028 <https://r3-cev.atlassian.net/browse/CORDA-3028>`_]
+* Allow transactions to be re-recorded using StatesToRecord.ALL_VISIBLE [`CORDA-2086 <https://r3-cev.atlassian.net/browse/CORDA-2086>`_]
+* shorten poll intervals for node info file propagation [`CORDA-2991 <https://r3-cev.atlassian.net/browse/CORDA-2991>`_]
+* Allow certificate directory to be a symlink [`CORDA-2914 <https://r3-cev.atlassian.net/browse/CORDA-2914>`_]
+* fix network builder [`CORDA-2998 <https://r3-cev.atlassian.net/browse/CORDA-2998>`_]
+* min after normal operation [`CORDA-3034. Reconnecting Rpc will now not wait only for 60 <https://r3-cev.atlassian.net/browse/CORDA-3034. Reconnecting Rpc will now not wait only for 60>`_]
+* Refactor NodeConfiguration out of NodeRegistrationHelper [`CORDA-2720 <https://r3-cev.atlassian.net/browse/CORDA-2720>`_]
+* NotaryLoader, improve exception handling [`CORDA-2996 <https://r3-cev.atlassian.net/browse/CORDA-2996>`_]
+* Introduce `SignOnlyCryptoService` and use it whenever possible [`CORDA-3021 <https://r3-cev.atlassian.net/browse/CORDA-3021>`_]
+* Introducing Destination interface for initiating flows with [`CORDA-3033 <https://r3-cev.atlassian.net/browse/CORDA-3033>`_]
+* Fine-tune compile vs runtime scopes of published deterministic jars [`CORDA-2871 <https://r3-cev.atlassian.net/browse/CORDA-2871>`_]
+* Upgrade notes for C4 need to include required minimum previous Corda version () , (#5124) [`CORDA-2511 <https://r3-cev.atlassian.net/browse/CORDA-2511>`_]
+* Align timeouts for CRL retrieval and TLS handshake [`CORDA-2935 <https://r3-cev.atlassian.net/browse/CORDA-2935>`_]
+* disable hibernate validator integration with hibernate () , (#5144) [`CORDA-2934 <https://r3-cev.atlassian.net/browse/CORDA-2934>`_]
+* Fix release tooling when product name != jira project [`CORDA-3017 <https://r3-cev.atlassian.net/browse/CORDA-3017>`_]
+* Constrain max heap size for Spring boot processes [`CORDA-3031 <https://r3-cev.atlassian.net/browse/CORDA-3031>`_]
+* Updated the majority of the dependencies that were out of date [`CORDA-2333 <https://r3-cev.atlassian.net/browse/CORDA-2333>`_]
+* Allow AbstractParty to initiate flow [`CORDA-3000 <https://r3-cev.atlassian.net/browse/CORDA-3000>`_]
+* Reverting jersey and mockito as it currently causes issues with ENT [`CORDA-2333 <https://r3-cev.atlassian.net/browse/CORDA-2333>`_]
+* Fixing x500Prinicipal matching [`CORDA-2974 <https://r3-cev.atlassian.net/browse/CORDA-2974>`_]
+* Fix for liquibase changelog warnings [`CORDA-2774 <https://r3-cev.atlassian.net/browse/CORDA-2774>`_]
+* Add documentation on the options for deploying nodes [`CORDA-1912 <https://r3-cev.atlassian.net/browse/CORDA-1912>`_]
+* Disable slow consumers for RPC since it doesn't work [`CORDA-2981 <https://r3-cev.atlassian.net/browse/CORDA-2981>`_]
+* Revert usage of Gradle JUnit 5 Platform Runner [`CORDA-2970 <https://r3-cev.atlassian.net/browse/CORDA-2970>`_]
+* Fix for CORDA-2972 [`CORDA-2972 <https://r3-cev.atlassian.net/browse/CORDA-2972>`_]
+* Catch IllegalArgumentException to avoid shutdown of NodeExplorer [`CORDA-2945 <https://r3-cev.atlassian.net/browse/CORDA-2945>`_]
+* Remove version uniqueness check [`CORDA-2975 <https://r3-cev.atlassian.net/browse/CORDA-2975>`_]
+* Support for custom Jackson serializers ()" , (#5167) [`Revert "CORDA-2773 <https://r3-cev.atlassian.net/browse/Revert "CORDA-2773>`_]
+* disable hibernate validator integration with hibernate [`CORDA-2934 <https://r3-cev.atlassian.net/browse/CORDA-2934>`_]
+* improve error messages for non composable types [`CORDA-2870 <https://r3-cev.atlassian.net/browse/CORDA-2870>`_]
+* Align timeouts for CRL retrieval and TLS handshake [`CORDA-2935 <https://r3-cev.atlassian.net/browse/CORDA-2935>`_]
+* Remove AMQP system property [`CORDA-2473 <https://r3-cev.atlassian.net/browse/CORDA-2473>`_]
+* Simple prose checking [`DEVREL-1287 <https://r3-cev.atlassian.net/browse/DEVREL-1287>`_]
+* Minor Typos & Commands info in "Other transaction components" intro [`DEVREL-1287 <https://r3-cev.atlassian.net/browse/DEVREL-1287>`_]
+* Minor Typographic Changes [`DEVREL-1287 <https://r3-cev.atlassian.net/browse/DEVREL-1287>`_]
+* Whitelist attachments signed by keys that already sign existing trusted attachments [`CORDA-2517 <https://r3-cev.atlassian.net/browse/CORDA-2517>`_]
+* Prevent node startup if legal identity key is lost but node key isn't [`CORDA-2866 <https://r3-cev.atlassian.net/browse/CORDA-2866>`_]
+* change default dataSource.url to match the docker container structure [`CORDA-2888 <https://r3-cev.atlassian.net/browse/CORDA-2888>`_]
+* change documentation [`CORDA-2641 <https://r3-cev.atlassian.net/browse/CORDA-2641>`_]
+* Allow bring-your-own-config to docker image [`CORDA-2888 <https://r3-cev.atlassian.net/browse/CORDA-2888>`_]
+* Remove the CanonicalizerPluginbuildSrc [`CORDA-2902 <https://r3-cev.atlassian.net/browse/CORDA-2902>`_]
+* Improve Signature Constraints documentation [`CORDA-2477 <https://r3-cev.atlassian.net/browse/CORDA-2477>`_]
+* Automatic propagation of whitelisted to Signature Constraints [`CORDA-2280 <https://r3-cev.atlassian.net/browse/CORDA-2280>`_]
+* Docker build tasks will pull the corda jarartifactory [`CORDA-2884 <https://r3-cev.atlassian.net/browse/CORDA-2884>`_]
+* Support for custom Jackson serializers [`CORDA-2773 <https://r3-cev.atlassian.net/browse/CORDA-2773>`_]
+* Added ability to specify signature scheme when signing [`CORDA-2882 <https://r3-cev.atlassian.net/browse/CORDA-2882>`_]
+* Drop the acknowledge window for RPC responses to 16KB1MB because the memory footprint is multipled by the number of RPC clients [`CORDA-2845 <https://r3-cev.atlassian.net/browse/CORDA-2845>`_]
+* Handle exceptions when file does not exist [`CORDA-2632 <https://r3-cev.atlassian.net/browse/CORDA-2632>`_]
+* Allow users to whitelist attachments by public key config [`CORDA-2575 <https://r3-cev.atlassian.net/browse/CORDA-2575>`_]
+* Remove CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS as commands are not flattened anymore [`CORDA-2817 <https://r3-cev.atlassian.net/browse/CORDA-2817>`_]
+* Fix issue with Quasar errors redirecting to useless page [` CORDA-2821 <https://r3-cev.atlassian.net/browse/ CORDA-2821>`_]
+* Support custom serialisers when attaching missing attachments to txs [`CORDA-2847 <https://r3-cev.atlassian.net/browse/CORDA-2847>`_]
+* Use `compileOnly` instead of `cordaCompile` in irs-demo to depend on `node` module
+* Improvements to docker image , compatible with v3.3 [`CORDA-4954 <https://r3-cev.atlassian.net/browse/CORDA-4954>`_]
+* Add peer information to stacktrace of received FlowException [`CORDA-2572 <https://r3-cev.atlassian.net/browse/CORDA-2572>`_]
+* Fix to allow softlinks of logs directory [`CORDA-2862 <https://r3-cev.atlassian.net/browse/CORDA-2862>`_]
+* Add dynamic port allocation [`CORDA-2743 <https://r3-cev.atlassian.net/browse/CORDA-2743>`_]
+* relax property type checking [`CORDA-2860 <https://r3-cev.atlassian.net/browse/CORDA-2860>`_]
+* give the message executor its own artemis session and producer [`CORDA-2861 <https://r3-cev.atlassian.net/browse/CORDA-2861>`_]
+* Do not remove exception information in dev mode [`CORDA-2645 <https://r3-cev.atlassian.net/browse/CORDA-2645>`_]
+* Update getting setup guide java details [`CORDA-2602 <https://r3-cev.atlassian.net/browse/CORDA-2602>`_]
+* Documentation around explicit upgrades [`CORDA-2456 <https://r3-cev.atlassian.net/browse/CORDA-2456>`_]
+* Follow up changes to error reporting around failed flows [`CORDA-2522 <https://r3-cev.atlassian.net/browse/CORDA-2522>`_]
+* change parameter syntax to conform to Corda CLI guidelines [`CORDA-2833 <https://r3-cev.atlassian.net/browse/CORDA-2833>`_]
+* relax fingerprinter strictness [`CORDA-2848 <https://r3-cev.atlassian.net/browse/CORDA-2848>`_]
+* Check if resources are in classpath [`CORDA-2651 <https://r3-cev.atlassian.net/browse/CORDA-2651>`_]
+* Improve error reporting around failed flows [`CORDA-2522 <https://r3-cev.atlassian.net/browse/CORDA-2522>`_]
+* Fix the way serialization whitelist is calculated for CordappImpl [`CORDA-2851 <https://r3-cev.atlassian.net/browse/CORDA-2851>`_]
+* Changed crash version to our latest [`CORDA-2519 <https://r3-cev.atlassian.net/browse/CORDA-2519>`_]
+* Clarify error message when base directory doesn't exist [`CORDA-2834 <https://r3-cev.atlassian.net/browse/CORDA-2834>`_]
+* change message when rpc/p2p login fails [`CORDA-2621 <https://r3-cev.atlassian.net/browse/CORDA-2621>`_]
+* nodeinfo signing tool [`CORDA-2833 <https://r3-cev.atlassian.net/browse/CORDA-2833>`_]
+* Restructure evolution serialization errors to print reason first [`CORDA-2633 <https://r3-cev.atlassian.net/browse/CORDA-2633>`_]
+* Add Java samples to upgrading to Corda 4 documentation [`CORDA-2710 <https://r3-cev.atlassian.net/browse/CORDA-2710>`_]
+* Update contract testing documentation [`CORDA-2528 <https://r3-cev.atlassian.net/browse/CORDA-2528>`_]
+* Do not start the P2P consumer until we have at least one registered handler (the state machine). This prevents message being delivered too early
+* Fix Progress Tracker bug [`CORDA-2825 <https://r3-cev.atlassian.net/browse/CORDA-2825>`_]
+
 .. _release_notes_v4_1:
 
 Corda 4.1

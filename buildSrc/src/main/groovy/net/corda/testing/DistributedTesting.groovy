@@ -8,6 +8,8 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
 
+import java.util.stream.Collectors
+
 /**
  This plugin is responsible for wiring together the various components of test task modification
  */
@@ -212,18 +214,30 @@ class DistributedTesting implements Plugin<Project> {
                 executedTestsFile.createNewFile()
                 filter {
                     List<String> executedTests = executedTestsFile.readLines()
+                    //adding wildcard to each test so they match the ones in the includes list
+                    executedTests.replaceAll({ test -> test + "*" })
                     def fork = getPropertyAsInt(subProject, "dockerFork", 0)
                     subProject.logger.info("requesting tests to include in testing task ${task.getPath()} (idx: ${fork})")
                     List<String> includes = globalAllocator.getTestIncludesForForkAndTestTask(
                             fork,
                             task)
                     subProject.logger.info "got ${includes.size()} tests to include into testing task ${task.getPath()}"
+                    subProject.logger.info "INCLUDE: ${includes.toString()} "
+                    subProject.logger.info "got ${executedTests.size()} tests to exclude from testing task ${task.getPath()}"
+                    subProject.logger.debug "EXCLUDE: ${executedTests.toString()} "
                     if (includes.size() == 0) {
                         subProject.logger.info "Disabling test execution for testing task ${task.getPath()}"
                         excludeTestsMatching "*"
                     }
-                    includes.removeAll(executedTests)
-                    executedTests.forEach { exclude ->
+
+                    List<String> intersection = executedTests.stream()
+                            .filter(includes.&contains)
+                            .collect(Collectors.toList())
+                    subProject.logger.info "got ${intersection.size()} tests in intersection"
+                    subProject.logger.info "INTERSECTION: ${intersection.toString()} "
+                    includes.removeAll(intersection)
+
+                    intersection.forEach { exclude ->
                         subProject.logger.info "excluding: $exclude for testing task ${task.getPath()}"
                         excludeTestsMatching exclude
                     }
