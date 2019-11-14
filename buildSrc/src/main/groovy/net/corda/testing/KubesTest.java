@@ -211,7 +211,7 @@ public class KubesTest extends DefaultTask {
         });
 
         int podNumber = podIdx + 1;
-        final AtomicInteger testRetries = new AtomicInteger(0);
+//        final AtomicInteger testRetries = new AtomicInteger(0);
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -246,14 +246,23 @@ public class KubesTest extends DefaultTask {
                     podLogsDirectory.mkdirs();
                 }
 
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-                int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
-                //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
-                if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
-                    getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
-                    throw new RuntimeException("There are test failures in this pod");
+                int resCode = 1;
+                File podOutput = null;
+                int failedTestsRetry = 0;
+                while(resCode != 0 && failedTestsRetry < numberOfRetries) {
+                    podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+                    resCode = waiter.join();
+                    failedTestsRetry++;
                 }
+
+//                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+//                int resCode = waiter.join();
+//                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+//                //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
+//                if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
+//                    getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
+//                    throw new RuntimeException("There are test failures in this pod");
+//                }
 
                 Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
