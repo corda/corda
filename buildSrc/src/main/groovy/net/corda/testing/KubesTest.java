@@ -51,6 +51,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -245,15 +246,14 @@ public class KubesTest extends DefaultTask {
                     podLogsDirectory.mkdirs();
                 }
 
-                final int[] testRetries = {0};
+                final AtomicInteger testRetries = new AtomicInteger(0);
                 return Retry.fixed(numberOfRetries).run(() -> {
                     File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
                     int resCode = waiter.join();
                     getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
                     //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
-                    if (resCode != 0 && testRetries[0] < numberOfRetries - 1) {
+                    if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
                         getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
-                        testRetries[0]++;
                         throw new RuntimeException("There are test failures in this pod");
                     }
 
