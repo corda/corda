@@ -84,7 +84,8 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
     }
 
     private fun initialRegistration(config: NodeConfiguration) {
-        // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+        // Null checks for [compatibilityZoneURL], [rootTruststorePath] and
+        // [rootTruststorePassword] have been done in [CmdLineOptions.loadConfig]
         val result = attempt { registerWithNetwork(config) }.doOnFailure(Consumer(this::handleRegistrationError))
         
         if (result.isSuccess) {
