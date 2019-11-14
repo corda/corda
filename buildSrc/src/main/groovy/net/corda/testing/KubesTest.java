@@ -270,7 +270,7 @@ public class KubesTest extends DefaultTask {
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            Pod pod = getKubernetesClient().pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+            Pod pod = getKubernetesClient().pods().inNamespace(namespace).withName(podName).get();
             downloadTestXmlFromPod(namespace, pod);
             throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
