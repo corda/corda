@@ -274,14 +274,14 @@ The highly recommended solution for CorDapp to CorDapp dependency is to always m
 
 .. package ownership
 
-Another way to look at bundling third party CorDapps is from the point of view of identity. With the introduction of the ``SignatureConstraint``, CorDapps will be signed
-by their creator, so the signature will become part of their identity: ``com.fruitcompany.Banana`` signed by the ``FruitCo``.
-But if another CorDapp developer, ``OrangeCo`` bundles the ``Fruit`` library, they must strip the signatures from the ``FruitCo`` and sign the JAR themselves.
-This will create a ``com.fruitcompany.Banana`` signed by the ``OrangeCo``, so there could be two types of Banana states on the network,
-but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these ``Banana`` contracts from diverging.
-Parties on the network receiving a ``com.fruitcompany.Banana`` will need to explicitly check the constraint to understand what they received.
-In Corda 4, to help avoid this type of confusion, we introduced the concept of Package Namespace Ownership (see ":doc:`design/data-model-upgrades/package-namespace-ownership`").
-Briefly, it allows companies to claim namespaces and anyone who encounters a class in that package that is not signed by the registered key knows is invalid.
+Another way to look at bundling third party CorDapps is from the point of view of identity. With the introduction of the `SignatureConstraint`, CorDapps will be signed
+by their creator, so the signature will become part of their identity: `com.fruitcompany.Banana` @SignedBy_TheFruitCo.
+But if another CorDapp developer, `OrangeCo` bundles the `Fruit` library, they must strip the signatures from `TheFruitCo` and sign the JAR themselves.
+This will create a `com.fruitcompany.Banana` @SignedBy_TheOrangeCo, so there could be two types of Banana states on the network,
+but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these `Banana` contracts from diverging.
+Parties on the network receiving a `com.fruitcompany.Banana` will need to explicitly check the constraint to understand what they received.
+In Corda 4, to help avoid this type of confusion, we introduced the concept of Package Namespace Ownership. Briefly, it allows companies to claim namespaces
+and anyone who encounters a class in that package that is not signed by the registered key knows is invalid.
 
 This new feature can be used to solve the above scenario. If ``FruitCo`` claims package ownership of ``com.fruitcompany``, it will prevent anyone
 from bundling its code because they will not be able to sign it with the right key.

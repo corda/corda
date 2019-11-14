@@ -163,14 +163,14 @@ problems associated with checkpoints for flows that appear to not be completing.
 
 The checkpoint agent can be downloaded from `here <https://software.r3.com/artifactory/corda-releases/net/corda/corda-tools-checkpoint-agent/>`_.
 
-To run simply pass in the following jar to the JVM used to start a Corda node: ``-javaagent:<PATH>/checkpoint-agent.jar[=arg=value,...]``
+To run simply pass in the following jar to the JVM used to start a Corda node: ``-Dcapsule.jvm.args=-javaagent:<PATH>/checkpoint-agent.jar[=arg=value,...]``
+
+.. note:: As above also ensure to use the jar when using corda gradle plugin configuration tasks: e.g. ``cordformation deployNodes`` task.
+          See https://docs.corda.net/head/generating-a-node.html#the-cordform-task
 
 .. warning:: This tool requires additional memory footprint and we recommended a minimal heap size of at least 1Gb.
 
 The agent can be customised with a number of optional parameters described below.
-
-.. note:: When using the gradle plugin utilities for deploying and running nodes, ensure the checkpoint agent jar is correctly passed to capsule as follows:
-    ``-Dcapsule.jvm.args=-javaagent:checkpoint-agent.jar[=arg=value,...]``
 
 Configuration
 -------------
