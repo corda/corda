@@ -31,6 +31,11 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             return replace(System.lineSeparator(), "\n")
         }
 
+        // Remove the lines which have been added since Java 8.
+        fun String.toJava8Format(): String {
+            return replace("  params: null\n", "")
+        }
+
         val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
         lateinit var certificate: X509Certificate
 
@@ -58,7 +63,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val showCertPath = classLoader.createTaskFor(taskFactory, ShowCertPath::class.java)
             val result = showCertPath.apply(sandboxCertPath) ?: fail("Result cannot be null")
 
-            assertEquals(ShowCertPath().apply(certPath).toUNIX(), result.toString())
+            assertEquals(ShowCertPath().apply(certPath).toUNIX().toJava8Format(), result.toString())
             assertThat(result::class.java.name).startsWith("sandbox.")
         }
     }
@@ -82,7 +87,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val showCertificate = classLoader.createTaskFor(taskFactory, ShowCertificate::class.java)
             val result = showCertificate.apply(sandboxCertificate) ?: fail("Result cannot be null")
 
-            assertEquals(ShowCertificate().apply(certificate).toUNIX(), result.toString())
+            assertEquals(ShowCertificate().apply(certificate).toUNIX().toJava8Format(), result.toString())
             assertThat(result::class.java.name).startsWith("sandbox.")
         }
     }
