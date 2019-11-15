@@ -60,7 +60,7 @@ pipeline {
                     pullRequest.createStatus(status: 'success',
                             context: 'continuous-integration/jenkins/pr-merge/smokeTest',
                             description: 'Smoke Tests Passed',
-                            targetUrl: "${env.JOB_URL}testResults")
+                            targetUrl: "${env.BUILD_URL}testResults")
                 }
             }
         }
@@ -71,7 +71,7 @@ pipeline {
                     pullRequest.createStatus(status: 'failure',
                             context: 'continuous-integration/jenkins/pr-merge/smokeTest',
                             description: 'Smoke Tests Failed',
-                            targetUrl: "${env.JOB_URL}testResults")
+                            targetUrl: "${env.BUILD_URL}testResults")
                 }
             }
         }
