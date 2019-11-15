@@ -2,10 +2,14 @@ package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
+import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
@@ -15,7 +19,9 @@ import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.json.simple.JSONObject
 import org.junit.Test
 import java.util.*
