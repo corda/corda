@@ -53,7 +53,6 @@ import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
     companion object {
@@ -169,13 +168,13 @@ class FlowFrameworkTests {
             bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow( terminateUponSignal = terminationSignal) }
             aliceNode.services.startFlow(ReceiveFlow(bob))
             mockNet.runNetwork()
-            assertEquals(1, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
-            assertEquals(0, bobFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(1, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
+            assertEquals(0, bobFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
             // continue bob's NoOpFlow, it will send an EndSessionMessage to alice
             terminationSignal.release()
             mockNet.runNetwork()
             // alice's ReceiveFlow is not finished because bob sent an EndSessionMessage, check that flow is no longer waiting
-            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(0, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
         }
     }
 
@@ -186,8 +185,8 @@ class FlowFrameworkTests {
             aliceNode.services.startFlow(ReceiveFlow(bob))
             mockNet.runNetwork()
             // both flows are suspened on a receive from the counter party
-            assertEquals(1, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
-            assertEquals(1, bobFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(1, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
+            assertEquals(1, bobFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
         }
     }
 
@@ -198,10 +197,10 @@ class FlowFrameworkTests {
             // "take a long time" task, implemented by a NoOpFlow stuck in call method
             aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
             mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
-            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(0, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
             // "take a long time" flow continues ...
             terminationSignal.release()
-            assertEquals(0, aliceFlowMonitor.waitingFlowsToDurations(Duration.ZERO).size)
+            assertEquals(0, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
         }
     }
 

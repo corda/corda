@@ -500,9 +500,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
-            val flowMonitor = FlowMonitor(smm,
-                    configuration.flowMonitorPeriodMillis,
-                    configuration.flowMonitorSuspensionLoggingThresholdMillis)
+            val flowMonitor = FlowMonitor(
+                smm,
+                configuration.flowMonitorPeriodMillis,
+                configuration.flowMonitorSuspensionLoggingThresholdMillis
+            )
             runOnStop += flowMonitor::stop
             flowMonitor.start()
             schedulerService.start()

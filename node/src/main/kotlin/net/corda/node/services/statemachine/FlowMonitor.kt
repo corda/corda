@@ -14,10 +14,12 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-internal class FlowMonitor constructor(private val smm: StateMachineManager,
-                                       private val monitoringPeriod: Duration,
-                                       private val suspensionLoggingThreshold: Duration,
-                                       private var scheduler: ScheduledExecutorService? = null) : LifecycleSupport {
+internal class FlowMonitor constructor(
+    private val smm: StateMachineManager,
+    private val monitoringPeriod: Duration,
+    private val suspensionLoggingThreshold: Duration,
+    private var scheduler: ScheduledExecutorService? = null
+) : LifecycleSupport {
 
     private companion object {
         private fun defaultScheduler(): ScheduledExecutorService {
@@ -52,19 +54,19 @@ internal class FlowMonitor constructor(private val smm: StateMachineManager,
     }
 
     private fun logFlowsWaitingForParty() {
-        for ((flow, suspensionDuration) in waitingFlowsToDurations(suspensionLoggingThreshold)) {
-            flow.ioRequest()?.let { request -> warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration) }?.let(logger::info)
+        for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
+            flow.ioRequest()?.let { request -> logger.info(warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)) }
         }
     }
 
     @VisibleForTesting
-    fun waitingFlowsToDurations(suspensionLoggingThreshold: Duration): Set<Pair<FlowStateMachineImpl<*>, Duration>> {
+    fun waitingFlowDurations(suspensionLoggingThreshold: Duration): Sequence<Pair<FlowStateMachineImpl<*>, Duration>> {
         val now = Instant.now()
         return smm.snapshot()
                 .asSequence()
                 .filter { flow -> flow !in smm.flowHospital && flow.isStarted() && flow.isSuspended() }
                 .map { flow -> flow to flow.ongoingDuration(now) }
-                .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }.toSet()
+                .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }
     }
 
     private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>,
@@ -92,8 +94,9 @@ internal class FlowMonitor constructor(private val smm: StateMachineManager,
     private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
 
     private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        val lastCheckpointTimestamp = transientState?.value?.checkpoint?.timestamp ?: return Duration.ZERO
-        return Duration.between(lastCheckpointTimestamp, now)
+        return transientState?.value?.checkpoint?.timestamp?.let { lastCheckpointTimestamp ->
+            Duration.between(lastCheckpointTimestamp, now)
+        } ?: Duration.ZERO
     }
 
     private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
