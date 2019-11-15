@@ -246,9 +246,9 @@ dependencies {
     
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
-    integrationTestCompile "org.jboss.byteman:byteman-submit:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman-submit:4.0.3"
     // The actual Byteman agent which should only be in the classpath of the out of process nodes
-    integrationTestCompile "org.jboss.byteman:byteman:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman:4.0.3"
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
