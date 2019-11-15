@@ -7,6 +7,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.TestResult
+import org.gradle.internal.impldep.junit.framework.TestFailure
 
 import java.util.stream.Collectors
 
@@ -252,8 +254,10 @@ class DistributedTesting implements Plugin<Project> {
             }
 
             afterTest { desc, result ->
-                executedTestsFile.withWriterAppend { writer ->
-                    writer.writeLine(desc.getClassName() + "." + desc.getName())
+                if (result.getResultType() == TestResult.ResultType.SUCCESS ) {
+                    executedTestsFile.withWriterAppend { writer ->
+                        writer.writeLine(desc.getClassName() + "." + desc.getName())
+                    }
                 }
             }
         }

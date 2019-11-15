@@ -18,7 +18,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import net.corda.testing.retry.Retry;
 import okhttp3.Response;
-import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +26,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,23 +33,25 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -76,7 +75,7 @@ public class KubesTest extends DefaultTask {
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
-    private final List<String> remainingPods = Collections.synchronizedList(new ArrayList());
+    private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet());
 
     public static String NAMESPACE = "thisisatest";
     int k8sTimeout = 50 * 1_000;
@@ -214,7 +213,7 @@ public class KubesTest extends DefaultTask {
         });
 
         int podNumber = podIdx + 1;
-
+        final AtomicInteger testRetries = new AtomicInteger(0);
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -248,11 +247,20 @@ public class KubesTest extends DefaultTask {
                 if (!podLogsDirectory.exists()) {
                     podLogsDirectory.mkdirs();
                 }
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
 
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
                 int resCode = waiter.join();
                 getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
-                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
+                Collection<File> binaryResults;
+                //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
+                if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
+                    downloadTestXmlFromPod(namespace, createdPod);
+                    getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
+                    throw new RuntimeException("There are test failures in this pod");
+                } else {
+                    binaryResults = downloadTestXmlFromPod(namespace, createdPod);
+                }
+
                 getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
 
                 try (KubernetesClient client = getKubernetesClient()) {
@@ -267,6 +275,8 @@ public class KubesTest extends DefaultTask {
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
+            Pod pod = getKubernetesClient().pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+            downloadTestXmlFromPod(namespace, pod);
             throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
