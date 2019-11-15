@@ -32,7 +32,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.RandomAccessFile;
 import java.math.BigInteger;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,7 +140,26 @@ public class KubesTest extends DefaultTask {
     }
 
     @NotNull
-    private KubernetesClient getKubernetesClient() {
+    private synchronized KubernetesClient getKubernetesClient() {
+
+        try (RandomAccessFile file = new RandomAccessFile("/tmp/refresh.lock", "rw");
+             FileChannel c = file.getChannel();
+             FileLock lock = c.lock()) {
+
+            getProject().getLogger().quiet("Invoking kubectl to attempt to refresh token");
+            ProcessBuilder tokenRefreshCommand = new ProcessBuilder().command("kubectl", "auth", "can-i", "get", "pods");
+            Process refreshProcess = tokenRefreshCommand.start();
+            int resultCodeOfRefresh = refreshProcess.waitFor();
+            getProject().getLogger().quiet("Completed Token refresh");
+
+            if (resultCodeOfRefresh != 0) {
+                throw new RuntimeException("Failed to invoke kubectl to refresh tokens");
+            }
+
+        } catch (InterruptedException | IOException e) {
+            throw new RuntimeException(e);
+        }
+
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
                 .withConnectionTimeout(k8sTimeout)
                 .withRequestTimeout(k8sTimeout)
