@@ -88,6 +88,13 @@ There have been several security upgrades, including changes to the Corda webser
 * Enhancements to attachment whitelisting: Transactions referencing contracts that are not installed on a node can still be accepted if the contract is signed by a trusted party.
 * Updated vulnerable dependency: Jolokia 1.2 to 1.6.0 are vulnerable to system-wide cross-site-request-forgery attacks. Updated to Jolokia 1.6.1 
 
+Platform version change
+~~~~~~~~~~~~~~~~~~~~~~~
+
+As some API calls were added to Corda to support Accounts, the platform version of Corda 4.3 needed to be changed from 4 to 5. This allows CorDapps that use Accounts to set their minimum platform version to 5, ensuring that they only operate on nodes that support the required features. CorDapps written for older versions of Corda are unaffected and will function without modification. Corda nodes running older versions of Corda can always interoperate with Corda nodes running 4.3. Note that CorDapps using the new Accounts feature require platform version 5 and hence Corda 4.3 - they will not function on prior versions of Corda.
+
+For more information on platform version, please see :doc:`versioning`. For more details on upgrading a CorDapp to use platform version 5, please see :doc:`app-upgrade-notes`.
+
 Deprecations
 ~~~~~~~~~~~~
 
