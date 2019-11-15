@@ -11,7 +11,7 @@ Welcome to the Corda 4.3 release notes. Please read these carefully to understan
 Corda 4.3
 =========
 
-Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
+Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 contains over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
 
 We recommend you upgrade from Corda 4.1 to Corda 4.3 as soon as possible.
 
@@ -102,7 +102,7 @@ The Corda Finance library is now deprecated and has been superseded by the Corda
 
 Any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
 
-Issued Fixed
+Issues Fixed
 ~~~~~~~~~~~~
 
 * Register custom serializers for jackson as well as amqp [`CORDA-3152 <https://r3-cev.atlassian.net/browse/CORDA-3152>`_]
