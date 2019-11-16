@@ -59,19 +59,19 @@ namespace amqp::internal::schema {
              * keep main constructor private to force use of the named constructor
              */
             Restricted (
-                std::unique_ptr<Descriptor> & descriptor_,
+                std::unique_ptr<Descriptor> descriptor_,
                 std::string,
                 std::string,
                 std::vector<std::string>,
-                const RestrictedTypes &);
+                RestrictedTypes);
 
         public :
             static std::unique_ptr<Restricted> make(
-                    std::unique_ptr<Descriptor> & descriptor_,
-                    const std::string &,
-                    const std::string &,
-                    const std::vector<std::string> &,
-                    const std::string &,
+                    std::unique_ptr<Descriptor>,
+                    std::string,
+                    std::string,
+                    std::vector<std::string>,
+                    std::string,
                     std::vector<uPtr<Choice>>);
 
             Restricted (Restricted&) = delete;

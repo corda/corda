@@ -25,16 +25,16 @@ namespace {
 
 amqp::internal::schema::
 List::List (
-    uPtr<Descriptor> & descriptor_,
-    const std::string & name_,
-    const std::string & label_,
-    const std::vector<std::string> & provides_,
-    const std::string & source_
+    uPtr<Descriptor> descriptor_,
+    std::string name_,
+    std::string label_,
+    std::vector<std::string> provides_,
+    std::string source_
 ) : Restricted (
-        descriptor_,
-        name_,
-        label_,
-        provides_,
+        std::move (descriptor_),
+        std::move (name_),
+        std::move (label_),
+        std::move (provides_),
         amqp::internal::schema::Restricted::RestrictedTypes::List)
   , m_listOf { listType(name_).second }
 {

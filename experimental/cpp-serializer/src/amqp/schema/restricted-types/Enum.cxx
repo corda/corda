@@ -10,17 +10,17 @@
 
 amqp::internal::schema::
 Enum::Enum (
-        uPtr<Descriptor> & descriptor_,
-        const std::string & name_,
-        const std::string & label_,
-        const std::vector<std::string> & provides_,
-        const std::string & source_,
+        uPtr<Descriptor> descriptor_,
+        std::string name_,
+        std::string label_,
+        std::vector<std::string> provides_,
+        std::string source_,
         std::vector<uPtr<Choice>> choices_
 ) : Restricted (
-        descriptor_,
-        name_,
-        label_,
-        provides_,
+        std::move (descriptor_),
+        std::move (name_),
+        std::move (label_),
+        std::move (provides_),
         amqp::internal::schema::Restricted::RestrictedTypes::Enum)
     , m_enum { name_ }
     , m_choices (std::move (choices_))

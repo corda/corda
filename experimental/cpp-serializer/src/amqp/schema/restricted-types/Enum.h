@@ -11,11 +11,11 @@ namespace amqp::internal::schema {
 
         public :
             Enum (
-                uPtr<Descriptor> & descriptor_,
-                const std::string &,
-                const std::string &,
-                const std::vector<std::string> &,
-                const std::string &,
+                uPtr<Descriptor> descriptor_,
+                std::string,
+                std::string,
+                std::vector<std::string>,
+                std::string,
                 std::vector<uPtr<Choice>>);
 
             std::vector<std::string>::const_iterator begin() const override;

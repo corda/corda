@@ -75,7 +75,12 @@ RestrictedDescriptor::build (pn_data_t * data_) const {
     DBG (data_ << std::endl);
 
     return schema::Restricted::make (
-            descriptor, name, label, provides, source, std::move (choices));
+            std::move (descriptor),
+            std::move (name),
+            std::move (label),
+            std::move (provides),
+            std::move (source),
+            std::move (choices));
 }
 
 /******************************************************************************/

@@ -23,9 +23,8 @@ namespace amqp::internal::reader {
 
         public :
             CompositeReader (
-                std::string type_,
-                std::vector<std::weak_ptr<Reader>> & readers_
-            );
+                std::string,
+                std::vector<std::weak_ptr<Reader>> &);
 
             ~CompositeReader() override = default;
 
@@ -47,8 +46,8 @@ namespace amqp::internal::reader {
 
         private :
             std::vector<std::unique_ptr<amqp::reader::IValue>> _dump (
-                pn_data_t * data_,
-                const SchemaType & schema_) const;
+                pn_data_t *,
+                const SchemaType &) const;
     };
 
 }

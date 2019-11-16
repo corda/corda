@@ -36,14 +36,16 @@ namespace amqp::internal::schema {
 
 amqp::internal::schema::
 Composite::Composite (
-        const std::string & name_,
+        std::string name_,
         std::string label_,
-        const sList<std::string> & provides_,
-        uPtr<Descriptor> & descriptor_,
-        std::vector<uPtr<Field>> & fields_
-) : AMQPTypeNotation (name_, descriptor_)
+        sList<std::string> provides_,
+        uPtr<Descriptor> descriptor_,
+        std::vector<uPtr<Field>> fields_
+) : AMQPTypeNotation (
+        std::move (name_),
+        std::move (descriptor_))
   , m_label (std::move (label_))
-  , m_provides (provides_)
+  , m_provides (std::move (provides_))
   , m_fields (std::move (fields_))
 { }
 

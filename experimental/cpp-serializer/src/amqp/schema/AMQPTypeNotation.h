@@ -46,9 +46,9 @@ namespace amqp::internal::schema {
         public :
             AMQPTypeNotation (
                 std::string name_,
-                std::unique_ptr<Descriptor> & descriptor_
+                std::unique_ptr<Descriptor> descriptor_
             ) : m_name (std::move (name_))
-              , m_descriptor (std::move(descriptor_))
+              , m_descriptor (std::move (descriptor_))
             { }
 
             const std::string & descriptor() const;

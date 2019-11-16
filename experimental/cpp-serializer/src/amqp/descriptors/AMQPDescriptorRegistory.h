@@ -70,8 +70,8 @@ namespace amqp {
      */
     uint32_t stripCorda (uint64_t id);
 
-    std::string describedToString(uint64_t);
-    std::string describedToString(uint32_t);
+    std::string describedToString (uint64_t);
+    std::string describedToString (uint32_t);
 }
 
 /******************************************************************************/

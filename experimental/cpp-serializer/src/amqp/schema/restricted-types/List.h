@@ -12,11 +12,11 @@ namespace amqp::internal::schema {
 
         public :
             List (
-                uPtr<Descriptor> & descriptor_,
-                const std::string &,
-                const std::string &,
-                const std::vector<std::string> &,
-                const std::string &);
+                uPtr<Descriptor> descriptor_,
+                std::string,
+                std::string,
+                std::vector<std::string>,
+                std::string);
 
             std::vector<std::string>::const_iterator begin() const override;
             std::vector<std::string>::const_iterator end() const override;
