@@ -96,7 +96,7 @@ object ConfigHelper {
                     cordaPropOccurrences.add(newKey)
 
                     newKey.let { key ->
-                        val cfg = ConfigFactory.parseString("$key=${it.value}")
+                        val cfg = ConfigFactory.parseMap(mapOf(key to it.value))
                         val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
 
                         val isInvalidProperty = result.errors.any { err -> err is Configuration.Validation.Error.Unknown }
