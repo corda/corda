@@ -1061,7 +1061,7 @@ class StatemachineErrorHandlingTest {
      * that 3 retries are attempted before recovering.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully - responding flow`() {
+    fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
@@ -1156,7 +1156,7 @@ class StatemachineErrorHandlingTest {
      * the responding flow to recover and finish its flow.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and be kept for observation if error persists - responding flow`() {
+    fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and be kept for observation if error persists`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
@@ -1244,7 +1244,7 @@ class StatemachineErrorHandlingTest {
      * succeeds and the flow finishes.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully - responding flow`() {
+    fun `responding flow - error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
@@ -1340,7 +1340,7 @@ class StatemachineErrorHandlingTest {
      * send to the responding node and the responding node successfully received it.
      */
     @Test
-    fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
+    fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation` () {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
             val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
