@@ -624,7 +624,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
     numberOfShards 5
-    streamOutput false
+    streamOutput true
     coresPerFork 6
     memoryInGbPerFork 10
     distribute DistributeTestsBy.CLASS
