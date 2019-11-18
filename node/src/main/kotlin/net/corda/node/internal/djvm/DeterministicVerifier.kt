@@ -19,6 +19,7 @@ import net.corda.djvm.messages.Message
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ClassSource
 import net.corda.node.djvm.LtxFactory
+import java.util.function.Function
 
 class DeterministicVerifier(
     ltx: LedgerTransaction,
@@ -27,7 +28,7 @@ class DeterministicVerifier(
 ) : Verifier(ltx, transactionClassLoader) {
 
     override fun verifyContracts() {
-        val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run {
+        val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run<Any>(Function { classLoader ->
             (classLoader.parent as? SandboxClassLoader)?.apply {
                 /**
                  * We don't need to add either Java APIs or Corda's own classes
@@ -92,7 +93,7 @@ class DeterministicVerifier(
 
             // Now execute the contract verifier task within the sandbox...
             verifier.apply(sandboxTx)
-        }
+        })
 
         with (result.costs) {
             logger.info("Verify {} complete: allocations={}, invocations={}, jumps={}, throws={}",
