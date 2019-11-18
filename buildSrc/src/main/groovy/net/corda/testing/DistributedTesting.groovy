@@ -7,6 +7,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.TestResult
+import org.gradle.internal.impldep.junit.framework.TestFailure
 
 import java.util.stream.Collectors
 
@@ -95,6 +97,7 @@ class DistributedTesting implements Plugin<Project> {
                 //modify the image building task to depend on the preAllocate task (if specified on the command line) - this prevents gradle running out of order
                 if (preAllocateTask.name in requestedTaskNames) {
                     imageBuildTask.dependsOn preAllocateTask
+                    imagePushTask.finalizedBy(deAllocateTask)
                 }
 
                 def userDefinedParallelTask = project.rootProject.tasks.create("userDefined" + testGrouping.getName().capitalize(), KubesTest) {
@@ -117,6 +120,8 @@ class DistributedTesting implements Plugin<Project> {
                     podLogLevel = testGrouping.getLogLevel()
                     doFirst {
                         dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
+                        sidecarImage = testGrouping.sidecarImage
+                        additionalArgs = testGrouping.additionalArgs
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.getName().capitalize()}", KubesReporting) {
@@ -167,7 +172,8 @@ class DistributedTesting implements Plugin<Project> {
         Task deAllocateTask = project.rootProject.tasks.create("deAllocateFor" + testGrouping.getName().capitalize()) {
             group = GRADLE_GROUP
             doFirst {
-                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
+                String dockerTag = System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY) ?:
+                        System.getProperty(ImageBuilding.PROVIDE_TAG_FOR_BUILDING_PROPERTY)
                 if (dockerTag == null) {
                     throw new GradleException("pre allocation cannot be used without a stable docker tag - please provide one using -D" + ImageBuilding.PROVIDE_TAG_FOR_RUNNING_PROPERTY)
                 }
@@ -250,8 +256,10 @@ class DistributedTesting implements Plugin<Project> {
             }
 
             afterTest { desc, result ->
-                executedTestsFile.withWriterAppend { writer ->
-                    writer.writeLine(desc.getClassName() + "." + desc.getName())
+                if (result.getResultType() == TestResult.ResultType.SUCCESS ) {
+                    executedTestsFile.withWriterAppend { writer ->
+                        writer.writeLine(desc.getClassName() + "." + desc.getName())
+                    }
                 }
             }
         }

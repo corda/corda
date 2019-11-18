@@ -1,6 +1,5 @@
 package net.corda.testing;
 
-import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.api.model.batch.JobBuilder;
@@ -39,36 +38,38 @@ public class PodAllocator {
 
     public void allocatePods(Integer number, Integer coresPerPod, Integer memoryPerPod, String prefix) {
 
-        Config config = new ConfigBuilder()
-                .withConnectionTimeout(CONNECTION_TIMEOUT)
-                .withRequestTimeout(CONNECTION_TIMEOUT)
-                .withRollingTimeout(CONNECTION_TIMEOUT)
-                .withWebsocketTimeout(CONNECTION_TIMEOUT)
-                .withWebsocketPingInterval(CONNECTION_TIMEOUT)
-                .build();
-
+        Config config = getConfig();
         KubernetesClient client = new DefaultKubernetesClient(config);
 
         List<Job> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildJob("pa-" + prefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
-        podsToRequest.forEach(requestedJob -> {
+        List<Job> createdJobs = podsToRequest.stream().map(requestedJob -> {
             String msg = "PreAllocating " + requestedJob.getMetadata().getName();
             if (logger instanceof org.gradle.api.logging.Logger) {
                 ((org.gradle.api.logging.Logger) logger).quiet(msg);
             } else {
                 logger.info(msg);
             }
-            client.batch().jobs().inNamespace(KubesTest.NAMESPACE).create(requestedJob);
-        });
+            return client.batch().jobs().inNamespace(KubesTest.NAMESPACE).create(requestedJob);
+        }).collect(Collectors.toList());
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            KubernetesClient tearDownClient = new DefaultKubernetesClient(getConfig());
+            tearDownClient.batch().jobs().delete(createdJobs);
+        }));
     }
 
-    public void tearDownPods(String prefix) {
-        io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
+    private Config getConfig() {
+        return new ConfigBuilder()
                 .withConnectionTimeout(CONNECTION_TIMEOUT)
                 .withRequestTimeout(CONNECTION_TIMEOUT)
                 .withRollingTimeout(CONNECTION_TIMEOUT)
                 .withWebsocketTimeout(CONNECTION_TIMEOUT)
                 .withWebsocketPingInterval(CONNECTION_TIMEOUT)
                 .build();
+    }
+
+    public void tearDownPods(String prefix) {
+        io.fabric8.kubernetes.client.Config config = getConfig();
         KubernetesClient client = new DefaultKubernetesClient(config);
         Stream<Job> jobsToDelete = client.batch().jobs().inNamespace(KubesTest.NAMESPACE).list()
                 .getItems()
