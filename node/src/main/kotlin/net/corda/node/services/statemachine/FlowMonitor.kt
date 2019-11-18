@@ -14,7 +14,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-internal class FlowMonitor constructor(
+internal class FlowMonitor(
     private val smm: StateMachineManager,
     private val monitoringPeriod: Duration,
     private val suspensionLoggingThreshold: Duration,
@@ -69,21 +69,22 @@ internal class FlowMonitor constructor(
                 .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }
     }
 
-    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>, flow: FlowStateMachineImpl<*>,
+    private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest<*>,
+                                                 flow: FlowStateMachineImpl<*>,
                                                  suspensionDuration: Duration): String {
         val message = StringBuilder("Flow with id ${flow.id.uuid} has been waiting for ${suspensionDuration.toMillis() / 1000} seconds ")
         message.append(
-                when (request) {
-                    is FlowIORequest.Send -> "to send a message to parties ${request.sessionToMessage.keys.partiesInvolved()}"
-                    is FlowIORequest.Receive -> "to receive messages from parties ${request.sessions.partiesInvolved()}"
-                    is FlowIORequest.SendAndReceive -> "to send and receive messages from parties ${request.sessionToMessage.keys.partiesInvolved()}"
-                    is FlowIORequest.WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${request.hash}"
-                    is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
-                    is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
-                    FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
-                    is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::javaClass} to complete"
-                    FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
-                }
+            when (request) {
+                is FlowIORequest.Send -> "to send a message to parties ${request.sessionToMessage.keys.partiesInvolved()}"
+                is FlowIORequest.Receive -> "to receive messages from parties ${request.sessions.partiesInvolved()}"
+                is FlowIORequest.SendAndReceive -> "to send and receive messages from parties ${request.sessionToMessage.keys.partiesInvolved()}"
+                is FlowIORequest.WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${request.hash}"
+                is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
+                is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
+                FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
+                is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::javaClass} to complete"
+                FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
+            }
         )
         message.append(".")
         return message.toString()
@@ -94,9 +95,7 @@ internal class FlowMonitor constructor(
     private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
 
     private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        return transientState?.value?.checkpoint?.timestamp?.let { lastCheckpointTimestamp ->
-            Duration.between(lastCheckpointTimestamp, now)
-        } ?: Duration.ZERO
+        return transientState?.value?.checkpoint?.timestamp?.let { Duration.between(it, now) } ?: Duration.ZERO
     }
 
     private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
