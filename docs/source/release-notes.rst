@@ -11,7 +11,7 @@ Welcome to the Corda 4.3 release notes. Please read these carefully to understan
 Corda 4.3
 =========
 
-Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
+Corda 4.1 was released with a great suite of new features to build on top of the success of Corda 4. Now, Corda 4.3 extends upon that with some powerful new capabilities. Corda 4.3 contains over 400 fixes and documentation updates to bring additional stability and quality of life improvements to those developing on the Corda platform.
 
 We recommend you upgrade from Corda 4.1 to Corda 4.3 as soon as possible.
 
@@ -88,6 +88,13 @@ There have been several security upgrades, including changes to the Corda webser
 * Enhancements to attachment whitelisting: Transactions referencing contracts that are not installed on a node can still be accepted if the contract is signed by a trusted party.
 * Updated vulnerable dependency: Jolokia 1.2 to 1.6.0 are vulnerable to system-wide cross-site-request-forgery attacks. Updated to Jolokia 1.6.1 
 
+Platform version change
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Given the addition of a new API to support the Accounts feature, the platform version of Corda 4.3 has been bumped up from 4 to 5. This is to prevent CorDapps that use it being deployed onto nodes unable to host them. Note that the minimum platform version has not been changed - this means that older Corda nodes can still interoperate with Corda 4.3 nodes. Since the APIs added do not affect the wire protocol or have other zone-level implications, applications can take advantage of these new platform version 5 features even if the Corda 4.3 node is running on a network whose minimum platform version is 4.
+
+For more information on platform version, please see :doc:`versioning`. For more details on upgrading a CorDapp to use platform version 5, please see :doc:`app-upgrade-notes`.
+
 Deprecations
 ~~~~~~~~~~~~
 
@@ -95,7 +102,7 @@ The Corda Finance library is now deprecated and has been superseded by the Corda
 
 Any confidential identities registered using the old API will not be reflected in the new tables after migration to Corda 4.3. However, the standard APIs work with both old and new confidential identities tables. For this reason, we do not recommend the use of both old and new confidential identities APIs in the same deployment. The old confidential identities API will be deprecated in a future release.
 
-Issued Fixed
+Issues Fixed
 ~~~~~~~~~~~~
 
 * Register custom serializers for jackson as well as amqp [`CORDA-3152 <https://r3-cev.atlassian.net/browse/CORDA-3152>`_]
