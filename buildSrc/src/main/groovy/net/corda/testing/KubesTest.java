@@ -64,6 +64,10 @@ public class KubesTest extends DefaultTask {
      */
     private static final String REGISTRY_CREDENTIALS_SECRET_NAME = "regcred";
 
+    private static int DEFAULT_K8S_TIMEOUT_VALUE_MILLIES = 60 * 1_000;
+    private static int DEFAULT_K8S_WEBSOCKET_TIMEOUT = DEFAULT_K8S_TIMEOUT_VALUE_MILLIES * 30;
+    private static int DEFAULT_POD_ALLOCATION_TIMEOUT = 60;
+
     String dockerTag;
     String fullTaskToExecutePath;
     String taskToExecuteName;
@@ -78,10 +82,8 @@ public class KubesTest extends DefaultTask {
     private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet());
 
     public static String NAMESPACE = "thisisatest";
-    int k8sTimeout = 50 * 1_000;
-    int webSocketTimeout = k8sTimeout * 6;
+
     int numberOfPods = 5;
-    int timeoutInMinutesForPodToStart = 60;
 
     DistributeTestsBy distribution = DistributeTestsBy.METHOD;
     PodLogLevel podLogLevel = PodLogLevel.INFO;
@@ -139,11 +141,11 @@ public class KubesTest extends DefaultTask {
     @NotNull
     private KubernetesClient getKubernetesClient() {
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
-                .withConnectionTimeout(k8sTimeout)
-                .withRequestTimeout(k8sTimeout)
-                .withRollingTimeout(k8sTimeout)
-                .withWebsocketTimeout(webSocketTimeout)
-                .withWebsocketPingInterval(webSocketTimeout)
+                .withConnectionTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withRequestTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withRollingTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withWebsocketTimeout(DEFAULT_K8S_WEBSOCKET_TIMEOUT)
+                .withWebsocketPingInterval(DEFAULT_K8S_WEBSOCKET_TIMEOUT)
                 .build();
 
         return new DefaultKubernetesClient(config);
@@ -460,7 +462,7 @@ public class KubesTest extends DefaultTask {
         try (KubernetesClient client = getKubernetesClient()) {
             getProject().getLogger().lifecycle("Waiting for pod " + pod.getMetadata().getName() + " to start before executing build");
             try {
-                client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES);
+                client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(DEFAULT_POD_ALLOCATION_TIMEOUT, TimeUnit.MINUTES);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
