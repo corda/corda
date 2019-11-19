@@ -149,7 +149,8 @@ class ReconnectingCordaRPCOps private constructor(
         }
         private val current: CordaRPCConnection
             @Synchronized get() = when (currentState) {
-                UNCONNECTED -> connect()
+                // The first attempt to establish a connection will try every address only once.
+                UNCONNECTED -> connect(infiniteRetries = false)
                 CONNECTED -> currentRPCConnection!!
                 CLOSED -> throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
                 CONNECTING, DIED -> throw IllegalArgumentException("Illegal state: $currentState ")
@@ -168,7 +169,7 @@ class ReconnectingCordaRPCOps private constructor(
             //TODO - handle error cases
             log.warn("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
-            connect()
+            connect(infiniteRetries = true)
             previousConnection?.forceClose()
             gracefulReconnect.onReconnect.invoke()
         }
@@ -181,16 +182,28 @@ class ReconnectingCordaRPCOps private constructor(
             doReconnect(e, previousConnection)
         }
         @Synchronized
-        private fun connect(): CordaRPCConnection {
+        private fun connect(infiniteRetries: Boolean): CordaRPCConnection {
             currentState = CONNECTING
-            currentRPCConnection = establishConnectionWithRetry()
+            currentRPCConnection = if (infiniteRetries) {
+                establishConnectionWithRetry()
+            } else {
+                establishConnectionWithRetry(retries = nodeHostAndPorts.size)
+            }
             currentState = CONNECTED
             return currentRPCConnection!!
         }
 
+        /**
+         * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
+         *
+         * @param retryInterval the interval between retries.
+         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param retries the number of retries remaining. A negative value implies infinite retries.
+         */
         private tailrec fun establishConnectionWithRetry(
                 retryInterval: Duration = 1.seconds,
-                roundRobinIndex: Int = 0
+                roundRobinIndex: Int = 0,
+                retries: Int = -1
         ): CordaRPCConnection {
             val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
             log.info("Connecting to: $attemptedAddress")
@@ -213,12 +226,7 @@ class ReconnectingCordaRPCOps private constructor(
                         log.error("Failed to login to node.", ex)
                         throw ex
                     }
-                    is RPCException -> {
-                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                        log.debug { "Exception upon establishing connection: ${ex.message}" }
-                    }
-                    is ActiveMQConnectionTimedOutException,
-                    is ActiveMQUnBlockedException -> {
+                    is RPCException, is ActiveMQConnectionTimedOutException, is ActiveMQUnBlockedException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
                     }
@@ -226,12 +234,17 @@ class ReconnectingCordaRPCOps private constructor(
                         log.warn("Unknown exception upon establishing connection.", ex)
                     }
                 }
+
+                if (retries == 0) {
+                    throw RPCException("Cannot connect to server(s). Tried with all available servers.", ex)
+                }
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
             // TODO - make the exponential retry factor configurable.
             val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            return establishConnectionWithRetry((retryInterval * 10) / 9, nextRoundRobinIndex)
+            val remainingRetries = if (retries < 0) retries else (retries - 1)
+            return establishConnectionWithRetry((retryInterval * 10) / 9, nextRoundRobinIndex, remainingRetries)
         }
         override val proxy: CordaRPCOps
             get() = current.proxy

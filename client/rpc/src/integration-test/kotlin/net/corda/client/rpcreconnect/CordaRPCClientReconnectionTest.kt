@@ -5,6 +5,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
+import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
@@ -21,6 +22,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -180,6 +182,17 @@ class CordaRPCClientReconnectionTest {
                         .isInstanceOf(MaxRpcRetryException::class.java)
             }
 
+        }
+    }
+
+    @Test
+    fun `establishing an RPC connection fails if there is no node listening to the specified address`() {
+        rpcDriver {
+            assertThatThrownBy {
+                CordaRPCClient(NetworkHostAndPort("localhost", portAllocator.nextPort()))
+                        .start(rpcUser.username, rpcUser.password, GracefulReconnect())
+            }.isInstanceOf(RPCException::class.java)
+                    .hasMessage("Cannot connect to server(s). Tried with all available servers.")
         }
     }
 
