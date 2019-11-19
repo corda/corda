@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 plugins {
     id 'org.jetbrains.kotlin.jvm'
     id 'net.corda.plugins.publish-utils'
@@ -40,6 +42,18 @@ dependencies {
     sandboxTesting project(':serialization-djvm:deserializers')
     sandboxTesting project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
     sandboxTesting "org.slf4j:slf4j-nop:$slf4j_version"
+}
+
+// The DJVM only supports Java 8 byte-code.
+compileTestJava {
+    sourceCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_1_8
+}
+
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = VERSION_1_8
+    }
 }
 
 jar {

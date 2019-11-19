@@ -48,7 +48,7 @@ Note that:
 
 SQLServer
 ---------
-Nodes also have untested support for Microsoft SQL Server 2017, using Microsoft JDBC Driver 6.2 for SQL Server. Here is
+Nodes also have untested support for Microsoft SQL Server 2017, using Microsoft JDBC Driver 6.4 for SQL Server. Here is
 an example node configuration for SQLServer:
 
 .. sourcecode:: groovy
@@ -62,12 +62,12 @@ an example node configuration for SQLServer:
     database = {
         transactionIsolationLevel = READ_COMMITTED
     }
-    jarDirs = ["[FULL_PATH]/sqljdbc_6.2/enu/"]
+    jarDirs = ["[FULL_PATH]/sqljdbc_6.4/enu/"]
 
 Note that:
 
-* Ensure the directory referenced by jarDirs contains only one JDBC driver JAR file; by the default,
-  sqljdbc_6.2/enu/contains two JDBC JAR files for different Java versions.
+* Ensure the directory referenced by jarDirs contains only one JDBC driver JAR file; by default, the
+  ``sqljdbc_6.4/enu/`` contains multiple JDBC JAR files for different Java versions.
 
 Node database tables
 ^^^^^^^^^^^^^^^^^^^^

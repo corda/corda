@@ -4,7 +4,8 @@ buildscript {
 
     ext {
         guava_version = constants.getProperty("guavaVersion")
-        class_graph_version = constants.getProperty('classgraphVersion')
+        // The API Scanner plugin needs ClassGraph >= 4.8.53
+        class_graph_version = '4.8.53'
         assertj_version = '3.9.1'
         junit_version = '4.12'
     }

@@ -1,3 +1,5 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
 /*
  * Gradle script plugin: Configure a module such that the Java and Kotlin
  * compilers use the deterministic rt.jar instead of the full JDK rt.jar.
@@ -19,11 +21,16 @@ tasks.withType(AbstractCompile) {
 
     // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
     // as it does the built-in JavaCompile task.
-    if (it.class.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
-        kotlinOptions.jdkHome = deterministic_jdk_home
+    if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+        kotlinOptions {
+            jdkHome = deterministic_jdk_home
+            jvmTarget = VERSION_1_8
+        }
     }
 }
 
 tasks.withType(JavaCompile) {
     options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
+    sourceCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_1_8
 }

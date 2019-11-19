@@ -53,6 +53,7 @@ task runtimeJar(type: Jar, dependsOn: makeJdk) {
     from(zipTree('libs/rt.jar'))
     from(zipTree('libs/jce.jar'))
     from(zipTree('libs/jsse.jar'))
+    from 'libs/calendars.properties'
     from 'libs/currency.data'
     from 'libs/tzdb.dat'
 

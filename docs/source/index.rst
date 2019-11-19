@@ -145,6 +145,5 @@ Welcome to Corda !
 
    contributing-index.rst
    deterministic-modules.rst
-   design/design-docs-index.rst
    changelog
    legal-info

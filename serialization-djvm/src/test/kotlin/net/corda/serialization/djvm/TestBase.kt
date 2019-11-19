@@ -102,9 +102,9 @@ abstract class TestBase(type: SandboxType) {
                     it.setMinimumSeverityLevel(minimumSeverityLevel)
                     it.setSandboxOnlyAnnotations(sandboxOnlyAnnotations)
                     it.setVisibleAnnotations(visibleAnnotations)
-                })).use {
-                    action(this)
-                }
+                })).use(Consumer { ctx ->
+                    ctx.action()
+                })
             }
         }.apply {
             uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, ex ->

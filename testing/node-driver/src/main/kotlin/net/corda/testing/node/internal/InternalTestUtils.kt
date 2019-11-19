@@ -167,6 +167,25 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
     }
 }
 
+fun nodeMustBeStartedFuture(
+    executorService: ScheduledExecutorService,
+    hostAndPort: NetworkHostAndPort,
+    listenProcess: Process? = null,
+    exception: () -> NodeListenProcessDeathException
+): CordaFuture<Unit> {
+    return poll(executorService, "address $hostAndPort to bind") {
+        if (listenProcess != null && !listenProcess.isAlive) {
+            throw exception()
+        }
+        try {
+            Socket(hostAndPort.host, hostAndPort.port).close()
+            Unit
+        } catch (_exception: SocketException) {
+            null
+        }
+    }
+}
+
 /*
  * The default timeout value of 40 seconds have been chosen based on previous node shutdown time estimate.
  * It's been observed that nodes can take up to 30 seconds to shut down, so just to stay on the safe side the 60 seconds
@@ -220,6 +239,14 @@ fun <A> poll(
 
 class ListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess: Process) :
         CordaException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+
+class NodeListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess: Process, val causeFromStdError: String) :
+    CordaException(
+        """
+        The node that was expected to start with $hostAndPort has died with status: ${listenProcess.exitValue()}
+        Error that caused the process to fail -> $causeFromStdError
+        """.trimIndent()
+    )
 
 fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
 

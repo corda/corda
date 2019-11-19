@@ -26,6 +26,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
+import net.corda.core.internal.readText
 import net.corda.core.internal.toPath
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.writeText
@@ -83,12 +84,12 @@ import rx.schedulers.Schedulers
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Random
 import java.util.UUID
@@ -412,6 +413,13 @@ class DriverDSLImpl(
         }
         try {
             _notaries.map { notary -> notary.map { handle -> handle.nodeHandles } }.getOrThrow(notaryHandleTimeout).forEach { future -> future.getOrThrow(notaryHandleTimeout) }
+        } catch(e: NodeListenProcessDeathException) {
+            val message = if (e.causeFromStdError.isNotBlank()) {
+                "Unable to start notaries. Failed with the following error: ${e.causeFromStdError}"
+            } else {
+                "Unable to start notaries. A required port might be bound already."
+            }
+            throw IllegalStateException(message)
         } catch (e: ListenProcessDeathException) {
             throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
         } catch (e: TimeoutException) {
@@ -596,6 +604,7 @@ class DriverDSLImpl(
                 systemProperties,
                 "512m",
                 null,
+                ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS")),
                 environmentVariables,
                 extraCmdLineFlag
         )
@@ -613,6 +622,7 @@ class DriverDSLImpl(
                                   bytemanPort: Int?): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(config.corda.myLegalName)
         val baseDirectory = config.corda.baseDirectory.createDirectories()
+        val identifier = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS"))
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
         localNetworkMap?.nodeInfosCopier?.addConfig(baseDirectory)
 
@@ -665,6 +675,7 @@ class DriverDSLImpl(
                     systemProperties,
                     parameters.maximumHeapSize,
                     parameters.logLevelOverride,
+                    identifier,
                     environmentVariables
             )
 
@@ -683,7 +694,18 @@ class DriverDSLImpl(
                 }
             }
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
-            val p2pReadyFuture = addressMustBeBoundFuture(executorService, effectiveP2PAddress, process)
+            val p2pReadyFuture = nodeMustBeStartedFuture(
+                executorService,
+                effectiveP2PAddress,
+                process
+            ) {
+                NodeListenProcessDeathException(
+                    effectiveP2PAddress,
+                    process,
+                    (config.corda.baseDirectory / "net.corda.node.Corda.$identifier.stderr.log").readText()
+                )
+            }
+
             p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
@@ -828,6 +850,7 @@ class DriverDSLImpl(
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
                 logLevelOverride: String?,
+                identifier: String,
                 environmentVariables : Map<String,String>,
                 extraCmdLineFlag: Array<String> = emptyArray()
         ): Process {
@@ -905,10 +928,11 @@ class DriverDSLImpl(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs,
+                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize,
                     classPath = cp,
+                    identifier = identifier,
                     environmentVariables = environmentVariables
             )
         }

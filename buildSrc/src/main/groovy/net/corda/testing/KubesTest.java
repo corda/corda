@@ -18,7 +18,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import net.corda.testing.retry.Retry;
 import okhttp3.Response;
-import org.apache.commons.compress.utils.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +26,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,23 +33,25 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -65,21 +64,26 @@ public class KubesTest extends DefaultTask {
      */
     private static final String REGISTRY_CREDENTIALS_SECRET_NAME = "regcred";
 
+    private static int DEFAULT_K8S_TIMEOUT_VALUE_MILLIES = 60 * 1_000;
+    private static int DEFAULT_K8S_WEBSOCKET_TIMEOUT = DEFAULT_K8S_TIMEOUT_VALUE_MILLIES * 30;
+    private static int DEFAULT_POD_ALLOCATION_TIMEOUT = 60;
+
     String dockerTag;
     String fullTaskToExecutePath;
     String taskToExecuteName;
+    String sidecarImage;
     Boolean printOutput = false;
+    List<String> additionalArgs;
 
     Integer numberOfCoresPerFork = 4;
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
+    private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet());
 
     public static String NAMESPACE = "thisisatest";
-    int k8sTimeout = 50 * 1_000;
-    int webSocketTimeout = k8sTimeout * 6;
+
     int numberOfPods = 5;
-    int timeoutInMinutesForPodToStart = 60;
 
     DistributeTestsBy distribution = DistributeTestsBy.METHOD;
     PodLogLevel podLogLevel = PodLogLevel.INFO;
@@ -137,11 +141,11 @@ public class KubesTest extends DefaultTask {
     @NotNull
     private KubernetesClient getKubernetesClient() {
         io.fabric8.kubernetes.client.Config config = new io.fabric8.kubernetes.client.ConfigBuilder()
-                .withConnectionTimeout(k8sTimeout)
-                .withRequestTimeout(k8sTimeout)
-                .withRollingTimeout(k8sTimeout)
-                .withWebsocketTimeout(webSocketTimeout)
-                .withWebsocketPingInterval(webSocketTimeout)
+                .withConnectionTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withRequestTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withRollingTimeout(DEFAULT_K8S_TIMEOUT_VALUE_MILLIES)
+                .withWebsocketTimeout(DEFAULT_K8S_WEBSOCKET_TIMEOUT)
+                .withWebsocketPingInterval(DEFAULT_K8S_WEBSOCKET_TIMEOUT)
                 .build();
 
         return new DefaultKubernetesClient(config);
@@ -210,6 +214,8 @@ public class KubesTest extends DefaultTask {
             }
         });
 
+        int podNumber = podIdx + 1;
+        final AtomicInteger testRetries = new AtomicInteger(0);
         try {
             // pods might die, so we retry
             return Retry.fixed(numberOfRetries).run(() -> {
@@ -226,7 +232,8 @@ public class KubesTest extends DefaultTask {
                         }
                     }
                     getProject().getLogger().lifecycle("creating pod: " + podName);
-                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc));
+                    createdPod = client.pods().inNamespace(namespace).create(buildPodRequest(podName, pvc, sidecarImage != null));
+                    remainingPods.add(podName);
                     getProject().getLogger().lifecycle("scheduled pod: " + podName);
                 }
 
@@ -238,29 +245,41 @@ public class KubesTest extends DefaultTask {
                 ByteArrayOutputStream errChannelStream = new ByteArrayOutputStream();
 
                 CompletableFuture<Integer> waiter = new CompletableFuture<>();
-                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
-
-
-                int resCode = waiter.join();
-                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podIdx + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
-                Collection<File> binaryResults = downloadTestXmlFromPod(namespace, createdPod);
-                getLogger().lifecycle("removing pod " + podName + " (" + podIdx + "/" + numberOfPods + ") after completed build");
                 File podLogsDirectory = new File(getProject().getBuildDir(), "pod-logs");
                 if (!podLogsDirectory.exists()) {
                     podLogsDirectory.mkdirs();
                 }
-                File logFileToArchive = new File(podLogsDirectory, podName + ".log");
-                try (FileInputStream logIn = new FileInputStream(podOutput); FileOutputStream logOut = new FileOutputStream(logFileToArchive)) {
-                    IOUtils.copy(logIn, logOut);
+
+                File podOutput = executeBuild(namespace, numberOfPods, podIdx, podName, podLogsDirectory, printOutput, stdOutOs, stdOutIs, errChannelStream, waiter);
+                int resCode = waiter.join();
+                getProject().getLogger().lifecycle("build has ended on on pod " + podName + " (" + podNumber + "/" + numberOfPods + ") with result " + resCode + " , gathering results");
+                Collection<File> binaryResults;
+                //we don't retry on the final attempt as this will crash the build and some pods might not get to finish
+                if (resCode != 0 && testRetries.getAndIncrement() < numberOfRetries - 1) {
+                    downloadTestXmlFromPod(namespace, createdPod);
+                    getProject().getLogger().lifecycle("There are test failures in this pod. Retrying failed tests!!!");
+                    throw new RuntimeException("There are test failures in this pod");
+                } else {
+                    binaryResults = downloadTestXmlFromPod(namespace, createdPod);
                 }
+
+                getLogger().lifecycle("removing pod " + podName + " (" + podNumber + "/" + numberOfPods + ") after completed build");
+
                 try (KubernetesClient client = getKubernetesClient()) {
                     client.pods().delete(createdPod);
                     client.persistentVolumeClaims().delete(pvc);
+                    synchronized (remainingPods) {
+                        remainingPods.remove(podName);
+                        getLogger().lifecycle("Remaining Pods: ");
+                        remainingPods.forEach(pod -> getLogger().lifecycle("\t" + pod));
+                    }
                 }
                 return new KubePodResult(podIdx, resCode, podOutput, binaryResults);
             });
         } catch (Retry.RetryException e) {
-            throw new RuntimeException("Failed to build in pod " + podName + " (" + podIdx + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
+            Pod pod = getKubernetesClient().pods().inNamespace(namespace).create(buildPodRequest(podName, pvc, sidecarImage != null));
+            downloadTestXmlFromPod(namespace, pod);
+            throw new RuntimeException("Failed to build in pod " + podName + " (" + podNumber + "/" + numberOfPods + ") in " + numberOfRetries + " attempts", e);
         }
     }
 
@@ -269,6 +288,7 @@ public class KubesTest extends DefaultTask {
                               int numberOfPods,
                               int podIdx,
                               String podName,
+                              File podLogsDirectory,
                               boolean printOutput,
                               PipedOutputStream stdOutOs,
                               PipedInputStream stdOutIs,
@@ -281,20 +301,27 @@ public class KubesTest extends DefaultTask {
         String[] buildCommand = getBuildCommand(numberOfPods, podIdx);
         getProject().getLogger().quiet("About to execute " + Arrays.stream(buildCommand).reduce("", (s, s2) -> s + " " + s2) + " on pod " + podName);
         client.pods().inNamespace(namespace).withName(podName)
+                .inContainer(podName)
                 .writingOutput(stdOutOs)
                 .writingErrorChannel(errChannelStream)
                 .usingListener(execListener)
-                .exec(getBuildCommand(numberOfPods, podIdx));
+                .exec(buildCommand);
 
-        return startLogPumping(stdOutIs, podIdx, printOutput);
+        return startLogPumping(stdOutIs, podIdx, podLogsDirectory, printOutput);
     }
 
-    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc) {
+    private Pod buildPodRequest(String podName, PersistentVolumeClaim pvc, boolean withDb) {
+        if (withDb) {
+            return buildPodRequestWithWorkerNodeAndDbContainer(podName, pvc);
+        } else {
+            return buildPodRequestWithOnlyWorkerNode(podName, pvc);
+        }
+    }
+
+    private Pod buildPodRequestWithOnlyWorkerNode(String podName, PersistentVolumeClaim pvc) {
         return new PodBuilder()
                 .withNewMetadata().withName(podName).endMetadata()
-
                 .withNewSpec()
-
                 .addNewVolume()
                 .withName("gradlecache")
                 .withNewHostPath()
@@ -321,23 +348,82 @@ public class KubesTest extends DefaultTask {
                 .withName(podName)
                 .withNewResources()
                 .addToRequests("cpu", new Quantity(numberOfCoresPerFork.toString()))
-                .addToRequests("memory", new Quantity(memoryGbPerFork.toString() + "Gi"))
+                .addToRequests("memory", new Quantity(memoryGbPerFork.toString()))
+                .endResources()
+                .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
+                .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
+                .endContainer()
+                .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
+                .withRestartPolicy("Never")
+                .endSpec()
+                .build();
+    }
+
+    private Pod buildPodRequestWithWorkerNodeAndDbContainer(String podName, PersistentVolumeClaim pvc) {
+        return new PodBuilder()
+                .withNewMetadata().withName(podName).endMetadata()
+                .withNewSpec()
+
+                .addNewVolume()
+                .withName("gradlecache")
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/gradle")
+                .endHostPath()
+                .endVolume()
+                .addNewVolume()
+                .withName("testruns")
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.getMetadata().getName())
+                .endPersistentVolumeClaim()
+                .endVolume()
+
+                .addNewContainer()
+                .withImage(dockerTag)
+                .withCommand("bash")
+                .withArgs("-c", "sleep 3600")
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
+                .withName(podName)
+                .withNewResources()
+                .addToRequests("cpu", new Quantity(Integer.valueOf(numberOfCoresPerFork - 1).toString()))
+                .addToRequests("memory", new Quantity(Integer.valueOf(memoryGbPerFork - 1).toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
                 .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
 
+                .addNewContainer()
+                .withImage(sidecarImage)
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
+                .withName(podName + "-pg")
+                .withNewResources()
+                .addToRequests("cpu", new Quantity("1"))
+                .addToRequests("memory", new Quantity("1Gi"))
+                .endResources()
+                .endContainer()
+
                 .addNewImagePullSecret(REGISTRY_CREDENTIALS_SECRET_NAME)
                 .withRestartPolicy("Never")
-
                 .endSpec()
                 .build();
     }
 
-    private File startLogPumping(InputStream stdOutIs, int podIdx, boolean printOutput) throws IOException {
-        File outputFile = Files.createTempFile("container", ".log").toFile();
+
+    private File startLogPumping(InputStream stdOutIs, int podIdx, File podLogsDirectory, boolean printOutput) throws IOException {
+        File outputFile = new File(podLogsDirectory, "container-" + podIdx + ".log");
+        outputFile.createNewFile();
         Thread loggingThread = new Thread(() -> {
-            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile));
+            try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile, true));
                  BufferedReader br = new BufferedReader(new InputStreamReader(stdOutIs))) {
                 String line;
                 while ((line = br.readLine()) != null) {
@@ -376,7 +462,7 @@ public class KubesTest extends DefaultTask {
         try (KubernetesClient client = getKubernetesClient()) {
             getProject().getLogger().lifecycle("Waiting for pod " + pod.getMetadata().getName() + " to start before executing build");
             try {
-                client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(timeoutInMinutesForPodToStart, TimeUnit.MINUTES);
+                client.pods().inNamespace(pod.getMetadata().getNamespace()).withName(pod.getMetadata().getName()).waitUntilReady(DEFAULT_POD_ALLOCATION_TIMEOUT, TimeUnit.MINUTES);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -398,6 +484,7 @@ public class KubesTest extends DefaultTask {
             client.pods()
                     .inNamespace(namespace)
                     .withName(podName)
+                    .inContainer(podName)
                     .dir(resultsInContainerPath)
                     .copy(tempDir);
         }
@@ -409,6 +496,7 @@ public class KubesTest extends DefaultTask {
         final String gitTargetBranch = " -Dgit.target.branch=" + Properties.getTargetGitBranch();
         final String artifactoryUsername = " -Dartifactory.username=" + Properties.getUsername() + " ";
         final String artifactoryPassword = " -Dartifactory.password=" + Properties.getPassword() + " ";
+        final String additionalArgs = this.additionalArgs.isEmpty() ? "" : String.join(" ", this.additionalArgs);
 
         String shellScript = "(let x=1 ; while [ ${x} -ne 0 ] ; do echo \"Waiting for DNS\" ; curl services.gradle.org > /dev/null 2>&1 ; x=$? ; sleep 1 ; done ) && "
                 + " cd /tmp/source && " +
@@ -418,7 +506,7 @@ public class KubesTest extends DefaultTask {
                 gitTargetBranch +
                 artifactoryUsername +
                 artifactoryPassword +
-                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + getLoggingLevel() + " 2>&1) ; " +
+                "-Dkubenetize -PdockerFork=" + podIdx + " -PdockerForks=" + numberOfPods + " " + fullTaskToExecutePath + " " + additionalArgs + " " + getLoggingLevel() + " 2>&1) ; " +
                 "let rs=$? ; sleep 10 ; exit ${rs}";
         return new String[]{"bash", "-c", shellScript};
     }
