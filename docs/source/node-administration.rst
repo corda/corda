@@ -24,6 +24,8 @@ to ensure that log message flushing is not slowing down the actual processing.
 If you need to switch to synchronous logging (e.g. for debugging/testing purposes), you can override this behaviour
 by adding ``-DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector`` to the node's
 command line or to the ``jvmArgs`` section of the node configuration (see :doc:`corda-configuration-file`).
+Synchronous logging also requires minor customization of the default ``log4j2.xml`` to set ``immediateFlush="true"`` for every
+``RollingRandomAccessFile`` appender. Specify ``-Dlog4j.configurationFile=<Customized config>`` to point to the altered config.
 
 .. warning:: Ensure that ``shutdownHook="disable"`` is set if you are overriding the log4j2 configuration file
    otherwise logs will not be flushed properly on shutdown and loss may occur. The option is set in the ``Configuration``
