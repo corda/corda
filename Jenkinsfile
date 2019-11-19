@@ -44,18 +44,7 @@ pipeline {
                                 " deAllocateForAllParallelUnitAndIntegrationTest allParallelUnitAndIntegrationTest  --stacktrace"
                     }
                 }
-//                stage('Unit Tests') {
-//                    steps {
-//                        sh "./gradlew " +
-//                                "-DbuildId=\"\${BUILD_ID}\" " +
-//                                "-Dkubenetize=true " +
-//                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-//                                " deAllocateForAllParallelUnitTest allParallelUnitTest --stacktrace"
-//                    }
-//                }
-
             }
-
         }
     }
 
