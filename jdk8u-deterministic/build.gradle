@@ -1,9 +1,6 @@
 repositories {
     maven {
-        url "$artifactory_contextUrl/corda-releases"
-    }
-    maven {
-        url "$artifactory_contextUrl/corda-dev"
+        url "$artifactory_contextUrl/corda-dependencies"
     }
 }
 
@@ -13,14 +10,11 @@ ext {
 }
 
 configurations {
-    jdk.resolutionStrategy {
-        cacheChangingModulesFor 0, 'seconds'
-    }
+    jdk
 }
 
 dependencies {
-    // Ensure everyone uses the latest SNAPSHOT.
-    jdk "net.corda:deterministic-rt:latest.integration:api"
+    jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
 }
 
 task copyJdk(type: Copy) {

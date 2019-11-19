@@ -31,13 +31,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
 
-repositories {
-    // Extra repository for the deterministic-rt JAR.
-    maven {
-        url "$artifactory_contextUrl/corda-dev"
-    }
-}
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -46,9 +39,7 @@ configurations {
     slowIntegrationTestCompile.extendsFrom testCompile
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 
-    jdkRt.resolutionStrategy {
-        cacheChangingModulesFor 0, 'seconds'
-    }
+    jdkRt
     deterministic
 }
 
@@ -174,7 +165,7 @@ dependencies {
     compile(project(':node:djvm')) {
         transitive = false
     }
-    jdkRt "net.corda:deterministic-rt:latest.integration"
+    jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
     deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
     deterministic project(':serialization-djvm:deserializers')
