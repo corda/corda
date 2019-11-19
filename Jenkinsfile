@@ -31,7 +31,7 @@ pipeline {
 
         stage('Corda Pull Request - Run Tests') {
             parallel {
-                stage('Integration Tests') {
+                stage('Integration and Unit Tests') {
                     steps {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
