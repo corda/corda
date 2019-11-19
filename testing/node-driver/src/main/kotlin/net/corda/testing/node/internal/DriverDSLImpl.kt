@@ -122,7 +122,8 @@ class DriverDSLImpl(
         val inMemoryDB: Boolean,
         val cordappsForAllNodes: Collection<TestCordappInternal>?,
         val djvmBootstrapSource: Path?,
-        val djvmCordaSource: List<Path>
+        val djvmCordaSource: List<Path>,
+        val environmentVariables : Map<String, String>
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -335,9 +336,11 @@ class DriverDSLImpl(
         } else {
             startOutOfProcessMiniNode(
                     config,
-                    "initial-registration",
-                    "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
-                    "--network-root-truststore-password=$rootTruststorePassword"
+                    arrayOf(
+                        "initial-registration",
+                        "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
+                        "--network-root-truststore-password=$rootTruststorePassword"
+                    )
             ).map { config }
         }
     }
@@ -504,7 +507,7 @@ class DriverDSLImpl(
             } else {
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
                 // This causes two node info files to be generated.
-                startOutOfProcessMiniNode(config, "generate-node-info").map {
+                startOutOfProcessMiniNode(config, arrayOf("generate-node-info")).map {
                     // Once done we have to read the signed node info file that's been generated
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
@@ -590,20 +593,20 @@ class DriverDSLImpl(
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
-    @Suppress("SpreadOperator")
-    private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
+    private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: Array<String> = emptyArray()): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
-            config,
-            quasarJarPath,
-            debugPort,
-            bytemanJarPath,
-            null,
-            systemProperties,
-            "512m",
-            null,
-            ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS")),
-            *extraCmdLineFlag
+                config,
+                quasarJarPath,
+                debugPort,
+                bytemanJarPath,
+                null,
+                systemProperties,
+                "512m",
+                null,
+                ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS")),
+                environmentVariables,
+                extraCmdLineFlag
         )
 
         return poll(executorService, "$extraCmdLineFlag (${config.corda.myLegalName})") {
@@ -664,15 +667,16 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val process = startOutOfProcessNode(
-                config,
-                quasarJarPath,
-                debugPort,
-                bytemanJarPath,
-                bytemanPort,
-                systemProperties,
-                parameters.maximumHeapSize,
-                parameters.logLevelOverride,
-                identifier
+                    config,
+                    quasarJarPath,
+                    debugPort,
+                    bytemanJarPath,
+                    bytemanPort,
+                    systemProperties,
+                    parameters.maximumHeapSize,
+                    parameters.logLevelOverride,
+                    identifier,
+                    environmentVariables
             )
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
@@ -838,16 +842,17 @@ class DriverDSLImpl(
 
         @Suppress("ComplexMethod", "MaxLineLength", "LongParameterList")
         private fun startOutOfProcessNode(
-            config: NodeConfig,
-            quasarJarPath: String,
-            debugPort: Int?,
-            bytemanJarPath: String?,
-            bytemanPort: Int?,
-            overriddenSystemProperties: Map<String, String>,
-            maximumHeapSize: String,
-            logLevelOverride: String?,
-            identifier: String,
-            vararg extraCmdLineFlag: String
+                config: NodeConfig,
+                quasarJarPath: String,
+                debugPort: Int?,
+                bytemanJarPath: String?,
+                bytemanPort: Int?,
+                overriddenSystemProperties: Map<String, String>,
+                maximumHeapSize: String,
+                logLevelOverride: String?,
+                identifier: String,
+                environmentVariables : Map<String,String>,
+                extraCmdLineFlag: Array<String> = emptyArray()
         ): Process {
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                     "debug port is " + (debugPort ?: "not enabled") + ", " +
@@ -892,7 +897,7 @@ class DriverDSLImpl(
                     "--base-directory=${config.corda.baseDirectory}",
                     "--logging-level=$loggingLevel",
                     "--no-local-shell").also {
-                it += extraCmdLineFlag
+                it.addAll(extraCmdLineFlag)
             }.toList()
 
             val bytemanJvmArgs = {
@@ -920,14 +925,15 @@ class DriverDSLImpl(
             }
 
             return ProcessUtilities.startJavaProcess(
-                className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
-                arguments = arguments,
-                jdwpPort = debugPort,
-                extraJvmArguments = extraJvmArguments + bytemanJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
-                workingDirectory = config.corda.baseDirectory,
-                maximumHeapSize = maximumHeapSize,
-                classPath = cp,
-                identifier = identifier
+                    className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
+                    arguments = arguments,
+                    jdwpPort = debugPort,
+                    extraJvmArguments = extraJvmArguments + bytemanJvmArgs + "-Dnet.corda.node.printErrorsToStdErr=true",
+                    workingDirectory = config.corda.baseDirectory,
+                    maximumHeapSize = maximumHeapSize,
+                    classPath = cp,
+                    identifier = identifier,
+                    environmentVariables = environmentVariables
             )
         }
 
@@ -1138,24 +1144,25 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val serializationEnv = setDriverSerialization()
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
-                    portAllocation = defaultParameters.portAllocation,
-                    debugPortAllocation = defaultParameters.debugPortAllocation,
-                    systemProperties = defaultParameters.systemProperties,
-                    driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
-                    useTestClock = defaultParameters.useTestClock,
-                    isDebug = defaultParameters.isDebug,
-                    startNodesInProcess = defaultParameters.startNodesInProcess,
-                    waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-                    extraCordappPackagesToScan = @Suppress("DEPRECATION") defaultParameters.extraCordappPackagesToScan,
-                    jmxPolicy = defaultParameters.jmxPolicy,
-                    notarySpecs = defaultParameters.notarySpecs,
-                    compatibilityZone = null,
-                    networkParameters = defaultParameters.networkParameters,
-                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                    inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
-                    djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
-                    djvmCordaSource = defaultParameters.djvmCordaSource
+                portAllocation = defaultParameters.portAllocation,
+                debugPortAllocation = defaultParameters.debugPortAllocation,
+                systemProperties = defaultParameters.systemProperties,
+                driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
+                useTestClock = defaultParameters.useTestClock,
+                isDebug = defaultParameters.isDebug,
+                startNodesInProcess = defaultParameters.startNodesInProcess,
+                waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                extraCordappPackagesToScan = @Suppress("DEPRECATION") defaultParameters.extraCordappPackagesToScan,
+                jmxPolicy = defaultParameters.jmxPolicy,
+                notarySpecs = defaultParameters.notarySpecs,
+                compatibilityZone = null,
+                networkParameters = defaultParameters.networkParameters,
+                notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
+                inMemoryDB = defaultParameters.inMemoryDB,
+                cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
+                djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
+                djvmCordaSource = defaultParameters.djvmCordaSource,
+                environmentVariables = defaultParameters.environmentVariables
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1252,28 +1259,30 @@ fun <A> internalDriver(
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
         djvmBootstrapSource: Path? = null,
         djvmCordaSource: List<Path> = emptyList(),
+        environmentVariables: Map<String, String> = emptyMap(),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
             driverDsl = DriverDSLImpl(
-                    portAllocation = portAllocation,
-                    debugPortAllocation = debugPortAllocation,
-                    systemProperties = systemProperties,
-                    driverDirectory = driverDirectory.toAbsolutePath(),
-                    useTestClock = useTestClock,
-                    isDebug = isDebug,
-                    startNodesInProcess = startNodesInProcess,
-                    waitForAllNodesToFinish = waitForAllNodesToFinish,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    notarySpecs = notarySpecs,
-                    jmxPolicy = jmxPolicy,
-                    compatibilityZone = compatibilityZone,
-                    networkParameters = networkParameters,
-                    notaryCustomOverrides = notaryCustomOverrides,
-                    inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes,
-                    djvmBootstrapSource = djvmBootstrapSource,
-                    djvmCordaSource = djvmCordaSource
+                portAllocation = portAllocation,
+                debugPortAllocation = debugPortAllocation,
+                systemProperties = systemProperties,
+                driverDirectory = driverDirectory.toAbsolutePath(),
+                useTestClock = useTestClock,
+                isDebug = isDebug,
+                startNodesInProcess = startNodesInProcess,
+                waitForAllNodesToFinish = waitForAllNodesToFinish,
+                extraCordappPackagesToScan = extraCordappPackagesToScan,
+                notarySpecs = notarySpecs,
+                jmxPolicy = jmxPolicy,
+                compatibilityZone = compatibilityZone,
+                networkParameters = networkParameters,
+                notaryCustomOverrides = notaryCustomOverrides,
+                inMemoryDB = inMemoryDB,
+                cordappsForAllNodes = cordappsForAllNodes,
+                djvmBootstrapSource = djvmBootstrapSource,
+                djvmCordaSource = djvmCordaSource,
+                environmentVariables = environmentVariables
             ),
             coerce = { it },
             dsl = dsl

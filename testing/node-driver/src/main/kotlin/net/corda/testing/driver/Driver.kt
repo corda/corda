@@ -201,7 +201,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     inMemoryDB = defaultParameters.inMemoryDB,
                     cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
                     djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
-                    djvmCordaSource = defaultParameters.djvmCordaSource
+                    djvmCordaSource = defaultParameters.djvmCordaSource,
+                    environmentVariables = defaultParameters.environmentVariables
             ),
             coerce = { it },
             dsl = dsl
@@ -261,7 +262,8 @@ data class DriverParameters(
         val inMemoryDB: Boolean = true,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
         val djvmBootstrapSource: Path? = null,
-        val djvmCordaSource: List<Path> = emptyList()
+        val djvmCordaSource: List<Path> = emptyList(),
+        val environmentVariables : Map<String, String> = emptyMap()
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 
@@ -301,7 +303,8 @@ data class DriverParameters(
 
             // These fields have been added in v4.4
             djvmBootstrapSource = null,
-            djvmCordaSource = emptyList()
+            djvmCordaSource = emptyList(),
+            environmentVariables = emptyMap()
     )
 
     constructor(
@@ -420,6 +423,7 @@ data class DriverParameters(
     fun withCordappsForAllNodes(cordappsForAllNodes: Collection<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
     fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
+    fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
 
     fun copy(
             isDebug: Boolean,
@@ -515,9 +519,9 @@ data class DriverParameters(
             notaryCustomOverrides = notaryCustomOverrides,
             inMemoryDB = inMemoryDB,
             cordappsForAllNodes = cordappsForAllNodes,
-
             // These fields have been added in v4.4
             djvmBootstrapSource = djvmBootstrapSource,
-            djvmCordaSource = djvmCordaSource
+            djvmCordaSource = djvmCordaSource,
+            environmentVariables = environmentVariables
     )
 }

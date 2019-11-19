@@ -124,6 +124,7 @@ fun <A> rpcDriver(
         cordappsForAllNodes: Collection<TestCordappInternal>? = null,
         djvmBootstrapSource: Path? = null,
         djvmCordaSource: List<Path> = emptyList(),
+        environmentVariables: Map<String, String> = emptyMap(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -146,7 +147,8 @@ fun <A> rpcDriver(
                             inMemoryDB = inMemoryDB,
                             cordappsForAllNodes = cordappsForAllNodes,
                             djvmBootstrapSource = djvmBootstrapSource,
-                            djvmCordaSource = djvmCordaSource
+                            djvmCordaSource = djvmCordaSource,
+                            environmentVariables = environmentVariables
                     ), externalTrace
             ),
             coerce = { it },

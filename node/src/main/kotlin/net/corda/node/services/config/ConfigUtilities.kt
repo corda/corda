@@ -4,10 +4,13 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.node.internal.Node
+import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -27,6 +30,7 @@ operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.p
 object ConfigHelper {
 
     private const val CORDA_PROPERTY_PREFIX = "corda."
+    private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
@@ -68,10 +72,48 @@ object ConfigHelper {
     }
 
     private fun Config.cordaEntriesOnly(): Config {
-        return ConfigFactory.parseMap(toProperties()
-            .filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }
-            .mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) }
-        )
+        val cordaPropOccurrences = mutableSetOf<String>()
+        val badKeyConversions = mutableSetOf<String>()
+
+        return ConfigFactory.parseMap(
+                toProperties()
+                .mapKeys {
+                    var newKey = (it.key as String)
+                                .replace('_', '.')
+                                .replace(UPPERCASE_PROPERTY_PREFIX, CORDA_PROPERTY_PREFIX)
+
+                    if (!newKey.startsWith(CORDA_PROPERTY_PREFIX)) {
+                        return@mapKeys newKey
+                    }
+
+                    newKey = newKey.substring(CORDA_PROPERTY_PREFIX.length)
+
+                    if (cordaPropOccurrences.contains(newKey))
+                    {
+                        throw ShadowingException(it.key.toString(), newKey)
+                    }
+
+                    cordaPropOccurrences.add(newKey)
+
+                    newKey.let { key ->
+                        val cfg = ConfigFactory.parseMap(mapOf(key to it.value))
+                        val result = V1NodeConfigurationSpec.validate(cfg, Configuration.Validation.Options(strict = true))
+
+                        val isInvalidProperty = result.errors.any { err -> err is Configuration.Validation.Error.Unknown }
+                        if (isInvalidProperty) {
+                            Node.printWarning(
+                                    "${it.key} (property or environment variable) cannot be mapped to an existing Corda" +
+                                            " config property and thus won't be used as a config override!" +
+                                            " It won't be passed as a config override! If that was the intention " +
+                                            " double check the spelling and ensure there is such config key.")
+                            badKeyConversions.add(key)
+                        }
+
+                        CORDA_PROPERTY_PREFIX + key
+                    }
+                }.filterKeys { it.startsWith(CORDA_PROPERTY_PREFIX) }
+                .mapKeys { it.key.substring(CORDA_PROPERTY_PREFIX.length) }
+                .filterKeys { !badKeyConversions.contains(it) })
     }
 }
 
