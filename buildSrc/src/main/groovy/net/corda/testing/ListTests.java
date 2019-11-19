@@ -6,6 +6,7 @@ import io.github.classgraph.ClassInfoList;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.TaskAction;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 interface TestLister {
     List<String> getAllTestsDiscovered();
@@ -47,23 +49,7 @@ public class ListTests extends DefaultTask implements TestLister {
         Collection<String> results;
         switch (distribution) {
             case METHOD:
-                results = new ClassGraph()
-                        .enableClassInfo()
-                        .enableMethodInfo()
-                        .ignoreClassVisibility()
-                        .ignoreMethodVisibility()
-                        .enableAnnotationInfo()
-                        .overrideClasspath(scanClassPath)
-                        .scan()
-                        .getClassesWithMethodAnnotation("org.junit.Test")
-                        .stream()
-                        .map(classInfo -> {
-                            ClassInfoList returnList = new ClassInfoList();
-                            returnList.add(classInfo);
-                            returnList.addAll(classInfo.getSubclasses());
-                            return returnList;
-                        })
-                        .flatMap(ClassInfoList::stream)
+                results = getClassGraphStreamOfTestClasses()
                         .map(classInfo -> classInfo.getMethodInfo().filter(methodInfo -> methodInfo.hasAnnotation("org.junit.Test"))
                                 .stream().map(methodInfo -> classInfo.getName() + "." + methodInfo.getName()))
                         .flatMap(Function.identity())
@@ -72,28 +58,32 @@ public class ListTests extends DefaultTask implements TestLister {
                 this.allTests = results.stream().sorted().collect(Collectors.toList());
                 break;
             case CLASS:
-                results = new ClassGraph()
-                        .enableClassInfo()
-                        .enableMethodInfo()
-                        .ignoreClassVisibility()
-                        .ignoreMethodVisibility()
-                        .enableAnnotationInfo()
-                        .overrideClasspath(scanClassPath)
-                        .scan()
-                        .getClassesWithMethodAnnotation("org.junit.Test")
-                        .stream()
-                        .map(classInfo -> {
-                            ClassInfoList returnList = new ClassInfoList();
-                            returnList.add(classInfo);
-                            returnList.addAll(classInfo.getSubclasses());
-                            return returnList;
-                        })
-                        .flatMap(ClassInfoList::stream)
+                results = getClassGraphStreamOfTestClasses()
                         .map(ClassInfo::getName)
                         .collect(Collectors.toSet());
                 this.allTests = results.stream().sorted().collect(Collectors.toList());
                 break;
         }
-        getProject().getLogger().lifecycle("THESE ARE ALL THE TESTSSS!!!!!!!!: " + allTests.toString());
+    }
+
+    @NotNull
+    private Stream<ClassInfo> getClassGraphStreamOfTestClasses() {
+        return new ClassGraph()
+                .enableClassInfo()
+                .enableMethodInfo()
+                .ignoreClassVisibility()
+                .ignoreMethodVisibility()
+                .enableAnnotationInfo()
+                .overrideClasspath(scanClassPath)
+                .scan()
+                .getClassesWithMethodAnnotation("org.junit.Test")
+                .stream()
+                .map(classInfo -> {
+                    ClassInfoList returnList = new ClassInfoList();
+                    returnList.add(classInfo);
+                    returnList.addAll(classInfo.getSubclasses());
+                    return returnList;
+                })
+                .flatMap(ClassInfoList::stream);
     }
 }
