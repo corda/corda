@@ -90,7 +90,7 @@ class DBNetworkParametersStorage(
         val hash = signedNetworkParameters.raw.hash
         log.trace { "Parameters to save $networkParameters with hash $hash" }
         database.transaction {
-            hashToParameters.addWithDuplicatesAllowed(hash, signedNetworkParameters)
+            hashToParameters.addWithDuplicatesAllowed(hash, signedNetworkParameters, false)
         }
     }
 
