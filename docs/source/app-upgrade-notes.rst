@@ -85,6 +85,8 @@ To fix this, an explicit type hint must be provided to the compiler:
 
 This stops type inference from occurring and forces the variable to be of type ``AbstractParty``.
 
+.. _platform_version_5_gradle_changes:
+
 Step 2. Update Gradle version and associated dependencies
 ---------------------------------------------------------
 
@@ -97,7 +99,7 @@ Platform Version 5 requires Gradle 5.4 to build. If you use the Gradle wrapper, 
 Otherwise, upgrade your installed copy in the usual manner for your operating system.
 
 Additionally, you'll need to add https://repo.gradle.org/gradle/libs-releases as a repository to your project, in order to pick up the
-gradle-api-tooling dependency. You can do this by adding the following to the repositories in your Gradle file:
+`gradle-api-tooling` dependency. You can do this by adding the following to the repositories in your Gradle file:
 
 .. code-block:: groovy
 
@@ -144,7 +146,7 @@ Otherwise just upgrade your installed copy in the usual manner for your operatin
 
 .. note:: Platform Version 5 requires a different version of Gradle, so if you're intending to upgrade past Platform Version 4 you may wish
    to skip updating Gradle here and upgrade directly to the version required by Platform Version 5. You'll still need to alter the version
-   numbers in your Gradle file as shown in this section. See `Step 2. Update Gradle version and associated dependencies`_
+   numbers in your Gradle file as shown in this section. See :ref:`platform_version_5_gradle_changes`
 
 Step 3. Update your Gradle build file
 -------------------------------------
