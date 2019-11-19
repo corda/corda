@@ -26,9 +26,9 @@ namespace amqp::internal::reader {
             explicit RestrictedReader (std::string);
             ~RestrictedReader() override = default;
 
-            std::any read(pn_data_t *) const override ;
+            std::any read (pn_data_t *) const override ;
 
-            std::string readString(pn_data_t *) const override;
+            std::string readString (pn_data_t *) const override;
 
             std::unique_ptr<amqp::reader::IValue> dump(
                 const std::string &,

@@ -33,7 +33,9 @@ namespace amqp::internal::schema {
             : public AMQPDescribed, public OrderedTypeNotation
     {
         public :
-            friend std::ostream & operator << (std::ostream &, const AMQPTypeNotation &);
+            friend std::ostream & operator << (
+                    std::ostream &,
+                    const AMQPTypeNotation &);
 
             enum Type { Composite, Restricted };
 
@@ -43,10 +45,10 @@ namespace amqp::internal::schema {
 
         public :
             AMQPTypeNotation (
-                const std::string & name_,
-                std::unique_ptr<Descriptor> & descriptor_
-            ) : m_name (name_)
-              , m_descriptor (std::move(descriptor_))
+                std::string name_,
+                std::unique_ptr<Descriptor> descriptor_
+            ) : m_name (std::move (name_))
+              , m_descriptor (std::move (descriptor_))
             { }
 
             const std::string & descriptor() const;

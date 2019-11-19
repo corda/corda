@@ -2,29 +2,29 @@
 
 #include "Restricted.h"
 
-/******************************************************************************/
-
 namespace amqp::internal::schema {
 
-    class List : public Restricted {
+    class Enum : public Restricted {
         private :
-            std::vector<std::string> m_listOf;
+            std::vector<std::string> m_enum;
+            std::vector<uPtr<Choice>> m_choices;
 
         public :
-            List (
+            Enum (
                 uPtr<Descriptor> descriptor_,
                 std::string,
                 std::string,
                 std::vector<std::string>,
-                std::string);
+                std::string,
+                std::vector<uPtr<Choice>>);
 
             std::vector<std::string>::const_iterator begin() const override;
             std::vector<std::string>::const_iterator end() const override;
 
-            const std::string & listOf() const;
-
             int dependsOn (const Restricted &) const override;
             int dependsOn (const class Composite &) const override;
+
+            std::vector<std::string> makeChoices() const;
     };
 
 }

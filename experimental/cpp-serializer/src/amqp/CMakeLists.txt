@@ -11,17 +11,20 @@ set (amqp_sources
         descriptors/corda-descriptors/FieldDescriptor.cxx
         descriptors/corda-descriptors/SchemaDescriptor.cxx
         descriptors/corda-descriptors/ObjectDescriptor.cxx
+        descriptors/corda-descriptors/ChoiceDescriptor.cxx
         descriptors/corda-descriptors/EnvelopeDescriptor.cxx
         descriptors/corda-descriptors/CompositeDescriptor.cxx
         descriptors/corda-descriptors/RestrictedDescriptor.cxx
-        schema/Schema.cxx
         schema/Field.cxx
+        schema/Schema.cxx
+        schema/Choice.cxx
         schema/Envelope.cxx
         schema/Composite.cxx
         schema/Descriptor.cxx
+        schema/AMQPTypeNotation.cxx
         schema/restricted-types/Restricted.cxx
         schema/restricted-types/List.cxx
-        schema/AMQPTypeNotation.cxx
+        schema/restricted-types/Enum.cxx
         reader/Reader.cxx
         reader/PropertyReader.cxx
         reader/CompositeReader.cxx
@@ -32,6 +35,7 @@ set (amqp_sources
         reader/property-readers/DoublePropertyReader.cxx
         reader/property-readers/StringPropertyReader.cxx
         reader/restricted-readers/ListReader.cxx
+        reader/restricted-readers/EnumReader.cxx
 )
 
 ADD_LIBRARY ( amqp ${amqp_sources} )

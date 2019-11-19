@@ -9,16 +9,16 @@
  ******************************************************************************/
 
 const std::string
-        amqp::internal::reader::
-        LongPropertyReader::m_name { // NOLINT
+amqp::internal::reader::
+LongPropertyReader::m_name { // NOLINT
         "Long Reader"
 };
 
 /******************************************************************************/
 
 const std::string
-        amqp::internal::reader::
-        LongPropertyReader::m_type { // NOLINT
+amqp::internal::reader::
+LongPropertyReader::m_type { // NOLINT
         "long"
 };
 

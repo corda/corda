@@ -1,5 +1,6 @@
 #include "Restricted.h"
 #include "List.h"
+#include "Enum.h"
 
 #include <string>
 #include <vector>
@@ -49,6 +50,10 @@ operator << (
             stream_ << "map";
             break;
         }
+        case Restricted::RestrictedTypes::Enum : {
+            stream_ << "enum";
+            break;
+        }
     }
 
     return stream_;
@@ -75,15 +80,38 @@ operator << (
 std::unique_ptr<amqp::internal::schema::Restricted>
 amqp::internal::schema::
 Restricted::make(
-        uPtr<Descriptor> & descriptor_,
-        const std::string & name_,
-        const std::string & label_,
-        const std::vector<std::string> & provides_,
-        const std::string & source_)
+        uPtr<Descriptor> descriptor_,
+        std::string name_,
+        std::string label_,
+        std::vector<std::string> provides_,
+        std::string source_,
+        std::vector<uPtr<Choice>> choices_)
 {
+    /*
+     * Lists represent both actual lists and enumerations. We differentiate
+     * between them as enums have choices ans lists don't. Pretty certain
+     * things are done this was as AMQP doesn't really have the concept
+     * of an enum.
+     */
     if (source_ == "list") {
-        return std::make_unique<amqp::internal::schema::List> (
-                descriptor_, name_, label_, provides_, source_);
+        if (choices_.empty()) {
+            return std::make_unique<amqp::internal::schema::List>(
+                    std::move (descriptor_),
+                    std::move (name_),
+                    std::move (label_),
+                    std::move (provides_),
+                    std::move (source_));
+        } else {
+            return std::make_unique<amqp::internal::schema::Enum>(
+                    std::move (descriptor_),
+                    std::move (name_),
+                    std::move (label_),
+                    std::move (provides_),
+                    std::move (source_),
+                    std::move (choices_));
+        }
+    } else if (source_ == "map") {
+        throw std::runtime_error ("maps not supported");
     }
 }
 
@@ -91,14 +119,16 @@ Restricted::make(
 
 amqp::internal::schema::
 Restricted::Restricted (
-    uPtr<Descriptor> & descriptor_,
-    const std::string & name_,
+    uPtr<Descriptor> descriptor_,
+    std::string name_,
     std::string label_,
-    const std::vector<std::string> & provides_,
-    const amqp::internal::schema::Restricted::RestrictedTypes & source_
-) : AMQPTypeNotation (name_, descriptor_)
+    std::vector<std::string> provides_,
+    amqp::internal::schema::Restricted::RestrictedTypes source_
+) : AMQPTypeNotation (
+        std::move (name_),
+        std::move (descriptor_))
   , m_label (std::move (label_))
-  , m_provides (provides_)
+  , m_provides (std::move (provides_))
   , m_source (source_)
 {
 }

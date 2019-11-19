@@ -11,13 +11,16 @@
 #include "debug.h"
 
 #include "amqp/reader/IReader.h"
-#include "reader/Reader.h"
 #include "amqp/reader/PropertyReader.h"
+
+#include "reader/Reader.h"
 #include "reader/CompositeReader.h"
 #include "reader/RestrictedReader.h"
 #include "reader/restricted-readers/ListReader.h"
+#include "reader/restricted-readers/EnumReader.h"
 
 #include "schema/restricted-types/List.h"
+#include "schema/restricted-types/Enum.h"
 
 /******************************************************************************/
 
@@ -88,7 +91,7 @@ CompositeFactory::process (const SchemaType & schema_) {
 
 std::shared_ptr<amqp::internal::reader::Reader>
 amqp::internal::
-CompositeFactory::process(
+CompositeFactory::process (
         const amqp::internal::schema::AMQPTypeNotation & schema_)
 {
     return computeIfAbsent<reader::Reader> (
@@ -97,10 +100,10 @@ CompositeFactory::process(
         [& schema_, this] () -> std::shared_ptr<reader::Reader> {
             switch (schema_.type()) {
                 case amqp::internal::schema::AMQPTypeNotation::Composite : {
-                    return processComposite(schema_);
+                    return processComposite (schema_);
                 }
                 case amqp::internal::schema::AMQPTypeNotation::Restricted : {
-                    return processRestricted(schema_);
+                    return processRestricted (schema_);
                 }
             }
         });
@@ -111,8 +114,8 @@ CompositeFactory::process(
 std::shared_ptr<amqp::internal::reader::Reader>
 amqp::internal::
 CompositeFactory::processComposite (
-        const amqp::internal::schema::AMQPTypeNotation & type_)
-{
+        const amqp::internal::schema::AMQPTypeNotation & type_
+) {
     std::vector<std::weak_ptr<reader::Reader>> readers;
 
     const auto & fields = dynamic_cast<const amqp::internal::schema::Composite &> (
@@ -165,6 +168,47 @@ CompositeFactory::processComposite (
 
 std::shared_ptr<amqp::internal::reader::Reader>
 amqp::internal::
+CompositeFactory::processEnum (
+    const amqp::internal::schema::Enum & enum_
+) {
+    DBG ("Processing Enum - " << enum_.name() << std::endl); // NOLINT
+
+    return std::make_shared<reader::EnumReader> (
+            enum_.name(),
+            enum_.makeChoices());
+}
+
+/******************************************************************************/
+
+std::shared_ptr<amqp::internal::reader::Reader>
+amqp::internal::
+CompositeFactory::processList (
+    const amqp::internal::schema::List & list_
+) {
+    DBG ("Processing List - " << list_.listOf() << std::endl); // NOLINT
+
+    if (schema::Field::typeIsPrimitive (list_.listOf())) {
+        DBG ("  List of Primitives" << std::endl); // NOLINT
+        auto reader = computeIfAbsent<reader::Reader>(
+                m_readersByType,
+                list_.listOf(),
+                [& list_]() -> std::shared_ptr<reader::PropertyReader> {
+                    return reader::PropertyReader::make (list_.listOf());
+                });
+
+        return std::make_shared<reader::ListReader>(list_.name(), reader);
+    } else {
+        DBG ("  List of Composite - " << list_.listOf() << std::endl); // NOLINT
+        auto reader = m_readersByType[list_.listOf()];
+
+        return std::make_shared<reader::ListReader>(list_.name(), reader);
+    }
+}
+
+/******************************************************************************/
+
+std::shared_ptr<amqp::internal::reader::Reader>
+amqp::internal::
 CompositeFactory::processRestricted (
         const amqp::internal::schema::AMQPTypeNotation & type_)
 {
@@ -172,30 +216,20 @@ CompositeFactory::processRestricted (
     const auto & restricted = dynamic_cast<const amqp::internal::schema::Restricted &> (
             type_);
 
-    if (restricted.restrictedType() ==
-        amqp::internal::schema::Restricted::RestrictedTypes::List)
-    {
-        const auto & list = dynamic_cast<const amqp::internal::schema::List &> (restricted);
-
-        DBG ("Processing List - " << list.listOf() << std::endl); // NOLINT
-
-        if (amqp::internal::schema::Field::typeIsPrimitive(list.listOf())) {
-            DBG ("  List of Primitives" << std::endl); // NOLINT
-            auto reader = computeIfAbsent<reader::Reader> (
-                    m_readersByType,
-                    list.listOf(),
-                    [& list] () -> std::shared_ptr<reader::PropertyReader> {
-                        return reader::PropertyReader::make (list.listOf());
-                    });
-
-            return std::make_shared<reader::ListReader> (type_.name(), reader);
-        } else {
-            DBG ("  List of Composite - " << list.listOf() << std::endl); // NOLINT
-            auto reader = m_readersByType[list.listOf()];
-
-            return std::make_shared<reader::ListReader> (list.name(), reader);
+    switch (restricted.restrictedType()) {
+        case schema::Restricted::RestrictedTypes::List : {
+            return processList (
+                    dynamic_cast<const amqp::internal::schema::List &> (restricted));
+        }
+        case schema::Restricted::RestrictedTypes::Enum : {
+            return processEnum (
+                    dynamic_cast<const amqp::internal::schema::Enum &> (restricted));
+        }
+        case schema::Restricted::RestrictedTypes::Map :{
+            throw std::runtime_error ("Cannot process maps");
         }
     }
+
 
     DBG ("  ProcessRestricted: Returning nullptr"); // NOLINT
     return nullptr;

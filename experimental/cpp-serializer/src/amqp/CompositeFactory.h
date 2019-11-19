@@ -12,6 +12,8 @@
 #include "amqp/schema/Envelope.h"
 #include "amqp/schema/Composite.h"
 #include "amqp/reader/CompositeReader.h"
+#include "amqp/schema/restricted-types/List.h"
+#include "amqp/schema/restricted-types/Enum.h"
 
 /******************************************************************************/
 
@@ -47,6 +49,12 @@ namespace amqp::internal {
 
             std::shared_ptr<reader::Reader> processRestricted (
                     const schema::AMQPTypeNotation &);
+
+            std::shared_ptr<reader::Reader> processList (
+                    const schema::List &);
+
+            std::shared_ptr<reader::Reader> processEnum (
+                    const schema::Enum &);
     };
 
 }
