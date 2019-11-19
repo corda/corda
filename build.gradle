@@ -623,11 +623,11 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
-    numberOfShards 5
-    streamOutput true
+    numberOfShards 6
+    streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest", "smokeTest"
