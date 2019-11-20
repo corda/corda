@@ -247,6 +247,13 @@ To copy the same file to all nodes `ext.drivers` can be defined in the top level
         }
     }
 
+The Cordform task will automatically copy a Jolokia agent JAR into each generated node's `drivers` subdirectory. The version of this JAR
+defaults to `1.6.0`. This can be changed by setting the `jolokia_version` property anywhere in your `build.gradle` file:
+
+.. sourcecode:: groovy
+
+    ext.jolokia_version = "1.6.1"
+
 .. _node_package_namespace_ownership:
 
 Package namespace ownership
