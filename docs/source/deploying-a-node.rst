@@ -96,7 +96,7 @@ handling, and ensures the Corda service is run at boot.
        WorkingDirectory=/opt/corda
        ExecStart=/usr/bin/java -jar /opt/corda/corda.jar
        Restart=on-failure
-       Environment="CAPSULE_CACHE_DIR=.capsule"
+       Environment="CAPSULE_CACHE_DIR=./capsule"
 
        [Install]
        WantedBy=multi-user.target
@@ -251,18 +251,20 @@ at boot, and means the Corda service stays running with no users connected to th
 
    .. code-block:: batch
 
-      nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
+      nssm install cordanode1 java.exe
+      nssm set cordanode1 AppParameters "-jar corda.jar"
       nssm set cordanode1 AppDirectory C:\Corda
       nssm set cordanode1 AppStdout C:\Corda\service.log
       nssm set cordanode1 AppStderr C:\Corda\service.log
-      nssm set cordanode1 AppEnvironmentExtra CAPSULE_CACHE_DIR=.capsule
+      nssm set cordanode1 AppEnvironmentExtra CAPSULE_CACHE_DIR=./capsule
       nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
       nssm set cordanode1 Start SERVICE_AUTO_START
       sc start cordanode1
 
 9. Modify the batch file:
 
-    * If you are installing multiple nodes, use a different service name (``cordanode1``) for each node
+    * If you are installing multiple nodes, use a different service name (``cordanode1``), and modify
+      `AppDirectory`, `AppStdout` and `AppStderr` for each node accordingly
     * Set an informative description
 
 10. Provision the required certificates to your node. Contact the network permissioning service or see
