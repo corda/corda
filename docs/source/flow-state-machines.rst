@@ -337,6 +337,13 @@ transaction that uses them. This flow returns a list of ``LedgerTransaction`` ob
    we don't download a transaction from the peer, they know we must have already seen it before. Fixing this privacy
    leak will come later.
 
+Finalizing transactions with only one participant
+.................................................
+
+In some cases, transactions will only have one participant, the initiator. In these instances, there are no other
+parties to send the transactions to during ``FinalityFlow``. In these cases the ``counterpartySession`` list must exist,
+but be empty.
+
 CollectSignaturesFlow/SignTransactionFlow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We also invoke two other subflows:
