@@ -20,11 +20,16 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static net.corda.testing.ListTests.DISTRIBUTION_PROPERTY;
+
 public class BucketingAllocator {
     private static final Logger LOG = LoggerFactory.getLogger(BucketingAllocator.class);
     private final List<TestsForForkContainer> forkContainers;
     private final Supplier<Tests> timedTestsProvider;
     private List<Tuple2<TestLister, Object>> sources = new ArrayList<>();
+
+    private DistributeTestsBy distribution = System.getProperty(DISTRIBUTION_PROPERTY) != null && !System.getProperty(DISTRIBUTION_PROPERTY).isEmpty() ?
+            DistributeTestsBy.valueOf(System.getProperty(DISTRIBUTION_PROPERTY)) : DistributeTestsBy.METHOD;
 
 
     public BucketingAllocator(Integer forkCount, Supplier<Tests> timedTestsProvider) {
@@ -104,7 +109,17 @@ public class BucketingAllocator {
             // If the gradle task is distributing by class rather than method, then 'testName' will be the className
             // and not className.testName
             // No matter which it is, we return the mean test duration as the duration value if not found.
-            final List<Tuple2<String, Long>> matchingTests = tests.startsWith(testName);
+            final List<Tuple2<String, Long>> matchingTests;
+            switch (distribution) {
+                case METHOD:
+                    matchingTests = tests.equals(testName);
+                    break;
+                case CLASS:
+                    matchingTests = tests.startsWith(testName);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown distribution type: " + distribution);
+            }
 
             return new TestBucket(task, testName, matchingTests);
         }).sorted(Comparator.comparing(TestBucket::getDuration).reversed()).collect(Collectors.toList());
