@@ -258,7 +258,7 @@ defaults to `1.6.0`. This can be changed by setting the `jolokia_version` proper
 
 Package namespace ownership
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To specify package namespace ownership, the optional ``networkParameterOverrides`` and ``packageOwnership`` blocks can be used, similar to the configuration file used in :doc:`network-bootstrapper`:
+To specify :doc:`design/data-model-upgrades/package-namespace-ownership` configuration, the optional ``networkParameterOverrides`` and ``packageOwnership`` blocks can be used, similar to the configuration file used in :doc:`network-bootstrapper`:
 
 .. sourcecode:: groovy
 
