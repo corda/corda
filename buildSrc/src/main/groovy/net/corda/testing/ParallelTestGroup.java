@@ -17,6 +17,7 @@ public class ParallelTestGroup extends DefaultTask {
     private PodLogLevel logLevel = PodLogLevel.INFO;
     private String sidecarImage;
     private List<String> additionalArgs = new ArrayList<>();
+    private List<String> taints = new ArrayList<>();
 
     public DistributeTestsBy getDistribution() {
         return distribution;
@@ -46,9 +47,17 @@ public class ParallelTestGroup extends DefaultTask {
         return logLevel;
     }
 
-    public String getSidecarImage() { return sidecarImage; }
+    public String getSidecarImage() {
+        return sidecarImage;
+    }
 
-    public List<String> getAdditionalArgs() { return additionalArgs; }
+    public List<String> getAdditionalArgs() {
+        return additionalArgs;
+    }
+
+    public List<String> getNodeTaints(){
+        return new ArrayList<>(taints);
+    }
 
     public void numberOfShards(int shards) {
         this.shardCount = shards;
@@ -93,6 +102,14 @@ public class ParallelTestGroup extends DefaultTask {
 
     private void additionalArgs(List<String> additionalArgs) {
         this.additionalArgs.addAll(additionalArgs);
+    }
+
+    public void nodeTaints(String... additionalArgs) {
+        nodeTaints(Arrays.asList(additionalArgs));
+    }
+
+    private void nodeTaints(List<String> additionalArgs) {
+        this.taints.addAll(additionalArgs);
     }
 
 }

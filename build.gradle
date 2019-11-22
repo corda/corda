@@ -610,8 +610,9 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     numberOfShards 10
     streamOutput false
     coresPerFork 5
-    memoryInGbPerFork 6
+    memoryInGbPerFork 12
     distribute DistributeTestsBy.CLASS
+    nodeTaints "unit"
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"

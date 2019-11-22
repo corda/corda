@@ -118,10 +118,11 @@ class DistributedTesting implements Plugin<Project> {
                     numberOfCoresPerFork = testGrouping.getCoresToUse()
                     distribution = testGrouping.getDistribution()
                     podLogLevel = testGrouping.getLogLevel()
+                    taints = testGrouping.getNodeTaints()
+                    sidecarImage = testGrouping.sidecarImage
+                    additionalArgs = testGrouping.additionalArgs
                     doFirst {
                         dockerTag = tagToUseForRunningTests ? (ImageBuilding.registryName + ":" + tagToUseForRunningTests) : (imagePushTask.imageName.get() + ":" + imagePushTask.tag.get())
-                        sidecarImage = testGrouping.sidecarImage
-                        additionalArgs = testGrouping.additionalArgs
                     }
                 }
                 def reportOnAllTask = project.rootProject.tasks.create("userDefinedReports${testGrouping.getName().capitalize()}", KubesReporting) {
