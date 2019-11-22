@@ -57,7 +57,7 @@ long as the JAR containing this contract is signed by ``Mega Corp``".
 .. Introduce the `LedgerTransaction` abstraction and how it relates to the transaction chain. Introduce the state serialization/deserialization and Classloaders.
 
 
-The LedgerTranscation
+The LedgerTransaction
 ^^^^^^^^^^^^^^^^^^^^^
 
 Another relevant aspect to remember is that because states are serialised binary objects, to perform any useful operation on them they need to
