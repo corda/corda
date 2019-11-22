@@ -24,7 +24,7 @@ private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
                              val owner: Party,
                              val counterparty: Party,
-                             val notary: Party? = null)
+                             val notary: Party)
 
 // DOCSTART 1
 // This is equivalent to the Cash.generateSpend
@@ -32,14 +32,13 @@ private data class FxRequest(val tradeId: String,
 private fun gatherOurInputs(serviceHub: ServiceHub,
                             lockId: UUID,
                             amountRequired: Amount<Issued<Currency>>,
-                            notary: Party?): Pair<List<StateAndRef<Cash.State>>, Long> {
+                            notary: Party): Pair<List<StateAndRef<Cash.State>>, Long> {
     // extract our identity for convenience
     val ourKeys = serviceHub.keyManagementService.keys
     val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
-    val notaries = notary ?: serviceHub.networkMapCache.notaryIdentities.first()
-    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notaries as AbstractParty))
+    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notary as AbstractParty))
 
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
     val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
