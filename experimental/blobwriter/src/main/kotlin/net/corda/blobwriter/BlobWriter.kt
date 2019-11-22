@@ -1,3 +1,5 @@
+@file:Suppress("ClassNaming")
+
 package net.corda.blobwriter
 
 import net.corda.core.serialization.SerializationContext
