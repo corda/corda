@@ -407,7 +407,7 @@ public class KubesTest extends DefaultTask {
                 .withClaimName(pvc.getMetadata().getName())
                 .endPersistentVolumeClaim()
                 .endVolume()
-                .withTolerations(taints.stream().map(taint -> new TolerationBuilder().withKey("key").withValue(taint).build()).collect(Collectors.toList()))
+                .withTolerations(taints.stream().map(taint -> new TolerationBuilder().withKey("key").withValue(taint).withOperator("Equal").withEffect("NoSchedule").build()).collect(Collectors.toList()))
                 .addNewContainer()
                 .withImage(dockerTag)
                 .withCommand("bash")

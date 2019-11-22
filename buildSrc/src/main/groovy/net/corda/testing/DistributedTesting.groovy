@@ -166,7 +166,7 @@ class DistributedTesting implements Plugin<Project> {
                 int numberOfPodsToRequest = testGrouping.getShardCount()
                 int coresPerPod = testGrouping.getCoresToUse()
                 int memoryGBPerPod = testGrouping.getGbOfMemory()
-                allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix)
+                allocator.allocatePods(numberOfPodsToRequest, coresPerPod, memoryGBPerPod, podPrefix, testGrouping.getNodeTaints())
             }
         }
 
