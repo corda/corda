@@ -609,7 +609,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     numberOfShards 10
     streamOutput false
     coresPerFork 5
-    memoryInGbPerFork 10
+    memoryInGbPerFork 12
     distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
@@ -617,9 +617,10 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
     streamOutput false
-    coresPerFork 5
-    memoryInGbPerFork 6
+    coresPerFork 3
+    memoryInGbPerFork 12
     distribute DistributeTestsBy.CLASS
+    nodeTaints "small"
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
@@ -627,15 +628,15 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
-    numberOfShards 5
+    numberOfShards 6
     streamOutput false
     coresPerFork 6
     memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest", "smokeTest"

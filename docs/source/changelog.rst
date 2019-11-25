@@ -36,7 +36,7 @@ Unreleased
 
 * Introduced a new low level flow diagnostics tool: checkpoint agent (that can be used standalone or in conjunction with the ``checkpoints dump`` shell command).
   See :doc:`checkpoint-tooling` for more information.
-  
+
 * ``NotaryFlow.Client`` now performs transaction verification by default to prevent accidentally sending an invalid transaction to a
   non-validating notary. The behaviour can be controlled by passing a constructor parameter flag ``skipVerification``.
   Note: this only affects flows that invoke ``NotaryFlow.Client`` directly – no behavioural change if using ``FinalityFlow``.
@@ -87,6 +87,9 @@ Unreleased
   A node which is running out of memory is now expected to stop immediately to preserve ledger consistency and avoid flaws in operations.
   Note that it's a responsibility of a client application to handle RPC reconnection in case this happens.
   See :ref:`setting_jvm_args` and :ref:`memory_usage_and_tuning` for further details.
+
+* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
 
 * Environment variables and system properties can now be provided with underscore separators instead of dots. Neither are case sensitive.
   See :ref:`overriding config values <corda_configuration_file_overriding_config>` for more information.

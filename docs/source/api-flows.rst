@@ -611,9 +611,17 @@ flow to receive the transaction:
         :dedent: 12
 
 ``idOfTxWeSigned`` is an optional parameter used to confirm that we got the right transaction. It comes from using ``SignTransactionFlow``
-which is described below.
+which is described in the error handling behaviour section.
 
-**Error handling behaviour**
+Finalizing transactions with only one participant
+.................................................
+
+In some cases, transactions will only have one participant, the initiator. In these instances, there are no other
+parties to send the transactions to during ``FinalityFlow``. In these cases the ``counterpartySession`` list must exist,
+but be empty.
+
+Error handling behaviour
+........................
 
 Once a transaction has been notarised and its input states consumed by the flow initiator (eg. sender), should the participant(s) receiving the
 transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have a scenario where not

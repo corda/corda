@@ -1,6 +1,7 @@
 package net.corda.testing;
 
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.api.model.batch.Job;
 import io.fabric8.kubernetes.api.model.batch.JobBuilder;
 import io.fabric8.kubernetes.client.Config;
@@ -36,12 +37,16 @@ public class PodAllocator {
         this.logger = LoggerFactory.getLogger(PodAllocator.class);
     }
 
-    public void allocatePods(Integer number, Integer coresPerPod, Integer memoryPerPod, String prefix) {
+    public void allocatePods(Integer number,
+                             Integer coresPerPod,
+                             Integer memoryPerPod,
+                             String prefix,
+                             List<String> taints) {
 
         Config config = getConfig();
         KubernetesClient client = new DefaultKubernetesClient(config);
 
-        List<Job> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildJob("pa-" + prefix + i, coresPerPod, memoryPerPod)).collect(Collectors.toList());
+        List<Job> podsToRequest = IntStream.range(0, number).mapToObj(i -> buildJob("pa-" + prefix + i, coresPerPod, memoryPerPod, taints)).collect(Collectors.toList());
         List<Job> createdJobs = podsToRequest.stream().map(requestedJob -> {
             String msg = "PreAllocating " + requestedJob.getMetadata().getName();
             if (logger instanceof org.gradle.api.logging.Logger) {
@@ -112,7 +117,7 @@ public class PodAllocator {
     }
 
 
-    Job buildJob(String podName, Integer coresPerPod, Integer memoryPerPod) {
+    Job buildJob(String podName, Integer coresPerPod, Integer memoryPerPod, List<String> taints) {
         return new JobBuilder().withNewMetadata().withName(podName).endMetadata()
                 .withNewSpec()
                 .withTtlSecondsAfterFinished(10)
@@ -121,6 +126,7 @@ public class PodAllocator {
                 .withName(podName + "-pod")
                 .endMetadata()
                 .withNewSpec()
+                .withTolerations(taints.stream().map(taint -> new TolerationBuilder().withKey("key").withValue(taint).withOperator("Equal").withEffect("NoSchedule").build()).collect(Collectors.toList()))
                 .addNewContainer()
                 .withImage("busybox:latest")
                 .withCommand("sh")

@@ -4,7 +4,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'gke' }
     options {
         timestamps()
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
@@ -26,7 +26,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage preAllocateForParallelRegressionTest --stacktrace"
+                            " clean pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -42,7 +42,7 @@ pipeline {
                         "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                         "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                         "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-                        " deAllocateForParallelRegressionTest parallelRegressionTest --stacktrace"
+                        " parallelRegressionTest --stacktrace"
             }
         }
     }

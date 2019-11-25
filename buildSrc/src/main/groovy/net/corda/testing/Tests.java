@@ -170,6 +170,20 @@ public class Tests {
         return results;
     }
 
+    @NotNull
+    List<Tuple2<String, Long>> equals(@NotNull final String testPrefix) {
+        List<Tuple2<String, Long>> results = this.tests.keySet().stream()
+                .filter(t -> t.equals(testPrefix))
+                .map(t -> new Tuple2<>(t, getDuration(t)))
+                .collect(Collectors.toList());
+        // We don't know if the testPrefix is a classname or classname.methodname (exact match).
+        if (results == null || results.isEmpty()) {
+            LOG.warn("In {} previously executed tests, could not find any starting with {}", tests.size(), testPrefix);
+            results = Arrays.asList(new Tuple2<>(testPrefix, getMeanDurationForTests()));
+        }
+        return results;
+    }
+
     /**
      * How many times has this function been run?  Every call to addDuration increments the current value.
      *
