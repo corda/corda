@@ -19,6 +19,7 @@ import net.corda.testing.core.singleIdentity
 import org.junit.Test
 import kotlin.test.assertEquals
 
+@Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
 class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
     /**
