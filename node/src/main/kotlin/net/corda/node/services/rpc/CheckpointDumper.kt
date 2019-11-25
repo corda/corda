@@ -184,7 +184,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                 flowCallStackSummary = flowCallStack.toSummary(),
                 flowCallStack = flowCallStack,
                 suspendedOn = (flowState as? FlowState.Started)?.flowIORequest?.toSuspendedOn(
-                        suspendedTimestamp(),
+                        timestamp,
                         now
                 ),
                 origin = invocationContext.origin.toOrigin(),
@@ -193,8 +193,6 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
                 errored = errorState as? ErrorState.Errored
         )
     }
-
-    private fun Checkpoint.suspendedTimestamp(): Instant = invocationContext.trace.invocationId.timestamp
 
     private fun checkpointDeserializationErrorMessage(
             checkpointId: StateMachineRunId,
