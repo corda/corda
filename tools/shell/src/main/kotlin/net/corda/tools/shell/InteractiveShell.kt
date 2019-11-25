@@ -183,7 +183,7 @@ object InteractiveShell {
                 "Commands to extract information about checkpoints stored within the node",
                 CheckpointShellCommand::class.java
         )
-        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password, runSshDaemon)
+        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
@@ -211,7 +211,7 @@ object InteractiveShell {
     }
 
     class ShellLifecycle(private val shellCommands: Path) : PluginLifeCycle() {
-        fun start(config: Properties, localUserName: String = "", localUserPassword: String = "", runSshDaemon: Boolean): Shell {
+        fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
@@ -237,8 +237,7 @@ object InteractiveShell {
                     return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
                 }
             }
-            val attributes = mutableMapOf<String, Any>()
-            attributes["crash.localShell"] = runSshDaemon
+            val attributes = emptyMap<String, Any>()
             val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
             context.refresh()
             this.config = config
