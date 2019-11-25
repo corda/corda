@@ -1,13 +1,18 @@
 package net.corda.testing;
 
+import io.fabric8.kubernetes.api.model.ContainerFluent;
 import io.fabric8.kubernetes.api.model.DoneablePod;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
+import io.fabric8.kubernetes.api.model.PodFluent;
+import io.fabric8.kubernetes.api.model.PodSpecFluent;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.api.model.StatusCause;
 import io.fabric8.kubernetes.api.model.StatusDetails;
+import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -77,12 +82,13 @@ public class KubesTest extends DefaultTask {
     String sidecarImage;
     Boolean printOutput = false;
     List<String> additionalArgs;
+    List<String> taints = Collections.emptyList();
 
     Integer numberOfCoresPerFork = 4;
     Integer memoryGbPerFork = 6;
     public volatile List<File> testOutput = Collections.emptyList();
     public volatile List<KubePodResult> containerResults = Collections.emptyList();
-    private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet());
+    private final Set<String> remainingPods = Collections.synchronizedSet(new HashSet<>());
 
     public static String NAMESPACE = "thisisatest";
 
@@ -341,34 +347,7 @@ public class KubesTest extends DefaultTask {
     }
 
     private Pod buildPodRequestWithOnlyWorkerNode(String podName, PersistentVolumeClaim pvc) {
-        return new PodBuilder()
-                .withNewMetadata().withName(podName).endMetadata()
-                .withNewSpec()
-                .addNewVolume()
-                .withName("gradlecache")
-                .withNewHostPath()
-                .withType("DirectoryOrCreate")
-                .withPath("/tmp/gradle")
-                .endHostPath()
-                .endVolume()
-                .addNewVolume()
-                .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
-                .endVolume()
-                .addNewContainer()
-                .withImage(dockerTag)
-                .withCommand("bash")
-                .withArgs("-c", "sleep 3600")
-                .addNewEnv()
-                .withName("DRIVER_NODE_MEMORY")
-                .withValue("1024m")
-                .withName("DRIVER_WEB_MEMORY")
-                .withValue("1024m")
-                .endEnv()
-                .withName(podName)
-                .withNewResources()
+        return getBasePodDefinition(podName, pvc)
                 .addToRequests("cpu", new Quantity(numberOfCoresPerFork.toString()))
                 .addToRequests("memory", new Quantity(memoryGbPerFork.toString()))
                 .endResources()
@@ -382,43 +361,13 @@ public class KubesTest extends DefaultTask {
     }
 
     private Pod buildPodRequestWithWorkerNodeAndDbContainer(String podName, PersistentVolumeClaim pvc) {
-        return new PodBuilder()
-                .withNewMetadata().withName(podName).endMetadata()
-                .withNewSpec()
-
-                .addNewVolume()
-                .withName("gradlecache")
-                .withNewHostPath()
-                .withType("DirectoryOrCreate")
-                .withPath("/tmp/gradle")
-                .endHostPath()
-                .endVolume()
-                .addNewVolume()
-                .withName("testruns")
-                .withNewPersistentVolumeClaim()
-                .withClaimName(pvc.getMetadata().getName())
-                .endPersistentVolumeClaim()
-                .endVolume()
-
-                .addNewContainer()
-                .withImage(dockerTag)
-                .withCommand("bash")
-                .withArgs("-c", "sleep 3600")
-                .addNewEnv()
-                .withName("DRIVER_NODE_MEMORY")
-                .withValue("1024m")
-                .withName("DRIVER_WEB_MEMORY")
-                .withValue("1024m")
-                .endEnv()
-                .withName(podName)
-                .withNewResources()
+        return getBasePodDefinition(podName, pvc)
                 .addToRequests("cpu", new Quantity(Integer.valueOf(numberOfCoresPerFork - 1).toString()))
                 .addToRequests("memory", new Quantity(Integer.valueOf(memoryGbPerFork - 1).toString() + "Gi"))
                 .endResources()
                 .addNewVolumeMount().withName("gradlecache").withMountPath("/tmp/gradle").endVolumeMount()
                 .addNewVolumeMount().withName("testruns").withMountPath(TEST_RUN_DIR).endVolumeMount()
                 .endContainer()
-
                 .addNewContainer()
                 .withImage(sidecarImage)
                 .addNewEnv()
@@ -438,6 +387,39 @@ public class KubesTest extends DefaultTask {
                 .withRestartPolicy("Never")
                 .endSpec()
                 .build();
+    }
+
+    private ContainerFluent.ResourcesNested<PodSpecFluent.ContainersNested<PodFluent.SpecNested<PodBuilder>>> getBasePodDefinition(String podName, PersistentVolumeClaim pvc) {
+        return new PodBuilder()
+                .withNewMetadata().withName(podName).endMetadata()
+                .withNewSpec()
+
+                .addNewVolume()
+                .withName("gradlecache")
+                .withNewHostPath()
+                .withType("DirectoryOrCreate")
+                .withPath("/tmp/gradle")
+                .endHostPath()
+                .endVolume()
+                .addNewVolume()
+                .withName("testruns")
+                .withNewPersistentVolumeClaim()
+                .withClaimName(pvc.getMetadata().getName())
+                .endPersistentVolumeClaim()
+                .endVolume()
+                .withTolerations(taints.stream().map(taint -> new TolerationBuilder().withKey("key").withValue(taint).withOperator("Equal").withEffect("NoSchedule").build()).collect(Collectors.toList()))
+                .addNewContainer()
+                .withImage(dockerTag)
+                .withCommand("bash")
+                .withArgs("-c", "sleep 3600")
+                .addNewEnv()
+                .withName("DRIVER_NODE_MEMORY")
+                .withValue("1024m")
+                .withName("DRIVER_WEB_MEMORY")
+                .withValue("1024m")
+                .endEnv()
+                .withName(podName)
+                .withNewResources();
     }
 
 
