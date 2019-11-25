@@ -38,7 +38,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
      * that 3 retries are attempted before recovering.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully - initiating subflow`() {
+    fun `initiating subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -148,7 +148,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
      * that 3 retries are attempted before recovering.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs after the first receive will retry and complete successfully - initiating subflow`() {
+    fun `initiating subflow - error during transition with CommitTransaction action that occurs after the first receive will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -250,7 +250,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
      * that 3 retries are attempted before recovering.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully - inline subflow`() {
+    fun `inline subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -344,7 +344,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
      * that 3 retries are attempted before recovering.
      */
     @Test
-    fun `error during transition with CommitTransaction action that occurs during the first receive will retry and complete successfully - inline subflow`() {
+    fun `inline subflow - error during transition with CommitTransaction action that occurs during the first receive will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
