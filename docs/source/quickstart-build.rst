@@ -241,7 +241,7 @@ Step Four: Creating a flow
             import net.corda.core.transactions.SignedTransaction
             import net.corda.core.transactions.TransactionBuilder
 
-5. Double-click the new contract file to open it.
+5. Double-click the new flow file to open it.
 
 6. Update the name of the ``Initiator`` class to ``CarIssueInitiator``.
 
