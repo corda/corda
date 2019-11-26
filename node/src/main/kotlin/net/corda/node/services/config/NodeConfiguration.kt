@@ -53,6 +53,8 @@ interface NodeConfiguration {
     val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = false
     val sshd: SSHDConfiguration?
+    val localShellAllowExitInSafeMode: Boolean
+    val localShellUnsafe: Boolean
     val database: DatabaseConfig
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize

@@ -31,6 +31,7 @@ import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.DEV_ROOT_CA
 import org.crsh.command.InvocationContext
 import org.crsh.text.Color
+import org.crsh.text.Decoration
 import org.crsh.text.RenderPrintWriter
 import org.junit.Before
 import org.junit.Test
@@ -235,7 +236,7 @@ class InteractiveShellTest {
     @Test
     fun killFlowWithNonsenseID() {
         InteractiveShell.killFlowById("nonsense", printWriter, cordaRpcOps, om)
-        verify(printWriter).println("Cannot parse flow ID of 'nonsense' - expecting a UUID.", Color.red)
+        verify(printWriter).println("Cannot parse flow ID of 'nonsense' - expecting a UUID.", Decoration.bold, Color.red)
         verify(printWriter).flush()
     }
 
@@ -246,7 +247,7 @@ class InteractiveShellTest {
 
         InteractiveShell.killFlowById(runId.uuid.toString(), printWriter, cordaRpcOps, om)
         verify(cordaRpcOps).killFlow(runId)
-        verify(printWriter).println("Failed to kill flow $runId", Color.red)
+        verify(printWriter).println("Failed to kill flow $runId", Decoration.bold, Color.red)
         verify(printWriter).flush()
     }
 
@@ -257,7 +258,7 @@ class InteractiveShellTest {
 
         InteractiveShell.killFlowById(runId.uuid.toString(), printWriter, cordaRpcOps, om)
         verify(cordaRpcOps).killFlow(runId)
-        verify(printWriter).println("Killed flow $runId", Color.yellow)
+        verify(printWriter).println("Killed flow $runId", Decoration.bold, Color.yellow)
         verify(printWriter).flush()
     }
 }

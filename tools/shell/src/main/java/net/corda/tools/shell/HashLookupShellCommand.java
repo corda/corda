@@ -8,6 +8,7 @@ import org.crsh.cli.Command;
 import org.crsh.cli.Man;
 import org.crsh.cli.Usage;
 import org.crsh.text.Color;
+import org.crsh.text.Decoration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,7 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
         logger.info("Executing command \"hash-lookup\".");
 
         if (txIdHash == null) {
-            out.println("Please provide a hexadecimal transaction Id hash value, see 'man hash-lookup'", Color.red);
+            out.println("Please provide a hexadecimal transaction Id hash value, see 'man hash-lookup'", Decoration.bold, Color.red);
             return;
         }
 
@@ -38,7 +39,7 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
         try {
             txIdHashParsed = SecureHash.parse(txIdHash);
         } catch (IllegalArgumentException e) {
-            out.println("The provided string is not a valid hexadecimal SHA-256 hash value", Color.red);
+            out.println("The provided string is not a valid hexadecimal SHA-256 hash value", Decoration.bold, Color.red);
             return;
         }
 
@@ -53,7 +54,7 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
             SecureHash found = match.get();
             out.println("Found a matching transaction with Id: " + found.toString());
         } else {
-            out.println("No matching transaction found", Color.red);
+            out.println("No matching transaction found", Decoration.bold, Color.red);
         }
     }
 }

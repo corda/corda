@@ -95,6 +95,7 @@ import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
+import net.corda.node.services.config.shell.determineUnsafeUsers
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
@@ -126,9 +127,7 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
-import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.StateMachineManagerInternal
 import net.corda.node.services.transactions.BasicVerifierFactoryService
 import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -534,6 +533,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             shellConfiguration.sshdPort?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
+
+            val unsafeUsers = determineUnsafeUsers(configuration)
+            org.crsh.ssh.term.CRaSHCommand.setUserInfo(unsafeUsers, true, false)
+            log.info("Setting unsafe users as: ${unsafeUsers}")
+
             InteractiveShell.startShell(shellConfiguration, cordappLoader.appClassLoader)
         }
     }

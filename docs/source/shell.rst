@@ -185,6 +185,18 @@ To run SSH server use ``--sshd-port`` option when starting standalone shell or `
 For connection to SSH refer to `Connecting to the shell`_.
 Certain operations (like starting Flows) will require Shell's ``--cordpass-directory`` to be configured correctly (see `Starting the standalone shell`_).
 
+Shell Safe Mode
+---------------
+This is a new mode added in the Enterprise 4.3 release to prevent the Crash shell embedded commands (e.g. 'java', 'system') from being
+executed by a user with insufficient privilege. This is part of a general security tightening initiative.
+When a shell is running in unsafe mode, the shell behaviour will be the same as before and will include Crash built in commands. By default
+the internal shell will run in safe mode but will still be have the ability to execute RPC client calls as before based on
+existing RPC permissions. No Corda functionality is affected by this change; only the ability to access to the Crash shell embedded commands.
+When running an SSH shell, it will run in safe mode for any user that does not explicitly have permission 'ALL' as one the items
+in their RPC permission list, see :doc:`tutorial-clientrpc-api` for more information about the RPC Client API. These shell changes are
+also applied to the Stand Alone shell which will now run in safe mode (Enterprise 4.3 onwards). It may be possible that, in the future,
+the Crash shell embedded commands may become deprecated. Where possible, please do not write any new code that depends on them as they
+are technically not part of Corda functionality.
 
 Interacting with the node via the shell
 ---------------------------------------
@@ -209,7 +221,7 @@ You can shut the node down via shell:
 * ``run shutdown`` will shut the node down immediately
 
 Output Formats
-**********************
+**************
 
 You can choose the format in which the output of the commands will be shown.
 
@@ -376,6 +388,13 @@ list the supported subcommands.
 
 Extending the shell
 -------------------
+
+THIS FUNCTIONALITY IS NOW ONLY AVAILABLE WHEN RUNNING THE SHELL IN UNSAFE MODE (see Safe Shell section above). This is because of possible
+security vulnerabilities caused by the Crash shell embedded commands. When shell commands are executed via SSH, a remote user has the ability
+to effect the node internal state (including running scripts, gc and even shutting down the node). Prior to Enterprise 4.3 this was possible
+regardless of the user's permissions. A user must now have 'ALL' as one of their RPC Permissions to be able to use the embedded commands via
+the unsafe shell. You are advised, where possible to design out dependencies on the Crash shell embedded commands (non-Corda commands)
+and, as a minimum, not to introduce any new dependencies on the unsafe shell environment.
 
 The shell can be extended using commands written in either Java or `Groovy`_ (a Java-compatible scripting language).
 These commands have full access to the node's internal APIs and thus can be used to achieve almost anything.

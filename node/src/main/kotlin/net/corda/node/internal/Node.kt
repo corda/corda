@@ -55,6 +55,8 @@ import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.config.MB
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
+import net.corda.node.services.config.shell.internalShellPassword
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -72,7 +74,6 @@ import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -353,7 +354,7 @@ open class Node(configuration: NodeConfiguration,
 
         val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
             if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this,
-                User(INTERNAL_SHELL_USER, ArtemisMessagingComponent.internalShellPassword, setOf(Permissions.all()))) else this
+                User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {

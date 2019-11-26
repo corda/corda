@@ -4,6 +4,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
+import net.corda.node.services.config.shell.INTERNAL_SHELL_USER
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -49,7 +50,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true)
 
-        val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(ArtemisMessagingComponent.INTERNAL_SHELL_USER) else emptyList()
+        val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(INTERNAL_SHELL_USER) else emptyList()
         val rolesAdderOnLogin = RolesAdderOnLogin(addRPCRoleToUsers) { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",

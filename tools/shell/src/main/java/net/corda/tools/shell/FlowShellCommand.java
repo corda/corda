@@ -55,7 +55,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
                           ANSIProgressRenderer ansiProgressRenderer,
                           ObjectMapper om) {
         if (name == null) {
-            out.println("You must pass a name for the flow, see 'man flow'", Color.red);
+            out.println("You must pass a name for the flow, see 'man flow'", Decoration.bold, Color.red);
             return;
         }
         String inp = input == null ? "" : String.join(" ", input).trim();

@@ -35,12 +35,12 @@ dependencies {
     compile project(':client:jackson')
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:$crash_version") {
+    compile("org.crashub:crash.shell:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
         exclude group: "org.bouncycastle"
     }
 
-    compile("com.github.corda.crash:crash.connectors.ssh:$crash_version") {
+    compile("org.crashub:crash.connectors.ssh:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
         exclude group: "org.bouncycastle"
     }
