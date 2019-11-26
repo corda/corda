@@ -11,7 +11,6 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.api.model.StatusCause;
 import io.fabric8.kubernetes.api.model.StatusDetails;
-import io.fabric8.kubernetes.api.model.Toleration;
 import io.fabric8.kubernetes.api.model.TolerationBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -424,7 +423,9 @@ public class KubesTest extends DefaultTask {
 
 
     private File startLogPumping(InputStream stdOutIs, int podIdx, File podLogsDirectory, boolean printOutput) throws IOException {
-        File outputFile = new File(podLogsDirectory, "container-" + podIdx + ".log");
+        File outputDir = new File(podLogsDirectory, taskToExecuteName);
+        outputDir.mkdirs();
+        File outputFile = new File(outputDir, "container-" + podIdx + ".log");
         outputFile.createNewFile();
         Thread loggingThread = new Thread(() -> {
             try (BufferedWriter out = new BufferedWriter(new FileWriter(outputFile, true));
