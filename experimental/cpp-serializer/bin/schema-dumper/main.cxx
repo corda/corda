@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <sstream>
 
-#import "debug.h"
+#include "debug.h"
 
 #include "proton/proton_wrapper.h"
 

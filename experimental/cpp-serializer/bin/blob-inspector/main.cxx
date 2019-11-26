@@ -9,7 +9,7 @@
 #include <proton/codec.h>
 #include <sys/stat.h>
 
-#import "debug.h"
+#include "debug.h"
 
 #include "proton/proton_wrapper.h"
 

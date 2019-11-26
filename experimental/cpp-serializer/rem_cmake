@@ -9,6 +9,7 @@ function cmake_rem_func {
 }
 
 rm -f BLOB-INSPECTOR.cbp
+rm -rf cmake-build-debug
 
 cmake_rem_func .
 cmake_rem_func ./bin
