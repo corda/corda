@@ -51,3 +51,10 @@ class UnexpectedFlowEndException(message: String, cause: Throwable?, val origina
 
     override fun getErrorId(): Long? = originalErrorId
 }
+
+/**
+ * Thrown when the user needs to pause a flow. It will send the current flow directly to the hospital.
+ */
+class PauseFlowException(message: String, cause: Throwable?) : CordaRuntimeException(message, cause) {
+    constructor(message: String) : this(message, null)
+}
