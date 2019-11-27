@@ -1,8 +1,6 @@
-import net.corda.testing.DistributeTestsBy
-import net.corda.testing.DistributedTesting
-import net.corda.testing.ImageBuilding
-import net.corda.testing.ParallelTestGroup
-import net.corda.testing.PodLogLevel
+import com.r3.testing.DistributeTestsBy
+import com.r3.testing.ParallelTestGroup
+import com.r3.testing.PodLogLevel
 
 import static org.gradle.api.JavaVersion.VERSION_11
 import static org.gradle.api.JavaVersion.VERSION_1_8
@@ -176,6 +174,7 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
+        classpath "com.r3.testing:gradle-distributed-testing-plugin:1.0"
     }
 }
 
@@ -637,5 +636,5 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
     memoryInGbPerFork 10
     distribute DistributeTestsBy.CLASS
 }
-apply plugin: ImageBuilding
-apply plugin: DistributedTesting
+apply plugin: 'com.r3.testing.distributed-testing'
+apply plugin: 'com.r3.testing.image-building'
