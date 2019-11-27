@@ -174,7 +174,7 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath "com.r3.testing:gradle-distributed-testing-plugin:1.0"
+        classpath "com.r3.testing:gradle-distributed-testing-plugin:1.1"
     }
 }
 
