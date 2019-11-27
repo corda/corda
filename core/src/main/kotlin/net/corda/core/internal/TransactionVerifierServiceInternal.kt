@@ -295,7 +295,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         for (contractClassName in (inputContractGroups.keys + outputContractGroups.keys)) {
 
             if (!contractClassName.contractHasAutomaticConstraintPropagation(transactionClassLoader)) {
-                contractClassName.warnContractWithoutConstraintPropagation()
+                contractClassName.warnContractWithoutConstraintPropagation(transactionClassLoader)
                 continue
             }
 
