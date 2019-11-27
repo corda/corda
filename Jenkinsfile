@@ -1,3 +1,4 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -23,7 +24,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage preAllocateForAllParallelUnitAndIntegrationTest --stacktrace"
+                            " clean pushBuildImage preAllocateForAllParallelIntegrationTest preAllocateForAllParallelUnitTest --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -31,7 +32,7 @@ pipeline {
 
         stage('Corda Pull Request - Run Tests') {
             parallel {
-                stage('Integration and Unit Tests') {
+                stage('Integration Tests') {
                     steps {
                         sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
@@ -41,7 +42,20 @@ pipeline {
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
-                                " deAllocateForAllParallelUnitAndIntegrationTest allParallelUnitAndIntegrationTest  --stacktrace"
+                                " deAllocateForAllParallelIntegrationTest allParallelIntegrationTest  --stacktrace"
+                    }
+                }
+                stage('Unit Tests') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
+                                " deAllocateForAllParallelUnitTest allParallelUnitTest --stacktrace"
                     }
                 }
             }
