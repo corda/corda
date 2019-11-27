@@ -175,6 +175,7 @@ buildscript {
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath "com.r3.testing:gradle-distributed-testing-plugin:1.1"
+        classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
 
