@@ -114,11 +114,15 @@ class DefaultEvolutionSerializerFactory(
                     // This includes assigning a primitive type to its equivalent "boxed" type.
                     val evolverPropertyType = evolverProperty.type.observedType.asClass()
                     evolverPropertyType.isAssignableFrom(propertyType)
-                        || (propertyType.isPrimitive && evolverPropertyType.isAssignableFrom(primitiveBoxedTypes[propertyType]
-                                ?: throw IllegalStateException("Unknown primitive type '$propertyType'")))
+                        || (propertyType.isPrimitive && evolverPropertyType.isAssignableFrom(boxed(propertyType)))
+                        || (evolverPropertyType.isPrimitive && boxed(evolverPropertyType).isAssignableFrom(propertyType))
                 }
             }
         }
+    }
+
+    private fun boxed(primitiveType: Class<*>): Class<*> {
+        return primitiveBoxedTypes[primitiveType] ?: throw IllegalStateException("Unknown primitive type '$primitiveType'")
     }
 
     private fun RemoteTypeInformation.Composable.validateEvolvability(localProperties: Map<PropertyName, LocalPropertyInformation>) {
