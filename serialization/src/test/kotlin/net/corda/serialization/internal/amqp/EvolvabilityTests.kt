@@ -768,4 +768,27 @@ class EvolvabilityTests {
         assertEquals(1, deserializedCC.a)
         assertEquals(42, deserializedCC.b)
     }
+
+    @Test
+    fun addMandatoryFieldWithAltConstructorAndMakeExistingNullableIntFieldMandatory() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.addMandatoryFieldWithAltConstructorAndMakeExistingNullableIntFieldMandatory"
+
+        // Original version of the class as it was serialised
+        // data class CC(val a: Int?)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(null)).bytes)
+
+        data class CC(val a: Int, val b: Int) {
+            @DeprecatedConstructorForDeserialization(1)
+            @Suppress("unused")
+            constructor(a: Int?) : this(a ?: -1,42)
+        }
+
+        val url = EvolvabilityTests::class.java.getResource(resource) ?: fail("Not found!")
+        val sc2 = url.readBytes()
+        val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
+
+        assertEquals(-1, deserializedCC.a)
+        assertEquals(42, deserializedCC.b)
+    }
 }
