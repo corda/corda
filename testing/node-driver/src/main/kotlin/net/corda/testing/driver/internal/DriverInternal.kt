@@ -7,7 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
@@ -59,7 +59,7 @@ data class InProcessImpl(
         private val onStopCallback: () -> Unit,
         private val node: NodeWithInfo
 ) : InProcess, NodeHandleInternal {
-    val database: CordaPersistence = node.node.database
+    val database: CordaTransactionSupport = node.node.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {

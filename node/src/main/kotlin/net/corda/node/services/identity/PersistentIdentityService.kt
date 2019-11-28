@@ -26,7 +26,7 @@ import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils
 import org.hibernate.annotations.Type
@@ -200,7 +200,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private val notaryIdentityCache = HashSet<Party>()
 
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
-    lateinit var database: CordaPersistence
+    lateinit var database: CordaTransactionSupport
 
     private lateinit var _pkToIdCache: WritablePublicKeyToOwningIdentityCache
 

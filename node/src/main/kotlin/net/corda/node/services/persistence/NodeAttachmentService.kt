@@ -29,7 +29,7 @@ import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
@@ -52,10 +52,10 @@ import javax.persistence.*
  */
 @ThreadSafe
 class NodeAttachmentService @JvmOverloads constructor(
-    metrics: MetricRegistry,
-    cacheFactory: NamedCacheFactory,
-    private val database: CordaPersistence,
-    val devMode: Boolean = false
+        metrics: MetricRegistry,
+        cacheFactory: NamedCacheFactory,
+        private val database: CordaTransactionSupport,
+        val devMode: Boolean = false
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
 
     // This is to break the circular dependency.

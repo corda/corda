@@ -9,7 +9,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.KeyOwningIdentity
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import java.security.PublicKey
 import java.util.*
 
@@ -17,7 +17,7 @@ import java.util.*
  * The [PublicKeyToOwningIdentityCacheImpl] provides a caching layer over the pk_hash_to_external_id table. Gets will attempt to read an
  * external identity from the database if it is not present in memory, while sets will write external identity UUIDs to this database table.
  */
-class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
+class PublicKeyToOwningIdentityCacheImpl(private val database: CordaTransactionSupport,
                                          cacheFactory: NamedCacheFactory) : WritablePublicKeyToOwningIdentityCache {
     companion object {
         val log = contextLogger()

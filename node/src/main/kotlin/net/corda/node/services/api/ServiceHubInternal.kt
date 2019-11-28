@@ -25,7 +25,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import java.security.PublicKey
 import java.util.*
 
@@ -67,7 +67,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
                                vaultService: VaultServiceInternal,
-                               database: CordaPersistence) {
+                               database: CordaTransactionSupport) {
 
             database.transaction {
                 require(txs.isNotEmpty()) { "No transactions passed in for recording" }
@@ -145,7 +145,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
-    val database: CordaPersistence
+    val database: CordaTransactionSupport
     val configuration: NodeConfiguration
     val nodeProperties: NodePropertiesStore
     val networkMapUpdater: NetworkMapUpdater

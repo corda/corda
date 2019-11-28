@@ -30,7 +30,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.notary.experimental.raft.RaftTransactionCommitLog.Commands.CommitTransaction
 import java.nio.file.Path
@@ -52,7 +52,7 @@ class RaftUniquenessProvider(
         /** If *null* the Raft log will be stored in memory. */
         private val storagePath: Path? = null,
         private val transportConfiguration: MutualSslConfiguration,
-        private val db: CordaPersistence,
+        private val db: CordaTransactionSupport,
         private val clock: Clock,
         private val metrics: MetricRegistry,
         private val cacheFactory: NamedCacheFactory,

@@ -24,7 +24,7 @@ import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import java.nio.file.Paths
 import java.time.Clock
@@ -35,7 +35,7 @@ class MigrationServicesForResolution(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorageInternal,
         private val transactions: TransactionStorage,
-        private val cordaDB: CordaPersistence,
+        private val cordaDB: CordaTransactionSupport,
         cacheFactory: MigrationNamedCacheFactory
 ): ServicesForResolution {
 

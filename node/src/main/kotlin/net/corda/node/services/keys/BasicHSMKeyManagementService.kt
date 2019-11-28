@@ -7,11 +7,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.cryptoservice.SignOnlyCryptoService
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
@@ -33,7 +31,7 @@ import kotlin.collections.LinkedHashSet
 class BasicHSMKeyManagementService(
         cacheFactory: NamedCacheFactory,
         override val identityService: PersistentIdentityService,
-        private val database: CordaPersistence,
+        private val database: CordaTransactionSupport,
         private val cryptoService: SignOnlyCryptoService
 ) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 

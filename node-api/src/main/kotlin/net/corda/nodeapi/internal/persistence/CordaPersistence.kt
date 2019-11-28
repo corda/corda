@@ -101,7 +101,7 @@ class CordaPersistence(
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
         val errorHandler: (t: Throwable) -> Unit = {}
-) : Closeable {
+) : Closeable, CordaTransactionSupport {
     companion object {
         private val log = contextLogger()
     }
@@ -206,18 +206,18 @@ class CordaPersistence(
     }
 
     /**
+     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
+     * @param statement to be executed in the scope of this transaction.
+     */
+    override fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
+
+    /**
      * Executes given statement in the scope of transaction, with the given isolation level.
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
+    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
             transaction(isolationLevel, 2, false, statement)
-
-    /**
-     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
-     * @param statement to be executed in the scope of this transaction.
-     */
-    fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
     /**
      * Executes given statement in the scope of transaction, with the given isolation level.
@@ -226,7 +226,7 @@ class CordaPersistence(
      * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a cause of [Throwable].
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
+    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
@@ -332,7 +332,7 @@ fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(propagateRollbackAsError:
 class DatabaseTransactionRolledBackException(txId: UUID) : Exception("Database transaction $txId was rolled back")
 
 // A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
-private class DatabaseTransactionWrappingSubscriber<U>(private val db: CordaPersistence?) : Subscriber<U>() {
+private class DatabaseTransactionWrappingSubscriber<U>(private val db: CordaTransactionSupport?) : Subscriber<U>() {
     // Some unsubscribes happen inside onNext() so need something that supports concurrent modification.
     val delegates = CopyOnWriteArrayList<Subscriber<in U>>()
 

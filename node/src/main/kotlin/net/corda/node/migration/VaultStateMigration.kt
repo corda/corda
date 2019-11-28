@@ -17,6 +17,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
@@ -278,7 +279,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     // serialization environment changes in the execute function in the migration, and change forEach -> parallelForEach.
     private val pool = ForkJoinPool.commonPool()
 
-    private class VaultPageTask(val database: CordaPersistence,
+    private class VaultPageTask(val database: CordaTransactionSupport,
                                 val page: List<VaultSchemaV1.VaultStates>,
                                 val block: (VaultSchemaV1.VaultStates) -> Unit): RecursiveAction() {
 

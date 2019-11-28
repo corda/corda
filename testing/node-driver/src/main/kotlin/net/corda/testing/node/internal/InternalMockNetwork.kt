@@ -47,7 +47,7 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
@@ -109,7 +109,7 @@ interface TestStartedNode {
     val attachments: NodeAttachmentService
     val rpcOps: CordaRPCOps
     val network: MockNodeMessagingService
-    val database: CordaPersistence
+    val database: CordaTransactionSupport
     val notaryService: NotaryService?
 
     fun dispose() = internals.stop()
@@ -287,7 +287,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 override val services: StartedNodeServices,
                 override val info: NodeInfo,
                 override val smm: StateMachineManager,
-                override val database: CordaPersistence,
+                override val database: CordaTransactionSupport,
                 override val rpcOps: CordaRPCOps,
                 override val notaryService: NotaryService?) : TestStartedNode {
 

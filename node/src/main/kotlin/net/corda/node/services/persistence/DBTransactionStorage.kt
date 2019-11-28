@@ -28,7 +28,7 @@ import java.util.*
 import javax.persistence.*
 import kotlin.streams.toList
 
-class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
+class DBTransactionStorage(private val database: CordaTransactionSupport, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Suppress("MagicNumber") // database column width
     @Entity

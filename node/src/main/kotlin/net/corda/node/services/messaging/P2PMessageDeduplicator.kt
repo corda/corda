@@ -5,7 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -16,7 +16,7 @@ import javax.persistence.Id
 /**
  * Encapsulate the de-duplication logic.
  */
-class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaPersistence) {
+class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaTransactionSupport) {
     // A temporary in-memory set of deduplication IDs and associated high water mark details.
     // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
