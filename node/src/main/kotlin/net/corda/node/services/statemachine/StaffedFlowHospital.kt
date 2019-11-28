@@ -567,7 +567,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             newError: Throwable,
             history: FlowMedicalHistory
         ): Diagnosis {
-            return if (newError is HospitalizeFlowException) {
+            return if (newError.mentionsThrowable(HospitalizeFlowException::class.java)) {
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
