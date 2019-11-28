@@ -113,6 +113,8 @@ dependencies {
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    testCompile "org.ow2.asm:asm:$asm_version"
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)
