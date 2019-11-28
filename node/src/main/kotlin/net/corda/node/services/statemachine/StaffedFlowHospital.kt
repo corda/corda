@@ -558,7 +558,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Pauses a flow, hospitalizing it immediately, upon throwing a [HospitalizeFlowException].
+     * Keeps the flow in for overnight observation if [HospitalizeFlowException] is received.
      */
     object SedationNurse : Staff {
         override fun consult(
