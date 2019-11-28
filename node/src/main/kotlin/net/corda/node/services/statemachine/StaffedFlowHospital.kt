@@ -2,7 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowException
-import net.corda.core.flows.PauseFlowException
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
@@ -558,7 +558,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Pauses a flow, hospitalizing it immediately, upon throwing a [PauseFlowException].
+     * Pauses a flow, hospitalizing it immediately, upon throwing a [HospitalizeFlowException].
      */
     object SedationNurse : Staff {
         override fun consult(
@@ -567,7 +567,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             newError: Throwable,
             history: FlowMedicalHistory
         ): Diagnosis {
-            return if (newError is PauseFlowException) {
+            return if (newError is HospitalizeFlowException) {
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
