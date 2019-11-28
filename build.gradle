@@ -151,6 +151,9 @@ buildscript {
             url 'https://kotlin.bintray.com/kotlinx'
         }
         maven {
+            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies-dev"
+        }
+        maven {
             url "$artifactory_contextUrl/corda-releases"
         }
     }
@@ -174,7 +177,7 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath "com.r3.testing:gradle-distributed-testing-plugin:1.1"
+        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-SNAPSHOT", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
