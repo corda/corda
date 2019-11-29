@@ -18,7 +18,11 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
         log.info("Starting notary in $mode mode")
     }
 
-    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory, ::signTransaction)
+    override val uniquenessProvider = PersistentUniquenessProvider(
+            services.clock,
+            services.database,
+            services.cacheFactory,
+            ::signTransaction)
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
