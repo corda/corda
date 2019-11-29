@@ -133,13 +133,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     abstract fun verifyTransaction(requestPayload: NotarisationPayload)
 
     @Suspendable
-    private fun signTransactionAndSendResponse(txId: SecureHash) {
-        val signature = service.signTransaction(txId)
-        logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
-        otherSideSession.send(NotarisationResponse(listOf(signature)))
-    }
-
-    @Suspendable
     private fun sendSignedResponse(txId: SecureHash, signature: TransactionSignature) {
         logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         otherSideSession.send(NotarisationResponse(listOf(signature)))

@@ -326,6 +326,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        request.future.set(UniquenessProvider.Result.Success(signTransaction(request.txId)))
+        val signedTx = signTransaction(request.txId)
+        request.future.set(UniquenessProvider.Result.Success(signedTx))
     }
 }
