@@ -1,8 +1,6 @@
-import net.corda.testing.DistributeTestsBy
-import net.corda.testing.DistributedTesting
-import net.corda.testing.ImageBuilding
-import net.corda.testing.ParallelTestGroup
-import net.corda.testing.PodLogLevel
+import com.r3.testing.DistributeTestsBy
+import com.r3.testing.ParallelTestGroup
+import com.r3.testing.PodLogLevel
 
 import static org.gradle.api.JavaVersion.VERSION_11
 import static org.gradle.api.JavaVersion.VERSION_1_8
@@ -156,6 +154,9 @@ buildscript {
             url 'https://kotlin.bintray.com/kotlinx'
         }
         maven {
+            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies-dev"
+        }
+        maven {
             url "$artifactory_contextUrl/corda-releases"
         }
     }
@@ -179,6 +180,8 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
+        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-SNAPSHOT", changing: true
+        classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
 
@@ -186,7 +189,6 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
-    id 'com.bmuschko.docker-remote-api'
 }
 
 apply plugin: 'project-report'
@@ -194,6 +196,7 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
+apply plugin: "com.bmuschko.docker-remote-api"
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -646,5 +649,5 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
     memoryInGbPerFork 10
     distribute DistributeTestsBy.CLASS
 }
-apply plugin: ImageBuilding
-apply plugin: DistributedTesting
+apply plugin: 'com.r3.testing.distributed-testing'
+apply plugin: 'com.r3.testing.image-building'
