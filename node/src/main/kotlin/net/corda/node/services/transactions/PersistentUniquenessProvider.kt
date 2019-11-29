@@ -14,7 +14,12 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.elapsedTime
-import net.corda.core.internal.notary.*
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.SigningFunction
+import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -33,12 +38,18 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.EmbeddedId
+import javax.persistence.Entity
+import javax.persistence.GeneratedValue
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.MappedSuperclass
 import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock, val database: CordaTransactionSupport, cacheFactory: NamedCacheFactory) : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock, val database: CordaTransactionSupport, cacheFactory: NamedCacheFactory, val signTransaction : SigningFunction) : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
     class BaseComittedState(
@@ -315,6 +326,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaTransact
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        request.future.set(UniquenessProvider.Result.Success)
+        val signedTx = signTransaction(request.txId)
+        request.future.set(UniquenessProvider.Result.Success(signedTx))
     }
 }

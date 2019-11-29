@@ -21,6 +21,7 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.notary.SigningFunction
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -37,7 +38,11 @@ import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.Table
 
 /**
  * A uniqueness provider that records committed input states in a distributed collection replicated and
@@ -56,7 +61,8 @@ class RaftUniquenessProvider(
         private val clock: Clock,
         private val metrics: MetricRegistry,
         private val cacheFactory: NamedCacheFactory,
-        private val raftConfig: RaftConfig
+        private val raftConfig: RaftConfig,
+        private val signTransaction: SigningFunction
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
@@ -228,7 +234,7 @@ class RaftUniquenessProvider(
                 UniquenessProvider.Result.Failure(commitError)
             } else {
                 log.info("All input states of transaction $txId have been committed")
-                UniquenessProvider.Result.Success
+                UniquenessProvider.Result.Success(signTransaction(txId))
             }
             future.set(result)
         }
