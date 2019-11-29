@@ -6,7 +6,7 @@ import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.node.services.vault.CordaTransactionSupport
-import net.corda.core.node.services.vault.VaultTransaction
+import net.corda.core.node.services.vault.SessionScope
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import org.hibernate.tool.schema.spi.SchemaManagementException
@@ -211,7 +211,7 @@ class CordaPersistence(
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
      * @param statement to be executed in the scope of this transaction.
      */
-    override fun <T> transaction(statement: VaultTransaction.() -> T): T = dbTransaction(defaultIsolationLevel, statement)
+    override fun <T> transaction(statement: SessionScope.() -> T): T = dbTransaction(defaultIsolationLevel, statement)
 
     /**
      * Provides access to a richer interface of [DatabaseTransaction] which has access to `connection`, `restrictedEntityManager` et al.
