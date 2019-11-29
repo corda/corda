@@ -21,6 +21,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
+        .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()
         .use { result ->
