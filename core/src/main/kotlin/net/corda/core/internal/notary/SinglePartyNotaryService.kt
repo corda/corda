@@ -5,19 +5,23 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.executeAsync
 import net.corda.core.internal.notary.UniquenessProvider.Result
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
+import java.security.PublicKey
 import java.time.Duration
 
 /** Base implementation for a notary service operated by a singe party. */
@@ -40,7 +44,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ) {
+    ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
         // `UniquenessProvider`.
@@ -60,9 +64,11 @@ abstract class SinglePartyNotaryService : NotaryService() {
                 )
         )
 
-        if (result is UniquenessProvider.Result.Failure) {
+        if (result is Result.Failure) {
             throw NotaryInternalException(result.error)
         }
+
+        return result
     }
 
     /**
@@ -97,4 +103,5 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
+
 }

@@ -2,8 +2,12 @@ package net.corda.core.internal.notary
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -64,3 +68,4 @@ fun validateTimeWindow(currentTime: Instant, timeWindow: TimeWindow?): NotaryErr
         NotaryError.TimeWindowInvalid(currentTime, timeWindow)
     } else null
 }
+

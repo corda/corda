@@ -23,7 +23,7 @@ import java.security.PublicKey
  */
 // START 1
 class MyCustomValidatingNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory)
+    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory, ::signTransaction)
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 

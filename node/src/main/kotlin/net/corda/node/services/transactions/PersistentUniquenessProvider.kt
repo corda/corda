@@ -5,6 +5,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
@@ -38,7 +39,7 @@ import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, cacheFactory: NamedCacheFactory) : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, cacheFactory: NamedCacheFactory, val signTransaction : SigningFunction) : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
     class BaseComittedState(
@@ -315,6 +316,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        request.future.set(UniquenessProvider.Result.Success)
+        request.future.set(UniquenessProvider.Result.Success(signTransaction(request.txId)))
     }
 }

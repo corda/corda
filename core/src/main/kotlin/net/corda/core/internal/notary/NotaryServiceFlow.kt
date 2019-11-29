@@ -4,12 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.internal.checkParameterHash
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import java.lang.IllegalStateException
 import java.time.Duration
 
 /**
@@ -25,7 +28,7 @@ import java.time.Duration
  * @param etaThreshold If the ETA for processing the request, according to the service, is greater than this, notify the client.
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>(), IdempotentFlow {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000
@@ -47,7 +50,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     override fun call(): Void? {
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
 
-        try {
+        val commitStatus = try {
             val tx: TransactionParts = validateRequest(requestPayload)
             val request = NotarisationRequest(tx.inputs, tx.id)
             validateRequestSignature(request, requestPayload.requestSignature)
@@ -73,7 +76,13 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             throw NotaryException(e.error, transactionId)
         }
 
-        signTransactionAndSendResponse(transactionId!!)
+        if (commitStatus is UniquenessProvider.Result.Success) {
+            sendSignedResponse(transactionId!!, commitStatus.signature)
+        }
+        else {
+            val error = IllegalStateException("Request that failed uniqueness reached signing code! Ignoring.")
+            throw NotaryException(NotaryError.General(error))
+        }
         return null
     }
 
@@ -126,6 +135,12 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
         val signature = service.signTransaction(txId)
+        logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
+        otherSideSession.send(NotarisationResponse(listOf(signature)))
+    }
+
+    @Suspendable
+    private fun sendSignedResponse(txId: SecureHash, signature: TransactionSignature) {
         logger.info("Transaction [$txId] successfully notarised, sending signature back to [${otherSideSession.counterparty.name}]")
         otherSideSession.send(NotarisationResponse(listOf(signature)))
     }
