@@ -113,7 +113,8 @@ class ClassLoadingUtilsTest {
         URLClassLoader(arrayOf(url)).use { cordappClassLoader ->
             val standaloneClass = createInstancesOfClassesImplementing(cordappClassLoader, BaseInterface::class.java)
                 .map(Any::javaClass)
-                .single { it.name == STANDALONE_CLASS_NAME }
+                .single()
+            assertEquals(STANDALONE_CLASS_NAME, standaloneClass.name)
             assertEquals(cordappClassLoader, standaloneClass.classLoader)
         }
     }
