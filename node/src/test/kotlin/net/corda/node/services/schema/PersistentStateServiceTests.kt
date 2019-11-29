@@ -63,7 +63,7 @@ class PersistentStateServiceTests {
         }
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), rigorousMock(), schemaService)
         val persistentStateService = PersistentStateService(schemaService)
-        database.transaction {
+        database.dbTransaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
             persistentStateService.persist(setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.sha256("dummy"), 0))))
             currentDBSession().flush()

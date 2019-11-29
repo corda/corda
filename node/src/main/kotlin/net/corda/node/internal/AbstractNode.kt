@@ -126,9 +126,7 @@ import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
-import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.StateMachineManagerInternal
 import net.corda.node.services.transactions.BasicVerifierFactoryService
 import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -476,7 +474,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        return database.transaction(recoverableFailureTolerance = 0) {
+        return database.dbTransaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
@@ -1142,7 +1140,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun jdbcSession(): Connection = database.createSession()
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-            return database.transaction {
+            return database.dbTransaction {
                 block(restrictedEntityManager)
             }
         }
@@ -1167,7 +1165,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
 @VisibleForTesting
 internal fun logVendorString(database: CordaPersistence, log: Logger) {
-    database.transaction {
+    database.dbTransaction {
         log.info("Connected to ${connection.metaData.databaseProductName} database.")
     }
 }

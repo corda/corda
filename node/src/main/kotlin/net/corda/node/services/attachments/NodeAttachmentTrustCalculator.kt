@@ -10,7 +10,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.persistence.AttachmentStorageInternal
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import java.security.PublicKey
 import java.util.stream.Stream
 

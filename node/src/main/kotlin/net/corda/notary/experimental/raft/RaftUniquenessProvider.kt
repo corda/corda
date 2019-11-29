@@ -30,7 +30,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.notary.experimental.raft.RaftTransactionCommitLog.Commands.CommitTransaction
 import java.nio.file.Path

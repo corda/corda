@@ -4,7 +4,7 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
+import net.corda.core.node.services.vault.CordaTransactionSupport
 
 interface ScheduledFlowRepository {
     fun delete(key: StateRef): Boolean

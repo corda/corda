@@ -86,7 +86,7 @@ class DBTransactionStorageTests {
     fun `two transactions with rollback`() {
         val firstTransaction = newTransaction()
         val secondTransaction = newTransaction()
-        database.transaction {
+        database.dbTransaction {
             transactionStorage.addTransaction(firstTransaction)
             transactionStorage.addTransaction(secondTransaction)
             rollback()

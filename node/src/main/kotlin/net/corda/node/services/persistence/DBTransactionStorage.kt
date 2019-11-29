@@ -9,6 +9,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.toFuture

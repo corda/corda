@@ -6,7 +6,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.NodePropertiesStore.FlowsDrainingModeOperations
 import net.corda.node.utilities.PersistentMap
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.slf4j.Logger
 import rx.subjects.PublishSubject

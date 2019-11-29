@@ -20,7 +20,7 @@ class TransactionCallbackTest {
     fun `onCommit called and onRollback not called on commit`() {
         var onCommitCount = 0
         var onRollbackCount = 0
-        database.transaction {
+        database.dbTransaction {
             onCommit { onCommitCount++ }
             onRollback { onRollbackCount++ }
         }
@@ -35,7 +35,7 @@ class TransactionCallbackTest {
         var onCommitCount = 0
         var onRollbackCount = 0
         try {
-            database.transaction {
+            database.dbTransaction {
                 onCommit { onCommitCount++ }
                 onRollback { onRollbackCount++ }
                 throw TestException()

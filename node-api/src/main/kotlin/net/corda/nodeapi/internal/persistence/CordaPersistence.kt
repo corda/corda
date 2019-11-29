@@ -5,6 +5,8 @@ import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.core.node.services.vault.VaultTransaction
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import org.hibernate.tool.schema.spi.SchemaManagementException
@@ -138,7 +140,7 @@ class CordaPersistence(
         }
         _contextDatabase.set(this)
         // Check not in read-only mode.
-        transaction {
+        dbTransaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
         }
     }
@@ -209,15 +211,30 @@ class CordaPersistence(
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
      * @param statement to be executed in the scope of this transaction.
      */
-    override fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
+    override fun <T> transaction(statement: VaultTransaction.() -> T): T = dbTransaction(defaultIsolationLevel, statement)
+
+    /**
+     * Provides access to a richer interface of [DatabaseTransaction] which has access to `connection`, `restrictedEntityManager` et al.
+     * Preference should always be given to use [transaction] method above and only if this is not sufficient switch to use [dbTransaction].
+     */
+    fun <T> dbTransaction(statement: DatabaseTransaction.() -> T): T = dbTransaction(defaultIsolationLevel, statement)
+
+    /**
+     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
+     * @param statement to be executed in the scope of this transaction.
+     * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
+     */
+    fun <T> dbTransaction(recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+        return dbTransaction(defaultIsolationLevel, recoverableFailureTolerance, false, statement)
+    }
 
     /**
      * Executes given statement in the scope of transaction, with the given isolation level.
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
-            transaction(isolationLevel, 2, false, statement)
+    private fun <T> dbTransaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
+            dbTransaction(isolationLevel, 2, false, statement)
 
     /**
      * Executes given statement in the scope of transaction, with the given isolation level.
@@ -226,7 +243,7 @@ class CordaPersistence(
      * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a cause of [Throwable].
      * @param statement to be executed in the scope of this transaction.
      */
-    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
+    private fun <T> dbTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
@@ -243,15 +260,6 @@ class CordaPersistence(
             errorHandler(persistenceException)
             throw persistenceException
         }
-    }
-
-    /**
-     * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
-     * @param statement to be executed in the scope of this transaction.
-     * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
-     */
-    fun <T> transaction(recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
-        return transaction(defaultIsolationLevel, recoverableFailureTolerance, false, statement)
     }
 
     private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
@@ -370,10 +378,10 @@ private class NoOpSubscriber<U>(t: Subscriber<in U>) : Subscriber<U>(t) {
 
 /**
  * Wrap delivery of observations in a database transaction.  Multiple subscribers will receive the observations inside
- * the same database transaction.  This also lazily subscribes to the source [rx.Observable] to preserve any buffering
+ * the same database transaction.  This also lazily subscribes to the source [Observable] to preserve any buffering
  * that might be in place.
  */
-fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence? = null): rx.Observable<T> {
+fun <T : Any> Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence? = null): Observable<T> {
     var wrappingSubscriber = DatabaseTransactionWrappingSubscriber<T>(db)
     // Use lift to add subscribers to a special subscriber that wraps a database transaction around observations.
     // Each subscriber will be passed to this lambda when they subscribe, at which point we add them to wrapping subscriber.

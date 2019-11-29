@@ -86,7 +86,7 @@ class IdentityServiceToStringShortMigrationTest {
         val listOfNamesWithoutPkHash = mutableListOf<CordaX500Name>()
         identities.forEach {
             logger.info("Checking: ${it.name}")
-            cordaDB.transaction {
+            cordaDB.dbTransaction {
                 val hashToIdentityStatement = database.dataSource.connection.prepareStatement("SELECT ${PersistentIdentityService.PK_HASH_COLUMN_NAME} FROM ${PersistentIdentityService.HASH_TO_IDENTITY_TABLE_NAME} WHERE pk_hash=?")
                 hashToIdentityStatement.setString(1, it.owningKey.toStringShort())
                 val hashToIdentityResultSet = hashToIdentityStatement.executeQuery()

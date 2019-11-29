@@ -28,8 +28,7 @@ import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.ExternalEvent
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupport
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
