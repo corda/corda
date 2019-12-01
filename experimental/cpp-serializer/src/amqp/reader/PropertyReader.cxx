@@ -31,11 +31,6 @@ namespace {
             }
         },
         {
-            "java.lang.Integer", []() -> std::shared_ptr<PropertyReader> {
-                return std::make_shared<IntPropertyReader> ();
-            }
-        },
-        {
             "string", []() -> std::shared_ptr<PropertyReader> {
                 return std::make_shared<StringPropertyReader> ();
             }
