@@ -78,6 +78,21 @@ namespace amqp::internal::schema {
  *
  ******************************************************************************/
 
+namespace {
+
+    std::map<std::string, std::string> boxedToUnboxed = {
+            { "java.lang.Integer", "int" },
+            { "java.lang.Boolean", "bool" },
+            { "java.lang.Byte", "char" },
+            { "java.lang.Short", "short" },
+            { "java.lang.Character", "char" },
+            { "java.lang.Float", "float" },
+            { "java.lang.Long", "long" },
+            { "java.lang.Double", "double" }
+    };
+
+}
+
 /**
  * Java gas two types of primitive, boxed and unboxed, essentially actual
  * primitives and classes representing those primitives. Of course, we
@@ -87,11 +102,9 @@ namespace amqp::internal::schema {
 std::string
 amqp::internal::schema::
 Restricted::unbox (const std::string & type_) {
-    if (type_ == "java.lang.Integer") {
-        return "int";
-    }
-
-    return type_;
+    auto it = boxedToUnboxed.find (type_);
+    if (it == boxedToUnboxed.end()) return type_;
+    else return it->second;
 }
 
 
