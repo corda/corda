@@ -1,7 +1,12 @@
 package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.IdentifiableException
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.StateMachineState
 
 // This is a file defining some common utilities for creating state machine transitions.
 
@@ -65,6 +70,12 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
         actions.add(Action.CreateTransaction)
         currentState = currentState.copy(isFlowResumed = true)
         return FlowContinuation.Resume(result)
+    }
+
+    fun resumeFlowLogic(result: Throwable): FlowContinuation {
+        actions.add(Action.CreateTransaction)
+        currentState = currentState.copy(isFlowResumed = true)
+        return FlowContinuation.Throw(result)
     }
 }
 

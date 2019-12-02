@@ -11,7 +11,12 @@ import net.corda.core.internal.executeAsync
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.testing.node.internal.*
+import net.corda.core.utilities.getOrThrow
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -63,16 +68,34 @@ class FlowAsyncOperationTests {
             }
         }
 
-        assertFailsWith<ExecutionException> { aliceNode.services.startFlow(flow).resultFuture.get() }
+        assertFailsWith<SpecialException> { aliceNode.services.startFlow(flow).resultFuture.getOrThrow() }
+    }
+
+    @Test
+    fun `operation result errors are propagated correctly, and can be caught by the flow`() {
+        val flow = object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                try {
+                    executeAsync(ErroredResult())
+                } catch (e: SpecialException) {
+                    // Suppress
+                }
+            }
+        }
+
+        aliceNode.services.startFlow(flow).resultFuture.get()
     }
 
     private class ErroredResult : FlowAsyncOperation<Unit> {
         override fun execute(deduplicationId: String): CordaFuture<Unit> {
             val future = openFuture<Unit>()
-            future.setException(Exception())
+            future.setException(SpecialException())
             return future
         }
     }
+
+    private class SpecialException : Exception()
 
     @Test(timeout = 30_000)
     fun `flows waiting on an async operation do not block the thread`() {

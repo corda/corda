@@ -135,6 +135,15 @@ sealed class Event {
     data class AsyncOperationCompletion(val returnValue: Any?) : Event()
 
     /**
+     * Signals the faiure of a [FlowAsyncOperation].
+     *
+     * Scheduling is triggered by the service that completes the future returned by the async operation.
+     *
+     * @param throwable the exception thrown by the operation.
+     */
+    data class AsyncOperationThrows(val throwable: Throwable) : Event()
+
+    /**
      * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
      */
     object RetryFlowFromSafePoint : Event() {
