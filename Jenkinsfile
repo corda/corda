@@ -4,6 +4,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
+    agent { label 'k8s'  }
     options { timestamps() }
 
     stages {
