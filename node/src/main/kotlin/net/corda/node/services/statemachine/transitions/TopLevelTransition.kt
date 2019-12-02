@@ -3,7 +3,22 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.Try
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.EndSessionMessage
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.FlowRemovalReason
+import net.corda.node.services.statemachine.FlowSessionImpl
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.SubFlow
 
 /**
  * This is the top level event-handling transition function capable of handling any [Event].
@@ -30,6 +45,7 @@ class TopLevelTransition(
             is Event.FlowFinish -> flowFinishTransition(event)
             is Event.InitiateFlow -> initiateFlowTransition(event)
             is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
+            is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
             is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
         }
     }
@@ -255,6 +271,12 @@ class TopLevelTransition(
     private fun asyncOperationCompletionTransition(event: Event.AsyncOperationCompletion): TransitionResult {
         return builder {
             resumeFlowLogic(event.returnValue)
+        }
+    }
+
+    private fun asyncOperationThrowsTransition(event: Event.AsyncOperationThrows): TransitionResult {
+        return builder {
+            resumeFlowLogic(event.throwable)
         }
     }
 
