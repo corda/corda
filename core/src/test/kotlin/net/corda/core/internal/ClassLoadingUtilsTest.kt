@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
@@ -40,7 +41,7 @@ class ClassLoadingUtilsTest {
         init {
             // Register the "attachment://" URL scheme.
             // You may only register new schemes ONCE per JVM!
-            URLSchemes
+            AttachmentsClassLoader
         }
     }
 
