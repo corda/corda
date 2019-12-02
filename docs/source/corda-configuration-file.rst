@@ -46,7 +46,7 @@ Placeholder Overrides
 
 It is possible to add placeholders to the ``node.conf`` file to override particular settings via environment variables. In this case the
 ``rpcSettings.address`` property will be overridden by the ``RPC_ADDRESS`` environment variable, and the node will fail to load if this
-environment variable isn't present (see: :ref:`hiding-sensitive-data` section for more information).
+environment variable isn't present (see: :ref:`hiding-sensitive-data` for more information).
 
 .. sourcecode:: groovy
 
@@ -59,8 +59,8 @@ Direct Overrides
 ~~~~~~~~~~~~~~~~
 
 It is also possible to directly override Corda configuration (regardless of whether the setting is already in the ``node.conf``), by using
-environment variables or JVM options. Simply prefix the variable with CORDA. or CORDA_, using periods (.) or
-underscores to signify nested options. For example, to override the ``rpcSettings.address`` variable, you can override it via environment variables:
+environment variables or JVM options. Simply prefix the field with CORDA. or CORDA_, using periods (.) or
+underscores (_) to signify nested options. For example, to override the ``rpcSettings.address`` setting, you can override it via environment variables:
 
 .. sourcecode:: shell
 
@@ -135,7 +135,6 @@ Limitations
 
 * Objects in lists cannot currently be overridden. For example the ``rpcUsers`` configuration key is a list of user objects, overriding these
   via environment variables or system properties will not work.
-
 
 Configuration file fields
 -------------------------
