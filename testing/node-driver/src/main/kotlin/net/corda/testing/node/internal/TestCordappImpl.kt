@@ -54,15 +54,14 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
 
         private fun findRootPaths(scanPackage: String): Set<Path> {
             return packageToRootPaths.computeIfAbsent(scanPackage) {
-                ClassGraph()
-                        .whitelistPackages(scanPackage)
-                        .pooledScan()
-                        .use { it.allResources }
+                ClassGraph().whitelistPackages(scanPackage).pooledScan().use { result ->
+                    result.allResources
                         .asSequence()
                         .map { it.classpathElementFile.toPath() }
                         .filterNot { it.toString().endsWith("-tests.jar") }
                         .map { if (it.toString().endsWith(".jar")) it else findProjectRoot(it) }
                         .toSet()
+                }
             }
         }
 
