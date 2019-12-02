@@ -36,31 +36,106 @@ This prevents configuration errors when mixing keys containing ``.`` wrapped wit
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
 
-Overriding values from node.conf
---------------------------------
+Overriding configuration values
+-------------------------------
 
 .. _corda_configuration_file_overriding_config:
 
-Environment variables
-  For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD`` (see: :ref:`hiding-sensitive-data` section).
+Placeholder Overrides
+~~~~~~~~~~~~~~~~~~~~~
 
-JVM options
-  JVM options or environmental variables prefixed with ``corda.`` can override ``node.conf`` fields.
-  Provided system properties can also set values for absent fields in ``node.conf``.
-  This is an example of adding/overriding the keyStore password :
+It is possible to add placeholders to the ``node.conf`` file to override particular settings via environment variables. In this case the
+``rpcSettings.address`` property will be overridden by the ``RPC_ADDRESS`` environment variable, and the node will fail to load if this
+environment variable isn't present (see: :ref:`hiding-sensitive-data` for more information).
+
+.. sourcecode:: groovy
+
+   rpcSettings {
+     address=${RPC_ADDRESS}
+     adminAddress="localhost:10015"
+   }
+
+Direct Overrides
+~~~~~~~~~~~~~~~~
+
+It is also possible to directly override Corda configuration (regardless of whether the setting is already in the ``node.conf``), by using
+environment variables or JVM options. Simply prefix the field with ``corda.`` or ``corda_``, using periods (``.``) or
+underscores (``_``) to signify nested options. For example, to override the ``rpcSettings.address`` setting, you can override it via environment variables:
+
+.. sourcecode:: shell
+
+   # For *nix systems:
+   export corda_rpcSettings_address=localhost:10015
+
+   # On Windows systems:
+   SET corda_rpcSettings_address=localhost:10015
+   SET corda.rpcSettings.address=localhost:10015
+
+Or via JVM arguments:
+
+.. sourcecode:: shell
+
+   java -Dcorda_rpcSettings_address=localhost:10015 -jar corda.jar
+   java -Dcorda.rpcSettings.address=localhost:10015 -jar corda.jar
+
+Items in lists can be overridden by appending the list index to the configuration key. For example, the ``jarDirs`` setting can be
+overridden via:
+
+.. sourcecode:: shell
+
+   # via JVM arguments:
+   java -Dcorda.jarDirs.0=./libs -Dcorda.jarDirs.1=./morelibs -jar corda.jar
+   java -Dcorda_jarDirs_0=./libs -Dcorda_jarDirs_1=./morelibs -jar corda.jar
+
+   # or via environment variables
+
+   # for *nix systems:
+   export corda_jarDirs_0=./libs
+   export corda_jarDirs_1=./morelibs
+
+   # for Windows systems:
+   SET corda.jarDirs.0=./libs
+   SET corda.jarDirs.1=./morelibs
+   # or
+   SET corda_jarDirs_0=./libs
+   SET corda_jarDirs_1=./morelibs
+
+Limitations
+```````````
+
+* If the same key is overridden by both an environment variable and system property, the system property takes precedence.
+
+* Variables and properties are case sensitive. Corda will warn you if a variable
+  prefixed with ``CORDA`` cannot be mapped to a valid property. Shadowing occurs when two properties
+  of the same type with the same key are defined. For example having ``corda.p2Aaddress=host:port`` and ``corda_p2Aaddress=host1:port1``
+  will raise an exception on startup. This is to prevent hard to spot mistakes.
+
+* If an item in a list is overridden via an environment variable/system property, the whole list will be overridden. E.g., with a ``node.conf``
+  containing:
+
+  .. sourcecode:: groovy
+
+     jarDirs=["./dir1", "./dir2", "./dir3"]
+
+  When Corda is started via:
 
   .. sourcecode:: shell
 
-    java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
+     java -Dcorda.jarDirs_0=./newdir1
 
-.. note:: If the same field is overriden by both an environment variable and system property, the system property
-   takes precedence.
+  The resulting value of ``jarDirs`` will be ``["./newdir1"]``.
 
-.. note:: Underscores can be used in instead of dots. For example overriding the ``p2pAddress`` with an environment variable can be done
-   by specifying ``CORDA_P2PADDRESS=host:port``. Variables and properties are not case sensitive. Corda will warn you if a variable
-   prefixed with ``CORDA`` cannot be mapped to a valid property. Shadowing occurs when two properties
-   of the same type with the same key are defined. For example having ``CORDA_P2PADDRESS=host:port`` and ``corda_p2paddress=host1:port1``
-   will raise an exception on startup. This is to prevent hard to spot mistakes.
+* You can't override a populated list with an empty list. For example, when ``devMode=false``, ``cordappSignerKeyFingerprintBlacklist`` is
+  pre-populated with Corda development keys. It isn't possible to set this to an empty list via the commandline. You can however override
+  the list with an all zero hash which will remove the keys:
+
+  .. sourcecode:: shell
+
+     java -Dcorda.cordappSignerKeyFingerprintBlacklist.0="0000000000000000000000000000000000000000000000000000000000000000"
+
+* Objects in lists cannot currently be overridden. For example the ``rpcUsers`` configuration key is a list of user objects, overriding these
+  via environment variables or system properties will not work.
+
 Configuration file fields
 -------------------------
 
