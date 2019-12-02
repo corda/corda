@@ -5,7 +5,10 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken

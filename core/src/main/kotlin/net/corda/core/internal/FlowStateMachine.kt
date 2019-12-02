@@ -43,4 +43,5 @@ interface FlowStateMachine<FLOWRETURN> {
     val context: InvocationContext
     val ourIdentity: Party
     val ourSenderUUID: String?
+    val creationTime: Long
 }

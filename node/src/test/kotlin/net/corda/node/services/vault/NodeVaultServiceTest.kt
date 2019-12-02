@@ -897,7 +897,7 @@ class NodeVaultServiceTest {
 
         fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
 
-        CordappResolver.withCordapp(targetPlatformVersion = 3) {
+        CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
             services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
             services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
             services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))

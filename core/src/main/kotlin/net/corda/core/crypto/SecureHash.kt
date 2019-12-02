@@ -1,6 +1,7 @@
 @file:KeepForDJVM
 package net.corda.core.crypto
 
+import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
@@ -9,6 +10,7 @@ import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import java.util.function.Supplier
 
 /**
  * Container for a cryptographically secure hash value.
@@ -69,12 +71,14 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
             } ?: throw IllegalArgumentException("Provided string is null")
         }
 
+        private val sha256MessageDigest = SHA256DigestSupplier()
+
         /**
          * Computes the SHA-256 hash value of the [ByteArray].
          * @param bytes The [ByteArray] to hash.
          */
         @JvmStatic
-        fun sha256(bytes: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bytes))
+        fun sha256(bytes: ByteArray) = SHA256(sha256MessageDigest.get().digest(bytes))
 
         /**
          * Computes the SHA-256 hash of the [ByteArray], and then computes the SHA-256 hash of the hash.
@@ -139,4 +143,17 @@ fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
  */
 fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bytes)
 
+/**
+ * Hide the [FastThreadLocal] class behind a [Supplier] interface
+ * so that we can remove it for core-deterministic.
+ */
+private class SHA256DigestSupplier : Supplier<MessageDigest> {
+    private val threadLocalSha256MessageDigest = LocalSHA256Digest()
+    override fun get(): MessageDigest = threadLocalSha256MessageDigest.get()
+}
 
+// Declaring this as "object : FastThreadLocal<>" would have
+// created an extra public class in the API definition.
+private class LocalSHA256Digest : FastThreadLocal<MessageDigest>() {
+    override fun initialValue(): MessageDigest = MessageDigest.getInstance("SHA-256")
+}
