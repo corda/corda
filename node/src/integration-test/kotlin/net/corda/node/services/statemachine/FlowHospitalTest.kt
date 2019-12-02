@@ -140,7 +140,8 @@ class FlowHospitalTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
+        driver(DriverParameters(startNodesInProcess = true,
+                                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
             // one node will be enough for this testing
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
@@ -275,8 +276,9 @@ class FlowHospitalTest {
 
     class CloakingHospitalizeFlowException : HospitalizeFlowException() { // HospitalizeFlowException wrapping important exception
         init {
-            // Wrapping an SQLException with "deadlock" as a message should lead the flow being handled by StaffedFlowHospital#DeadlockNurse as well
-            // and therefore having the flow discharged and not getting it for overnight observation.
+            // Wrapping an SQLException with "deadlock" as a message should lead the flow being handled
+            // by StaffedFlowHospital#DeadlockNurse as well and therefore having the flow discharged
+            // and not getting it for overnight observation.
             setCause(SQLException("deadlock"))
         }
     }
