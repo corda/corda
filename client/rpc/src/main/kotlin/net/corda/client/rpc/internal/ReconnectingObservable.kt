@@ -57,8 +57,10 @@ class ReconnectingObservable<T> private constructor(subscriber: ReconnectingSubs
         private fun scheduleResubscribe(error: Throwable) {
             if (unsubscribed) return
             reconnectingRPCConnection.observersPool.execute {
-                if (unsubscribed) return@execute
+                if (unsubscribed || reconnectingRPCConnection.isClosed()) return@execute
                 reconnectingRPCConnection.reconnectOnError(error)
+                // It can take a while to reconnect so we might find that we've shutdown in in the meantime
+                if (unsubscribed || reconnectingRPCConnection.isClosed()) return@execute
                 val newDataFeed = createDataFeed()
                 subscribeImmediately(newDataFeed)
             }

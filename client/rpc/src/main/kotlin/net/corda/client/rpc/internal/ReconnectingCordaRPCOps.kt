@@ -142,6 +142,7 @@ class ReconnectingCordaRPCOps private constructor(
             UNCONNECTED, CONNECTED, CONNECTING, CLOSED, DIED
         }
 
+        @Volatile
         private var currentState = UNCONNECTED
 
         init {
@@ -150,14 +151,22 @@ class ReconnectingCordaRPCOps private constructor(
         private val current: CordaRPCConnection
             @Synchronized get() = when (currentState) {
                 // The first attempt to establish a connection will try every address only once.
-                UNCONNECTED -> connect(infiniteRetries = false)
-                CONNECTED -> currentRPCConnection!!
-                CLOSED -> throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
-                CONNECTING, DIED -> throw IllegalArgumentException("Illegal state: $currentState ")
+                UNCONNECTED ->
+                    connect(infiniteRetries = false) ?: throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
+                CONNECTED ->
+                    currentRPCConnection!!
+                CLOSED ->
+                    throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
+                CONNECTING, DIED ->
+                    throw IllegalArgumentException("Illegal state: $currentState ")
             }
 
         @Synchronized
         private fun doReconnect(e: Throwable, previousConnection: CordaRPCConnection?) {
+            if (isClosed()) {
+                // We don't want to reconnect if we purposely closed
+                return
+            }
             if (previousConnection != currentRPCConnection) {
                 // We've already done this, skip
                 return
@@ -181,16 +190,20 @@ class ReconnectingCordaRPCOps private constructor(
             val previousConnection = currentRPCConnection
             doReconnect(e, previousConnection)
         }
-        @Synchronized
-        private fun connect(infiniteRetries: Boolean): CordaRPCConnection {
+        private fun connect(infiniteRetries: Boolean): CordaRPCConnection? {
             currentState = CONNECTING
-            currentRPCConnection = if (infiniteRetries) {
-                establishConnectionWithRetry()
-            } else {
-                establishConnectionWithRetry(retries = nodeHostAndPorts.size)
+            synchronized(this) {
+                currentRPCConnection = if (infiniteRetries) {
+                    establishConnectionWithRetry()
+                } else {
+                    establishConnectionWithRetry(retries = nodeHostAndPorts.size)
+                }
+                // It's possible we could get closed while waiting for the connection to establish.
+                if (!isClosed()) {
+                    currentState = CONNECTED
+                }
             }
-            currentState = CONNECTED
-            return currentRPCConnection!!
+            return currentRPCConnection
         }
 
         /**
@@ -204,7 +217,11 @@ class ReconnectingCordaRPCOps private constructor(
                 retryInterval: Duration = 1.seconds,
                 roundRobinIndex: Int = 0,
                 retries: Int = -1
-        ): CordaRPCConnection {
+        ): CordaRPCConnection? {
+            if (isClosed()) {
+                // We've decided to exit for some reason (maybe the client is being shutdown)
+                return null
+            }
             val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
             log.info("Connecting to: $attemptedAddress")
             try {
@@ -250,16 +267,19 @@ class ReconnectingCordaRPCOps private constructor(
             get() = current.proxy
         override val serverProtocolVersion
             get() = current.serverProtocolVersion
-        @Synchronized
         override fun notifyServerAndClose() {
             currentState = CLOSED
-            currentRPCConnection?.notifyServerAndClose()
+            synchronized(this) {
+                currentRPCConnection?.notifyServerAndClose()
+            }
         }
-        @Synchronized
         override fun forceClose() {
             currentState = CLOSED
-            currentRPCConnection?.forceClose()
+            synchronized(this) {
+                currentRPCConnection?.forceClose()
+            }
         }
+        fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
@@ -278,6 +298,9 @@ class ReconnectingCordaRPCOps private constructor(
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
+            if (reconnectingRPCConnection.isClosed()) {
+                throw RPCException("Cannot execute RPC command after client has shut down.")
+            }
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
             while (remainingAttempts != 0) {
