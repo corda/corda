@@ -1,9 +1,6 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.Strand
-import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateAndRef
@@ -37,7 +34,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.sql.SQLException
-import java.util.Random
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -154,7 +151,7 @@ class FlowHospitalTest {
     }
 
     @Test
-    fun `HospitalizeFlowException cloaking an important exception`() {
+    fun `HospitalizeFlowException cloaking an important exception thrown`() {
         var dischargedCounter = 0
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ ->
