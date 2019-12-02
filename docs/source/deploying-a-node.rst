@@ -64,7 +64,7 @@ handling, and ensures the Corda service is run at boot.
               ]
           }
       ]
-      custom { jvmArgs = [ '-Xmx2048m', '-XX:+UseG1GC' ] }
+      custom { jvmArgs = [ "-Xmx2048m", "-XX:+UseG1GC" ] }
 
 7. Make the following changes to ``/opt/corda/node.conf``:
 
