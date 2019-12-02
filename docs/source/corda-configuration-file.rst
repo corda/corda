@@ -59,8 +59,8 @@ Direct Overrides
 ~~~~~~~~~~~~~~~~
 
 It is also possible to directly override Corda configuration (regardless of whether the setting is already in the ``node.conf``), by using
-environment variables or JVM options. Simply prefix the field with CORDA. or CORDA_, using periods (.) or
-underscores (_) to signify nested options. For example, to override the ``rpcSettings.address`` setting, you can override it via environment variables:
+environment variables or JVM options. Simply prefix the field with ``corda.`` or ``corda_``, using periods (``.``) or
+underscores (``_``) to signify nested options. For example, to override the ``rpcSettings.address`` setting, you can override it via environment variables:
 
 .. sourcecode:: shell
 
