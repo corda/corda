@@ -13,7 +13,10 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long>()
 
-        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath(), { key: Any? -> key as Long }), "test")
+        val wrappedCache = wrap(
+                cache,
+                CacheTracing.CacheTracingConfig(true, tempDir.toPath(), { key: Any? -> key as Long }),
+                "test")
 
         wrappedCache.put(1L, 1L)
         wrappedCache.putAll(mutableMapOf(2L to 2L, 3L to 3L))
@@ -32,7 +35,10 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long>()
 
-        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath().resolve("foo/bar"), { key: Any? -> key as Long }), "test")
+        val wrappedCache = wrap(
+                cache,
+                CacheTracing.CacheTracingConfig(true, tempDir.toPath().resolve("foo/bar"), { key: Any? -> key as Long }),
+                "test")
 
         wrappedCache.put(1L, 1L)
         wrappedCache.putAll(mutableMapOf(2L to 2L, 3L to 3L))

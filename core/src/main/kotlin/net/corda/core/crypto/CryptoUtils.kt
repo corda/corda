@@ -1,3 +1,4 @@
+@file:Suppress("MatchingDeclarationName")
 @file:KeepForDJVM
 @file:JvmName("CryptoUtils")
 

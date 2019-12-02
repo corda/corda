@@ -1,3 +1,4 @@
+@file:Suppress("MatchingDeclarationName")
 package net.corda.core.internal.profiling
 
 import com.github.benmanes.caffeine.cache.Cache
@@ -26,9 +27,14 @@ class CacheTracing {
             keys.forEach { queue.add(converter(it)) }
         }
 
+        @Suppress("MagicNumber")
         fun shutdown() {
             running = false
             writeThread.join(10.seconds.toMillis())
+        }
+
+        companion object {
+            const val sleepTimeMillis: Long = 100
         }
 
         private fun writeFunc() {
@@ -38,9 +44,12 @@ class CacheTracing {
             }
             FileOutputStream(fileName, true).use {
                 val buffer = ByteBuffer.allocate(java.lang.Long.BYTES)
-                var firstRun = true // make sure the loop runs at least once (in case of very short lived process where the thread might be started after shutdown is initiated.
+                var firstRun = true // make sure the loop runs at least once (in case of very short
+                                    // lived process where the thread might be started after shutdown is initiated.
                 while (running || firstRun) {
-                    Thread.sleep(100) // sleep first, then check for work (so that work arriving during sleep does not get lost in shutdown)
+                    firstRun = false
+                    Thread.sleep(sleepTimeMillis) // sleep first, then check for work (so that work arriving
+                                            // during sleep does not get lost in shutdown)
                     var item: Long? = null
                     while ({ item = queue.poll(); item }() != null) {
                         buffer.putLong(item!!)
@@ -52,7 +61,10 @@ class CacheTracing {
         }
     }
 
-    private open class TracingCacheWrapper<K, V>(protected val cache: Cache<K, V>, protected val collector: TraceCollector<K>) : Cache<K, V> by cache {
+    private open class TracingCacheWrapper<K, V>(
+            protected val cache: Cache<K, V>,
+            protected val collector: TraceCollector<K>)
+        : Cache<K, V> by cache {
         override fun put(key: K, value: V) {
             collector.collectKeys(listOf(key))
             cache.put(key, value)
@@ -75,7 +87,9 @@ class CacheTracing {
         }
     }
 
-    private class TracingLoadingCacheWrapper<K, V>(val loadingCache: LoadingCache<K, V>, collector: TraceCollector<K>) : LoadingCache<K, V>, TracingCacheWrapper<K, V>(loadingCache, collector) {
+    private class TracingLoadingCacheWrapper<K, V>(
+            val loadingCache: LoadingCache<K, V>, collector: TraceCollector<K>)
+        : LoadingCache<K, V>, TracingCacheWrapper<K, V>(loadingCache, collector) {
         override fun getAll(keys: MutableIterable<K>): MutableMap<K, V> {
             collector.collectKeys(keys)
             return loadingCache.getAll(keys)
@@ -96,11 +110,19 @@ class CacheTracing {
 
     companion object {
         fun <K, V> wrap(cache: Cache<K, V>, config: CacheTracingConfig?, traceName: String): Cache<K, V> {
-            return if (config != null && config.enabled) TracingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter)) else cache
+            return if (config != null && config.enabled) {
+                TracingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter))
+            } else {
+                cache
+            }
         }
 
         fun <K, V> wrap(cache: LoadingCache<K, V>, config: CacheTracingConfig?, traceName: String): LoadingCache<K, V> {
-            return if (config != null && config.enabled) TracingLoadingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter)) else cache
+            return if (config != null && config.enabled) {
+                TracingLoadingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter))
+            } else {
+                cache
+            }
         }
 
         private val collectors = ConcurrentHashMap<String, TraceCollector<*>>()

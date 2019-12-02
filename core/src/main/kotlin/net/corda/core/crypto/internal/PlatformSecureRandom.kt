@@ -8,7 +8,11 @@ import net.corda.core.crypto.DummySecureRandom
 import net.corda.core.utilities.SgxSupport
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.lang3.SystemUtils
-import java.io.*
+import java.io.DataInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
@@ -35,10 +39,12 @@ class PlatformSecureRandomService(provider: Provider)
 
     private val instance: SecureRandomSpi = if (SystemUtils.IS_OS_LINUX) tryAndUseLinuxSecureRandomSpi() else PlatformSecureRandomSpi()
 
+    @Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
     private fun tryAndUseLinuxSecureRandomSpi(): SecureRandomSpi = try {
         LinuxSecureRandomSpi()
     } catch (e: Exception) {
-        logger.error("Unable to initialise LinuxSecureRandomSpi. The exception logged with this message might assist with diagnosis.  The process will now exit.", e)
+        logger.error("Unable to initialise LinuxSecureRandomSpi. The exception logged with this message " +
+                "might assist with diagnosis.  The process will now exit.", e)
         System.exit(1)
         throw RuntimeException("Never reached, but calms the compiler.")
     }
@@ -60,6 +66,7 @@ private class PlatformSecureRandomSpi : SecureRandomSpi() {
 }
 
 @DeleteForDJVM
+@Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
 private class LinuxSecureRandomSpi : SecureRandomSpi() {
     private fun openURandom(): InputStream {
         try {
@@ -86,4 +93,5 @@ private class LinuxSecureRandomSpi : SecureRandomSpi() {
 }
 
 // Enterprise optimisation: This is safe to share because of the underlying implementation of SecureRandomSpi
-private val sharedSecureRandom: SecureRandom by lazy(LazyThreadSafetyMode.PUBLICATION) { SecureRandom.getInstance(PlatformSecureRandomService.algorithm) }
+private val sharedSecureRandom: SecureRandom by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    SecureRandom.getInstance(PlatformSecureRandomService.algorithm) }

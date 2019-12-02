@@ -21,6 +21,7 @@ class JvmStatsHelper(dumpGcStats: Boolean = true, dumpMemoryStats: Boolean = tru
     private val gcBeans = if (dumpGcStats) ManagementFactory.getGarbageCollectorMXBeans() else null
     private val osBean = if (dumpOsStats) ManagementFactory.getOperatingSystemMXBean() else null
 
+    @Suppress("TooGenericExceptionCaught" ) // Under no circumstance should a stats helper failure escape up the stack
     private fun StringBuilder.tryAppend(label: String, block: () -> String) {
         this.append("$label: ")
         try {
@@ -52,7 +53,8 @@ class JvmStatsHelper(dumpGcStats: Boolean = true, dumpMemoryStats: Boolean = tru
             }
             gcBeans?.apply {
                 forEach {
-                    message.tryAppend("GC") { "${it.name}\n    collectionCount: ${it.collectionCount} collectionTime: ${it.collectionTime}\n" }
+                    message.tryAppend("GC") { "${it.name}\n    collectionCount: ${it.collectionCount} " +
+                            "collectionTime: ${it.collectionTime}\n" }
                 }
             }
             osBean?.apply {
