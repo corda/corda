@@ -24,7 +24,7 @@ pipeline {
                     //if(currentBuild.currentResult == 'FAILURE') {
                         def testIssue = [fields: [ project: [key: 'TM'],
                                                  summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
-                                                 issuetype: [id: '3']]]
+                                                 issuetype: [name: 'Story']]]
 
                         response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
