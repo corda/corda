@@ -27,19 +27,21 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            //archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            //junit '**/build/test-results-xml/**/*.xml'
+
+        }
+
+        unsuccessful {
             script {
-                if(currentBuild.currentResult == 'FAILURE') {
-                    def testIssue = [fields: [ project: [key: 'TM'],
-                                             summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
-                                             issuetype: [name: 'Story']]]
+                def testIssue = [fields: [ project: [key: 'TM'],
+                                         summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
+                                         issuetype: [name: 'Story']]]
 
-                    response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
+                response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
-                    echo response.successful.toString()
-                    echo response.data.toString()
-                }
+                echo response.successful.toString()
+                echo response.data.toString()
             }
         }
 
