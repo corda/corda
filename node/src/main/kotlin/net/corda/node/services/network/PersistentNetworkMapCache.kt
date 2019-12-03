@@ -25,7 +25,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
@@ -39,7 +39,7 @@ import javax.persistence.PersistenceException
 /** Database-based network map cache. */
 @ThreadSafe
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
-                                     private val database: CordaTransactionSupport,
+                                     private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
 
     companion object {

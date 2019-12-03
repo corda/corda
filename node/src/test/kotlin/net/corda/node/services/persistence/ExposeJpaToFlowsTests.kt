@@ -7,7 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.packageName_
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
@@ -39,7 +39,7 @@ class ExposeJpaToFlowsTests {
     val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     lateinit var mockNet: MockNetwork
     lateinit var services: MockServices
-    lateinit var database: CordaTransactionSupport
+    lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {

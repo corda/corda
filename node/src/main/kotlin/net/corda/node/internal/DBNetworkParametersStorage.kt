@@ -21,7 +21,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang3.ArrayUtils
 import java.security.cert.X509Certificate
@@ -29,7 +29,7 @@ import javax.persistence.*
 
 class DBNetworkParametersStorage(
         cacheFactory: NamedCacheFactory,
-        private val database: CordaTransactionSupport,
+        private val database: CordaPersistence,
         // TODO It's very inefficient solution (at least at the beginning when node joins without historical data)
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?

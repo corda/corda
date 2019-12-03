@@ -30,7 +30,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Clock
@@ -42,7 +42,7 @@ import java.time.Clock
  * State re-synchronisation is achieved by replaying the command log to the new (or re-joining) cluster member.
  */
 class RaftTransactionCommitLog<E, EK>(
-        private val db: CordaTransactionSupport,
+        private val db: CordaPersistence,
         private val nodeClock: Clock,
         createMap: () -> AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, E, EK>
 ) : StateMachine(), Snapshottable {

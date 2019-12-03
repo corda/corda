@@ -40,7 +40,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -84,7 +84,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
                          val serverAddress: NetworkHostAndPort,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
-                         private val database: CordaTransactionSupport,
+                         private val database: CordaPersistence,
                          private val networkMap: NetworkMapCacheInternal,
                          @Suppress("UNUSED")
                          private val metricRegistry: MetricRegistry,

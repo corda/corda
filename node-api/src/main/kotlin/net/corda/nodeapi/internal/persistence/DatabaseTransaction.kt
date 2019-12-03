@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
-import net.corda.core.node.services.vault.SessionScope
+import org.hibernate.BaseSessionEventListener
 import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
@@ -22,7 +22,7 @@ class DatabaseTransaction(
         isolation: Int,
         private val outerTransaction: DatabaseTransaction?,
         val database: CordaPersistence
-) : SessionScope {
+) {
     val id: UUID = UUID.randomUUID()
 
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
@@ -44,7 +44,7 @@ class DatabaseTransaction(
         RestrictedEntityManager(entityManager)
     }
 
-    override val session: Session by sessionDelegate
+    val session: Session by sessionDelegate
     private lateinit var hibernateTransaction: Transaction
 
     internal val boundary = PublishSubject.create<CordaPersistence.Boundary>()

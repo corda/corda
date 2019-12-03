@@ -4,7 +4,7 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 interface ScheduledFlowRepository {
     fun delete(key: StateRef): Boolean
@@ -12,7 +12,7 @@ interface ScheduledFlowRepository {
     fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>>
 }
 
-class PersistentScheduledFlowRepository(val database: CordaTransactionSupport) : ScheduledFlowRepository {
+class PersistentScheduledFlowRepository(val database: CordaPersistence) : ScheduledFlowRepository {
     private fun toPersistentEntityKey(stateRef: StateRef): PersistentStateRef {
         return PersistentStateRef(stateRef.txhash.toString(), stateRef.index)
     }

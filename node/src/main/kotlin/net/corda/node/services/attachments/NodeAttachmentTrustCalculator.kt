@@ -10,7 +10,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.persistence.AttachmentStorageInternal
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 import java.util.stream.Stream
 
@@ -21,10 +21,10 @@ import java.util.stream.Stream
  * attachments received over the network. The list consists of SHA-256 hashes of public keys
  */
 class NodeAttachmentTrustCalculator(
-        private val attachmentStorage: AttachmentStorageInternal,
-        private val database: CordaTransactionSupport?,
-        cacheFactory: NamedCacheFactory,
-        private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
+    private val attachmentStorage: AttachmentStorageInternal,
+    private val database: CordaPersistence?,
+    cacheFactory: NamedCacheFactory,
+    private val blacklistedAttachmentSigningKeys: List<SecureHash> = emptyList()
 ) : AttachmentTrustCalculator, SingletonSerializeAsToken() {
 
     @VisibleForTesting

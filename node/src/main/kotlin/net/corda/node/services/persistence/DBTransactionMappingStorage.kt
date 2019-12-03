@@ -6,7 +6,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -21,7 +21,7 @@ import javax.annotation.concurrent.ThreadSafe
  * RPC API to correlate transaction creation with flows.
  */
 @ThreadSafe
-class DBTransactionMappingStorage(private val database: CordaTransactionSupport) : StateMachineRecordedTransactionMappingStorage {
+class DBTransactionMappingStorage(private val database: CordaPersistence) : StateMachineRecordedTransactionMappingStorage {
     val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {

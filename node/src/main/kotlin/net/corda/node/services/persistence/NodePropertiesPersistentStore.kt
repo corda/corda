@@ -6,7 +6,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.NodePropertiesStore.FlowsDrainingModeOperations
 import net.corda.node.utilities.PersistentMap
-import net.corda.core.node.services.vault.CordaTransactionSupport
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.slf4j.Logger
 import rx.subjects.PublishSubject
@@ -18,7 +18,7 @@ import javax.persistence.Table
 /**
  * Simple node properties key value store in DB.
  */
-class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: CordaTransactionSupport, cacheFactory: NamedCacheFactory) : NodePropertiesStore {
+class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: CordaPersistence, cacheFactory: NamedCacheFactory) : NodePropertiesStore {
     private companion object {
         val logger = contextLogger()
     }
@@ -41,7 +41,7 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: 
     )
 }
 
-class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaTransactionSupport, logger: Logger, cacheFactory: NamedCacheFactory) : FlowsDrainingModeOperations {
+class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger, cacheFactory: NamedCacheFactory) : FlowsDrainingModeOperations {
     private val nodeSpecificFlowsExecutionModeKey = "${readPhysicalNodeId()}_flowsExecutionMode"
 
     init {

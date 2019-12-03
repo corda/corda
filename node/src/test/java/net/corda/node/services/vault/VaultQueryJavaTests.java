@@ -27,7 +27,7 @@ import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.finance.test.SampleCashSchemaV2;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
-import net.corda.core.node.services.vault.SessionScope;
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
 import net.corda.testing.core.internal.ContractJarTestUtils;
@@ -213,7 +213,7 @@ public class VaultQueryJavaTests {
         List<String> dealIds = asList("123", "456", "789");
         @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
-                database.transaction((SessionScope tx) -> {
+                database.transaction((DatabaseTransaction tx) -> {
                     Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
                     StateAndRef<LinearState> linearState = states.getStates().iterator().next();
                     UniqueIdentifier uid = linearState.component1().getData().getLinearId();
