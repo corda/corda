@@ -23,10 +23,10 @@ pipeline {
                 script {
                     //if(currentBuild.currentResult == 'FAILURE') {
                         def testIssue = [fields: [ project: [key: 'TM'],
-                                                 summary: 'Regression build failed for: ' + currentBuild.displayName,
-                                                 issuetype: [name: 'Task']]]
+                                                 summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
+                                                 issuetype: [id: '3']]]
 
-                        response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
+                        response = jiraNewIssue issue: testIssue
 
                         echo response.successful.toString()
                         echo response.data.toString()
@@ -37,10 +37,7 @@ pipeline {
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
-        }
+
 
         cleanup {
             deleteDir() /* clean up our workspace */
