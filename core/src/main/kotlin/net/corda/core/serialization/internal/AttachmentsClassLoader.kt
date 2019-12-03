@@ -351,7 +351,7 @@ object AttachmentsClassLoaderBuilder {
  * This will not be exposed as an API.
  */
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
-    private const val attachmentScheme = "attachment"
+    internal const val attachmentScheme = "attachment"
 
     // TODO - what happens if this grows too large?
     private val loadedAttachments = mutableMapOf<String, Attachment>().toSynchronised()
