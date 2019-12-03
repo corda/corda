@@ -47,8 +47,8 @@ pipeline {
         }
 
         stage('JIRA') {
-            steps {
-                if(currentBuild.currentResult == 'FAILURE') {
+            if(currentBuild.currentResult == 'FAILURE') {
+                steps {
                     def issue = [fields: [ project: [key: 'TM'],
                         summary: 'Regression build failed for: ' + currentBuild.displayName,
                         issuetype: [name: 'Task']]]
