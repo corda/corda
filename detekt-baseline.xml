@@ -1320,7 +1320,7 @@
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$throw IllegalStateException("CryptoService and signingCertificateStore are not aligned, the entry for key-alias: $alias is only found in $keyExistsIn")</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also { attachments.servicesForResolution = it }</ID>
-    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$private</ID>
+    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$override val transactionSupport: CordaTransactionSupport</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex is HikariPool.PoolInitializationException -&gt; throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex.cause is ClassNotFoundException -&gt; throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")</ID>
@@ -2516,7 +2516,6 @@
     <ID>MaxLineLength:MockServices.kt$MockServices.Companion$makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)</ID>
     <ID>MaxLineLength:MockServices.kt$MockServices.Companion$return object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toTypedArray(), keyManagementService) { override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters) override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader) override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable&lt;SignedTransaction&gt;) { ServiceHubInternal.recordTransactions( statesToRecord, txs as? Collection ?: txs.toList(), validatedTransactions as WritableTransactionStorage, mockStateMachineRecordedTransactionMappingStorage, vaultService as VaultServiceInternal, persistence ) } override fun jdbcSession(): Connection = persistence.createSession() override fun &lt;T : Any?&gt; withEntityManager(block: EntityManager.() -&gt; T): T { return block(contextTransaction.restrictedEntityManager) } override fun withEntityManager(block: Consumer&lt;EntityManager&gt;) { return block.accept(contextTransaction.restrictedEntityManager) } }</ID>
     <ID>MaxLineLength:MockServices.kt$MockServices.Companion$val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())</ID>
-    <ID>MaxLineLength:MyCustomNotaryService.kt$MyCustomValidatingNotaryService : SinglePartyNotaryService</ID>
     <ID>MaxLineLength:Network.kt$Network$node.getWorldMapLocation()?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: ScreenCoordinate(0.0, 0.0)</ID>
     <ID>MaxLineLength:Network.kt$Network$private val peerButtons = peerComponents.filtered { myIdentity.value !in it.nodeInfo.legalIdentitiesAndCerts.map { it.party } }.map { it.button }</ID>
     <ID>MaxLineLength:Network.kt$Network$val inputParties = it.inputs.sequence() .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved } .filterNotNull() .map { it.stateAndRef.state.data }.getParties() val outputParties = it.transaction.coreTransaction.let { if (it is WireTransaction) it.outputStates.observable().getParties() // For ContractUpgradeWireTransaction and NotaryChangeWireTransaction the output parties are the same as input parties else inputParties } val signingParties = it.transaction.sigs.map { it.by.toKnownParty() } // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network. // TODO : Expose artemis queue to get real message information. inputParties.cross(outputParties) + inputParties.cross(signingParties)</ID>
@@ -3365,7 +3364,6 @@
     <ID>MaxLineLength:ThrowableSerializer.kt$ThrowableSerializer${ try { // TODO: This will need reworking when we have multiple class loaders val clazz = Class.forName(proxy.exceptionClass, false, factory.classloader) // If it is CordaException or CordaRuntimeException, we can seek any constructor and then set the properties // Otherwise we just make a CordaRuntimeException if (CordaThrowable::class.java.isAssignableFrom(clazz) &amp;&amp; Throwable::class.java.isAssignableFrom(clazz)) { val typeInformation = factory.getTypeInformation(clazz) val constructor = typeInformation.constructor val params = constructor.parameters.map { parameter -&gt; proxy.additionalProperties[parameter.name] ?: proxy.additionalProperties[parameter.name.capitalize()] } val throwable = constructor.observedMethod.newInstance(*params.toTypedArray()) (throwable as CordaThrowable).apply { if (this.javaClass.name != proxy.exceptionClass) this.originalExceptionClassName = proxy.exceptionClass this.setMessage(proxy.message) this.setCause(proxy.cause) this.addSuppressed(proxy.suppressed) } return (throwable as Throwable).apply { this.stackTrace = proxy.stackTrace } } } catch (e: Exception) { logger.warn("Unexpected exception de-serializing throwable: ${proxy.exceptionClass}. Converting to CordaRuntimeException.", e) } // If the criteria are not met or we experience an exception constructing the exception, we fall back to our own unchecked exception. return CordaRuntimeException(proxy.exceptionClass, null, null).apply { this.setMessage(proxy.message) this.setCause(proxy.cause) this.stackTrace = proxy.stackTrace this.addSuppressed(proxy.suppressed) } }</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests$addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.Companion$defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin())</ID>
-    <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService$@Suspendable override</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService$override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic&lt;Void?&gt;</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService$private</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService.&lt;no name provided&gt;$override</ID>
@@ -3925,6 +3923,7 @@
     <ID>ThrowsCount:JacksonSupport.kt$JacksonSupport.PartyDeserializer$private fun lookupByNameSegment(mapper: PartyObjectMapper, parser: JsonParser): Party</ID>
     <ID>ThrowsCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseVersion(versionStr: String?, attributeName: String): Int</ID>
     <ID>ThrowsCount:LedgerDSLInterpreter.kt$Verifies$ fun failsWith(expectedMessage: String?): EnforceVerifyOrFail</ID>
+    <ID>ThrowsCount:MockServices.kt$ fun &lt;T : SerializeAsToken&gt; createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -&gt; T): T</ID>
     <ID>ThrowsCount:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List&lt;X509Certificate&gt;)</ID>
     <ID>ThrowsCount:NodeInfoFilesCopier.kt$NodeInfoFilesCopier$private fun atomicCopy(source: Path, destination: Path)</ID>
     <ID>ThrowsCount:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
@@ -4811,7 +4810,6 @@
     <ID>WildcardImport:NotaryServiceFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:NotaryServiceTests.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:NotaryServiceTests.kt$import net.corda.testing.node.internal.*</ID>
-    <ID>WildcardImport:NotaryUtils.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:NotaryWhitelistTests.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:NotaryWhitelistTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:OGSwapPricingExample.kt$import com.opengamma.strata.product.swap.*</ID>
@@ -4843,8 +4841,6 @@
     <ID>WildcardImport:PersistentIdentityServiceTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:PersistentNetworkMapCacheTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:PersistentStateServiceTests.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:PersistentUniquenessProvider.kt$import javax.persistence.*</ID>
-    <ID>WildcardImport:PersistentUniquenessProvider.kt$import net.corda.core.internal.notary.*</ID>
     <ID>WildcardImport:Portfolio.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:PortfolioApi.kt$import javax.ws.rs.*</ID>
     <ID>WildcardImport:PortfolioState.kt$import net.corda.core.contracts.*</ID>
@@ -4869,7 +4865,6 @@
     <ID>WildcardImport:RPCSecurityManagerImpl.kt$import org.apache.shiro.authc.*</ID>
     <ID>WildcardImport:RPCServer.kt$import net.corda.core.utilities.*</ID>
     <ID>WildcardImport:RPCServer.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
-    <ID>WildcardImport:RaftUniquenessProvider.kt$import javax.persistence.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.node.services.statemachine.StaffedFlowHospital.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:ReceiveTransactionFlow.kt$import net.corda.core.contracts.*</ID>
