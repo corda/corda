@@ -111,6 +111,12 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+    override val cordappsClassLoader: ClassLoader? = if (!startNodesInProcess) {
+        createCordappsClassLoader(cordappsForAllNodes)
+    } else {
+        null
+    }
+
     // While starting with inProcess mode, we need to have different names to avoid clashes
     private val inMemoryCounter = AtomicInteger()
 
@@ -159,6 +165,7 @@ class DriverDSLImpl(
         }
         _shutdownManager?.shutdown()
         _executorService?.shutdownNow()
+        (cordappsClassLoader as? AutoCloseable)?.close()
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
@@ -834,6 +841,13 @@ class DriverDSLImpl(
             return config
         }
 
+        private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): ClassLoader? {
+            if (cordapps == null || cordapps.isEmpty()) {
+                return null
+            }
+            return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
+        }
+
         private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))
 
         /**
@@ -921,6 +935,8 @@ interface InternalDriverDSL : DriverDSL {
 
     val shutdownManager: ShutdownManager
 
+    val cordappsClassLoader: ClassLoader?
+
     fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
 
     /**
@@ -960,7 +976,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization()
+    val serializationEnv = setDriverSerialization(driverDsl.cordappsClassLoader)
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()

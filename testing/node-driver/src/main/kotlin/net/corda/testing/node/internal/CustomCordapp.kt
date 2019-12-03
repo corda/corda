@@ -4,6 +4,7 @@ import io.github.classgraph.ClassGraph
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
@@ -55,9 +56,18 @@ data class CustomCordapp(
                 .pooledScan()
 
         scanResult.use {
+            val whitelistService = SerializationWhitelist::class.java.name
+            val whitelists = it.getClassesImplementing(whitelistService)
+
             JarOutputStream(file.outputStream()).use { jos ->
                 jos.addEntry(testEntry(JarFile.MANIFEST_NAME)) {
                     createTestManifest(name, versionId, targetPlatformVersion).write(jos)
+                }
+                if (whitelists.isNotEmpty()) {
+                    jos.addEntry(directoryEntry("META-INF/services"))
+                    jos.addEntry(testEntry("META-INF/services/$whitelistService")) {
+                        jos.write(whitelists.names.joinToString(separator = "\r\n").toByteArray())
+                    }
                 }
 
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
@@ -107,6 +117,16 @@ data class CustomCordapp(
 
     private fun testEntry(name: String): ZipEntry {
         return ZipEntry(name).setCreationTime(epochFileTime).setLastAccessTime(epochFileTime).setLastModifiedTime(epochFileTime)
+    }
+
+    private fun directoryEntry(name: String): ZipEntry {
+        val directoryName = if (name.endsWith('/')) name else "$name/"
+        return testEntry(directoryName).apply {
+            method = ZipEntry.STORED
+            compressedSize = 0
+            size = 0
+            crc = 0
+        }
     }
 
     data class SigningInfo(val keyStorePath: Path? = null)

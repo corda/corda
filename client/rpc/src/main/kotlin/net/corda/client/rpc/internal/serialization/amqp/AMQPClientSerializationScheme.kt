@@ -21,11 +21,16 @@ class AMQPClientSerializationScheme(
         cordappSerializationWhitelists: Set<SerializationWhitelist>,
         serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, cordappSerializationWhitelists, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
-    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, serializerFactoriesForContexts)
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists)
+    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>)
+        : this(cordapps.customSerializers, cordapps.serializationWhitelists, serializerFactoriesForContexts)
+    constructor(
+        cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
+        cordappSerializationWhitelists: Set<SerializationWhitelist>
+    ) : this(cordappCustomSerializers, cordappSerializationWhitelists, createDefaultSerializerFactoryCache())
 
     @Suppress("UNUSED")
-    constructor() : this(emptySet(), emptySet(), AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
+    constructor() : this(emptySet(), emptySet())
 
     companion object {
         /** Call from main only. */
@@ -43,6 +48,10 @@ class AMQPClientSerializationScheme(
                     rpcClientContext = AMQP_RPC_CLIENT_CONTEXT,
                     rpcServerContext = AMQP_RPC_SERVER_CONTEXT
             )
+        }
+
+        private fun createDefaultSerializerFactoryCache(): MutableMap<SerializationFactoryCacheKey, SerializerFactory> {
+            return AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised()
         }
     }
 
