@@ -26,7 +26,7 @@ pipeline {
                                                  summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
                                                  issuetype: [id: '3']]]
 
-                        response = jiraNewIssue issue: testIssue
+                        response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
                         echo response.successful.toString()
                         echo response.data.toString()
