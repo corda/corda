@@ -7,6 +7,7 @@ import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -25,7 +26,10 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
+import java.lang.Thread.sleep
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -193,6 +197,36 @@ class CordaRPCClientReconnectionTest {
                         .start(rpcUser.username, rpcUser.password, GracefulReconnect())
             }.isInstanceOf(RPCException::class.java)
                     .hasMessage("Cannot connect to server(s). Tried with all available servers.")
+        }
+    }
+
+    @Test(timeout = 120_000)
+    fun `RPC connection can be shut down after being disconnected from the node`() {
+        driver(DriverParameters(cordappsForAllNodes = emptyList())) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            CordaRPCClient(node.rpcAddress).start(rpcUser.username, rpcUser.password, gracefulReconnect).use {
+                node.stop()
+                thread() {
+                    it.proxy.startTrackedFlow(
+                            ::CashIssueFlow,
+                            10.DOLLARS,
+                            OpaqueBytes.of(0),
+                            defaultNotaryIdentity
+                    )
+                }
+                // This just gives the flow time to get started so the RPC detects a problem
+                sleep(1000)
+                it.close()
+            }
         }
     }
 
