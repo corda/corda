@@ -53,6 +53,15 @@ pipeline {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
         }
+
+        failure  {
+            def issue = [fields: [ project: [key: 'TM'],
+                                           summary: 'Regression build failed for: ' + currentBuild.displayName,
+                                           issuetype: [name: 'Task']]]
+            def newIssue = jiraNewIssue issue: issue
+            echo newIssue.data.key
+        }
+
         cleanup {
             deleteDir() /* clean up our workspace */
         }
