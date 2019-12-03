@@ -45,18 +45,20 @@ pipeline {
                         " parallelRegressionTest --stacktrace"
             }
         }
-
-        stage('JIRA') {
-            steps {
-                def issue = [fields: [ project: [key: 'TM'],
-                    summary: 'Regression build failed for: ' + currentBuild.displayName,
-                    issuetype: [name: 'Task']]]
-                def newIssue = jiraNewIssue issue: issue
-                echo newIssue.data.key
-            }
-        }
     }
 
+    node {
+        stage('JIRA') {
+            def testIssue = [fields: [ project: [key: 'TM'],
+                                     summary: 'Regression build failed for: ' + currentBuild.displayName,
+                                     issuetype: [name: 'Task']]]
+
+            response = jiraNewIssue issue: testIssue
+
+            echo response.successful.toString()
+            echo response.data.toString()
+        }
+    }
 
     post {
         always {
