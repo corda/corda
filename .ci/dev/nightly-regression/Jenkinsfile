@@ -1,0 +1,65 @@
+@Library('existing-build-control')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent { label 'gke' }
+    options {
+        timestamps()
+        overrideIndexTriggers(false)
+        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+    }
+    triggers {
+        pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
+    }
+
+    environment {
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
+        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
+        BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+    }
+
+    stages {
+        stage('Generate Build Image') {
+            steps {
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean pushBuildImage --stacktrace"
+                }
+                sh "kubectl auth can-i get pods"
+            }
+        }
+
+        stage('Regression Test') {
+            steps {
+                sh "./gradlew " +
+                        "-DbuildId=\"\${BUILD_ID}\" " +
+                        "-Dkubenetize=true " +
+                        "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                        "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                        "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                        "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                        "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                        " parallelRegressionTest --stacktrace"
+            }
+        }
+    }
+
+
+    post {
+        always {
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: true
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
+
