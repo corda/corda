@@ -11,12 +11,17 @@
 namespace amqp::internal {
 
     class RestrictedDescriptor : public AMQPDescriptor {
+        public :
+            /**
+             * This could just live as a stand alone function in the
+             * anonymous namespace... but for testing purposes lets
+             * just make it a static members of the class
+             */
+            static std::string makePrim (const std::string &);
+
     public :
         RestrictedDescriptor() = delete;
-
-        RestrictedDescriptor(std::string symbol_, int val_)
-                : AMQPDescriptor (std::move (symbol_), val_)
-        { }
+        RestrictedDescriptor (std::string, int);
 
         ~RestrictedDescriptor() final = default;
 

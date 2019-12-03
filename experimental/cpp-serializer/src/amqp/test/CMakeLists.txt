@@ -7,6 +7,7 @@ set (amqp-test-sources
         List.cxx
         Single.cxx
         TestUtils.cxx
+        RestrictedDescriptor.cxx
         OrderedTypeNotationTest.cxx
 )
 

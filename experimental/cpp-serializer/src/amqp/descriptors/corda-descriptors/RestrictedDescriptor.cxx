@@ -7,21 +7,77 @@
 #include "amqp/schema/restricted-types/Restricted.h"
 #include "amqp/descriptors/AMQPDescriptors.h"
 
+#include <map>
+#include <regex>
 #include <sstream>
 
 /******************************************************************************/
 
 namespace {
 
+    const std::map<std::string, std::pair<std::regex, std::string>> regexs {
+            {
+                "java.lang.Integer",
+                std::pair { std::regex { "java.lang.Integer"}, "int"}
+            },
+            {
+                "java.lang.Boolean",
+                std::pair { std::regex { "java.lang.Boolean"}, "bool"}
+            },
+            {
+                "java.lang.Byte",
+                std::pair { std::regex { "java.lang.Byte"}, "char"}
+            },
+            {
+                "java.lang.Short",
+                std::pair { std::regex { "java.lang.Short"}, "short"}
+            },
+            {
+                "java.lang.Character",
+                std::pair { std::regex { "java.lang.Character"}, "char"}
+            },
+            {
+                "java.lang.Float",
+                std::pair { std::regex { "java.lang.Float"}, "float"}
+            },
+            {
+                "java.lang.Long",
+                std::pair { std::regex { "java.lang.Long"}, "long"}
+            },
+            {
+                "java.lang.Double",
+                std::pair { std::regex { "java.lang.Double"}, "double"}
+            }
+    };
+
+}
+
+/******************************************************************************/
+
+namespace amqp::internal {
+
     std::string
-    makePrim (const std::string & name_) {
-        if (name_ == "java.lang.Integer[]") {
-            return "int[]";
+    RestrictedDescriptor::makePrim (const std::string & name_) {
+        std::string name { name_ };
+        for (const auto & i: regexs) {
+            name = std::regex_replace (name, i.second.first, i.second.second);
         }
 
-        return name_;
+        return name;
     }
 
+}
+
+/******************************************************************************/
+
+amqp::internal::
+RestrictedDescriptor::RestrictedDescriptor (
+    std::string symbol_,
+    int val_
+) : AMQPDescriptor (std::move (symbol_)
+  , val_
+) {
+    
 }
 
 /******************************************************************************

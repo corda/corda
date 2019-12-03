@@ -71,6 +71,8 @@ data class _e_ (val e: E)
 data class _Le_ (val listy: List<E>)
 data class _L_i__ (val listy: List<_i_>)
 
+data class _ALd_ (val a: Array<List<Double>>)
+
 fun main (args: Array<String>) {
     initialiseSerialization()
     val path = "../cpp-serializer/bin/test-files";
@@ -93,6 +95,12 @@ fun main (args: Array<String>) {
                     _i_ (2),
                     _i_ (3))
             ).serialize().bytes)
+
+    File("$path/_ALd_").writeBytes( _ALd_ (arrayOf(
+            listOf (10.1, 11.2, 12.3),
+            listOf (),
+            listOf (13.4)
+    )).serialize().bytes)
 
 
     File ("$path/_i_is__").writeBytes(_i_is__(1, _is_ (2, "three")).serialize().bytes)
