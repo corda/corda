@@ -8,6 +8,8 @@ import net.corda.core.node.services.vault.SessionScope
  */
 class CordaTransactionSupportImpl(private val persistence: CordaPersistence) : CordaTransactionSupport {
     override fun <T> transaction(statement: SessionScope.() -> T): T {
+        // An alternative approach could be to make `DatabaseTransaction` extend from `SessionScope`, but this will introduce a hierarchical
+        // dependency which might be unwanted in some cases.
         fun DatabaseTransaction.innerFunc(): T {
             return statement.invoke(
                 object : SessionScope {
