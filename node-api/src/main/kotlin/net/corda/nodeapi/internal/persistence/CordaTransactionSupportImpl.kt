@@ -16,6 +16,6 @@ class CordaTransactionSupportImpl(private val persistence: CordaPersistence) : C
                     override val session = this@innerFunc.session
                 })
         }
-        return persistence.transaction(DatabaseTransaction::innerFunc)
+        return persistence.transaction(0, DatabaseTransaction::innerFunc)
     }
 }

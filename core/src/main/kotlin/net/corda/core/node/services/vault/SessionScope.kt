@@ -4,7 +4,7 @@ import net.corda.core.DoNotImplement
 import org.hibernate.Session
 
 /**
- * Represents scope for the operation when Hibernate [Session] been created, i.e. transaction started.
+ * Represents scope for the operation when JPA [Session] been created, i.e. transaction started.
  */
 @DoNotImplement
 interface SessionScope {
