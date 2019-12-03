@@ -13,25 +13,25 @@ class CustomSerializerContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val currancyData = tx.outputsOfType(CurrancyState::class.java)
-        require(currancyData.isNotEmpty()) {
-            "Requires at least one currancy state"
+        val currantsyData = tx.outputsOfType(CurrantsyState::class.java)
+        require(currantsyData.isNotEmpty()) {
+            "Requires at least one currantsy state"
         }
 
-        currancyData.forEach {
-            require(it.currancy.currants in 0..MAX_CURRANT) {
-                "Too many currants! ${it.currancy.currants} is unraisinable!"
+        currantsyData.forEach {
+            require(it.currantsy.currants in 0..MAX_CURRANT) {
+                "Too many currants! ${it.currantsy.currants} is unraisinable!"
             }
         }
     }
 
     @Suppress("CanBeParameter", "MemberVisibilityCanBePrivate")
-    class CurrancyState(val owner: AbstractParty, val currancy: Currancy) : ContractState {
+    class CurrantsyState(val owner: AbstractParty, val currantsy: Currantsy) : ContractState {
         override val participants: List<AbstractParty> = listOf(owner)
 
         @Override
         override fun toString(): String {
-            return currancy.toString()
+            return currantsy.toString()
         }
     }
 

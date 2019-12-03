@@ -1,7 +1,7 @@
 package net.corda.node
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.contracts.serialization.custom.Currancy
+import net.corda.contracts.serialization.custom.Currantsy
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -46,7 +46,7 @@ class ContractWithCustomSerializerTest {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
                     .proxy
-                    .startFlow(::CustomSerializerFlow, Currancy(CURRANTS))
+                    .startFlow(::CustomSerializerFlow, Currantsy(CURRANTS))
                     .returnValue
                     .getOrThrow()
             }
