@@ -47,12 +47,14 @@ pipeline {
         }
 
         stage('JIRA') {
-            if(currentBuild.currentResult == 'FAILURE') {
-                def issue = [fields: [ project: [key: 'TM'],
-                    summary: 'Regression build failed for: ' + currentBuild.displayName,
-                    issuetype: [name: 'Task']]]
-                def newIssue = jiraNewIssue issue: issue
-                echo newIssue.data.key
+            steps {
+                if(currentBuild.currentResult == 'FAILURE') {
+                    def issue = [fields: [ project: [key: 'TM'],
+                        summary: 'Regression build failed for: ' + currentBuild.displayName,
+                        issuetype: [name: 'Task']]]
+                    def newIssue = jiraNewIssue issue: issue
+                    echo newIssue.data.key
+                }
             }
         }
     }
