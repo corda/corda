@@ -35,6 +35,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val lazyBridgeStart by boolean().optional().withDefaultValue(Defaults.lazyBridgeStart)
     private val detectPublicIp by boolean().optional().withDefaultValue(Defaults.detectPublicIp)
     private val sshd by nested(SSHDConfigurationSpec).optional()
+    private val localShellAllowExitInSafeMode by boolean().optional().withDefaultValue(Defaults.localShellAllowExitInSafeMode)
+    private val localShellUnsafe by boolean().optional().withDefaultValue(Defaults.localShellUnsafe)
     private val database by nested(DatabaseConfigSpec).optional()
     private val noLocalShell by boolean().optional().withDefaultValue(Defaults.noLocalShell)
     private val attachmentCacheBound by long().optional().withDefaultValue(Defaults.attachmentCacheBound)
@@ -103,6 +105,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     lazyBridgeStart = configuration[lazyBridgeStart],
                     detectPublicIp = configuration[detectPublicIp],
                     sshd = configuration[sshd],
+                    localShellAllowExitInSafeMode = configuration[localShellAllowExitInSafeMode],
+                    localShellUnsafe = configuration[localShellUnsafe],
                     database = database,
                     noLocalShell = configuration[noLocalShell],
                     attachmentCacheBound = configuration[attachmentCacheBound],

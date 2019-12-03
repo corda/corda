@@ -38,6 +38,7 @@ import net.corda.core.messaging.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
+import org.crsh.command.ShellSafety
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
 import org.crsh.console.jline.console.ConsoleReader
@@ -50,6 +51,7 @@ import org.crsh.shell.Shell
 import org.crsh.shell.ShellFactory
 import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
+import org.crsh.text.Decoration
 import org.crsh.text.RenderPrintWriter
 import org.crsh.util.InterruptHandler
 import org.crsh.util.Utils
@@ -86,6 +88,8 @@ import kotlin.concurrent.thread
 // TODO: Fix up the 'dashboard' command which has some rendering issues.
 // TODO: Resurrect or reimplement the mail plugin.
 // TODO: Make it notice new shell commands added after the node started.
+
+const val STANDALONE_SHELL_PERMISSION = "ALL"
 
 @Suppress("MaxLineLength")
 object InteractiveShell {
@@ -128,13 +132,20 @@ object InteractiveShell {
             rpcConn = connection
             connection.proxy as InternalCordaRPCOps
         }
-        _startShell(configuration, classLoader)
+        launchShell(configuration, standalone, classLoader)
     }
 
-    private fun _startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+    private fun launchShell(configuration: ShellConfiguration, standalone: Boolean, classLoader: ClassLoader? = null) {
         shellConfiguration = configuration
         InteractiveShell.classLoader = classLoader
         val runSshDaemon = configuration.sshdPort != null
+
+        var runShellInSafeMode = true
+        if (!standalone) {
+            log.info("launchShell: User=${configuration.user} perm=${configuration.permissions}")
+            log.info("Shell: PermitExit= ${configuration.localShellAllowExitInSafeMode}, UNSAFELOCAL=${configuration.localShellUnsafe}")
+            runShellInSafeMode = configuration.permissions?.filter { it.contains(STANDALONE_SHELL_PERMISSION); }?.isEmpty() != false
+        }
 
         val config = Properties()
         if (runSshDaemon) {
@@ -183,7 +194,14 @@ object InteractiveShell {
                 "Commands to extract information about checkpoints stored within the node",
                 CheckpointShellCommand::class.java
         )
-        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
+
+        val shellSafety = ShellSafety().apply {
+            setSafeShell(runShellInSafeMode)
+            setInternal(!standalone)
+            setStandAlone(standalone)
+            setAllowExitInSafeMode(configuration.localShellAllowExitInSafeMode || standalone)
+        }
+        shell = ShellLifecycle(configuration.commandsDirectory, shellSafety).start(config, configuration.user, configuration.password)
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
@@ -210,7 +228,7 @@ object InteractiveShell {
         }
     }
 
-    class ShellLifecycle(private val shellCommands: Path) : PluginLifeCycle() {
+    class ShellLifecycle(private val shellCommands: Path, private val shellSafety: ShellSafety) : PluginLifeCycle() {
         fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
@@ -243,7 +261,8 @@ object InteractiveShell {
             this.config = config
             start(context)
             ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops,
+                    StdoutANSIProgressRenderer), shellSafety)
         }
     }
 
@@ -317,15 +336,15 @@ object InteractiveShell {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
-            output.println(e.message ?: "Access denied", Color.red)
+            output.println(e.message ?: "Access denied", Decoration.bold, Color.red)
             return
         }
         if (matches.isEmpty()) {
-            output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
+            output.println("No matching flow found, run 'flow list' to see your options.", Decoration.bold, Color.red)
             return
         } else if (matches.size > 1 && matches.find { it.endsWith(nameFragment)} == null) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
-            matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
+            matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Decoration.bold, Color.yellow) }
             return
         }
 
@@ -364,10 +383,10 @@ object InteractiveShell {
             }
             output.println("Flow completed with result: ${stateObservable.returnValue.get()}")
         } catch (e: NoApplicableConstructor) {
-            output.println("No matching constructor found:", Color.red)
-            e.errors.forEach { output.println("- $it", Color.red) }
+            output.println("No matching constructor found:", Decoration.bold, Color.red)
+            e.errors.forEach { output.println("- $it", Decoration.bold, Color.red) }
         } catch (e: PermissionException) {
-            output.println(e.message ?: "Access denied", Color.red)
+            output.println(e.message ?: "Access denied", Decoration.bold, Color.red)
         } catch (e: ExecutionException) {
             // ignoring it as already logged by the progress handler subscriber
         } finally {
@@ -421,7 +440,7 @@ object InteractiveShell {
             val runId = try {
                 inputObjectMapper.readValue(id, StateMachineRunId::class.java)
             } catch (e: JsonMappingException) {
-                output.println("Cannot parse flow ID of '$id' - expecting a UUID.", Color.red)
+                output.println("Cannot parse flow ID of '$id' - expecting a UUID.", Decoration.bold, Color.red)
                 log.error("Failed to parse flow ID", e)
                 return
             }
@@ -429,14 +448,14 @@ object InteractiveShell {
             if (id.length < uuidStringSize) {
                 val msg = "Can not kill the flow. Flow ID of '$id' seems to be malformed - a UUID should have $uuidStringSize characters. " +
                         "Expand the terminal window to see the full UUID value."
-                output.println(msg, Color.red)
+                output.println(msg, Decoration.bold, Color.red)
                 log.warn(msg)
                 return
             }
             if (rpcOps.killFlow(runId)) {
-                output.println("Killed flow $runId", Color.yellow)
+                output.println("Killed flow $runId", Decoration.bold, Color.yellow)
             } else {
-                output.println("Failed to kill flow $runId", Color.red)
+                output.println("Failed to kill flow $runId", Decoration.bold, Color.red)
             }
         } finally {
             output.flush()
@@ -568,7 +587,7 @@ object InteractiveShell {
             // The flow command provides better support and startFlow requires special handling anyway due to
             // the generic startFlow RPC interface which offers no type information with which to parse the
             // string form of the command.
-            out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
+            out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Decoration.bold, Color.yellow)
             return null
         } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
             return gracefulShutdown(out, cordaRPCOps)
@@ -603,12 +622,12 @@ object InteractiveShell {
                 }
             }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
-            out.println(e.message, Color.red)
+            out.println(e.message, Decoration.bold, Color.red)
             if (e !is StringToMethodCallParser.UnparseableCallException.NoSuchFile) {
                 out.println("Please try 'man run' to learn what syntax is acceptable")
             }
         } catch (e: Exception) {
-            out.println("RPC failed: ${e.rootCause}", Color.red)
+            out.println("RPC failed: ${e.rootCause}", Decoration.bold, Color.red)
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()

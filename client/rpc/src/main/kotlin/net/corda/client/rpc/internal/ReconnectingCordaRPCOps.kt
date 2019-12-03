@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
+import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
@@ -230,8 +231,12 @@ class ReconnectingCordaRPCOps private constructor(
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
                     }
+                    is PermissionException -> {
+                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
+                        log.debug { "Permission Exception establishing connection: ${ex.message}" }
+                    }
                     else -> {
-                        log.warn("Unknown exception upon establishing connection.", ex)
+                        log.warn("Unknown exception [${ex.javaClass.name}] upon establishing connection.", ex)
                     }
                 }
 
