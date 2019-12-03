@@ -21,7 +21,7 @@ pipeline {
         stage('JIRA') {
             steps {
                 script {
-                    //if(currentBuild.currentResult == 'FAILURE') {
+                    if(currentBuild.currentResult == 'FAILURE') {
                         def testIssue = [fields: [ project: [key: 'TM'],
                                                  summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
                                                  issuetype: [name: 'Story']]]
@@ -30,7 +30,7 @@ pipeline {
 
                         echo response.successful.toString()
                         echo response.data.toString()
-                    //}
+                    }
                 }
             }
         }
