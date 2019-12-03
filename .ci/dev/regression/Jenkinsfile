@@ -48,14 +48,16 @@ pipeline {
 
         stage('JIRA') {
             steps {
-                def testIssue = [fields: [ project: [key: 'TM'],
-                                         summary: 'Regression build failed for: ' + currentBuild.displayName,
-                                         issuetype: [name: 'Task']]]
+                script {
+                    def testIssue = [fields: [ project: [key: 'TM'],
+                                             summary: 'Regression build failed for: ' + currentBuild.displayName,
+                                             issuetype: [name: 'Task']]]
 
-                response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
+                    response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
-                echo response.successful.toString()
-                echo response.data.toString()
+                    echo response.successful.toString()
+                    echo response.data.toString()
+                }
             }
         }
     }
