@@ -819,7 +819,7 @@ Here is an example of a flow that we might have wanted to be retried again in th
         }
     }
 
-.. note:: Custom exceptions extending HospitalizeFlowException will be treated the same way when thrown.
+.. note:: Custom exceptions extending HospitalizeFlowException will be treated the same way, as described above, whenever thrown.
 
 ProgressTracker
 ---------------
