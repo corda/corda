@@ -813,7 +813,7 @@ Here is an example of a flow that we might have wanted to be retried again in th
                     throw HospitalizeFlowException("The resource requested could not be found!") // throw a HospitalizeFlowException arbitrarily.
             } catch (e: UnknownHostException) {
                 // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
-                // We can achieve this by wrapping the thrown exception with a HospitalizeFlowException and throw this instead.
+                // We can achieve this by wrapping the thrown exception with a HospitalizeFlowException and throw it instead.
                 throw HospitalizeFlowException("Service might be offline!", e)
             }
         }
