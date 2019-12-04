@@ -773,6 +773,54 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
 
+HospitalizeFlowException
+------------------------
+When writing flows it could be the case that you would want to stop the execution of a flow at some point
+under certain circumstances. Or, prevent a flow's erroneous termination that would lead to all the
+flow's records being removed. In both such cases the flow would then be re-executed at a later point in time.
+
+The way to do this is by throwing a ``HospitalizeFlowException``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/flows/HospitalizeFlowException.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+The flow framework will hospitalise a flow throwing a ``HospitalizeFlowException``.
+
+This exception could be thrown arbitrarily or it could wrap an exception being thrown in the flow execution.
+
+Normally, within a flow's execution, if an exception is being thrown and if this exception is not one of the exception types
+already being handled by the flow framework described in :ref:`flow hospital runtime behaviour <flow-hospital-runtime>`,
+it will lead to the flow's erroneous termination. All of the flow's records will then be removed. To avoid this;
+keep the flow and have it retrying its execution at a later point in time, we could wrap this thrown exception with a
+``HospitalizeFlowException`` and throw it instead. In that case, the flow will be held by the :doc:`node-flow-hospital`
+and will be retried from its last checkpoint upon node restart.
+
+Here is an example of a flow that we might have wanted to be retried again in the future instead of terminating erroneously:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+    class TryAccessServiceFlow(): FlowLogic<Unit>() {
+        override fun call() {
+            try {
+                val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
+                if (code == 404)
+                    throw HospitalizeFlowException("The resource requested could not be found!") // throw a HospitalizeFlowException arbitrarily.
+            } catch (e: UnknownHostException) {
+                // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
+                // We can achieve this by wrapping the thrown exception with a HospitalizeFlowException and throw this instead.
+                throw HospitalizeFlowException("Service might be offline!", e)
+            }
+        }
+    }
+
+.. note:: Custom exceptions extending HospitalizeFlowException will be treated the same way when thrown.
+
 ProgressTracker
 ---------------
 We can give our flow a progress tracker. This allows us to see the flow's progress visually in our node's CRaSH shell.
