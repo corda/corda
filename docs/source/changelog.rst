@@ -7,6 +7,9 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* ``AppServiceHub`` been extended to provide access to ``database`` which will enable the Service class to perform DB transactions
+  from the threads managed by the custom Service.
+
 * Moved and renamed the testing web server to the ``testing`` subproject. Also renamed the published artifact to ``corda-testserver.jar``.
 
 * New Vault Query criteria to specify exact matches for specified participants.

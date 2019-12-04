@@ -56,6 +56,9 @@ Below is an empty implementation of a Service class:
 The ``AppServiceHub`` provides the ``ServiceHub`` functionality to the Service class, with the extra ability to start flows. Starting flows
 from ``AppServiceHub`` is explained further in :ref:`Starting Flows from a Service <starting_flows_from_a_service>`.
 
+The ``AppServiceHub`` also provides access to ``database`` which will enable the Service class to perform DB transactions from the threads
+managed by the Service.
+
 Code can be run during node startup when the class is being initialised. To do so, place the code into the ``init`` block or constructor.
 This is useful when a service needs to establish a connection to an external database or setup observables via ``ServiceHub.trackBy`` during
 its startup. These can then persist during the service's lifetime.
