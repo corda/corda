@@ -93,7 +93,9 @@ abstract class AbstractAMQPSerializationScheme(
             factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
         cordappCustomSerializers.forEach { customSerializer ->
-            factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
+            if (customSerializer::class.java.classLoader == context.deserializationClassLoader) {
+                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
+            }
         }
 
         context.properties[ContextPropertyKeys.SERIALIZERS]?.apply {

@@ -325,7 +325,6 @@ object AttachmentsClassLoaderBuilder {
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap(SerializationWhitelist::whitelist)
-                    .toList()
 
             // Create a new serializationContext for the current transaction. In this context we will forbid
             // deserialization of objects from the future, i.e. disable forwards compatibility. This is to ensure
