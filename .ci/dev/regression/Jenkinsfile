@@ -35,6 +35,7 @@ pipeline {
             script {
                 def testIssue = [fields: [ project: [key: 'TM'],
                                          summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
+                                         description: currentBuild.absoluteUrl,
                                          issuetype: [name: 'Story']]]
 
                 response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
