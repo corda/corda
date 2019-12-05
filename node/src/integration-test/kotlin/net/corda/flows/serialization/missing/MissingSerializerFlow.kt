@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.serialization.missing.contract.Data
 import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.DataState
 import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.Operate
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
@@ -31,7 +32,8 @@ class MissingSerializerFlow(private val value: Long) : FlowLogic<SecureHash>() {
             inputs = emptyList(),
             outputs = listOf(TransactionState(
                 data = dataState,
-                notary = notary
+                notary = notary,
+                constraint = AlwaysAcceptAttachmentConstraint
             )),
             notary = notary,
             commands = listOf(Command(Operate(), ourIdentity.owningKey)),

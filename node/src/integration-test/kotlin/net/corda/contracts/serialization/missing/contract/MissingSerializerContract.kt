@@ -9,7 +9,7 @@ import net.corda.core.transactions.LedgerTransaction
 @Suppress("unused")
 class MissingSerializerContract : Contract {
     companion object {
-        const val MAX_VALUE = 2000
+        const val MAX_VALUE = 2000L
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -19,8 +19,8 @@ class MissingSerializerContract : Contract {
         }
 
         states.forEach {
-            require(it.data.value in 0..MAX_VALUE) {
-                "Data ${it.data.value} exceeds maximum value!"
+            require(it.data in Data(0)..Data(MAX_VALUE)) {
+                "Data ${it.data} exceeds maximum value!"
             }
         }
     }

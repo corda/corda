@@ -126,9 +126,19 @@ class CachingCustomSerializerRegistry(
                     "All serializers must be registered before the cache comes into use.")
         }
 
-        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
-            customSerializers += customSerializer
-            customSerializer
+        val typeDescriptor = customSerializer.typeDescriptor.toString()
+        if (customSerializer.isEnabled) {
+            descriptorBasedSerializerRegistry.getOrBuild(typeDescriptor) {
+                customSerializers += customSerializer
+                customSerializer
+            }
+        } else {
+            customSerializer.serializerLocation?.apply {
+                descriptorBasedSerializerRegistry.setDisabled(
+                    descriptor = typeDescriptor,
+                    serializerLocation = this
+                )
+            }
         }
     }
 

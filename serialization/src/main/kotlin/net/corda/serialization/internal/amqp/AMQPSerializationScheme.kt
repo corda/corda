@@ -23,7 +23,7 @@ data class SerializationFactoryCacheKey(val classWhitelist: ClassWhitelist,
                                         val preventDataLoss: Boolean,
                                         val customSerializers: Set<SerializationCustomSerializer<*, *>>)
 
-fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
+fun SerializerFactory.addToWhitelist(types: Collection<Class<*>>) {
     require(types.toSet().size == types.size) {
         val duplicates = types.toMutableList()
         types.toSet().forEach { duplicates -= it }
@@ -67,11 +67,11 @@ abstract class AbstractAMQPSerializationScheme(
 
         @DeleteForDJVM
         val List<Cordapp>.customSerializers
-            get() = flatMap { it.serializationCustomSerializers }.toSet()
+            get() = flatMapTo(LinkedHashSet()) { it.serializationCustomSerializers }
 
         @DeleteForDJVM
         val List<Cordapp>.serializationWhitelists
-            get() = flatMap { it.serializationWhitelists }.toSet()
+            get() = flatMapTo(LinkedHashSet()) { it.serializationWhitelists }
     }
 
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
@@ -89,9 +89,8 @@ abstract class AbstractAMQPSerializationScheme(
             factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
         cordappCustomSerializers.forEach { customSerializer ->
-            if (customSerializer::class.java.classLoader == context.deserializationClassLoader) {
-                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
-            }
+            val isEnabled = customSerializer::class.java.classLoader == context.deserializationClassLoader
+            factory.registerExternal(CorDappCustomSerializer(customSerializer, isEnabled, factory))
         }
 
         context.properties[ContextPropertyKeys.SERIALIZERS]?.apply {
@@ -103,12 +102,10 @@ abstract class AbstractAMQPSerializationScheme(
 
     private fun registerCustomWhitelists(factory: SerializerFactory) {
         serializationWhitelists.forEach {
-            factory.addToWhitelist(*it.whitelist.toTypedArray())
+            factory.addToWhitelist(it.whitelist)
         }
         cordappSerializationWhitelists.forEach {
-            it.whitelist.forEach { clazz ->
-                factory.addToWhitelist(clazz)
-            }
+            factory.addToWhitelist(it.whitelist)
         }
     }
 
