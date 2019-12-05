@@ -40,7 +40,7 @@ pipeline {
                 def testIssue = [fields: [ project: [key: 'TM'],
                                          summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
                                          description: currentBuild.absoluteUrl,
-                                         assignee: users.data[0].displayName,
+                                         assignee: [name: users.data[0].displayName],
                                          issuetype: [name: 'Story']]]
 
                 response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
