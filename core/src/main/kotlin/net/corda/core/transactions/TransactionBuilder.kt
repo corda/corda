@@ -1,10 +1,14 @@
+@file:Suppress("ThrowsCount", "ComplexMethod")
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -16,8 +20,6 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import java.io.NotSerializableException
-import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -46,7 +48,7 @@ open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = defaultLockId(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
-        protected val attachments: MutableList<SecureHash> = arrayListOf(),
+        protected val attachments: MutableList<AttachmentId> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
@@ -57,7 +59,7 @@ open class TransactionBuilder(
     constructor(notary: Party? = null,
                 lockId: UUID = defaultLockId(),
                 inputs: MutableList<StateRef> = arrayListOf(),
-                attachments: MutableList<SecureHash> = arrayListOf(),
+                attachments: MutableList<AttachmentId> = arrayListOf(),
                 outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
                 commands: MutableList<Command<*>> = arrayListOf(),
                 window: TimeWindow? = null,
@@ -70,14 +72,23 @@ open class TransactionBuilder(
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
         private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
+        private val MISSING_CLASS_DISABLED = java.lang.Boolean.getBoolean("net.corda.transactionbuilder.missingclass.disabled")
 
         private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
         private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
+        private fun Collection<*>.deepEquals(other: Collection<*>): Boolean {
+            return (size == other.size) && containsAll(other) && other.containsAll(this)
+        }
+        private fun Collection<AttachmentId>.toPrettyString(): String = sorted().joinToString(
+            separator = System.lineSeparator(),
+            prefix = System.lineSeparator()
+        )
     }
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val excludedAttachments = arrayListOf<AttachmentId>()
 
     /**
      * Creates a copy of the builder.
@@ -106,7 +117,7 @@ open class TransactionBuilder(
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
                 is ReferencedStateAndRef<*> -> addReferenceState(t)
-                is SecureHash -> addAttachment(t)
+                is AttachmentId -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is StateAndContract -> addOutputState(t.state, t.contract)
                 is ContractState -> throw UnsupportedOperationException("Removed as of V1: please use a StateAndContract instead")
@@ -128,16 +139,26 @@ open class TransactionBuilder(
      * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
 
     @CordaInternal
-    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+    internal fun toWireTransactionWithContext(
+        services: ServicesForResolution,
+        serializationContext: SerializationContext?
+    ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
+
+    private tailrec fun toWireTransactionWithContext(
+        services: ServicesForResolution,
+        serializationContext: SerializationContext?,
+        tryCount: Int
+    ): WireTransaction {
         val referenceStates = referenceStates()
         if (referenceStates.isNotEmpty()) {
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
 
-        val (allContractAttachments: Collection<SecureHash>, resolvedOutputs: List<TransactionState<ContractState>>) = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
+        val (allContractAttachments: Collection<AttachmentId>, resolvedOutputs: List<TransactionState<ContractState>>)
+                = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
 
         // Final sanity check that all states have the correct constraints.
         for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs)) {
@@ -150,7 +171,8 @@ open class TransactionBuilder(
                             inputStates(),
                             resolvedOutputs,
                             commands(),
-                            (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
+                            // Sort the attachments to ensure transaction builds are stable.
+                            ((allContractAttachments + attachments).toSortedSet() - excludedAttachments).toList(),
                             notary,
                             window,
                             referenceStates,
@@ -163,10 +185,10 @@ open class TransactionBuilder(
         // This is a workaround as the current version of Corda does not support cordapp dependencies.
         // It works by running transaction validation and then scan the attachment storage for missing classes.
         // TODO - remove once proper support for cordapp dependencies is added.
-        val addedDependency = addMissingDependency(services, wireTx)
+        val addedDependency = addMissingDependency(services, wireTx, tryCount)
 
         return if (addedDependency)
-            toWireTransactionWithContext(services, serializationContext)
+            toWireTransactionWithContext(services, serializationContext, tryCount + 1)
         else
             wireTx
     }
@@ -181,7 +203,7 @@ open class TransactionBuilder(
     /**
      * @return true if a new dependency was successfully added.
      */
-    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
+    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction, tryCount: Int): Boolean {
         return try {
             wireTx.toLedgerTransaction(services).verify()
             // The transaction verified successfully without adding any extra dependency.
@@ -192,8 +214,14 @@ open class TransactionBuilder(
             when {
                 // Handle various exceptions that can be thrown during verification and drill down the wrappings.
                 // Note: this is a best effort to preserve backwards compatibility.
-                rootError is ClassNotFoundException -> addMissingAttachment((rootError.message ?: throw e).replace(".", "/"), services, e)
-                rootError is NoClassDefFoundError -> addMissingAttachment(rootError.message ?: throw e, services, e)
+                rootError is ClassNotFoundException -> {
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
+                        || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), services, e)
+                }
+                rootError is NoClassDefFoundError -> {
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
+                        || addMissingAttachment(rootError.message ?: throw e, services, e)
+                }
 
                 // Ignore these exceptions as they will break unit tests.
                 // The point here is only to detect missing dependencies. The other exceptions are irrelevant.
@@ -214,9 +242,47 @@ open class TransactionBuilder(
         }
     }
 
+    private fun fixupAttachments(
+        txAttachments: List<AttachmentId>,
+        services: ServicesForResolution,
+        originalException: Throwable
+    ): Boolean {
+        val replacementAttachments = services.cordappProvider.internalFixupAttachmentIds(txAttachments)
+        if (replacementAttachments.deepEquals(txAttachments)) {
+            return false
+        }
+
+        val extraAttachments = replacementAttachments - txAttachments
+        extraAttachments.forEach { id ->
+            val attachment = services.attachments.openAttachment(id)
+            if (attachment == null || !attachment.isUploaderTrusted()) {
+                log.warn("""The node's fix-up rules suggest including attachment {}, which cannot be found either.
+                    |Please contact the developer of the CorDapp for further instructions.
+                    |""".trimMargin(), id)
+                throw originalException
+            }
+        }
+
+        attachments.addAll(extraAttachments)
+        with(excludedAttachments) {
+            clear()
+            addAll(txAttachments - replacementAttachments)
+        }
+
+        log.warn("Attempting to rebuild transaction with these extra attachments:{}{}and these attachments removed:{}",
+            extraAttachments.toPrettyString(),
+            System.lineSeparator(),
+            excludedAttachments.toPrettyString()
+        )
+        return true
+    }
+
     private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
         if (!isValidJavaClass(missingClass)) {
             log.warn("Could not autodetect a valid attachment for the transaction being built.")
+            throw originalException
+        } else if (MISSING_CLASS_DISABLED) {
+            log.warn("BROKEN TRANSACTION, BUT AUTOMATIC DETECTION OF {} IS DISABLED!", missingClass)
             throw originalException
         }
 
@@ -240,17 +306,21 @@ open class TransactionBuilder(
     }
 
     /**
-     * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state [AutomaticPlaceholderConstraint]s.
-     * The contract attachments are used to create a deterministic Classloader to deserialise the transaction and to run the contract verification.
+     * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state
+     * [AutomaticPlaceholderConstraint]s. The contract attachments are used to create a deterministic Classloader to deserialise the
+     * transaction and to run the contract verification.
      *
-     * The selection logic depends on the Attachment Constraints of the input, output and reference states, also on the explicitly set attachments.
+     * The selection logic depends on the Attachment Constraints of the input, output and reference states, also on the explicitly
+     * set attachments.
      * TODO also on the versions of the attachments of the transactions generating the input states. ( after we add versioning)
      */
     private fun selectContractAttachmentsAndOutputStateConstraints(
-            services: ServicesForResolution, serializationContext: SerializationContext?): Pair<Collection<SecureHash>, List<TransactionState<ContractState>>> {
+            services: ServicesForResolution,
+            @Suppress("UNUSED_PARAMETER") serializationContext: SerializationContext?
+    ): Pair<Collection<AttachmentId>, List<TransactionState<ContractState>>> {
 
         // Determine the explicitly set contract attachments.
-        val explicitAttachmentContracts: List<Pair<ContractClassName, SecureHash>> = this.attachments
+        val explicitAttachmentContracts: List<Pair<ContractClassName, AttachmentId>> = this.attachments
                 .map(services.attachments::openAttachment)
                 .mapNotNull { it as? ContractAttachment }
                 .flatMap { attch ->
@@ -258,9 +328,12 @@ open class TransactionBuilder(
                 }
 
         // And fail early if there's more than 1 for a contract.
-        require(explicitAttachmentContracts.isEmpty() || explicitAttachmentContracts.groupBy { (ctr, _) -> ctr }.all { (_, groups) -> groups.size == 1 }) { "Multiple attachments set for the same contract." }
+        require(explicitAttachmentContracts.isEmpty()
+                  || explicitAttachmentContracts.groupBy { (ctr, _) -> ctr }.all { (_, groups) -> groups.size == 1 }) {
+            "Multiple attachments set for the same contract."
+        }
 
-        val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
+        val explicitAttachmentContractsMap: Map<ContractClassName, AttachmentId> = explicitAttachmentContracts.toMap()
 
         val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map { it.state }
                 .groupBy { it.contract }
@@ -270,7 +343,8 @@ open class TransactionBuilder(
 
         // Handle reference states.
         // Filter out all contracts that might have been already used by 'normal' input or output states.
-        val referenceStateGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = referencesWithTransactionState.groupBy { it.contract }
+        val referenceStateGroups: Map<ContractClassName, List<TransactionState<ContractState>>>
+                = referencesWithTransactionState.groupBy { it.contract }
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
                 .filterNot { it.key in allContracts }
                 .map { refStateEntry ->
@@ -602,7 +676,7 @@ open class TransactionBuilder(
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */
-    fun addAttachment(attachmentId: SecureHash) = apply {
+    fun addAttachment(attachmentId: AttachmentId) = apply {
         attachments.add(attachmentId)
     }
 
@@ -692,7 +766,7 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
     /** Returns an immutable list of attachment hashes. */
-    fun attachments(): List<SecureHash> = ArrayList(attachments)
+    fun attachments(): List<AttachmentId> = ArrayList(attachments)
 
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)

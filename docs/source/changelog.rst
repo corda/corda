@@ -7,6 +7,11 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Custom serializer classes implementing ``SerializationCustomSerializer`` should ideally be packaged in the same CorDapp as the
+  contract classes. Corda 4 could therefore fail to verify transactions created with Corda 3 if their custom serializer classes
+  had been packaged somewhere else. Add a "fallback mechanism" to Corda's transaction verification logic which will attempt to
+  include any missing custom serializers from other CorDapps within ``AttachmentStorage``.
+
 * Fix a bug in Corda 4.0 that combined commands in ``TransactionBuilder`` if they only differed by the signers list.  The behaviour is now consistent with prior Corda releases.
 
 * Disabled the default loading of ``hibernate-validator`` as a plugin by hibernate when a CorDapp depends on it. This change will in turn fix the

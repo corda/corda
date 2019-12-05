@@ -26,7 +26,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
 
     override val jarFile: Path
         get() {
-            val jars = TestCordappImpl.findJars(scanPackage)
+            val jars = findJars(scanPackage)
             when (jars.size) {
                 0 -> throw IllegalArgumentException("There are no CorDapps containing the package $scanPackage on the classpath. Make sure " +
                         "the package name is correct and that the CorDapp is added as a gradle dependency.")
@@ -54,13 +54,13 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
 
         private fun findRootPaths(scanPackage: String): Set<Path> {
             return packageToRootPaths.computeIfAbsent(scanPackage) {
-                ClassGraph().whitelistPackages(scanPackage).pooledScan().use { result ->
-                    result.allResources
+                val classGraph = ClassGraph().whitelistPaths(scanPackage.replace('.', '/'))
+                classGraph.pooledScan().use { scanResult ->
+                    scanResult.allResources
                         .asSequence()
                         .map { it.classpathElementFile.toPath() }
                         .filterNot { it.toString().endsWith("-tests.jar") }
-                        .map { if (it.toString().endsWith(".jar")) it else findProjectRoot(it) }
-                        .toSet()
+                        .mapTo(LinkedHashSet()) { if (it.toString().endsWith(".jar")) it else findProjectRoot(it) }
                 }
             }
         }

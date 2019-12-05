@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.model.*
 import org.hibernate.type.descriptor.java.ByteTypeDescriptor
@@ -80,8 +81,10 @@ class DefaultRemoteSerializerFactory(
             }
 
             // Return the specific serializer the caller asked for.
-            serializers[typeDescriptor] ?: throw NotSerializableException(
-                    "Could not find type matching descriptor $typeDescriptor.")
+            serializers[typeDescriptor] ?: throw MissingSerializerException(
+                message = "Could not find type matching descriptor $typeDescriptor.",
+                typeDescriptor = typeDescriptor
+            )
         }
 
     private fun getUncached(

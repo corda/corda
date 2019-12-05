@@ -120,7 +120,7 @@ private constructor(
 
     /**
      * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
-
+     *
      * The contract verification logic is run in a custom classloader created for the current transaction.
      * This classloader is only used during verification and does not leak to the client code.
      *
@@ -131,17 +131,20 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(emptyList()).verify()
+        internalPrepareVerify(attachments).verify()
     }
 
     /**
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun internalPrepareVerify(extraAttachments: List<Attachment>): Verifier {
+    internal fun internalPrepareVerify(txAttachments: List<Attachment>): Verifier {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
+                txAttachments,
+                getParamsWithGoo(),
+                id) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.

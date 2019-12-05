@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.model
 
 import java.lang.reflect.*
-import kotlin.reflect.KFunction
 import java.util.*
 
 typealias PropertyName = String
@@ -87,11 +86,11 @@ sealed class LocalTypeInformation {
      * Get the map of [LocalPropertyInformation], for all types that have it, or an empty map otherwise.
      */
     val propertiesOrEmptyMap: Map<PropertyName, LocalPropertyInformation> get() = when(this) {
-        is LocalTypeInformation.Composable -> properties
-        is LocalTypeInformation.Abstract -> properties
-        is LocalTypeInformation.AnInterface -> properties
-        is LocalTypeInformation.NonComposable -> properties
-        is LocalTypeInformation.Opaque -> wrapped.propertiesOrEmptyMap
+        is Composable -> properties
+        is Abstract -> properties
+        is AnInterface -> properties
+        is NonComposable -> properties
+        is Opaque -> wrapped.propertiesOrEmptyMap
         else -> emptyMap()
     }
 
@@ -99,10 +98,10 @@ sealed class LocalTypeInformation {
      * Get the list of interfaces, for all types that have them, or an empty list otherwise.
      */
     val interfacesOrEmptyList: List<LocalTypeInformation> get() = when(this) {
-        is LocalTypeInformation.Composable -> interfaces
-        is LocalTypeInformation.Abstract -> interfaces
-        is LocalTypeInformation.AnInterface -> interfaces
-        is LocalTypeInformation.NonComposable -> interfaces
+        is Composable -> interfaces
+        is Abstract -> interfaces
+        is AnInterface -> interfaces
+        is NonComposable -> interfaces
         else -> emptyList()
     }
 
@@ -246,11 +245,12 @@ sealed class LocalTypeInformation {
      * we do not possess a method (such as a unique "deserialization constructor" satisfied by these properties) for
      * creating a new instance from a dictionary of property values.
      *
-     * @param constructor [LocalConstructorInformation] for the constructor of this type, if there is one.
-     * @param properties [LocalPropertyInformation] for the properties of the interface.
-     * @param superclass [LocalTypeInformation] for the superclass of the underlying class of this type.
-     * @param interfaces [LocalTypeInformation] for the interfaces extended by this interface.
-     * @param typeParameters [LocalTypeInformation] for the resolved type parameters of the type.
+     * @property constructor [LocalConstructorInformation] for the constructor of this type, if there is one.
+     * @property properties [LocalPropertyInformation] for the properties of the interface.
+     * @property superclass [LocalTypeInformation] for the superclass of the underlying class of this type.
+     * @property interfaces [LocalTypeInformation] for the interfaces extended by this interface.
+     * @property typeParameters [LocalTypeInformation] for the resolved type parameters of the type.
+     * @param nonComposableSubtypes [NonComposable] for the type descriptors that make this type non-composable,
      */
     data class NonComposable(
             override val observedType: Type,
@@ -259,7 +259,10 @@ sealed class LocalTypeInformation {
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
-            val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
+            val typeParameters: List<LocalTypeInformation>,
+            private val nonComposableSubtypes: Set<NonComposable>) : LocalTypeInformation() {
+        val nonComposableTypes: Set<NonComposable> get() = nonComposableSubtypes.flatMapTo(LinkedHashSet()) { it.nonComposableTypes } + this
+    }
 
     /**
      * Represents a type whose underlying class is a collection class such as [List] with a single type parameter.

@@ -202,14 +202,25 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>): LocalTypeInformation {
         val superclassInformation = buildSuperclassInformation(type)
         val interfaceInformation = buildInterfaceInformation(type)
-        val observedConstructor = constructorForDeserialization(type)
-
-        if (observedConstructor == null) {
+        val observedConstructor = constructorForDeserialization(type) ?: run {
             if (warnIfNonComposable) {
                 logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
-                    superclassInformation, interfaceInformation, typeParameterInformation)
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = null,
+                properties = if (rawType == Class::class.java) {
+                    // Do NOT drill down into the internals of java.lang.Class.
+                    emptyMap()
+                } else {
+                    buildReadOnlyProperties(rawType)
+                },
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                nonComposableSubtypes = emptySet()
+            )
         }
 
         val constructorInformation = buildConstructorInformation(type, observedConstructor)
@@ -217,16 +228,36 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
 
         val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
 
-        if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
-            if (warnIfNonComposable) {
-                if (hasNonComposableProperties) {
-                    logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
-                } else {
-                    logger.info("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
+        if (!propertiesSatisfyConstructor(constructorInformation, properties)) {
+            val missingConstructorProperties = missingMandatoryConstructorProperties(constructorInformation, properties)
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = constructorInformation,
+                properties = properties,
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                nonComposableSubtypes = missingConstructorProperties
+                    .filterIsInstanceTo(LinkedHashSet(), LocalTypeInformation.NonComposable::class.java)
+            )
+        }
+
+        val nonComposableProperties = properties.filterValues { it.type is LocalTypeInformation.NonComposable }
+
+        if (nonComposableProperties.isNotEmpty()) {
+            return LocalTypeInformation.NonComposable(
+                observedType = type,
+                typeIdentifier = typeIdentifier,
+                constructor = constructorInformation,
+                properties = properties,
+                superclass = superclassInformation,
+                interfaces = interfaceInformation,
+                typeParameters = typeParameterInformation,
+                nonComposableSubtypes = nonComposableProperties.values.mapTo(LinkedHashSet()) {
+                    it.type as LocalTypeInformation.NonComposable
                 }
-            }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
-                    interfaceInformation, typeParameterInformation)
+            )
         }
 
         val evolutionConstructors = evolutionConstructors(type).map { ctor ->
@@ -251,8 +282,31 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
         }.toSet()
 
-        return (0 until constructorInformation.parameters.size).none { index ->
+        return (constructorInformation.parameters.indices).none { index ->
             constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties
+        }
+    }
+
+    private fun missingMandatoryConstructorProperties(
+            constructorInformation: LocalConstructorInformation,
+            properties: Map<PropertyName, LocalPropertyInformation>
+    ): List<LocalConstructorParameterInformation> {
+        if (!constructorInformation.hasParameters) return emptyList()
+
+        val indicesAddressedByProperties = properties.values.asSequence().mapNotNull {
+            when (it) {
+                is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                else -> null
+            }
+        }.toSet()
+
+        return (constructorInformation.parameters.indices).mapNotNull { index ->
+            val parameter = constructorInformation.parameters[index]
+            when {
+                constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties -> parameter
+                else -> null
+            }
         }
     }
 

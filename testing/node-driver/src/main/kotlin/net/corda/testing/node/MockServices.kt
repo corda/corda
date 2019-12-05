@@ -72,7 +72,7 @@ open class MockServices private constructor(
         private val cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
-        private val initialNetworkParameters: NetworkParameters,
+        initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>,
         override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
@@ -385,10 +385,14 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
-    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }
+    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(
+        numberOfWorkers = 2,
+        cordappProvider = mockCordappProvider,
+        attachments = attachments
+    )
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 

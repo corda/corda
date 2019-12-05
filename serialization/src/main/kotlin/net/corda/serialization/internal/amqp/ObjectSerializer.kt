@@ -1,7 +1,14 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.model.*
+import net.corda.core.serialization.internal.MissingSerializerException
+import net.corda.serialization.internal.model.LocalConstructorInformation
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.PropertyName
+import net.corda.serialization.internal.model.RemotePropertyInformation
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -14,10 +21,14 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
-            if (typeInformation is LocalTypeInformation.NonComposable)
-                throw NotSerializableException(
-                        "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint(false)}, " +
-                        "but it is not constructable from its public properties, and so requires a custom serialiser.")
+            if (typeInformation is LocalTypeInformation.NonComposable) {
+                val typeNames = typeInformation.nonComposableTypes.map { it.observedType.typeName }
+                throw MissingSerializerException(
+                    message = "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint(false)}, " +
+                            "but it is not constructable from its public properties, and so requires a custom serialiser.",
+                    typeNames = typeNames
+                )
+            }
 
             val typeDescriptor = factory.createDescriptor(typeInformation)
             val typeNotation = TypeNotationGenerator.getTypeNotation(typeInformation, typeDescriptor)

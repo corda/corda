@@ -158,7 +158,7 @@ class NodeAttachmentService(
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(DBAttachment::class.java)))
         val count = session.createQuery(criteriaQuery).singleResult
         attachmentCount.inc(count)
     }
@@ -261,9 +261,9 @@ class NodeAttachmentService(
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
 
-    private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
+    private fun loadAttachmentContent(id: AttachmentId): Pair<Attachment, ByteArray>? {
         return database.transaction {
-            val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+            val attachment = currentDBSession().get(DBAttachment::class.java, id.toString())
                     ?: return@transaction null
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad, attachment.uploader).let {
                 val contracts = attachment.contractClassNames
@@ -332,7 +332,7 @@ class NodeAttachmentService(
     }
 
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
-        currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
+        currentDBSession().find(DBAttachment::class.java, attachmentId.toString()) != null
     }
 
     private fun verifyVersionUniquenessForSignedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?) {
@@ -387,7 +387,7 @@ class NodeAttachmentService(
                     val session = currentDBSession()
                     if (!devMode)
                         verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
-                    val attachment = NodeAttachmentService.DBAttachment(
+                    val attachment = DBAttachment(
                             attId = id.toString(),
                             content = bytes,
                             uploader = uploader,
@@ -404,7 +404,7 @@ class NodeAttachmentService(
                 }
                 if (isUploaderTrusted(uploader)) {
                     val session = currentDBSession()
-                    val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+                    val attachment = session.get(DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
                         if (!devMode)
@@ -427,7 +427,7 @@ class NodeAttachmentService(
     }
 
     private fun getSigners(attachmentBytes: ByteArray) =
-            JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+            JarInputStream(attachmentBytes.inputStream()).use(JarSignatureCollector::collectSigners)
 
     private fun getVersion(attachmentBytes: ByteArray) =
             JarInputStream(attachmentBytes.inputStream()).use {

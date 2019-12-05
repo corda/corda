@@ -4,6 +4,7 @@ import io.github.classgraph.ClassGraph
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.node.services.AttachmentFixup
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -31,18 +32,21 @@ data class CustomCordapp(
         val versionId: Int = 1,
         val targetPlatformVersion: Int = PLATFORM_VERSION,
         val classes: Set<Class<*>> = emptySet(),
+        val fixups: List<AttachmentFixup> = emptyList(),
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
 ) : TestCordappInternal() {
     init {
-        require(packages.isNotEmpty() || classes.isNotEmpty()) { "At least one package or class must be specified" }
+        require(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isNotEmpty()) {
+            "At least one package or class must be specified"
+        }
     }
 
     override val jarFile: Path get() = getJarFile(this)
 
     override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
 
-    override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
+    override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes, fixups = fixups)
 
     fun signed(keyStorePath: Path? = null): CustomCordapp = copy(signingInfo = SigningInfo(keyStorePath))
 
@@ -74,6 +78,27 @@ data class CustomCordapp(
                 // pick the first one found.
                 scanResult.allResources.asMap().forEach { path, resourceList ->
                     jos.addEntry(testEntry(path), resourceList[0].open())
+                }
+            }
+        }
+    }
+
+    internal fun createFixupJar(file: Path) {
+        JarOutputStream(file.outputStream()).use { jos ->
+            jos.addEntry(testEntry(JarFile.MANIFEST_NAME)) {
+                createTestManifest(name, versionId, targetPlatformVersion).write(jos)
+            }
+            jos.addEntry(testEntry("META-INF/Corda-Fixups")) {
+                fixups.filter { it.first.isNotEmpty() }.forEach { (source, target) ->
+                    val data = source.joinToString(
+                        separator = ",",
+                        postfix = target.joinToString(
+                            separator = ",",
+                            prefix = "=>",
+                            postfix = "\r\n"
+                        )
+                    )
+                    jos.write(data.toByteArray())
                 }
             }
         }
@@ -136,7 +161,7 @@ data class CustomCordapp(
         private val epochFileTime = FileTime.from(Instant.EPOCH)
         private val cordappsDirectory: Path
         private val defaultJarSignerDirectory: Path
-        private val whitespace = "\\s".toRegex()
+        private val whitespace = "\\s++".toRegex()
         private val cache = ConcurrentHashMap<CustomCordapp, Path>()
 
         init {
@@ -151,7 +176,11 @@ data class CustomCordapp(
             return cache.computeIfAbsent(cordapp.copy(config = emptyMap())) {
                 val filename = it.run { "${name.replace(whitespace, "-")}_${versionId}_${targetPlatformVersion}_${UUID.randomUUID()}.jar" }
                 val jarFile = cordappsDirectory.createDirectories() / filename
-                it.packageAsJar(jarFile)
+                if (it.fixups.isNotEmpty()) {
+                    it.createFixupJar(jarFile)
+                } else {
+                    it.packageAsJar(jarFile)
+                }
                 it.signJar(jarFile)
                 logger.debug { "$it packaged into $jarFile" }
                 jarFile

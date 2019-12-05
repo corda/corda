@@ -228,6 +228,13 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId", null)
 
 
+    /**
+     * @param txId Id of the transaction that Corda is no longer able to verify.
+     */
+    @KeepForDJVM
+    class BrokenTransactionException(txId: SecureHash, message: String)
+        : TransactionVerificationException(txId, message, null)
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM

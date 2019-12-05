@@ -9,18 +9,18 @@ import net.corda.core.transactions.LedgerTransaction
 @Suppress("unused")
 class CustomSerializerContract : Contract {
     companion object {
-        const val MAX_CURRANT = 2000
+        const val MAX_CURRANT = 2000L
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val currantsyData = tx.outputsOfType(CurrantsyState::class.java)
+        val currantsyData = tx.outputsOfType<CurrantsyState>()
         require(currantsyData.isNotEmpty()) {
             "Requires at least one currantsy state"
         }
 
         currantsyData.forEach {
-            require(it.currantsy.currants in 0..MAX_CURRANT) {
-                "Too many currants! ${it.currantsy.currants} is unraisinable!"
+            require(it.currantsy in Currantsy(0)..Currantsy(MAX_CURRANT)) {
+                "Too many currants! $it is unraisinable!"
             }
         }
     }
