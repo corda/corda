@@ -119,7 +119,13 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
     }
 
     private fun collectionComparisonToPredicate(column: Path<out Any?>, columnPredicate: CollectionExpression<*>): Predicate {
-        val literal = columnPredicate.rightLiteral
+        val literal = if (columnPredicate.rightLiteral.isEmpty()) {
+            // This is needed because MS SQL does not allow writing IN statement with empty list, e.g this is invalid: "select 1 where 'a' in ()"
+            // To fix it we just insert a null into the list and the query becomes: "select 1 where 'a' in (null)"
+            listOf(null)
+        } else {
+            columnPredicate.rightLiteral
+        }
         return if (literal.any { it is String }) {
             @Suppress("UNCHECKED_CAST")
             column as Path<String?>
