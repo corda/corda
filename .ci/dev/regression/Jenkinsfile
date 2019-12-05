@@ -34,7 +34,7 @@ pipeline {
         unsuccessful {
 
             script {
-                def lastCommitterEmail = sh returnStdout: true, script: 'git log -1 --pretty=format:'%ae''
+                def lastCommitterEmail = sh returnStdout: true, script: 'git log -1 --pretty=format:"%ae"'
                 echo lastCommitterEmail
                 def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'LOCAL', failOnError: false
                 echo users.data.toString()
