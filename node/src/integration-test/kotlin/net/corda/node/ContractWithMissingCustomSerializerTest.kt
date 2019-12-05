@@ -1,8 +1,7 @@
 package net.corda.node
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.CordaRuntimeException
-//import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.flows.serialization.missing.MissingSerializerFlow
@@ -15,6 +14,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -33,11 +33,11 @@ class ContractWithMissingCustomSerializerTest {
             notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
             cordappsForAllNodes = listOf(
                 cordappWithPackages("net.corda.flows.serialization.missing").signed(),
-                cordappWithPackages("net.corda.contracts.serialization.missing.contract").signed()
+                cordappWithPackages("net.corda.contracts.serialization.missing").signed()
             )
         )) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            assertThrows<CordaRuntimeException> {
+            val ex = assertThrows<TransactionVerificationException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
                     .proxy
@@ -45,6 +45,7 @@ class ContractWithMissingCustomSerializerTest {
                     .returnValue
                     .getOrThrow()
             }
+            assertThat(ex).hasMessageContaining("Data $BOBBINS bobbins exceeds maximum value!")
         }
     }
 }
