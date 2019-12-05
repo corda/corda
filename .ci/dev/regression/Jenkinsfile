@@ -32,16 +32,21 @@ pipeline {
         //}
 
         unsuccessful {
+
             script {
-                def testIssue = [fields: [ project: [key: 'TM'],
-                                         summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
-                                         description: currentBuild.absoluteUrl,
-                                         issuetype: [name: 'Story']]]
+                lastCommitterEmail = `git log -1 --pretty=format:'%ae'`
+                echo lastCommitterEmail
+                def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'LOCAL', failOnError: false
+                echo users.data.toString()
+                //def testIssue = [fields: [ project: [key: 'TM'],
+                //                         summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
+                //                         description: currentBuild.absoluteUrl,
+                //                         issuetype: [name: 'Story']]]
 
-                response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
+                //response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
-                echo response.successful.toString()
-                echo response.data.toString()
+                //echo response.successful.toString()
+                //echo response.data.toString()
             }
         }
 
