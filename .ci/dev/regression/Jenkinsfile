@@ -36,7 +36,7 @@ pipeline {
             script {
                 def lastCommitterEmail = sh returnStdout: true, script: 'git log -1 --pretty=format:"%ae"'
                 echo lastCommitterEmail
-                def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'LOCAL', failOnError: false
+                def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'R3 Jira', failOnError: false
                 echo users.data.toString()
                 //def testIssue = [fields: [ project: [key: 'TM'],
                 //                         summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
