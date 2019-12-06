@@ -101,8 +101,12 @@ class FlowHospitalTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
+        driver(
+            DriverParameters(
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+            )
+        ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
@@ -119,8 +123,12 @@ class FlowHospitalTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
+        driver(
+            DriverParameters(
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+            )
+        ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
@@ -137,8 +145,12 @@ class FlowHospitalTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
+        driver(
+            DriverParameters(
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+            )
+        ) {
             // one node will be enough for this testing
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
@@ -160,8 +172,12 @@ class FlowHospitalTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
+        driver(
+            DriverParameters(
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+            )
+        ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
