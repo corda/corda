@@ -779,32 +779,34 @@ Below is an example using ``FlowException``:
 
    .. sourcecode:: kotlin
 
-       @InitiatingFlow
-       class SendMoneyFlow(private val moneyRecipient: Party): FlowLogic<Unit>() {
-           @Suspendable
-           override fun call() {
-               val money = Money(10.0, USD)
-               try {
-                   initiateFlow(moneyRecipient).sendAndReceive<Unit>(money)
-               } catch(e: FlowException) {
-                   if (e.cause?.message?.contains("WrongCurrencyException")!!)
-                       log.info(e.message, e)
-               }
-           }
-       }
+        @InitiatingFlow
+        class SendMoneyFlow(private val moneyRecipient: Party) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val money = Money(10.0, USD)
+                try {
+                    initiateFlow(moneyRecipient).sendAndReceive<Unit>(money)
+                } catch (e: FlowException) {
+                    if (e.cause is WrongCurrencyException) {
+                        log.info(e.message, e)
+                    }
+                }
+            }
+        }
 
-       @InitiatedBy(SendMoneyFlow::class)
-       class ReceiveMoneyFlow(private val moneySender: FlowSession): FlowLogic<Unit>() {
-           @Suspendable
-           override fun call() {
-               val receivedMoney = moneySender.receive<Money>().unwrap{ it }
-               if (receivedMoney.currency != GBP) {
-                   // Wrap a thrown Exception with a FlowException for the counter party to receive it.
-                   throw FlowException(WrongCurrencyException("I only accept GBP, sorry!"))
-               }
-           }
-       }
+        @InitiatedBy(SendMoneyFlow::class)
+        class ReceiveMoneyFlow(private val moneySender: FlowSession) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val receivedMoney = moneySender.receive<Money>().unwrap { it }
+                if (receivedMoney.currency != GBP) {
+                    // Wrap a thrown Exception with a FlowException for the counter party to receive it.
+                    throw FlowException(WrongCurrencyException("I only accept GBP, sorry!"))
+                }
+            }
+        }
 
+        class WrongCurrencyException(message: String) : CordaRuntimeException(message)
 
 HospitalizeFlowException
 ------------------------
