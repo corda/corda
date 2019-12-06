@@ -70,15 +70,15 @@ Specifically, there are two main ways a flow is hospitalized:
      The time is hard to document as the notary members, if actually alive, will inform the requester of the ETA of a response.
      This can occur an infinite number of times.  i.e. we never give up notarising.  No intervention required.
 
-   * **Internal Corda errors**:
-     Flows that experience errors from inside the Corda statemachine, that are not handled by any of the scenarios details above, will be retried a number of times
-     and then kept in for observation if the error continues.
-
    * ``HospitalizeFlowException``:
      This kind of exception should be thrown whenever we would need a flow to get hospitalised. This flow will not be retried and be kept for observation.
      However, please **note** that if a ``HospitalizeFlowException`` extends or wraps one of the other exception types handled by the flow hospital, then in that case,
      if the extended or wrapped exception is of higher priority, the hospital will treat the extended/ wrapped exception instead, and not the ``HospitalizeFlowException``.
      So if for example, a HospitalizeFlowException exception is wrapping an ``SQLException`` mentioning a **deadlock** , then this ``HospitalizeFlowException``
      will be treated as an ``SQLException`` mentioning a **deadlock**.
+
+   * **Internal Corda errors**:
+     Flows that experience errors from inside the Corda statemachine, that are not handled by any of the scenarios details above, will be retried a number of times
+     and then kept in for observation if the error continues.
 
 .. note:: Flows that are kept in for observation are retried upon node restart.
