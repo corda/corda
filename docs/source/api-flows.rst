@@ -773,6 +773,39 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
 
+Below is an example of a flow couple making use of ``FlowException``:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+       @InitiatingFlow
+       class SendMoneyFlow(private val moneyRecipient: Party): FlowLogic<Unit>() {
+           @Suspendable
+           override fun call() {
+               val money = Money(10.0, USD)
+               try {
+                   initiateFlow(moneyRecipient).sendAndReceive<Unit>(money)
+               } catch(e: FlowException) {
+                   if (e.cause?.message?.contains("WrongCurrencyException")!!)
+                       log.info(e.message, e)
+               }
+           }
+       }
+
+       @InitiatedBy(SendMoneyFlow::class)
+       class ReceiveMoneyFlow(private val moneySender: FlowSession): FlowLogic<Unit>() {
+           @Suspendable
+           override fun call() {
+               val receivedMoney = moneySender.receive<Money>().unwrap{ it }
+               if (receivedMoney.currency != GBP) {
+                   // Wrap a thrown Exception with a FlowException for the counter party to receive it.
+                   throw FlowException(WrongCurrencyException("I only accept GBP, sorry!"))
+               }
+           }
+       }
+
+
 HospitalizeFlowException
 ------------------------
 Some operations can fail intermittently and will succeed if they are tried again at a later time. Flows have the ability to halt their
