@@ -811,7 +811,6 @@ Here is an example of a flow that we might have wanted to be retried again in th
                 val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
             } catch (e: UnknownHostException) {
                 // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
-                // We can achieve this by wrapping the thrown exception with a HospitalizeFlowException and throw it instead.
                 throw HospitalizeFlowException("Service might be offline!", e)
             }
         }
