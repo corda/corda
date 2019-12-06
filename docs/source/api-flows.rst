@@ -773,7 +773,7 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
 
-Below is an example of a flow couple making use of ``FlowException``:
+Below is an example using ``FlowException``:
 
 .. container:: codeset
 
