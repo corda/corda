@@ -275,7 +275,6 @@ class FlowHospitalTest {
 
         @Suspendable
         override fun call() {
-            // Create an instance out of the Class reference and TODO check if it is or has a HospitalizeFlowException.
             val throwable = hospitalizeFlowExceptionClass.newInstance()
             (throwable as? Throwable)?.let {
                 throw it
