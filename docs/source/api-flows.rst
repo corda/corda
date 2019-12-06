@@ -831,16 +831,16 @@ Below is an example of a flow that should retry again in the future if an error 
 
    .. sourcecode:: kotlin
 
-    class TryAccessServiceFlow(): FlowLogic<Unit>() {
-        override fun call() {
-            try {
-                val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
-            } catch (e: UnknownHostException) {
-                // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
-                throw HospitalizeFlowException("Service might be offline!", e)
+        class TryAccessServiceFlow(): FlowLogic<Unit>() {
+            override fun call() {
+                try {
+                    val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
+                } catch (e: UnknownHostException) {
+                    // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
+                    throw HospitalizeFlowException("Service might be offline!", e)
+                }
             }
         }
-    }
 
 ProgressTracker
 ---------------
