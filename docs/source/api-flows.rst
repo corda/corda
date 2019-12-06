@@ -775,11 +775,10 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 
 HospitalizeFlowException
 ------------------------
-When writing flows it could be the case that you would want to stop the execution of a flow at some point
-under certain circumstances. Or, prevent a flow's erroneous termination that would lead to all the
-flow's records being removed. In both such cases the flow would then be re-executed at a later point in time.
+Some operations can fail intermittently and will succeed if they are tried again at a later time. Flows have the ability to halt their
+execution in such situations. By throwing a ``HospitalizeFlowException`` a flow will stop and retry at a later time (on the next node restart).
 
-The way to do this is by throwing a ``HospitalizeFlowException``:
+A ``HospitalizeFlowException`` can be defined in various ways:
 
 .. container:: codeset
 
@@ -788,18 +787,12 @@ The way to do this is by throwing a ``HospitalizeFlowException``:
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
 
-The flow framework will hospitalise a flow throwing a ``HospitalizeFlowException``.
+.. note:: If a ``HospitalizeFlowException`` is wrapping or extending an exception already being handled by the :doc:`node-flow-hospital`, the outcome of a flow may change. For example, the flow
+  could instantly retry or terminate if a critical error occurred.
 
-This exception could be thrown arbitrarily or it could wrap an exception being thrown in the flow execution.
+.. note:: ``HospitalizeFlowException`` can be extended for customized exceptions. These exceptions will be treated in the same way when thrown.
 
-Normally, within a flow's execution, if an exception is being thrown and if this exception is not one of the exception types
-already being handled by the flow framework described in :ref:`flow hospital runtime behaviour <flow-hospital-runtime>`,
-it will lead to the flow's erroneous termination. All of the flow's records will then be removed. To avoid this;
-keep the flow and have it retrying its execution at a later point in time, we could wrap this thrown exception with a
-``HospitalizeFlowException`` and throw it instead. In that case, the flow will be held by the :doc:`node-flow-hospital`
-and will be retried from its last checkpoint upon node restart.
-
-Here is an example of a flow that we might have wanted to be retried again in the future instead of terminating erroneously:
+Below is an example of a flow that should retry again in the future if an error occurs:
 
 .. container:: codeset
 
@@ -815,8 +808,6 @@ Here is an example of a flow that we might have wanted to be retried again in th
             }
         }
     }
-
-.. note:: Custom exceptions extending HospitalizeFlowException will be treated the same way, as described above, whenever thrown.
 
 ProgressTracker
 ---------------
