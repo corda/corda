@@ -71,11 +71,8 @@ Specifically, there are two main ways a flow is hospitalized:
      This can occur an infinite number of times.  i.e. we never give up notarising.  No intervention required.
 
    * ``HospitalizeFlowException``:
-     This kind of exception should be thrown whenever we would need a flow to get hospitalised. This flow will not be retried and be kept for observation.
-     However, please **note** that if a ``HospitalizeFlowException`` extends or wraps one of the other exception types handled by the flow hospital, then in that case,
-     if the extended or wrapped exception is of higher priority, the hospital will treat the extended/ wrapped exception instead, and not the ``HospitalizeFlowException``.
-     So if for example, a HospitalizeFlowException exception is wrapping an ``SQLException`` mentioning a **deadlock** , then this ``HospitalizeFlowException``
-     will be treated as an ``SQLException`` mentioning a **deadlock**.
+     The aim of this exception is to provide user code a way to retry a flow from its last checkpoint if a known intermittent failure occurred.
+     Any ``HospitalizeFlowException`` that is thrown and not handled by any of the scenarios detailed above, will be kept in for observation.
 
    * **Internal Corda errors**:
      Flows that experience errors from inside the Corda statemachine, that are not handled by any of the scenarios details above, will be retried a number of times
