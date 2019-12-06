@@ -809,8 +809,6 @@ Here is an example of a flow that we might have wanted to be retried again in th
         override fun call() {
             try {
                 val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
-                if (code == 404)
-                    throw HospitalizeFlowException("The resource requested could not be found!") // throw a HospitalizeFlowException arbitrarily.
             } catch (e: UnknownHostException) {
                 // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
                 // We can achieve this by wrapping the thrown exception with a HospitalizeFlowException and throw it instead.
