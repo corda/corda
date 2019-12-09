@@ -1,7 +1,8 @@
 #pragma once
 
 #include <iosfwd>
-#include "CordaBytes.h"
+#include "include/CordaBytes.h"
+#include "include/AMQPBlob.h"
 
 /******************************************************************************/
 
@@ -11,10 +12,10 @@ struct pn_data_t;
 
 class BlobInspector {
     private :
-        pn_data_t * m_data;
+        amqp::AMQPBlob m_blob;
 
     public :
-        BlobInspector (CordaBytes &);
+        explicit BlobInspector (amqp::CordaBytes &);
 
         std::string dump();
 

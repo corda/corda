@@ -1,8 +1,7 @@
-include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/src)
-include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/src/amqp)
+include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/libs)
 
-link_directories (${BLOB-INSPECTOR_BINARY_DIR}/src/amqp)
-link_directories (${BLOB-INSPECTOR_BINARY_DIR}/src/proton)
+link_directories (${BLOB-INSPECTOR_BINARY_DIR}/libs/amqp)
+link_directories (${BLOB-INSPECTOR_BINARY_DIR}/libs/proton-wrapper)
 
 add_executable (schema-dumper main)
 

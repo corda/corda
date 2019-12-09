@@ -1,12 +1,12 @@
-include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/src)
-include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/src/amqp)
+include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/libs/corda-utils)
+include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/libs/proton-wrapper)
+include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/libs/amqp)
 
-link_directories (${BLOB-INSPECTOR_BINARY_DIR}/src/amqp)
-link_directories (${BLOB-INSPECTOR_BINARY_DIR}/src/proton)
+link_directories (${BLOB-INSPECTOR_BINARY_DIR}/libs/amqp)
+link_directories (${BLOB-INSPECTOR_BINARY_DIR}/libs/proton-wrapper)
 
 set (blob-inspector-sources
-        BlobInspector.cxx
-        CordaBytes.cxx)
+        BlobInspector.cxx)
 
 
 add_executable (blob-inspector main.cxx ${blob-inspector-sources})

@@ -7,13 +7,14 @@ SET (${PROJECT_NAME}_MINOR_VERSION 0)
 SET (${PROJECT_NAME}_PATCH_LEVEL 1)
 
 ADD_DEFINITIONS ("-Wall -g -ansi -pedantic")
+#ADD_DEFINITIONS ("-Wall -g -ansi")
 
 #ADD_DEFINITIONS ("-DSRC_DEBUG")
 
 #
 #
 #
-#set (CMAKE_VERBOSE_MAKEFILE "TRUE" CACHE BOOL "" FORCE)
+set (CMAKE_VERBOSE_MAKEFILE "FALSE" CACHE BOOL "" FORCE)
 
 #
 # For "reasons" something to do with the way the comand line compiler
@@ -26,14 +27,9 @@ if(APPLE)
     link_directories (/usr/local/lib)
 endif()
 
-#
-# Interface include files
-#
-include_directories (${BLOB-INSPECTOR_SOURCE_DIR}/include)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-ADD_SUBDIRECTORY (src)
+ADD_SUBDIRECTORY (libs)
 ADD_SUBDIRECTORY (bin)

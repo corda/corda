@@ -11,3 +11,6 @@ Makefile
 # CLion / JetBrains
 .idea
 BLOB-INSPECTOR.cbp
+
+# build output
+*.a

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "CordaBytes.h"
+#include "include/CordaBytes.h"
 #include "BlobInspector.h"
 
 const std::string filepath ("../../test-files/"); // NOLINT
@@ -13,7 +13,7 @@ const std::string filepath ("../../test-files/"); // NOLINT
 void
 test (const std::string & file_, const std::string & result_) {
     auto path { filepath + file_ } ;
-    CordaBytes cb (path);
+    amqp::CordaBytes cb (path);
     auto val = BlobInspector (cb).dump();
     ASSERT_EQ(result_, val);
 }
