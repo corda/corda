@@ -149,6 +149,9 @@ quasar {
 
 artifacts {
     testArtifacts testJar
+    publish testJar {
+        archiveClassifier = "test"
+    }
 }
 
 scanApi {

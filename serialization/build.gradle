@@ -59,6 +59,9 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
+    publish testJar {
+        archiveClassifier = "test"
+    }
 }
 
 jar {
