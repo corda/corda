@@ -88,20 +88,41 @@ object CordappResolver {
      */
     val currentTargetVersion: Int get() = currentCordapp?.targetPlatformVersion ?: 1
 
+    // A list of extra CorDapps added to the current CorDapps list for testing purposes.
+    private var extraCordappsForTesting = listOf<Cordapp>()
+
+    /**
+     * Return all the CorDapps that were involved in the call stack at the point the provided exception was generated.
+     *
+     * This is provided to allow splitting the cost of generating the exception and retrieving the CorDapps involved.
+     */
+    fun cordappsFromException(exception: Exception): List<Cordapp> {
+        val apps = exception.stackTrace
+                .mapNotNull { cordappClasses[it.className] }
+                .flatten()
+                .distinct()
+        return (apps + extraCordappsForTesting)
+    }
+
     /**
      * Temporarily apply a fake CorDapp with the given parameters. For use in testing.
      */
     @Synchronized
     @VisibleForTesting
-    fun <T> withCordapp(minimumPlatformVersion: Int = 1, targetPlatformVersion: Int = PLATFORM_VERSION, block: () -> T): T {
+    fun <T> withTestCordapp(minimumPlatformVersion: Int = 1,
+                            targetPlatformVersion: Int = PLATFORM_VERSION,
+                            extraApps: List<CordappImpl> = listOf(),
+                            block: () -> T): T {
         val currentResolver = cordappResolver
         cordappResolver = {
             CordappImpl.TEST_INSTANCE.copy(minimumPlatformVersion = minimumPlatformVersion, targetPlatformVersion = targetPlatformVersion)
         }
+        extraCordappsForTesting = listOf(cordappResolver()!!) + extraApps
         try {
             return block()
         } finally {
             cordappResolver = currentResolver
+            extraCordappsForTesting = listOf()
         }
     }
 

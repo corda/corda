@@ -4,8 +4,8 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import org.assertj.core.api.Assertions.catchThrowable
-import org.junit.Assert
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ReadOnlyBufferException
@@ -52,10 +52,10 @@ class ByteArraysTest {
 
         val privacySalt = net.corda.core.contracts.PrivacySalt()
         val privacySaltAsHexString = privacySalt.bytes.toHexString()
-        Assert.assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
+        assertTrue(privacySaltAsHexString.matches(HEX_REGEX))
 
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         val txhashAsHexString = stateRef.txhash.bytes.toHexString()
-        Assert.assertTrue(txhashAsHexString.matches(HEX_REGEX))
+        assertTrue(txhashAsHexString.matches(HEX_REGEX))
     }
 }

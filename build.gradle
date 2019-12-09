@@ -77,7 +77,7 @@ buildscript {
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.22.Final'
+    ext.netty_version = '4.1.29.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
     // Legacy JUnit 4 version
@@ -95,10 +95,10 @@ buildscript {
     ext.jansi_version = '1.18'
     ext.hibernate_version = '5.4.3.Final'
     ext.h2_version = '1.4.199' // Update docs if renamed or removed.
-    ext.postgresql_version = '42.2.5'
+    ext.postgresql_version = '42.2.8'
     ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
-    ext.eddsa_version = '0.2.0'
+    ext.eddsa_version = '0.3.0'
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.3'
@@ -120,6 +120,7 @@ buildscript {
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
+    ext.commons_lang_version = '3.9'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
     if (JavaVersion.current() == JavaVersion.VERSION_11) {

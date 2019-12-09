@@ -15,19 +15,52 @@ class LifeCycle<S : Enum<S>>(initial: S) {
     private val lock = ReentrantReadWriteLock()
     private var state = initial
 
-    /** Assert that the lifecycle in the [requiredState]. */
-    fun requireState(requiredState: S) {
-        requireState({ "Required state to be $requiredState, was $it" }) { it == requiredState }
+    /**
+     * Assert that the lifecycle in the [requiredState]. Optionally runs [block], for the duration of which the
+     * lifecycle is guaranteed to stay in [requiredState].
+     */
+    fun <A> requireState(
+            requiredState: S,
+            block: () -> A
+    ): A {
+        return requireState(
+                errorMessage = { "Required state to be $requiredState, was $it" },
+                predicate = { it == requiredState },
+                block = block
+        )
+    }
+
+    fun requireState(requiredState: S) = requireState(requiredState) {}
+
+    fun <A> requireState(
+            requiredState: S,
+            throwable: Throwable,
+            block: () -> A
+    ): A {
+        return lock.readLock().withLock {
+            if (requiredState != state) {
+                throw throwable
+            }
+            block()
+        }
     }
 
     /** Assert something about the current state atomically. */
+    fun <A> requireState(
+            errorMessage: (S) -> String,
+            predicate: (S) -> Boolean,
+            block: () -> A
+    ): A {
+        return lock.readLock().withLock {
+            require(predicate(state)) { errorMessage(state) }
+            block()
+        }
+    }
     fun requireState(
             errorMessage: (S) -> String = { "Predicate failed on state $it" },
             predicate: (S) -> Boolean
     ) {
-        lock.readLock().withLock {
-            require(predicate(state)) { errorMessage(state) }
-        }
+        requireState(errorMessage, predicate) {}
     }
 
     /** Transition the state from [from] to [to]. */

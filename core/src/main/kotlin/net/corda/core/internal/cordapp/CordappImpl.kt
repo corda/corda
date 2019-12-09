@@ -35,7 +35,8 @@ data class CordappImpl(
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
-        private val explicitCordappClasses: List<String> = emptyList()
+        private val explicitCordappClasses: List<String> = emptyList(),
+        val isVirtual: Boolean = false
 ) : Cordapp {
     override val name: String = jarName(jarPath)
 

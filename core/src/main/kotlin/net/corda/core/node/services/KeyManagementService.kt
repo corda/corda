@@ -7,7 +7,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.ServiceHub
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
