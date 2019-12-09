@@ -427,7 +427,9 @@ val DEFAULT_HTTP_CONNECT_TIMEOUT = 30.seconds.toMillis()
 val DEFAULT_HTTP_READ_TIMEOUT = 30.seconds.toMillis()
 
 @DeleteForDJVM
-fun URL.openHttpConnection(proxy: Proxy? = null): HttpURLConnection = (if (proxy == null) openConnection() else openConnection(proxy)).also {
+fun URL.openHttpConnection(proxy: Proxy? = null): HttpURLConnection = (
+        if (proxy == null) openConnection()
+        else openConnection(proxy)).also {
     // The default values are 0 which means infinite timeout.
     it.connectTimeout = DEFAULT_HTTP_CONNECT_TIMEOUT.toInt()
     it.readTimeout = DEFAULT_HTTP_READ_TIMEOUT.toInt()

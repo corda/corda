@@ -35,6 +35,7 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     override fun getService(type: String, algorithm: String): Service? = serviceFactory(type, algorithm)
 
     // Used to work around banning of ConcurrentHashMap in DJVM
+    @Suppress("TooGenericExceptionCaught")
     private val serviceFactory: (String, String) -> Service? = try {
         // Will throw UnsupportedOperationException in DJVM
         makeCachingFactory()
