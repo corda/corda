@@ -9,7 +9,6 @@ import net.corda.core.node.services.vault.CollectionOperator.*
 import net.corda.core.node.services.vault.ColumnPredicate.*
 import net.corda.core.node.services.vault.EqualityComparisonOperator.*
 import net.corda.core.node.services.vault.LikenessOperator.*
-import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field

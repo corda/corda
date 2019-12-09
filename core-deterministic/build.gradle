@@ -58,10 +58,13 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
     from(compileKotlin)
     from(processResources)
     from(zipTree(originalJar)) {
+        exclude 'net/corda/core/crypto/DelegatingSecureRandomService*.class'
+        exclude 'net/corda/core/crypto/SHA256DigestSupplier.class'
         exclude 'net/corda/core/internal/*ToggleField*.class'
         exclude 'net/corda/core/serialization/*SerializationFactory*.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/utilities/SgxSupport*.class'
     }
 
     reproducibleFileOrder = true
