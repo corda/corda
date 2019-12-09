@@ -25,7 +25,7 @@ namespace amqp::internal::reader {
             PropertyReader() = default;
             ~PropertyReader() override = default;
 
-            std::string readString(pn_data_t *) const override = 0;
+            std::string readString (pn_data_t *) const override = 0;
 
             std::any read (pn_data_t *) const override = 0;
 

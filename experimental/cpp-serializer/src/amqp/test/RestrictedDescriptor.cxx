@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "corda-descriptors/RestrictedDescriptor.h"
+#include "descriptors/corda-descriptors/RestrictedDescriptor.h"
 
-using namespace amqp::internal;
+using namespace amqp::internal::schema::descriptors;
 
 TEST (RestrictedDescriptor, makePrim1) { // NOLINT
-     EXPECT_EQ ("int", RestrictedDescriptor::makePrim ("int"));
+    EXPECT_EQ ("int", RestrictedDescriptor::makePrim ("int"));
 }
 
 TEST (RestrictedDescriptor, makePrim2) { // NOLINT

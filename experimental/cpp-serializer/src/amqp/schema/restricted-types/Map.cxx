@@ -1,7 +1,7 @@
 #include "Map.h"
 #include "List.h"
 #include "Enum.h"
-#include "Composite.h"
+#include "amqp/schema/described-types/Composite.h"
 
 /******************************************************************************
  *

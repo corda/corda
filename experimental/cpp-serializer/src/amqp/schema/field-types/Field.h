@@ -2,7 +2,7 @@
 
 /******************************************************************************/
 
-#include "../Descriptor.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "amqp/AMQPDescribed.h"
 
 #include "types.h"

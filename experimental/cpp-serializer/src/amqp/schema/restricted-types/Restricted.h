@@ -8,8 +8,8 @@
 #include <string>
 
 #include "schema/field-types/Field.h"
-#include "schema/Choice.h"
-#include "schema/Descriptor.h"
+#include "amqp/schema/described-types/Choice.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "schema/AMQPTypeNotation.h"
 
 #include "amqp/AMQPDescribed.h"

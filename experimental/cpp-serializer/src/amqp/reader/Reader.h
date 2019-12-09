@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-#include "amqp/schema/Schema.h"
+#include "amqp/schema/described-types/Schema.h"
 #include "amqp/reader/IReader.h"
 
 /******************************************************************************/

@@ -347,7 +347,7 @@ readAndNext<long> (
     bool tolerateDeviance_
 ) {
     long rtn = pn_data_get_long (data_);
-    pn_data_next(data_);
+    pn_data_next (data_);
     return rtn;
 }
 
@@ -361,7 +361,7 @@ readAndNext<u_long > (
         bool tolerateDeviance_
 ) {
     long rtn = pn_data_get_ulong (data_);
-    pn_data_next(data_);
+    pn_data_next (data_);
     return rtn;
 }
 

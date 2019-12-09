@@ -3,7 +3,7 @@
 
 #include "colours.h"
 
-#include "Composite.h"
+#include "amqp/schema/described-types/Composite.h"
 #include "amqp/schema/restricted-types/Restricted.h"
 
 /******************************************************************************

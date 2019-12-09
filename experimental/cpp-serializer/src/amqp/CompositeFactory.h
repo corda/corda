@@ -9,9 +9,9 @@
 #include "types.h"
 
 #include "amqp/ICompositeFactory.h"
-#include "amqp/schema/Schema.h"
-#include "amqp/schema/Envelope.h"
-#include "amqp/schema/Composite.h"
+#include "amqp/schema/described-types/Schema.h"
+#include "amqp/schema/described-types/Envelope.h"
+#include "amqp/schema/described-types/Composite.h"
 #include "amqp/reader/CompositeReader.h"
 #include "amqp/schema/restricted-types/Map.h"
 #include "amqp/schema/restricted-types/Array.h"

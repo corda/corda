@@ -6,7 +6,7 @@
 
 #include "amqp/AMQPDescribed.h"
 
-#include "amqp/schema/Schema.h"
+#include "amqp/schema/described-types/Schema.h"
 
 /******************************************************************************
  *

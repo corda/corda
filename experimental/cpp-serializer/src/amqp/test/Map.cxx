@@ -2,7 +2,7 @@
 
 #include "TestUtils.h"
 
-#include "Descriptor.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "restricted-types/Map.h"
 #include "restricted-types/List.h"
 #include "restricted-types/Enum.h"

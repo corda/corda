@@ -7,7 +7,7 @@
 #include <any>
 #include <vector>
 #include <iostream>
-#include <amqp/schema/Schema.h>
+#include <amqp/schema/described-types/Schema.h>
 
 /******************************************************************************/
 

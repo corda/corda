@@ -31,8 +31,11 @@ namespace proton {
     void is_string (pn_data_t *, bool allowNull = false);
     void is_described (pn_data_t *);
 
+    /**
+     * Specialised in the CXX file
+     */
     template<typename T>
-    T get_symbol (pn_data_t * data_) {
+    T get_symbol (pn_data_t *) {
         return T {};
     }
 

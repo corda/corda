@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "colours.h"
 
-#include "schema/Composite.h"
+#include "amqp/schema/described-types/Composite.h"
 
 /******************************************************************************
  *

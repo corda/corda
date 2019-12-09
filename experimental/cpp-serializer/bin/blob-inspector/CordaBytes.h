@@ -13,7 +13,8 @@ class CordaBytes {
         char * m_blob;
 
     public :
-        CordaBytes (const std::string &);
+        explicit CordaBytes (const std::string &);
+
         ~CordaBytes() {
             delete [] m_blob;
         }

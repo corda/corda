@@ -5,7 +5,7 @@
 #include <memory>
 #include <types.h>
 
-#include "Descriptor.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "OrderedTypeNotations.h"
 
 /******************************************************************************

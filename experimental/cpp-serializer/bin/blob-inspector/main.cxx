@@ -15,9 +15,9 @@
 
 #include "amqp/AMQPHeader.h"
 #include "amqp/AMQPSectionId.h"
-#include "amqp/descriptors/AMQPDescriptorRegistory.h"
+#include "amqp/schema/descriptors/AMQPDescriptorRegistory.h"
 
-#include "amqp/schema/Envelope.h"
+#include "amqp/schema/described-types/Envelope.h"
 #include "amqp/CompositeFactory.h"
 #include "CordaBytes.h"
 #include "BlobInspector.h"

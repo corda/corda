@@ -7,16 +7,16 @@
 #include "proton/codec.h"
 #include "proton/proton_wrapper.h"
 
-#include "amqp/descriptors/AMQPDescriptorRegistory.h"
+#include "amqp/schema/descriptors/AMQPDescriptorRegistory.h"
 
 #include "amqp/CompositeFactory.h"
-#include "amqp/schema/Envelope.h"
+#include "amqp/schema/described-types/Envelope.h"
 
 /******************************************************************************/
 
 BlobInspector::BlobInspector (CordaBytes & cb_)
-: m_data { pn_data (cb_.size()) }{
-
+    : m_data { pn_data (cb_.size()) }
+{
     // returns how many bytes we processed which right now we don't care
     // about but I assume there is a case where it doesn't process the
     // entire file
@@ -37,7 +37,7 @@ BlobInspector::dump() {
 
         envelope.reset (
                 dynamic_cast<amqp::internal::schema::Envelope *> (
-                        amqp::AMQPDescriptorRegistory[a]->build(m_data).release()));
+                        amqp::internal::AMQPDescriptorRegistory[a]->build(m_data).release()));
     }
 
     amqp::internal::CompositeFactory cf;
