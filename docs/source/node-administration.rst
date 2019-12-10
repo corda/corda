@@ -26,6 +26,7 @@ by adding ``-DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassL
 command line or to the ``jvmArgs`` section of the node configuration (see :doc:`corda-configuration-file`).
 Synchronous logging also requires minor customization of the default ``log4j2.xml`` to set ``immediateFlush="true"`` for every
 ``RollingRandomAccessFile`` appender. Specify ``-Dlog4j.configurationFile=<Customized config>`` to point to the altered config.
+The default ``log4j2.xml`` can be extracted using ``jar`` utility from ``corda-node-<version>.jar`` which is contained in ``corda.jar``.
 
 .. warning:: Ensure that ``shutdownHook="disable"`` is set if you are overriding the log4j2 configuration file
    otherwise logs will not be flushed properly on shutdown and loss may occur. The option is set in the ``Configuration``
