@@ -208,10 +208,11 @@ if (project.hasProperty("versionFromGit")){
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
 }
 
+// Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
 if (ext.versionSuffix != ""){
-    ext.corda_release_version = "${ext.baseVersion}-${ext.versionSuffix}"
+    ext.corda_release_version = "${ext.baseVersion}-${ext.versionSuffix}".toString()
 } else {
-    ext.corda_release_version = "${ext.baseVersion}"
+    ext.corda_release_version = "${ext.baseVersion}".toString()
 }
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
