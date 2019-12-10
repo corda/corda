@@ -131,7 +131,12 @@ class CollectSignaturesFlowTests : WithContracts {
     fun `throws exception when extra sessions are initiated`() {
         bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
-        val future = aliceNode.startFlow(ExtraSessionsFlow(listOf(bobNode.info.singleIdentity(), charlieNode.info.singleIdentity()), listOf(bobNode.info.singleIdentity(), alice)))
+        val future = aliceNode.startFlow(ExtraSessionsFlow(
+                listOf(
+                        bobNode.info.singleIdentity(),
+                        charlieNode.info.singleIdentity()
+                ),
+                listOf(bobNode.info.singleIdentity(), alice)))
                 .resultFuture
         mockNet.runNetwork()
         future.getOrThrow()

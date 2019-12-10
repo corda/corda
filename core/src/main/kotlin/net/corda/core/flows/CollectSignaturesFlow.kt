@@ -120,7 +120,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
 
         //check that there is at most one session for each not well known party
         for (entry in notWellKnownSessionsToAbstractPartyMap) {
-            require(entry.value.size == 1) { "There are multiple sessions initiated for Destination ${entry.key.owningKey.toStringShort()}" }
+            require(entry.value.size == 1)
+            { "There are multiple sessions initiated for Destination ${entry.key.owningKey.toStringShort()}" }
         }
 
         //all keys that were used to initate a session must be sent to that session
@@ -129,16 +130,19 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         //all keys that are left over MUST map back to a
         val keysThatMustMapToAWellKnownSession = unsigned - keysToSendToAnonymousSessions
         //if a key does not have a well known identity associated with it, it does not map to a wellKnown sessions
-        val keysThatDoNotMapToAWellKnownSession = keysThatMustMapToAWellKnownSession.filter { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it)) == null }
+        val keysThatDoNotMapToAWellKnownSession = keysThatMustMapToAWellKnownSession
+                .filter { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it)) == null }
         //ensure that no keys are impossible to map to a session
-        require(keysThatDoNotMapToAWellKnownSession.isEmpty()) { " Unable to match key(s): $keysThatDoNotMapToAWellKnownSession to a session to collect signatures from" }
+        require(keysThatDoNotMapToAWellKnownSession.isEmpty())
+        { " Unable to match key(s): $keysThatDoNotMapToAWellKnownSession to a session to collect signatures from" }
 
         //we now know that all the keys are either related to a specific session due to being used as a Destination for that session
         //OR map back to a wellKnown party
         //now we must check that each wellKnown party has a session passed for it
         val groupedByPartyKeys = groupPublicKeysByWellKnownParty(serviceHub, keysThatMustMapToAWellKnownSession)
         for (entry in groupedByPartyKeys) {
-            require(wellKnownSessionsToAbstractPartyMap.contains(entry.key)) { "${entry.key} is a required signer, but no session has been passed in for them" }
+            require(wellKnownSessionsToAbstractPartyMap.contains(entry.key))
+            { "${entry.key} is a required signer, but no session has been passed in for them" }
         }
 
         //so we now know that all keys are linked to a session in some way
@@ -146,7 +150,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         val extraNotWellKnownSessions = notWellKnownSessions.filterNot { (it.destination as AbstractParty).owningKey in unsigned }
         val extraWellKnownSessions = wellKnownSessions.filterNot { it.counterparty in groupedByPartyKeys }
 
-        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty()) { "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction." }
+        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty())
+        { "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction." }
 
         //OK let's collect some signatures!
 
