@@ -20,6 +20,7 @@ def cordaSourceReadReplace(app, docname, source):
 corda_substitutions = {
     "|corda_version|" : constants_properties_dict["cordaVersion"],
     "|corda_version_lower|" : constants_properties_dict["cordaVersion"].lower(),
+    "|stable_corda_version|" : constants_properties_dict["stableCordaVersion"].lower(),
     "|java_version|" : "8u"+constants_properties_dict["java8MinUpdateVersion"],
     "|kotlin_version|" : constants_properties_dict["kotlinVersion"],
     "|gradle_plugins_version|" : constants_properties_dict["gradlePluginsVersion"],

@@ -17,8 +17,11 @@ It starts at 1 and will increment by exactly 1 for each release which changes an
 entire platform. This includes public APIs on the node itself, the RPC system, messaging, serialisation, etc. API backwards
 compatibility will always be maintained, with the use of deprecation to suggest migration away from old APIs. In very rare
 situations APIs may have to be changed, for example due to security issues. There is no relationship between the platform version
-and the release version - a change in the major or minor values may or may not increase the platform version. However
-we do endeavour to keep them synchronised for now, as a convenience.
+and the release version - a change in the major or minor values may or may not increase the platform version. The major version 
+will be incremented in cases where an entire network would need to upgrade before all the functionality of a release could be 
+utilized. The release version will be incremented to indicate a set of new capabilities that can be unilaterally adopted by 
+node operators or application developers without requiring the whole network to have upgraded. An increase in the platform 
+version signifies the addition of new APIs for developers
 
 The platform version is part of the node's ``NodeInfo`` object, which is available from the ``ServiceHub``. This enables
 a CorDapp to find out which version it's running on and determine whether a desired feature is available. When a node

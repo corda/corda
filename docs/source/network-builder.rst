@@ -10,13 +10,13 @@ containers to abstract the complexity of managing a distributed network away fro
 
 The network you build will either be made up of local ``Docker`` nodes *or* of nodes spread across Azure
 containers.
-For each node a separate Docker image is built based on `corda/corda-zulu-java1.8-|corda_version| <https://hub.docker.com/r/corda/corda-zulu-java1.8-|corda_version_lower|>`_.
+For each node a separate Docker image is built based on `corda/corda-zulu-java1.8-|stable_corda_version| <https://hub.docker.com/r/corda/corda-zulu-java1.8-|stable_corda_version|>`_.
 Unlike the official image, a `node.conf` file and CorDapps are embedded into the image
 (they are not externally provided to the running container via volumes/mount points).
 More backends may be added in future. The tool is open source, so contributions to add more
 destinations for the containers are welcome!
 
-`Download the Corda Network Builder <https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-network-builder/|corda_version|/corda-tools-network-builder-|corda_version|.jar>`_.
+`Download the Corda Network Builder <https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-network-builder/|stable_corda_version|/corda-tools-network-builder-|stable_corda_version|.jar>`_.
 
 .. _pre-requisites:
 

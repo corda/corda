@@ -202,7 +202,7 @@ at boot, and means the Corda service stays running with no users connected to th
 .. code-block:: shell
 
         mkdir C:\Corda
-        wget http://jcenter.bintray.com/net/corda/corda/|corda_version|/corda-|corda_version|.jar -OutFile C:\Corda\corda.jar
+        wget http://jcenter.bintray.com/net/corda/corda/|stable_corda_version|/corda-|stable_corda_version|.jar -OutFile C:\Corda\corda.jar
 
 2. Create a directory called ``cordapps`` in ``C:\Corda\`` and save your CorDapp jar file to it. Alternatively,
    download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
