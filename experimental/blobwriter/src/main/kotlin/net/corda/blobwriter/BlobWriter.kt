@@ -1,4 +1,5 @@
 @file:Suppress("ClassNaming")
+@file:Suppress("MagicNumber")
 
 package net.corda.blobwriter
 
