@@ -46,6 +46,7 @@ fun initialiseSerialization() {
 }
 
 data class _i_ (val a: Int)
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 data class _Oi_ (val a: Integer)
 data class _l_ (val x: Long)
 data class _Ai_ (val z : Array<Int>)
