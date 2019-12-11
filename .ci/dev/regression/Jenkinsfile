@@ -53,6 +53,40 @@ pipeline {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
             allure includeProperties: false, jdk: '', results: [[path: '**/build/test-results-xml/**']]
+
+            script
+            {
+                // We want to send a summary email, but want to limit to once per day.
+                // Comparing the dates of the previous and current builds achieves this,
+                // i.e. we will only send an email for the first build on a given day.
+                def prevBuildDate = new Date(
+                        currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
+                def currentBuildDate = new Date(
+                        currentBuild.timeInMillis).clearTime()
+
+                if (prevBuildDate != currentBuildDate) {
+                    def statusSymbol = '\u2753'
+                    switch(currentBuild.result) {
+                        case 'SUCCESS':
+                            statusSymbol = '\u2705'
+                            break;
+                        case 'UNSTABLE':
+                        case 'FAILURE':
+                            statusSymbol = '\u274c'
+                            break;
+                        default:
+                            break;
+                    }
+
+                    echo('First build for this date, sending summary email')
+                    emailext to: '$DEFAULT_RECIPIENTS',
+                        subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
+                        mimeType: 'text/html',
+                        body: '${SCRIPT, template="groovy-html.template"}'
+                } else {
+                    echo('Already sent summary email today, suppressing')
+                }
+            }
         }
         cleanup {
             deleteDir() /* clean up our workspace */
