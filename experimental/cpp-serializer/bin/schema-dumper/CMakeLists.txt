@@ -6,4 +6,4 @@ link_directories (${BLOB-INSPECTOR_BINARY_DIR}/src/proton)
 
 add_executable (schema-dumper main)
 
-target_link_libraries (schema-dumper proton amqp qpid-proton)
+target_link_libraries (schema-dumper amqp proton qpid-proton)

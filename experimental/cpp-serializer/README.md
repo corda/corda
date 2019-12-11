@@ -36,8 +36,13 @@ Google Test
  * make
  * make install
 
-### Linux
+### Linux (Ubuntu)
 
  * sudo apt-get install cmake
  * sudo apt-get install libqpid-proton8-dev
- * sudi apt-get install libgtest-dev
+ * sudo apt-get install libgtest-dev
+
+ And now because that installer only pulls down the sources
+ * cd /usr/src/googletest
+ * sudo cmake .
+ * sudo cmake --build . --target install

@@ -45,17 +45,14 @@ namespace {
 
             const std::string & name() const { return m_name; }
 
-            decltype(m_dependsOn.cbegin()) begin() const { return m_dependsOn.cbegin(); }
-            decltype(m_dependsOn.cend()) end() const { return m_dependsOn.cend(); }
-    };
+            decltype(m_dependsOn.cbegin()) begin() const {
+                return m_dependsOn.cbegin();
+            }
 
-    inline
-    std::string
-    str (const amqp::internal::schema::OrderedTypeNotations<OTN> & list_) {
-        std::stringstream ss;
-        ss << list_;
-        return ss.str();
-    }
+            decltype(m_dependsOn.cend()) end() const {
+                return m_dependsOn.cend();
+            }
+    };
 
 }
 
@@ -84,6 +81,20 @@ operator << (
     }
 
     return stream_;
+}
+
+/******************************************************************************/
+
+namespace {
+
+    inline
+    std::string
+    str (const amqp::internal::schema::OrderedTypeNotations<OTN> & list_) {
+        std::stringstream ss;
+        ss << list_;
+        return ss.str();
+    }
+
 }
 
 /******************************************************************************/
