@@ -11,7 +11,9 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = constants.getProperty("cordaVersion")
+    ext.baseVersion = constants.getProperty("cordaVersion")
+    ext.versionSuffix = constants.getProperty("versionSuffix")
+
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -190,7 +192,8 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
-}
+    id "org.ajoberstar.grgit" version "4.0.0"
+ }
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
@@ -198,6 +201,20 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
+
+
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// the latest git commit hash and timestamp and create a version postfix from that
+if (project.hasProperty("versionFromGit")){
+    ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
+}
+
+// Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
+if (ext.versionSuffix != ""){
+    ext.corda_release_version = "${ext.baseVersion}-${ext.versionSuffix}".toString()
+} else {
+    ext.corda_release_version = "${ext.baseVersion}".toString()
+}
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
