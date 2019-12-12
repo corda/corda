@@ -93,6 +93,9 @@ abstract class AbstractAMQPSerializationScheme(
             factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
         cordappCustomSerializers.forEach { customSerializer ->
+            // We won't be able to enable this custom serializer unless it also belongs to
+            // the deserialization classloader. However, we still need to know what type
+            // descriptor it handles and which CorDapp provides it.
             val isEnabled = customSerializer::class.java.classLoader == context.deserializationClassLoader
             factory.registerExternal(CorDappCustomSerializer(customSerializer, isEnabled, factory))
         }
