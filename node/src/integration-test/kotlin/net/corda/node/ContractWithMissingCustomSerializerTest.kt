@@ -1,7 +1,7 @@
 package net.corda.node
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.contracts.serialization.missing.contract.CustomData
+import net.corda.contracts.serialization.missing.CustomData
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.messaging.startFlow

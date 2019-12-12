@@ -1,6 +1,6 @@
 package net.corda.flows.serialization.missing
 
-import net.corda.contracts.serialization.missing.contract.CustomData
+import net.corda.contracts.serialization.missing.CustomData
 import net.corda.core.serialization.SerializationCustomSerializer
 
 @Suppress("unused")

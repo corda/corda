@@ -1,4 +1,4 @@
-package net.corda.contracts.serialization.missing.contract
+package net.corda.contracts.serialization.missing
 
 /**
  * This class REQUIRES a custom serializer because its
