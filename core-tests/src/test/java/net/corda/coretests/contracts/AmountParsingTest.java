@@ -5,7 +5,6 @@ import org.junit.Test;
 
 import static net.corda.finance.Currencies.POUNDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class AmountParsingTest {
 
