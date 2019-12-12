@@ -29,7 +29,7 @@ class TestDescriptorBasedSerializerRegistry : DescriptorBasedSerializerRegistry 
         contents.putIfAbsent(descriptor, serializer)
     }
 
-    override fun setDisabled(descriptor: String, serializerLocation: URL) {
+    override fun setDisabled(descriptor: String, serializerLocation: URL): Boolean {
         throw UnsupportedOperationException("Not implemented")
     }
 

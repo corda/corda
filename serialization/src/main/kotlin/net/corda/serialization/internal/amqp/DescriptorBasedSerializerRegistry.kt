@@ -14,7 +14,13 @@ interface DescriptorBasedSerializerRegistry {
     operator fun get(descriptor: String): AMQPSerializer<Any>?
     operator fun set(descriptor: String, serializer: AMQPSerializer<Any>)
     fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
-    fun setDisabled(descriptor: String, serializerLocation: URL)
+
+    /**
+     * @param descriptor The type descriptor for the serializable type.
+     * @param serializerLocation The URL for the location of the serializer class.
+     * @return true iff we successfully BOTH disabled [descriptor] AND stored [serializerLocation].
+     */
+    fun setDisabled(descriptor: String, serializerLocation: URL): Boolean
 }
 
 class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry {
@@ -28,12 +34,9 @@ class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistr
         registry.putIfAbsent(descriptor, serializer)
     }
 
-    override fun setDisabled(descriptor: String, serializerLocation: URL) {
-        // Serializers inside the registry MUST take precedence
-        // over any disabled serializers.
-        if (!registry.containsKey(descriptor)) {
-            disabled.putIfAbsent(descriptor, serializerLocation)
-        }
+    override fun setDisabled(descriptor: String, serializerLocation: URL): Boolean {
+        // Serializers inside the registry MUST take precedence over any disabled serializers.
+        return !registry.containsKey(descriptor) && disabled.putIfAbsent(descriptor, serializerLocation) == null
     }
 
     override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>) =
