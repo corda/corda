@@ -46,7 +46,7 @@ class ContractWithCustomSerializerTest {
                     .returnValue
                     .getOrThrow()
             }
-            assertThat(ex).hasMessageContaining("Too many currants! $CURRANTS is unraisinable!")
+            assertThat(ex).hasMessageContaining("Too many currants! $CURRANTS juicy currants is unraisinable!")
         }
     }
 }
