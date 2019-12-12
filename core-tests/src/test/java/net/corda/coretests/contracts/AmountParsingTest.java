@@ -13,6 +13,5 @@ public class AmountParsingTest {
     public void testGbpParse() {
         assertEquals(POUNDS(10), Amount.parseCurrency("10 GBP"));
         assertEquals(POUNDS(11), Amount.parseCurrency("£11"));
-        fail();
     }
 }
