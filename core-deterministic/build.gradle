@@ -64,7 +64,6 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
         exclude 'net/corda/core/serialization/*SerializationFactory*.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
-        exclude 'net/corda/core/utilities/SgxSupport*.class'
     }
 
     reproducibleFileOrder = true
