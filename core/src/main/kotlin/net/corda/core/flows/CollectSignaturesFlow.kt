@@ -141,8 +141,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         //now we must check that each wellKnown party has a session passed for it
         val groupedByPartyKeys = groupPublicKeysByWellKnownParty(serviceHub, keysThatMustMapToAWellKnownSession)
         for (entry in groupedByPartyKeys) {
-            require(wellKnownSessionsToPartyMap.contains(entry.key),
-                    { "${entry.key} is a required signer, but no session has been passed in for them" })
+            require(wellKnownSessionsToPartyMap.contains(entry.key))
+            { "${entry.key} is a required signer, but no session has been passed in for them" }
         }
 
         //so we now know that all keys are linked to a session in some way
@@ -150,8 +150,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         val extraNotWellKnownSessions = anonymousSessions.filterNot { (it.destination as AbstractParty).owningKey in unsigned }
         val extraWellKnownSessions = wellKnownSessions.filterNot { it.counterparty in groupedByPartyKeys }
 
-        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty(),
-                { "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction." })
+        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty())
+        { "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction." }
 
         //OK let's collect some signatures!
 
