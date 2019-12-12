@@ -1,8 +1,8 @@
 package net.corda.flows.serialization.missing
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.serialization.missing.contract.Data
-import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.DataState
+import net.corda.contracts.serialization.missing.contract.CustomData
+import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.CustomDataState
 import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.Operate
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Command
@@ -27,17 +27,17 @@ class MissingSerializerFlow(private val value: Long) : FlowLogic<SecureHash>() {
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
         val legalIdentityKey = serviceHub.myInfo.legalIdentitiesAndCerts.first().owningKey
 
-        val dataState = DataState(ourIdentity, Data(value))
+        val customDataState = CustomDataState(ourIdentity, CustomData(value))
         val wtx = WireTransaction(createComponentGroups(
             inputs = emptyList(),
             outputs = listOf(TransactionState(
-                data = dataState,
+                data = customDataState,
                 notary = notary,
                 constraint = AlwaysAcceptAttachmentConstraint
             )),
             notary = notary,
             commands = listOf(Command(Operate(), ourIdentity.owningKey)),
-            attachments = serviceHub.attachments.getLatestContractAttachments(dataState.requiredContractClassName!!),
+            attachments = serviceHub.attachments.getLatestContractAttachments(customDataState.requiredContractClassName!!),
             timeWindow = null,
             references = emptyList(),
             networkParametersHash = null
