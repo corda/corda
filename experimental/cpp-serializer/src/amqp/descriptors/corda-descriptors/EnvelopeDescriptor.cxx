@@ -61,11 +61,6 @@ EnvelopeDescriptor::read (
 /******************************************************************************/
 
 amqp::internal::
-EnvelopeDescriptor::EnvelopeDescriptor() : AMQPDescriptor() { }
-
-/******************************************************************************/
-
-amqp::internal::
 EnvelopeDescriptor::EnvelopeDescriptor (
     const std::string & symbol_,
     int val_

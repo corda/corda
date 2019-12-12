@@ -12,6 +12,7 @@ import net.corda.node.services.Permissions
 import net.corda.testing.core.*
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
@@ -33,7 +34,7 @@ class RpcExceptionHandlingTest {
             rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
                 assertEquals((exception.cause as CordaRuntimeException).originalExceptionClassName, SQLException::class.qualifiedName)
@@ -57,7 +58,7 @@ class RpcExceptionHandlingTest {
             }
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
@@ -76,7 +77,7 @@ class RpcExceptionHandlingTest {
             rpc.startFlow(::FlowExceptionFlow, expectedMessage, expectedErrorId).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
@@ -108,7 +109,7 @@ class RpcExceptionHandlingTest {
             nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
 
             assertThatThrownBy { scenario(ALICE_NAME, BOB_NAME,true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
@@ -123,40 +124,42 @@ class RpcExceptionHandlingTest {
             }.isInstanceOf(UnexpectedFlowEndException::class.java)
         }
     }
-}
 
-@StartableByRPC
-@InitiatingFlow
-class InitFlow(private val party: Party) : FlowLogic<String>() {
-    @Suspendable
-    override fun call(): String {
-        val session = initiateFlow(party)
-        return session.sendAndReceive<String>("hey").unwrap { it }
+    @StartableByRPC
+    @InitiatingFlow
+    class InitFlow(private val party: Party) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            val session = initiateFlow(party)
+            return session.sendAndReceive<String>("hey").unwrap { it }
+        }
     }
-}
 
-@Suppress("TooGenericExceptionThrown")
-@InitiatedBy(InitFlow::class)
-class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        initiatingSession.receive<String>().unwrap { it }
-        throw Exception("Something went wrong!", SQLException("Oops!"))
+    @Suppress("TooGenericExceptionThrown")
+    @InitiatedBy(InitFlow::class)
+    class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            initiatingSession.receive<String>().unwrap { it }
+            throw Exception("Something went wrong!", SQLException("Oops!"))
+        }
     }
-}
 
-@StartableByRPC
-class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>() {
-    @Suspendable
-    override fun call(): String = throw Exception(message, SQLException("Oops!"))
-}
-
-@StartableByRPC
-class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
-    @Suspendable
-    override fun call(): String {
-        val exception = FlowException(message)
-        errorId?.let { exception.originalErrorId = it }
-        throw exception
+    @StartableByRPC
+    class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String = throw Exception(message, SQLException("Oops!"))
     }
+
+    @StartableByRPC
+    class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            val exception = FlowException(message)
+            errorId?.let { exception.originalErrorId = it }
+            throw exception
+        }
+    }
+
+
 }

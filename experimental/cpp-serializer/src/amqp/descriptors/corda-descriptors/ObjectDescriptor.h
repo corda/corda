@@ -14,11 +14,9 @@ namespace amqp::internal {
 
     class ObjectDescriptor : public AMQPDescriptor {
     public :
-        ObjectDescriptor() : AMQPDescriptor() { }
+        ObjectDescriptor() = delete;
 
-        ObjectDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-        { }
+        ObjectDescriptor(const std::string &, int);
 
         ~ObjectDescriptor() final = default;
 

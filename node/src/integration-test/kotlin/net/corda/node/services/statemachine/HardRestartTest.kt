@@ -21,6 +21,7 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -67,7 +68,8 @@ class HardRestartTest {
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
@@ -105,7 +107,8 @@ class HardRestartTest {
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
@@ -143,7 +146,8 @@ class HardRestartTest {
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
@@ -225,7 +229,8 @@ class HardRestartTest {
                 startNodesInProcess = false,
                 inMemoryDB = false,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),

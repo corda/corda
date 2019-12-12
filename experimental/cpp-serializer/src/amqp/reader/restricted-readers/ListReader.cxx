@@ -58,7 +58,7 @@ ListReader::dump_(
 
     {
         proton::auto_enter ae (data_);
-        auto it = schema_.fromDescriptor (proton::readAndNext<std::string>(data_));
+        schema_.fromDescriptor (proton::readAndNext<std::string>(data_));
 
         {
             proton::auto_list_enter ale (data_, true);

@@ -12,7 +12,7 @@ namespace amqp::internal {
 
     class RestrictedDescriptor : public AMQPDescriptor {
     public :
-        RestrictedDescriptor() : AMQPDescriptor() { }
+        RestrictedDescriptor() = delete;
 
         RestrictedDescriptor(const std::string & symbol_, int val_)
                 : AMQPDescriptor(symbol_, val_)

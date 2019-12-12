@@ -6,12 +6,22 @@ import com.typesafe.config.*;
 import sun.misc.Signal;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.stream.Collectors.toMap;
+
 public class CordaCaplet extends Capsule {
+    private static final String DJVM_DIR ="djvm";
 
     private Config nodeConfig = null;
     private String baseDir = null;
@@ -79,10 +89,76 @@ public class CordaCaplet extends Capsule {
         return null;
     }
 
+    private void installDJVM() {
+        Path djvmDir = Paths.get(baseDir, DJVM_DIR);
+        if (!djvmDir.toFile().mkdir() && !Files.isDirectory(djvmDir)) {
+            log(LOG_VERBOSE, "DJVM directory could not be created");
+        } else {
+            try {
+                Path sourceDir = appDir().resolve(DJVM_DIR);
+                if (Files.isDirectory(sourceDir)) {
+                    installCordaDependenciesForDJVM(sourceDir, djvmDir);
+                    installTransitiveDependenciesForDJVM(appDir(), djvmDir);
+                }
+            } catch (IOException e) {
+                log(LOG_VERBOSE, "Failed to populate directory " + djvmDir.toAbsolutePath());
+                log(LOG_VERBOSE, e);
+            }
+        }
+    }
+
+    private void installCordaDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
+        try (DirectoryStream<Path> directory = Files.newDirectoryStream(sourceDir, file -> Files.isRegularFile(file))) {
+            for (Path sourceFile : directory) {
+                Path targetFile = targetDir.resolve(sourceFile.getFileName());
+                installFile(sourceFile, targetFile);
+            }
+        }
+    }
+
+    private void installTransitiveDependenciesForDJVM(Path sourceDir, Path targetDir) throws IOException {
+        Manifest manifest = getManifest();
+        String[] transitives = manifest.getMainAttributes().getValue("Corda-DJVM-Dependencies").split("\\s++", 0);
+        for (String transitive : transitives) {
+            Path source = sourceDir.resolve(transitive);
+            if (Files.isRegularFile(source)) {
+                installFile(source, targetDir.resolve(transitive));
+            }
+        }
+    }
+
+    private Manifest getManifest() throws IOException {
+        URL capsule = getClass().getProtectionDomain().getCodeSource().getLocation();
+        try (JarInputStream jar = new JarInputStream(capsule.openStream())) {
+            return jar.getManifest();
+        }
+    }
+
+    private void installFile(Path source, Path target) {
+        try {
+            // Forcibly reinstall this dependency.
+            Files.deleteIfExists(target);
+            Files.createSymbolicLink(target, source);
+        } catch (UnsupportedOperationException | IOException e) {
+            copyFile(source, target);
+        }
+    }
+
+    private void copyFile(Path source, Path target) {
+        try {
+            Files.copy(source, target, REPLACE_EXISTING);
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            target.toFile().delete();
+            log(LOG_VERBOSE, e);
+        }
+    }
+
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
+        installDJVM();
         return super.prelaunch(jvmArgs, args);
     }
 
@@ -155,10 +231,13 @@ public class CordaCaplet extends Capsule {
             // Add system properties, if specified, from the config.
             Map<String, String> systemProps = new LinkedHashMap<>((Map<String, String>) super.attribute(attr));
             try {
-                Config overrideSystemProps = nodeConfig.getConfig("systemProperties");
+                Map<String, ?> overrideSystemProps = nodeConfig.getConfig("systemProperties").entrySet().stream()
+                    .map(Property::create)
+                    .filter(Property::isValid)
+                    .collect(toMap(Property::getKey, Property::getValue));
                 log(LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
-                for (Map.Entry<String, ConfigValue> entry : overrideSystemProps.entrySet()) {
-                    systemProps.put(entry.getKey(), entry.getValue().unwrapped().toString());
+                for (Map.Entry<String, ?> entry : overrideSystemProps.entrySet()) {
+                    systemProps.put(entry.getKey(), entry.getValue().toString());
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
@@ -236,5 +315,34 @@ public class CordaCaplet extends Capsule {
 
     private Boolean isJAR(File file) {
         return file.getName().toLowerCase().endsWith(".jar");
+    }
+
+    /**
+     * Helper class so that we can parse the "systemProperties" element of node.conf.
+     */
+    private static class Property {
+        private final List<String> path;
+        private final Object value;
+
+        Property(List<String> path, Object value) {
+            this.path = path;
+            this.value = value;
+        }
+
+        boolean isValid() {
+            return path.size() == 1;
+        }
+
+        String getKey() {
+            return path.get(0);
+        }
+
+        Object getValue() {
+            return value;
+        }
+
+        static Property create(Map.Entry<String, ConfigValue> entry) {
+            return new Property(ConfigUtil.splitPath(entry.getKey()), entry.getValue().unwrapped());
+        }
     }
 }

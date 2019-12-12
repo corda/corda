@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
@@ -46,7 +47,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             FinalityDoctor,
             TransientConnectionCardiologist,
             DatabaseEndocrinologist,
-            TransitionErrorGeneralPractitioner
+            TransitionErrorGeneralPractitioner,
+            SedationNurse
         )
 
         @VisibleForTesting
@@ -551,6 +553,24 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         ${(newError as? StateTransitionException)?.transitionEvent?.let { "- Event: $it" }}
                         """.trimIndent()
                 }
+            }
+        }
+    }
+
+    /**
+     * Keeps the flow in for overnight observation if [HospitalizeFlowException] is received.
+     */
+    object SedationNurse : Staff {
+        override fun consult(
+            flowFiber: FlowFiber,
+            currentState: StateMachineState,
+            newError: Throwable,
+            history: FlowMedicalHistory
+        ): Diagnosis {
+            return if (newError.mentionsThrowable(HospitalizeFlowException::class.java)) {
+                Diagnosis.OVERNIGHT_OBSERVATION
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
             }
         }
     }

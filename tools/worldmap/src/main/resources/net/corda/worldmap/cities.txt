@@ -3,7 +3,7 @@ Tokyo (JP)	139.75	35.68
 Beijing Shi (CN)	116.38	39.92
 Shanghai (CN)	121.4	31
 Buenos Aires (AR)	-58.67	-34.58
-Bombay (IN)	72.82	18.97
+Mumbai (IN)	72.82	18.97
 Karachi (PK)	67.03	24.87
 Constantinople (TR)	28.95	41.02
 Mexico (MX)	-99.03	19.38

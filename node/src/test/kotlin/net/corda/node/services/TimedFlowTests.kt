@@ -272,7 +272,10 @@ class TimedFlowTests {
             /** A dummy commit method that immediately returns a success message. */
             override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
-                    set(UniquenessProvider.Result.Success)
+                    val signature = services.database.transaction {
+                        signTransaction(txId)
+                    }
+                    set(UniquenessProvider.Result.Success(signature))
                 }
             }
 
@@ -280,7 +283,14 @@ class TimedFlowTests {
         }
 
         @Suspendable
-        override fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>) {
+        override fun commitInputStates(
+                inputs: List<StateRef>,
+                txId: SecureHash,
+                caller: Party,
+                requestSignature: NotarisationRequestSignature,
+                timeWindow: TimeWindow?,
+                references: List<StateRef>
+        ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
@@ -290,8 +300,9 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
+                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
             }
+            return UniquenessProvider.Result.Failure(NotaryError.General(Throwable("leave me alone")))
         }
 
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, waitEtaThreshold)

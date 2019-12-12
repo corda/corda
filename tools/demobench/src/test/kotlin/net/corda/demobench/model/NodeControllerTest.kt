@@ -11,7 +11,7 @@ import kotlin.test.*
 class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
-    private val controller = NodeController({ _, _ -> })
+    private val controller = NodeController(false) { _, _ -> }
     private val node1Name = "Organisation 1"
     private val organisation2Name = "Organisation 2"
 
@@ -61,6 +61,17 @@ class NodeControllerTest {
         assertTrue(controller.nameExists("Organisation 1"))
         assertTrue(controller.nameExists("Organisation1"))
         assertTrue(controller.nameExists("organisation 1"))
+    }
+
+    @Test
+    fun `test node system properties`() {
+        val data = NodeData()
+        data.legalName.value = node1Name
+
+        val wrapper = controller.validate(data) ?: fail("No wrapped configuration!")
+        val systemProperties = wrapper.nodeConfig.systemProperties
+        assertFalse(systemProperties["net.corda.djvm"] as Boolean)
+        assertFalse(systemProperties["co.paralleluniverse.fibers.verifyInstrumentation"] as Boolean)
     }
 
     @Test
@@ -146,6 +157,7 @@ class NodeControllerTest {
         assertTrue(controller.keyExists("myname"))
     }
 
+    @Suppress("LongParameterList")
     private fun createConfig(
             organisation: String = "Unknown",
             p2pPort: Int = 0,
@@ -154,7 +166,8 @@ class NodeControllerTest {
             webPort: Int = 0,
             h2port: Int = 0,
             notary: NotaryService? = null,
-            users: List<User> = listOf(user("guest"))
+            users: List<User> = listOf(user("guest")),
+            systemProperties: Map<String, Any?> = emptyMap()
     ): NodeConfigWrapper {
         val nodeConfig = NodeConfig(
                 myLegalName = CordaX500Name(
@@ -170,7 +183,8 @@ class NodeControllerTest {
                 webAddress = localPort(webPort),
                 h2port = h2port,
                 notary = notary,
-                rpcUsers = users
+                rpcUsers = users,
+                systemProperties = systemProperties
         )
         return NodeConfigWrapper(baseDir, nodeConfig)
     }

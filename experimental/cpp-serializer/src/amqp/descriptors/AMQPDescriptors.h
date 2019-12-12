@@ -39,7 +39,8 @@ namespace amqp::internal::descriptors {
         auto id = pn_data_get_ulong(data_);
 
         return uPtr<T>(
-                static_cast<T *>(amqp::AMQPDescriptorRegistory[id]->build(data_).release()));
+            static_cast<T *>(
+                amqp::AMQPDescriptorRegistory[id]->build(data_).release()));
     }
 }
 
@@ -47,18 +48,6 @@ namespace amqp::internal::descriptors {
 
 namespace amqp::internal {
 
-    class ChoiceDescriptor : public AMQPDescriptor {
-        public :
-            ChoiceDescriptor() : AMQPDescriptor() { }
-
-            ChoiceDescriptor(const std::string & symbol_, int val_)
-                : AMQPDescriptor(symbol_, val_)
-            { }
-
-            ~ChoiceDescriptor() final = default;
-
-            std::unique_ptr<AMQPDescribed> build (pn_data_t *) const override;
-    };
 
 }
 

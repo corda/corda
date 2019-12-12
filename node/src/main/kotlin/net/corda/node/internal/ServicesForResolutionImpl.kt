@@ -35,7 +35,7 @@ data class ServicesForResolutionImpl(
         return stateRefs.groupBy { it.txhash }.flatMap {
             val stx = validatedTransactions.getTransaction(it.key) ?: throw TransactionResolutionException(it.key)
             val baseTx = stx.resolveBaseTransaction(this)
-            it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
+            it.value.map { ref -> StateAndRef(baseTx.outputs[ref.index], ref) }
         }.toSet()
     }
 

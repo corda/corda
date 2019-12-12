@@ -4,10 +4,13 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
 import java.time.Duration
+
+typealias SigningFunction = (SecureHash) -> TransactionSignature
 
 /**
  * A service that records input states of the given transaction and provides conflict information
@@ -36,10 +39,11 @@ interface UniquenessProvider {
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
 
-    /** The outcome of committing a transaction. */
+    /** The outcome of committing and signing a transaction. */
     sealed class Result {
         /** Indicates that all input states have been committed successfully. */
-        object Success : Result()
+        data class Success(val signature: TransactionSignature) : Result()
+
         /** Indicates that the transaction has not been committed. */
         data class Failure(val error: NotaryError) : Result()
     }

@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
+import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
@@ -123,6 +124,7 @@ class ReconnectingCordaRPCOps private constructor(
             )
         }
     }
+
     /**
      * Helper class useful for reconnecting to a Node.
      */
@@ -141,6 +143,7 @@ class ReconnectingCordaRPCOps private constructor(
             UNCONNECTED, CONNECTED, CONNECTING, CLOSED, DIED
         }
 
+        @Volatile
         private var currentState = UNCONNECTED
 
         init {
@@ -148,14 +151,23 @@ class ReconnectingCordaRPCOps private constructor(
         }
         private val current: CordaRPCConnection
             @Synchronized get() = when (currentState) {
-                UNCONNECTED -> connect()
-                CONNECTED -> currentRPCConnection!!
-                CLOSED -> throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
-                CONNECTING, DIED -> throw IllegalArgumentException("Illegal state: $currentState ")
+                // The first attempt to establish a connection will try every address only once.
+                UNCONNECTED ->
+                    connect(infiniteRetries = false) ?: throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
+                CONNECTED ->
+                    currentRPCConnection!!
+                CLOSED ->
+                    throw IllegalArgumentException("The ReconnectingRPCConnection has been closed.")
+                CONNECTING, DIED ->
+                    throw IllegalArgumentException("Illegal state: $currentState ")
             }
 
         @Synchronized
         private fun doReconnect(e: Throwable, previousConnection: CordaRPCConnection?) {
+            if (isClosed()) {
+                // We don't want to reconnect if we purposely closed
+                return
+            }
             if (previousConnection != currentRPCConnection) {
                 // We've already done this, skip
                 return
@@ -167,7 +179,7 @@ class ReconnectingCordaRPCOps private constructor(
             //TODO - handle error cases
             log.warn("Reconnecting to ${this.nodeHostAndPorts} due to error: ${e.message}")
             log.debug("", e)
-            connect()
+            connect(infiniteRetries = true)
             previousConnection?.forceClose()
             gracefulReconnect.onReconnect.invoke()
         }
@@ -179,18 +191,38 @@ class ReconnectingCordaRPCOps private constructor(
             val previousConnection = currentRPCConnection
             doReconnect(e, previousConnection)
         }
-        @Synchronized
-        private fun connect(): CordaRPCConnection {
+        private fun connect(infiniteRetries: Boolean): CordaRPCConnection? {
             currentState = CONNECTING
-            currentRPCConnection = establishConnectionWithRetry()
-            currentState = CONNECTED
-            return currentRPCConnection!!
+            synchronized(this) {
+                currentRPCConnection = if (infiniteRetries) {
+                    establishConnectionWithRetry()
+                } else {
+                    establishConnectionWithRetry(retries = nodeHostAndPorts.size)
+                }
+                // It's possible we could get closed while waiting for the connection to establish.
+                if (!isClosed()) {
+                    currentState = CONNECTED
+                }
+            }
+            return currentRPCConnection
         }
 
+        /**
+         * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
+         *
+         * @param retryInterval the interval between retries.
+         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param retries the number of retries remaining. A negative value implies infinite retries.
+         */
         private tailrec fun establishConnectionWithRetry(
                 retryInterval: Duration = 1.seconds,
-                roundRobinIndex: Int = 0
-        ): CordaRPCConnection {
+                roundRobinIndex: Int = 0,
+                retries: Int = -1
+        ): CordaRPCConnection? {
+            if (isClosed()) {
+                // We've decided to exit for some reason (maybe the client is being shutdown)
+                return null
+            }
             val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
             log.info("Connecting to: $attemptedAddress")
             try {
@@ -212,43 +244,47 @@ class ReconnectingCordaRPCOps private constructor(
                         log.error("Failed to login to node.", ex)
                         throw ex
                     }
-                    is RPCException -> {
+                    is RPCException, is ActiveMQConnectionTimedOutException, is ActiveMQUnBlockedException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                         log.debug { "Exception upon establishing connection: ${ex.message}" }
                     }
-                    is ActiveMQConnectionTimedOutException -> {
+                    is PermissionException -> {
                         // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                        log.debug { "Exception upon establishing connection: ${ex.message}" }
-                    }
-                    is ActiveMQUnBlockedException -> {
-                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                        log.debug { "Exception upon establishing connection: ${ex.message}" }
+                        log.debug { "Permission Exception establishing connection: ${ex.message}" }
                     }
                     else -> {
-                        log.warn("Unknown exception upon establishing connection.", ex)
+                        log.warn("Unknown exception [${ex.javaClass.name}] upon establishing connection.", ex)
                     }
+                }
+
+                if (retries == 0) {
+                    throw RPCException("Cannot connect to server(s). Tried with all available servers.", ex)
                 }
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
             // TODO - make the exponential retry factor configurable.
             val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            return establishConnectionWithRetry((retryInterval * 10) / 9, nextRoundRobinIndex)
+            val remainingRetries = if (retries < 0) retries else (retries - 1)
+            return establishConnectionWithRetry((retryInterval * 10) / 9, nextRoundRobinIndex, remainingRetries)
         }
         override val proxy: CordaRPCOps
             get() = current.proxy
         override val serverProtocolVersion
             get() = current.serverProtocolVersion
-        @Synchronized
         override fun notifyServerAndClose() {
             currentState = CLOSED
-            currentRPCConnection?.notifyServerAndClose()
+            synchronized(this) {
+                currentRPCConnection?.notifyServerAndClose()
+            }
         }
-        @Synchronized
         override fun forceClose() {
             currentState = CLOSED
-            currentRPCConnection?.forceClose()
+            synchronized(this) {
+                currentRPCConnection?.forceClose()
+            }
         }
+        fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
@@ -267,6 +303,9 @@ class ReconnectingCordaRPCOps private constructor(
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
+            if (reconnectingRPCConnection.isClosed()) {
+                throw RPCException("Cannot execute RPC command after client has shut down.")
+            }
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
             while (remainingAttempts != 0) {

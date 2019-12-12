@@ -59,7 +59,7 @@ dependencies {
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
     
-    compile "org.apache.commons:commons-lang3:3.9"
+    compile "org.apache.commons:commons-lang3:$commons_lang_version"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     compile "net.i2p.crypto:eddsa:$eddsa_version"
@@ -74,7 +74,12 @@ dependencies {
     // required to use @Type annotation
     compile "org.hibernate:hibernate-core:$hibernate_version"
 
+    // FastThreadLocal
+    compile "io.netty:netty-common:$netty_version"
+
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
+
+    testCompile "org.ow2.asm:asm:$asm_version"
 
     // JDK11: required by Quasar at run-time
     testRuntimeOnly "com.esotericsoftware:kryo:4.0.2"
@@ -144,6 +149,9 @@ quasar {
 
 artifacts {
     testArtifacts testJar
+    publish testJar {
+        archiveClassifier = "test"
+    }
 }
 
 scanApi {

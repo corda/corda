@@ -22,7 +22,8 @@ import net.corda.core.utilities.contextLogger
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.ArrayDeque
+import java.util.UUID
 import java.util.regex.Pattern
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
@@ -70,8 +71,8 @@ open class TransactionBuilder(
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
 
-        private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
-        private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
+        private const val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
+        private val FQCP: Pattern = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
         private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
     }
 

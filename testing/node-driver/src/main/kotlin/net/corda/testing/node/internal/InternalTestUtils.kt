@@ -282,15 +282,18 @@ fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
 /**
  * Should only be used by Driver and MockNode.
  */
-fun setDriverSerialization(): AutoCloseable? {
+fun setDriverSerialization(classLoader: ClassLoader?): AutoCloseable? {
     return if (_allEnabledSerializationEnvs.isEmpty()) {
-        DriverSerializationEnvironment().enable()
+        DriverSerializationEnvironment(classLoader).enable()
     } else {
         null
     }
 }
 
-private class DriverSerializationEnvironment : SerializationEnvironment by createTestSerializationEnv(), AutoCloseable {
+fun setDriverSerialization(): AutoCloseable? = setDriverSerialization(null)
+
+private class DriverSerializationEnvironment(classLoader: ClassLoader?)
+                  : SerializationEnvironment by createTestSerializationEnv(classLoader), AutoCloseable {
     fun enable() = apply { _driverSerializationEnv.set(this) }
     override fun close() {
         _driverSerializationEnv.set(null)
@@ -302,6 +305,8 @@ private class DriverSerializationEnvironment : SerializationEnvironment by creat
 fun JarOutputStream.addEntry(entry: ZipEntry, input: InputStream) {
     addEntry(entry) { input.use { it.copyTo(this) } }
 }
+
+fun JarOutputStream.addEntry(entry: ZipEntry) = addEntry(entry) {}
 
 inline fun JarOutputStream.addEntry(entry: ZipEntry, write: () -> Unit) {
     putNextEntry(entry)

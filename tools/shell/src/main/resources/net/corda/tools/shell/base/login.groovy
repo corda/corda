@@ -4,21 +4,12 @@ package net.corda.tools.shell.base
 // given in the configuration code in InteractiveShell.
 
 welcome = { ->
-    if (crash.context.attributes["crash.localShell"] == true) {
-        """
+    """
         
         Welcome to the Corda interactive shell.
-        Useful commands include 'help' to see what is available, and 'bye' to exit the shell.
+        You can see the available commands by typing 'help'.
         
-        """.stripIndent()
-    } else {
-        """
-        
-        Welcome to the Corda interactive shell.
-        Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
-        
-        """.stripIndent()
-    }
+    """.stripIndent()
 }
 
 prompt = { ->

@@ -3,6 +3,7 @@
 /******************************************************************************/
 
 #include <map>
+#include <memory>
 #include <string>
 #include <iostream>
 
@@ -70,7 +71,7 @@ namespace amqp::internal {
 
             void validateAndNext (pn_data_t *) const;
 
-            virtual std::unique_ptr<AMQPDescribed> build (pn_data_t * data_) const;
+            virtual std::unique_ptr<AMQPDescribed> build (pn_data_t *) const;
 
             virtual void read (
                 pn_data_t *,

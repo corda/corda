@@ -1,9 +1,6 @@
 Node administration
 ===================
 
-.. _hiding-sensitive-data:
-
-
 Logging
 -------
 
@@ -180,6 +177,8 @@ A node which is running out of memory is expected to stop immediately to preserv
 Note that it's a responsibility of a client application to handle RPC reconnection in case this happens. It's also advised to have
 necessary JVM monitoring and restart infrastructure in place.
 See :ref:`setting_jvm_args` for further details on JVM out-of-memory related parameters.
+
+.. _hiding-sensitive-data:
 
 Hiding sensitive data
 ---------------------

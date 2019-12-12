@@ -27,6 +27,7 @@ import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
+import java.net.Proxy
 import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
@@ -426,15 +427,17 @@ val DEFAULT_HTTP_CONNECT_TIMEOUT = 30.seconds.toMillis()
 val DEFAULT_HTTP_READ_TIMEOUT = 30.seconds.toMillis()
 
 @DeleteForDJVM
-fun URL.openHttpConnection(): HttpURLConnection = openConnection().also {
+fun URL.openHttpConnection(proxy: Proxy? = null): HttpURLConnection = (
+        if (proxy == null) openConnection()
+        else openConnection(proxy)).also {
     // The default values are 0 which means infinite timeout.
     it.connectTimeout = DEFAULT_HTTP_CONNECT_TIMEOUT.toInt()
     it.readTimeout = DEFAULT_HTTP_READ_TIMEOUT.toInt()
 } as HttpURLConnection
 
 @DeleteForDJVM
-fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
-    return openHttpConnection().run {
+fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>, proxy: Proxy? = null): ByteArray {
+    return openHttpConnection(proxy).run {
         doOutput = true
         requestMethod = "POST"
         properties.forEach { (key, value) -> setRequestProperty(key, value) }

@@ -4,6 +4,7 @@
 #include "corda-descriptors/FieldDescriptor.h"
 #include "corda-descriptors/SchemaDescriptor.h"
 #include "corda-descriptors/ObjectDescriptor.h"
+#include "corda-descriptors/ChoiceDescriptor.h"
 #include "corda-descriptors/EnvelopeDescriptor.h"
 #include "corda-descriptors/CompositeDescriptor.h"
 #include "corda-descriptors/RestrictedDescriptor.h"
@@ -48,30 +49,19 @@ namespace amqp {
     AMQPDescriptorRegistory = {
         {
             22UL,
-            std::make_shared<internal::AMQPDescriptor> (
-                "DESCRIBED",
-                -1)
+            std::make_shared<internal::AMQPDescriptor> ("DESCRIBED", -1)
         },
         {
             1UL | internal::DESCRIPTOR_TOP_32BITS,
-            std::make_shared<internal::EnvelopeDescriptor> (
-                    internal::EnvelopeDescriptor (
-                        "ENVELOPE",
-                        internal::ENVELOPE))
+            std::make_shared<internal::EnvelopeDescriptor> ("ENVELOPE", internal::ENVELOPE)
         },
         {
             2UL | internal::DESCRIPTOR_TOP_32BITS,
-            std::make_shared<internal::SchemaDescriptor> (
-                    internal::SchemaDescriptor (
-                        "SCHEMA",
-                        internal::SCHEMA))
+            std::make_shared<internal::SchemaDescriptor> ("SCHEMA", internal::SCHEMA)
         },
         {
             3UL | internal::DESCRIPTOR_TOP_32BITS,
-            std::make_shared<internal::ObjectDescriptor> (
-                    internal::ObjectDescriptor (
-                        "OBJECT_DESCRIPTOR",
-                        internal::OBJECT))
+            std::make_shared<internal::ObjectDescriptor> ("OBJECT_DESCRIPTOR", internal::OBJECT)
         },
         {
             4UL | internal::DESCRIPTOR_TOP_32BITS,
@@ -96,10 +86,7 @@ namespace amqp {
         },
         {
             7UL | internal::DESCRIPTOR_TOP_32BITS,
-            std::make_shared<internal::ChoiceDescriptor> (
-                    internal::ChoiceDescriptor (
-                        "CHOICE",
-                        internal::CHOICE))
+            std::make_shared<internal::ChoiceDescriptor> ("CHOICE", internal::CHOICE)
         },
         {
             8UL | internal::DESCRIPTOR_TOP_32BITS,

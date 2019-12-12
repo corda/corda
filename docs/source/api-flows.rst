@@ -773,6 +773,77 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
 
+Below is an example using ``FlowException``:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @InitiatingFlow
+        class SendMoneyFlow(private val moneyRecipient: Party) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val money = Money(10.0, USD)
+                try {
+                    initiateFlow(moneyRecipient).sendAndReceive<Unit>(money)
+                } catch (e: FlowException) {
+                    if (e.cause is WrongCurrencyException) {
+                        log.info(e.message, e)
+                    }
+                }
+            }
+        }
+
+        @InitiatedBy(SendMoneyFlow::class)
+        class ReceiveMoneyFlow(private val moneySender: FlowSession) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val receivedMoney = moneySender.receive<Money>().unwrap { it }
+                if (receivedMoney.currency != GBP) {
+                    // Wrap a thrown Exception with a FlowException for the counter party to receive it.
+                    throw FlowException(WrongCurrencyException("I only accept GBP, sorry!"))
+                }
+            }
+        }
+
+        class WrongCurrencyException(message: String) : CordaRuntimeException(message)
+
+HospitalizeFlowException
+------------------------
+Some operations can fail intermittently and will succeed if they are tried again at a later time. Flows have the ability to halt their
+execution in such situations. By throwing a ``HospitalizeFlowException`` a flow will stop and retry at a later time (on the next node restart).
+
+A ``HospitalizeFlowException`` can be defined in various ways:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/flows/HospitalizeFlowException.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+.. note:: If a ``HospitalizeFlowException`` is wrapping or extending an exception already being handled by the :doc:`node-flow-hospital`, the outcome of a flow may change. For example, the flow
+  could instantly retry or terminate if a critical error occurred.
+
+.. note:: ``HospitalizeFlowException`` can be extended for customized exceptions. These exceptions will be treated in the same way when thrown.
+
+Below is an example of a flow that should retry again in the future if an error occurs:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        class TryAccessServiceFlow(): FlowLogic<Unit>() {
+            override fun call() {
+                try {
+                    val code = serviceHub.cordaService(HTTPService::class.java).get() // throws UnknownHostException.
+                } catch (e: UnknownHostException) {
+                    // Accessing the service failed! It might be offline. Let's hospitalize this flow, and have it retry again on next node startup.
+                    throw HospitalizeFlowException("Service might be offline!", e)
+                }
+            }
+        }
+
 ProgressTracker
 ---------------
 We can give our flow a progress tracker. This allows us to see the flow's progress visually in our node's CRaSH shell.

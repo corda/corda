@@ -18,6 +18,7 @@ import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.*
 import net.corda.core.node.services.*
+import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -488,6 +489,9 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
         override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
             throw UnsupportedOperationException()
         }
+
+        override val database: CordaTransactionSupport
+            get() = throw UnsupportedOperationException()
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
 }

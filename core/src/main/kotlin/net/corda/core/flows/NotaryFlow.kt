@@ -8,9 +8,12 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.BackpressureAwareTimedFlow
+import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
+import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -35,9 +38,16 @@ class NotaryFlow {
     @InitiatingFlow
     open class Client(
             private val stx: SignedTransaction,
-            override val progressTracker: ProgressTracker
+            override val progressTracker: ProgressTracker,
+            /**
+             * Set to *true* if the [stx] has already been verified for signature and contract validity,
+             * to prevent re-verification.
+             */
+            private val skipVerification: Boolean = false
     ) : BackpressureAwareTimedFlow<List<TransactionSignature>>() {
-        constructor(stx: SignedTransaction) : this(stx, tracker())
+        @JvmOverloads
+        constructor(stx: SignedTransaction, skipVerification: Boolean = false) : this(stx, tracker(), skipVerification)
+        constructor(stx: SignedTransaction, progressTracker: ProgressTracker): this(stx, progressTracker, false)
 
         companion object {
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
@@ -70,16 +80,21 @@ class NotaryFlow {
          * Checks that the transaction specifies a valid notary, and verifies that it contains all required signatures
          * apart from the notary's.
          */
-        // TODO: [CORDA-2274] Perform full transaction verification once verification caching is enabled.
         protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
             check(serviceHub.loadStates(stx.inputs.toSet() + stx.references.toSet()).all { it.state.notary == notaryParty }) {
                 "Input states and reference input states must have the same Notary"
             }
-            stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
+
+            if (!skipVerification) {
+                // TODO= [CORDA-3267] Remove duplicate signature verification
+                stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
+                stx.verify(serviceHub, false)
+            }
             return notaryParty
         }
+
         /** Notarises the transaction with the [notaryParty], obtains the notary's signature(s). */
         @Throws(NotaryException::class)
         @Suspendable
@@ -107,7 +122,6 @@ class NotaryFlow {
                 val historicNotary = (serviceHub.networkParametersService as NetworkParametersStorage).getHistoricNotary(notaryParty)
                         ?: throw IllegalStateException("The notary party $notaryParty specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
                 historicNotary.validating
-
             } else serviceHub.networkMapCache.isValidatingNotary(notaryParty)
         }
 

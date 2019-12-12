@@ -60,7 +60,7 @@ class FinalityFlowTests : WithFinality {
     fun `allow use of the old API if the CorDapp target version is 3`() {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
-        val resultFuture = CordappResolver.withCordapp(targetPlatformVersion = 3) {
+        val resultFuture = CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
         }

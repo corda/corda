@@ -1,13 +1,16 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
+import java.util.function.Function
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
@@ -26,15 +29,13 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
- *
- * @param inputVersions A map linking each contract class name to the advertised version of the JAR that defines it. Used for downgrade protection.
  */
-class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader) {
+abstract class Verifier(val ltx: LedgerTransaction, protected val transactionClassLoader: ClassLoader) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 
     companion object {
-        private val logger = contextLogger()
+        val logger = contextLogger()
     }
 
     /**
@@ -141,7 +142,7 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
                 .withIndex()
                 .filter { it.value.encumbrance != null }
                 .map { Pair(it.index, it.value.encumbrance!!) }
-        if (!statesAndEncumbrance.isEmpty()) {
+        if (statesAndEncumbrance.isNotEmpty()) {
             checkBidirectionalOutputEncumbrances(statesAndEncumbrance)
             checkNotariesOutputEncumbrance(statesAndEncumbrance)
         }
@@ -294,7 +295,7 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
         for (contractClassName in (inputContractGroups.keys + outputContractGroups.keys)) {
 
             if (!contractClassName.contractHasAutomaticConstraintPropagation(transactionClassLoader)) {
-                contractClassName.warnContractWithoutConstraintPropagation()
+                contractClassName.warnContractWithoutConstraintPropagation(transactionClassLoader)
                 continue
             }
 
@@ -326,6 +327,7 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
      *
      * @throws TransactionVerificationException if the constraints fail to verify
      */
+    @Suppress("NestedBlockDepth", "MagicNumber")
     private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // For each contract/constraint pair check that the relevant attachment is valid.
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
@@ -360,27 +362,55 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
     }
 
     /**
+     * Placeholder function for the contract verification logic.
+     */
+    abstract fun verifyContracts()
+}
+
+class BasicVerifier(ltx: LedgerTransaction, transactionClassLoader: ClassLoader) : Verifier(ltx, transactionClassLoader) {
+    /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      *
      * Note: Reference states are not verified.
      */
-    private fun verifyContracts() {
-
-        // Loads the contract class from the transactionClassLoader.
-        fun contractClassFor(className: ContractClassName) = try {
-            transactionClassLoader.loadClass(className).asSubclass(Contract::class.java)
-        } catch (e: Exception) {
-            throw TransactionVerificationException.ContractCreationError(ltx.id, className, e)
+    override fun verifyContracts() {
+        try {
+            ContractVerifier(transactionClassLoader).apply(ltx)
+        } catch (e: TransactionVerificationException.ContractRejection) {
+            logger.error("Error validating transaction ${ltx.id}.", e.cause)
+            throw e
         }
+    }
+}
 
-        val contractClasses: Map<ContractClassName, Class<out Contract>> = (inputStates + ltx.outputs)
-                .map { it.contract }
-                .toSet()
-                .map { contract -> contract to contractClassFor(contract) }
-                .toMap()
+/**
+ * Verify all of the contracts on the given [LedgerTransaction].
+ */
+@Suppress("TooGenericExceptionCaught")
+@KeepForDJVM
+class ContractVerifier(private val transactionClassLoader: ClassLoader) : Function<LedgerTransaction, Unit> {
+    // This constructor is used inside the DJVM's sandbox.
+    @Suppress("unused")
+    constructor() : this(ClassLoader.getSystemClassLoader())
 
-        val contractInstances: List<Contract> = contractClasses.map { (contractClassName, contractClass) ->
+    // Loads the contract class from the transactionClassLoader.
+    private fun createContractClass(id: SecureHash, contractClassName: ContractClassName): Class<out Contract> {
+        return try {
+            Class.forName(contractClassName, false, transactionClassLoader).asSubclass(Contract::class.java)
+        } catch (e: Exception) {
+            throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
+        }
+    }
+
+    override fun apply(ltx: LedgerTransaction) {
+        val contractClassNames = (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
+            .map(TransactionState<*>::contract)
+            .toSet()
+
+        contractClassNames.associateBy(
+            { it }, { createContractClass(ltx.id, it) }
+        ).map { (contractClassName, contractClass) ->
             try {
                 /**
                  * This function must execute with the DJVM's sandbox, which does not
@@ -393,13 +423,10 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
             } catch (e: Exception) {
                 throw TransactionVerificationException.ContractCreationError(ltx.id, contractClassName, e)
             }
-        }
-
-        contractInstances.forEach { contract ->
+        }.forEach { contract ->
             try {
                 contract.verify(ltx)
             } catch (e: Exception) {
-                logger.error("Error validating transaction ${ltx.id}.", e)
                 throw TransactionVerificationException.ContractRejection(ltx.id, contract, e)
             }
         }

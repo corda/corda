@@ -20,6 +20,10 @@ import net.corda.core.utilities.debug
  * is acceptable then it is from that point onwards committed to the ledger, and will be written through to the
  * vault. Additionally it will be distributed to the parties reflected in the participants list of the states.
  *
+ * By default, the initiating flow will commit states that are relevant to the initiating party as indicated by
+ * [StatesToRecord.ONLY_RELEVANT]. Relevance is determined by the union of all participants to states which have been
+ * included in the transaction. This default behaviour may be modified by passing in an alternate value for [StatesToRecord].
+ *
  * The transaction is expected to have already been resolved: if its dependencies are not available in local
  * storage, verification will fail. It must have signatures from all necessary parties other than the notary.
  *
@@ -40,7 +44,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                                        private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
                                        private val sessions: Collection<FlowSession>,
-                                       private val newApi: Boolean) : FlowLogic<SignedTransaction>() {
+                                       private val newApi: Boolean,
+                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             transaction, extraRecipients, progressTracker, emptyList(), false
@@ -75,6 +80,22 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
             progressTracker: ProgressTracker = tracker()
     ) : this(transaction, emptyList(), progressTracker, sessions, true)
+
+    /**
+     * Notarise the given transaction and broadcast it to all the participants.
+     *
+     * @param transaction What to commit.
+     * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
+     * also be provided.
+     * @param statesToRecord Which states to commit to the vault.
+     */
+    @JvmOverloads
+    constructor(
+            transaction: SignedTransaction,
+            sessions: Collection<FlowSession>,
+            statesToRecord: StatesToRecord,
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true, statesToRecord)
 
     /**
      * Notarise the given transaction and broadcast it to all the participants.
@@ -195,14 +216,14 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     private fun notariseAndRecord(): SignedTransaction {
         val notarised = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
-            val notarySignatures = subFlow(NotaryFlow.Client(transaction))
+            val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
             transaction + notarySignatures
         } else {
             logger.info("No need to notarise this transaction.")
             transaction
         }
         logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(notarised)
+        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
         logger.info("Recorded transaction locally successfully.")
         return notarised
     }
@@ -228,6 +249,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         val notary = transaction.tx.notary
         // The notary signature(s) are allowed to be missing but no others.
         if (notary != null) transaction.verifySignaturesExcept(notary.owningKey) else transaction.verifyRequiredSignatures()
+        // TODO= [CORDA-3267] Remove duplicate signature verification
         val ltx = transaction.toLedgerTransaction(serviceHub, false)
         ltx.verify()
         return ltx
@@ -246,7 +268,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
  * @param otherSideSession The session which is providing the transaction to record.
  * @param expectedTxId Expected ID of the transaction that's about to be received. This is typically retrieved from
  * [SignTransactionFlow]. Setting it to null disables the expected transaction ID check.
- * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
+ * @param statesToRecord Which states to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  */
 class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
                                                     private val expectedTxId: SecureHash? = null,

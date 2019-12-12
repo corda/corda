@@ -14,6 +14,15 @@
  *
  ******************************************************************************/
 
+amqp::internal::
+ObjectDescriptor::ObjectDescriptor (
+    const std::string & symbol_,
+    int val_
+) : AMQPDescriptor (symbol_, val_) {
+}
+
+/******************************************************************************/
+
 /**
  *
  */

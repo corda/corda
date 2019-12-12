@@ -40,7 +40,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ) {
+    ): Result {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
         // `UniquenessProvider`.
@@ -60,9 +60,11 @@ abstract class SinglePartyNotaryService : NotaryService() {
                 )
         )
 
-        if (result is UniquenessProvider.Result.Failure) {
+        if (result is Result.Failure) {
             throw NotaryInternalException(result.error)
         }
+
+        return result
     }
 
     /**
@@ -97,4 +99,5 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
+
 }

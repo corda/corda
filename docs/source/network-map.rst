@@ -13,13 +13,6 @@ objects from two sources:
 The network map server also distributes the parameters file that define values for various settings that all nodes need
 to agree on to remain in sync.
 
-.. note:: In Corda 3 no implementation of the HTTP network map server is provided. This is because the details of how
-   a compatibility zone manages its membership (the databases, ticketing workflows, HSM hardware etc) is expected to vary
-   between operators, so we provide a simple REST based protocol for uploading/downloading NodeInfos and managing
-   network parameters. A future version of Corda may provide a simple "stub" implementation for running test zones.
-   In Corda 3 the right way to run a test network is through distribution of the relevant files via your own mechanisms.
-   We provide a tool to automate the bulk of this task (see below).
-
 HTTP network map protocol
 -------------------------
 
@@ -48,24 +41,11 @@ The set of REST end-points for the network map service are as follows.
 | GET            | /network-map/my-hostname                | Retrieve the IP address of the caller (and **not** of the network map).                                                                      |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
-Network maps hosted by R3 or other parties using R3's commercial network management tools typically also provide the following endpoints as a convenience to operators and other users
+Additional endpoints from R3
+~~~~~~~~~~~~
 
-.. note:: we include them here as they can aid debugging but, for the avoidance of doubt, they are not a formal part of the spec and the node will operate even in their absence.
-
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| Request method | Path                                    | Description                                                                                                                                  |
-+================+=========================================+==============================================================================================================================================+
-| GET            | /network-map/json                       | Retrieve the current public network map formatted as a JSON document.                                                                        |
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/json/{uuid}                | Retrieve the current network map for a private network indicated by the uuid parameter formatted as a JSON document.                         |
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/json/node-infos            | Retrieve a human readable list of the currently registered ``NodeInfo`` files in the public network formatted as a JSON document.            |
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/json/node-infos/{uid}      | Retrieve a human readable list of the currently registered ``NodeInfo`` files in the specified private network map.                          |
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/json/node-info/{hash}      | Retrieve a human readable version of a ``NodeInfo`` formatted as a JSON document.                                                            |
-+----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-
+Network maps hosted by R3 or other parties using R3's commercial network management tools typically provide some
+additional endpoints for users. These additional endpoints can be found `here <https://docs.cenm.r3.com/network-map-overview.html>`_.
 
 HTTP is used for the network map service instead of Corda's own AMQP based peer to peer messaging protocol to
 enable the server to be placed behind caching content delivery networks like Cloudflare, Akamai, Amazon Cloudfront and so on.
@@ -162,8 +142,6 @@ Network parameters are controlled by the zone operator of the Corda network that
 these parameters. There are many reasons that can lead to this decision: adding a notary, setting new fields that were added to enable
 smooth network interoperability, or a change of the existing compatibility constants is required, for example.
 
-.. note:: A future release may support the notion of phased roll-out of network parameter changes.
-
 Updating of the parameters by the zone operator is done in two phases:
 1. Advertise the proposed network parameter update to the entire network.
 2. Switching the network onto the new parameters - also known as a `flag day`.
@@ -183,8 +161,8 @@ know about the details of the impending change, along with the justification, ho
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-Auto Acceptance
-```````````````
+Automatic Acceptance
+~~~~~~~~~~~~~~~
 
 If the only changes between the current and new parameters are for auto-acceptable parameters then, unless configured otherwise, the new
 parameters will be accepted without user input. The following parameters with the ``@AutoAcceptable`` annotation are auto-acceptable:
@@ -221,7 +199,7 @@ node configuration:
     ...
 
 Manual Acceptance
-`````````````````
+~~~~~~~~~~~~~~~~~
 
 If the auto-acceptance behaviour is turned off via the configuration or the network parameters change involves parameters that are
 not auto-acceptable then manual approval is required.

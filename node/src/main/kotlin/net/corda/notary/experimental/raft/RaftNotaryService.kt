@@ -28,7 +28,8 @@ class RaftNotaryService(
                 clock,
                 monitoringService.metrics,
                 services.cacheFactory,
-                raftConfig
+                raftConfig,
+                ::signTransaction
         )
     }
 

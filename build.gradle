@@ -11,7 +11,9 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = constants.getProperty("cordaVersion")
+    ext.baseVersion = constants.getProperty("cordaVersion")
+    ext.versionSuffix = constants.getProperty("versionSuffix")
+
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
@@ -32,6 +34,7 @@ buildscript {
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
     }
+    ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
             'co.paralleluniverse**',
             'groovy**',
@@ -73,8 +76,10 @@ buildscript {
     ext.disruptor_version = constants.getProperty("disruptorVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.metrics_new_relic_version = constants.getProperty("metricsNewRelicVersion")
+    ext.djvm_version = constants.getProperty("djvmVersion")
+    ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.22.Final'
+    ext.netty_version = '4.1.29.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
     // Legacy JUnit 4 version
@@ -92,14 +97,14 @@ buildscript {
     ext.jansi_version = '1.18'
     ext.hibernate_version = '5.4.3.Final'
     ext.h2_version = '1.4.199' // Update docs if renamed or removed.
-    ext.postgresql_version = '42.2.5'
+    ext.postgresql_version = '42.2.8'
     ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
-    ext.eddsa_version = '0.2.0'
+    ext.eddsa_version = '0.3.0'
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = '810d2b774b85d4938be01b9b65e29e4fddbc450b'
+    ext.crash_version = '1.7.1'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -117,6 +122,7 @@ buildscript {
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
     ext.picocli_version = '3.9.6'
+    ext.commons_lang_version = '3.9'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
@@ -186,10 +192,8 @@ plugins {
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
-}
-
-ext {
-}
+    id "org.ajoberstar.grgit" version "4.0.0"
+ }
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
@@ -198,22 +202,37 @@ apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
 
+
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// the latest git commit hash and timestamp and create a version postfix from that
+if (project.hasProperty("versionFromGit")){
+    ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
+}
+
+// Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
+if (ext.versionSuffix != ""){
+    ext.corda_release_version = "${ext.baseVersion}-${ext.versionSuffix}".toString()
+} else {
+    ext.corda_release_version = "${ext.baseVersion}".toString()
+}
+
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
 // with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
 // the resulting import. This fixes it.
 apply plugin: 'java'
 
-println "Java version: " + JavaVersion.current()
+logger.lifecycle("Java version: {}", JavaVersion.current())
 sourceCompatibility = VERSION_1_8
-if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     targetCompatibility = VERSION_1_8
-else
+} else {
     targetCompatibility = VERSION_11
-println "Java source compatibility: " + sourceCompatibility
-println "Java target compatibility: " + targetCompatibility
-println "Quasar version: " + quasar_version
-println "Quasar classifier: " + quasar_classifier
+}
+logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
+logger.lifecycle("Java target compatibility: {}", targetCompatibility)
+logger.lifecycle("Quasar version: {}", quasar_version)
+logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
 
 allprojects {
     apply plugin: 'kotlin'
@@ -244,10 +263,11 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    if (JavaVersion.current() == JavaVersion.VERSION_1_8)
+    if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
         targetCompatibility = VERSION_1_8
-    else
+    } else {
         targetCompatibility = VERSION_11
+    }
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -256,6 +276,7 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
             // We cannot fail the build on compiler warnings because we have java warnings that you cannot disable:
             // Signal is internal proprietary API and may be removed in a future release
@@ -322,10 +343,11 @@ allprojects {
         }
     }
 
-    jar {
-        // JDK11 built and published artifacts to include classifier
-        if (jdkClassifier != null)
+    if (jdkClassifier) {
+        jar {
+            // JDK11 built and published artifacts to include classifier
             archiveClassifier = jdkClassifier
+        }
     }
 
     group 'net.corda'
@@ -337,6 +359,7 @@ allprojects {
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+        maven { url "$artifactory_contextUrl/corda-dev" }
     }
 
     configurations {
@@ -483,11 +506,13 @@ bintrayConfig {
             'corda-core',
             'corda-core-deterministic',
             'corda-deterministic-verifier',
+            'corda-deserializers-djvm',
             'corda',
             'corda-finance-workflows',
             'corda-finance-contracts',
             'corda-node',
             'corda-node-api',
+            'corda-node-djvm',
             'corda-test-common',
             'corda-test-utils',
             'corda-test-db',
@@ -500,6 +525,7 @@ bintrayConfig {
             'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
+            'corda-serialization-djvm',
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',

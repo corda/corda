@@ -47,7 +47,7 @@ data_and_stop(std::ifstream & f_, ssize_t sz) {
             dynamic_cast<amqp::internal::schema::Envelope *> (
                 amqp::AMQPDescriptorRegistory[a]->build(d).release()));
 
-        DBG (std::cout << std::endl << "Types in schema: " << std::endl
+        DBG (std::endl << "Types in schema: " << std::endl
             << *envelope << std::endl); // NOLINT
     }
 

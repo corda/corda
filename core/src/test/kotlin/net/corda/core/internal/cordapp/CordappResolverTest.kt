@@ -28,7 +28,7 @@ class CordappResolverTest {
         assertEquals(defaultTargetVersion, CordappResolver.currentTargetVersion)
 
         val expectedTargetVersion = 555
-        CordappResolver.withCordapp(targetPlatformVersion = expectedTargetVersion) {
+        CordappResolver.withTestCordapp(targetPlatformVersion = expectedTargetVersion) {
             val actualTargetVersion = CordappResolver.currentTargetVersion
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }

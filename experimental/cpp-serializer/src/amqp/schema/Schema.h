@@ -18,7 +18,10 @@
 
 namespace amqp::internal::schema {
 
-    using SchemaMap = std::map<std::string, const std::reference_wrapper<const uPtr<AMQPTypeNotation>>>;
+    using SchemaMap = std::map<
+            std::string,
+            const std::reference_wrapper<const uPtr<AMQPTypeNotation>>>;
+
     using ISchemaType = amqp::schema::ISchema<SchemaMap::const_iterator>;
 
     class Schema
@@ -35,7 +38,7 @@ namespace amqp::internal::schema {
             SchemaMap m_typeToDescriptor;
 
         public :
-            explicit Schema (OrderedTypeNotations<AMQPTypeNotation> types_);
+            explicit Schema (OrderedTypeNotations<AMQPTypeNotation>);
 
             const OrderedTypeNotations<AMQPTypeNotation> & types() const;
 

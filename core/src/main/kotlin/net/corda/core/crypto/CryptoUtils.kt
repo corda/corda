@@ -1,3 +1,4 @@
+@file:Suppress("MatchingDeclarationName")
 @file:KeepForDJVM
 @file:JvmName("CryptoUtils")
 
@@ -14,7 +15,14 @@ import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
 import java.math.BigInteger
 import java.nio.ByteBuffer
-import java.security.*
+import java.security.InvalidKeyException
+import java.security.KeyPair
+import java.security.NoSuchAlgorithmException
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.SecureRandom
+import java.security.SecureRandomSpi
+import java.security.SignatureException
 
 /**
  * Utility to simplify the act of signing a byte array.
@@ -116,6 +124,7 @@ val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: 
 
 /** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
+
 /** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
@@ -137,6 +146,7 @@ fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 // val (private, public) = keyPair
 /* The [PrivateKey] of this [KeyPair]. */
 operator fun KeyPair.component1(): PrivateKey = this.private
+
 /* The [PublicKey] of this [KeyPair]. */
 operator fun KeyPair.component2(): PublicKey = this.public
 
@@ -189,6 +199,29 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
 @DeleteForDJVM
 @Throws(NoSuchAlgorithmException::class)
 fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
+
+/**
+ * This is a hack added because during deserialisation when no-param constructors are called sometimes default values
+ * generate random numbers, which fail in SGX.
+ * TODO remove this once deserialisation is figured out.
+ */
+private class DummySecureRandomSpi : SecureRandomSpi() {
+    override fun engineSetSeed(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineSetSeed called").printStackTrace(System.out)
+    }
+
+    override fun engineNextBytes(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineNextBytes called").printStackTrace(System.out)
+        bytes?.fill(0)
+    }
+
+    override fun engineGenerateSeed(numberOfBytes: Int): ByteArray {
+        Exception("DummySecureRandomSpi.engineGenerateSeed called").printStackTrace(System.out)
+        return ByteArray(numberOfBytes)
+    }
+}
+
+object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
 
 /**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.
@@ -254,3 +287,4 @@ fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = Serializa
  * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
  */
 fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
+

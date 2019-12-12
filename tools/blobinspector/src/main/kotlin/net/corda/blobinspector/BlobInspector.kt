@@ -79,6 +79,11 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             mapper.writeValue(out, deserialized)
             ExitCodes.SUCCESS
         } catch (e: Exception) {
+            print("Unexpected exception: ${e.message}")
+            if (verbose) {
+                println()
+                e.printStackTrace(System.out)
+            }
             ExitCodes.FAILURE
         } finally {
             _contextSerializationEnv.set(null)

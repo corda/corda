@@ -1,6 +1,8 @@
+@file:KeepForDJVM
 package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION

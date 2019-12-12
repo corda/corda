@@ -53,6 +53,8 @@ interface NodeConfiguration {
     val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = false
     val sshd: SSHDConfiguration?
+    val localShellAllowExitInSafeMode: Boolean
+    val localShellUnsafe: Boolean
     val database: DatabaseConfig
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
@@ -116,14 +118,21 @@ enum class JmxReporterType {
     JOLOKIA, NEW_RELIC
 }
 
-data class DevModeOptions(val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker, val allowCompatibilityZone: Boolean = Defaults.disableCheckpointChecker) {
-
+data class DevModeOptions(
+        val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
+        val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
+        val djvm: DJVMOptions? = null
+) {
     internal object Defaults {
-
         val disableCheckpointChecker = false
         val allowCompatibilityZone = false
     }
 }
+
+data class DJVMOptions(
+   val bootstrapSource: String?,
+   val cordaSource: List<String>
+)
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true

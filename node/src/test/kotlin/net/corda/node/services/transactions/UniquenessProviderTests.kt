@@ -2,9 +2,12 @@ package net.corda.node.services.transactions
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
@@ -14,6 +17,7 @@ import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.raft.RaftConfig
@@ -28,12 +32,15 @@ import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
+import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.security.KeyPair
 import java.time.Clock
 import kotlin.test.assertEquals
 
@@ -93,12 +100,12 @@ class UniquenessProviderTests(
         val firstTxId = SecureHash.randomSHA256()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result = uniquenessProvider.commit(listOf(inputState1), firstTxId, identity, requestSignature, timeWindow).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully later.
         testClock.advanceBy(90.minutes)
         val result2 = uniquenessProvider.commit(listOf(inputState1), firstTxId, identity, requestSignature, timeWindow).get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -120,12 +127,12 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully.
         val result2 = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -135,7 +142,7 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
         val secondTxId = SecureHash.randomSHA256()
@@ -157,18 +164,18 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // The reference state gets consumed.
         val result2 = uniquenessProvider.commit(listOf(referenceState), SecureHash.randomSHA256(), identity, requestSignature, timeWindow)
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully.
         testClock.advanceBy(90.minutes)
         val result3 = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result3)
+        assert(result3 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -190,7 +197,7 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
         val secondTxId = SecureHash.randomSHA256()
@@ -210,7 +217,7 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
         val secondTxId = SecureHash.randomSHA256()
@@ -230,11 +237,11 @@ class UniquenessProviderTests(
         val inputState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(inputState), txID, identity, requestSignature).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully.
         val result2 = uniquenessProvider.commit(listOf(inputState), txID, identity, requestSignature).get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -244,7 +251,7 @@ class UniquenessProviderTests(
         val inputs = listOf(inputState)
         val firstTxId = txID
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         val secondTxId = SecureHash.randomSHA256()
 
@@ -263,12 +270,12 @@ class UniquenessProviderTests(
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
         val result = uniquenessProvider.commit(listOf(inputState), txID, identity, requestSignature, timeWindow).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully later.
         testClock.advanceBy(90.minutes)
         val result2 = uniquenessProvider.commit(listOf(inputState), txID, identity, requestSignature, timeWindow).get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -287,7 +294,7 @@ class UniquenessProviderTests(
         val inputs = listOf(inputState)
         val firstTxId = txID
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         val secondTxId = SecureHash.randomSHA256()
 
@@ -306,7 +313,7 @@ class UniquenessProviderTests(
         val inputs = listOf(inputState)
         val firstTxId = txID
         val result = uniquenessProvider.commit(inputs, firstTxId, identity, requestSignature).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         val secondTxId = SecureHash.randomSHA256()
 
@@ -330,13 +337,13 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(listOf(inputState), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Idempotency: can re-notarise successfully.
         testClock.advanceBy(90.minutes)
         val result2 = uniquenessProvider.commit(listOf(inputState), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result2)
+        assert(result2 is UniquenessProvider.Result.Success)
     }
 
     @Test
@@ -346,7 +353,7 @@ class UniquenessProviderTests(
         val referenceState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(inputState), firstTxId, identity, requestSignature, references = emptyList()).get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
         val secondTxId = SecureHash.randomSHA256()
@@ -367,7 +374,7 @@ class UniquenessProviderTests(
 
         val result = uniquenessProvider.commit(listOf(referenceState), firstTxId, identity, requestSignature, references = emptyList())
                 .get()
-        assertEquals(UniquenessProvider.Result.Success, result)
+        assert(result is UniquenessProvider.Result.Success)
 
         // Transaction referencing the spent sate fails.
         val secondTxId = SecureHash.randomSHA256()
@@ -381,6 +388,22 @@ class UniquenessProviderTests(
     }
 
     /* Group G: input, reference states and time window – covered by previous tests. */
+
+    /* Transaction signing tests. */
+    @Test
+    fun `signs transactions correctly`() {
+        (1..10).map {
+            val inputState1 = generateStateRef()
+            val firstTxId = SecureHash.randomSHA256()
+            val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
+            Pair(firstTxId, uniquenessProvider.commit(listOf(inputState1), firstTxId, identity, requestSignature, timeWindow))
+        }.forEach {
+            val result = it.second.get()
+            assert(result is UniquenessProvider.Result.Success)
+            val signature = (result as UniquenessProvider.Result.Success).signature
+            assert(signature.verify(it.first))
+        }
+    }
 }
 
 interface UniquenessProviderFactory {
@@ -394,7 +417,7 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
-        return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory())
+        return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory(), ::signSingle)
     }
 
     override fun cleanUp() {
@@ -420,7 +443,8 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
                 clock,
                 MetricRegistry(),
                 TestingNamedCacheFactory(),
-                RaftConfig(NetworkHostAndPort("localhost", raftNodePort), emptyList())
+                RaftConfig(NetworkHostAndPort("localhost", raftNodePort), emptyList()),
+                ::signSingle
         ).apply {
             start()
             provider = this
@@ -432,3 +456,17 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
         database?.close()
     }
 }
+
+var ourKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+val keyService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
+val pubKey = keyService.freshKey()
+
+fun signSingle(it: SecureHash) = keyService.sign(
+        SignableData(
+                txId = it,
+                signatureMetadata = SignatureMetadata(
+                        4,
+                        Crypto.findSignatureScheme(pubKey).schemeNumberID
+                )
+        ), pubKey
+)

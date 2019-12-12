@@ -38,6 +38,9 @@ infix fun Long.exactAdd(b: Long): Long = Math.addExact(this, b)
  */
 inline fun <reified T : Any> loggerFor(): Logger = LoggerFactory.getLogger(T::class.java)
 
+/** Returns the logger used for detailed logging. */
+fun detailedLogger(): Logger = LoggerFactory.getLogger("DetailedInfo")
+
 /** When called from a companion object, returns the logger for the enclosing class. */
 fun Any.contextLogger(): Logger = LoggerFactory.getLogger(javaClass.enclosingClass)
 

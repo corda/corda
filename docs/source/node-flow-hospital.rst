@@ -70,6 +70,10 @@ Specifically, there are two main ways a flow is hospitalized:
      The time is hard to document as the notary members, if actually alive, will inform the requester of the ETA of a response.
      This can occur an infinite number of times.  i.e. we never give up notarising.  No intervention required.
 
+   * ``HospitalizeFlowException``:
+     The aim of this exception is to provide user code a way to retry a flow from its last checkpoint if a known intermittent failure occurred.
+     Any ``HospitalizeFlowException`` that is thrown and not handled by any of the scenarios detailed above, will be kept in for observation.
+
    * **Internal Corda errors**:
      Flows that experience errors from inside the Corda statemachine, that are not handled by any of the scenarios details above, will be retried a number of times
      and then kept in for observation if the error continues.

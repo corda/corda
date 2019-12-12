@@ -38,6 +38,9 @@ configurations {
     
     slowIntegrationTestCompile.extendsFrom testCompile
     slowIntegrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+    jdkRt
+    deterministic
 }
 
 sourceSets {
@@ -156,6 +159,19 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
+    // Sandbox for deterministic contract verification
+    compile "net.corda.djvm:corda-djvm:$djvm_version"
+    compile project(':serialization-djvm')
+    compile(project(':node:djvm')) {
+        transitive = false
+    }
+    jdkRt "net.corda:deterministic-rt:$deterministic_rt_version"
+    deterministic project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    deterministic project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+    deterministic project(':serialization-djvm:deserializers')
+    deterministic project(':node:djvm')
+    deterministic "org.slf4j:slf4j-nop:$slf4j_version"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"
 
@@ -230,9 +246,9 @@ dependencies {
     
     // Byteman for runtime (termination) rules injection on the running node
     // Submission tool allowing to install rules on running nodes
-    integrationTestCompile "org.jboss.byteman:byteman-submit:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman-submit:4.0.3"
     // The actual Byteman agent which should only be in the classpath of the out of process nodes
-    integrationTestCompile "org.jboss.byteman:byteman:4.0.3"
+    slowIntegrationTestCompile "org.jboss.byteman:byteman:4.0.3"
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
@@ -253,8 +269,11 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Test) {
-    if (JavaVersion.current() == JavaVersion.VERSION_11)
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
         jvmArgs '-Djdk.attach.allowAttachSelf=true'
+    }
+    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
+    systemProperty 'deterministic-sources.path', configurations.deterministic.asPath
 }
 
 task integrationTest(type: Test) {
@@ -271,6 +290,9 @@ task slowIntegrationTest(type: Test) {
 
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
+    excludeClassLoaders.addAll(
+            'net.corda.djvm.**'
+    )
     excludePackages.addAll(
             "antlr**",
             "com.codahale**",
@@ -279,10 +301,12 @@ quasar {
             "com.google.**",
             "com.lmax.**",
             "com.zaxxer.**",
+            "djvm**",
             "net.bytebuddy**",
             "io.github.classgraph**",
             "io.netty*",
             "liquibase**",
+            "net.corda.djvm**",
             "net.i2p.crypto.**",
             "nonapi.io.github.classgraph.**",
             "org.apiguardian.**",
@@ -300,6 +324,10 @@ quasar {
 
 jar {
     baseName 'corda-node'
+    manifest {
+        attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
+        attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
+    }
 }
 
 publish {

@@ -1,7 +1,11 @@
 package net.corda.demobench.model
 
-import com.typesafe.config.*
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.empty
+import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyToDirectory
@@ -12,7 +16,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.*
+import java.util.Properties
 
 /**
  * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
@@ -32,6 +36,7 @@ data class NodeConfig(
         /** Pass-through for generating node.conf with external DB */
         val dataSourceProperties: Properties? = null,
         val database: Properties? = null,
+        val systemProperties: Map<String, Any?>,
         private val devMode: Boolean = true,
         private val detectPublicIp: Boolean = false,
         private val useTestClock: Boolean = true
@@ -48,8 +53,18 @@ data class NodeConfig(
             .withValue("address", valueFor(rpcSettings.address.toString()))
             .withValue("adminAddress", valueFor(rpcSettings.adminAddress.toString()))
             .root()
-        return NodeConfigurationData(myLegalName, p2pAddress, this.rpcSettings.address, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode)
+        return NodeConfigurationData(
+                myLegalName = myLegalName,
+                p2pAddress = p2pAddress,
+                rpcAddress = this.rpcSettings.address,
+                notary = notary,
+                h2port = h2port,
+                rpcUsers = rpcUsers,
+                useTestClock = useTestClock,
+                detectPublicIp = detectPublicIp,
+                devMode = devMode)
             .toConfig()
+            .withValue("systemProperties", valueFor(systemProperties))
             .withoutPath("rpcAddress")
             .withoutPath("rpcAdminAddress")
             .withValue("rpcSettings", rpcSettings)
@@ -125,6 +140,7 @@ fun String.toKey() = filter { !it.isWhitespace() }.toLowerCase()
 
 fun <T> valueFor(any: T): ConfigValue = ConfigValueFactory.fromAnyRef(any)
 
+@Suppress("unused")
 private fun Config.withOptionalValue(path: String, obj: ConfigObject): Config {
-    return if (obj.isEmpty()) this else this.withValue(path, obj)
+    return if (obj.isEmpty()) this else withValue(path, obj)
 }

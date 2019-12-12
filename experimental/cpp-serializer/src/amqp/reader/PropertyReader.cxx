@@ -19,37 +19,35 @@
 
 namespace {
 
+    using namespace amqp::internal::reader;
+
     std::map<
             std::string,
             std::shared_ptr<amqp::internal::reader::PropertyReader>(*)()
     > propertyMap = { // NOLINT
         {
-            "int", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
-                return std::make_shared<amqp::internal::reader::IntPropertyReader> ();
+            "int", []() -> std::shared_ptr<PropertyReader> {
+                return std::make_shared<IntPropertyReader> ();
             }
         },
         {
-            "string", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
-                return std::make_shared<amqp::internal::reader::StringPropertyReader> (
-                        amqp::internal::reader::StringPropertyReader());
+            "string", []() -> std::shared_ptr<PropertyReader> {
+                return std::make_shared<StringPropertyReader> ();
             }
         },
         {
-            "boolean", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
-                return std::make_shared<amqp::internal::reader::BoolPropertyReader> (
-                        amqp::internal::reader::BoolPropertyReader());
+            "boolean", []() -> std::shared_ptr<PropertyReader> {
+                return std::make_shared<BoolPropertyReader> ();
             }
         },
         {
-            "long", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
-                return std::make_shared<amqp::internal::reader::LongPropertyReader> (
-                        amqp::internal::reader::LongPropertyReader());
+            "long", []() -> std::shared_ptr<PropertyReader> {
+                return std::make_shared<LongPropertyReader> ();
             }
         },
         {
-            "double", []() -> std::shared_ptr<amqp::internal::reader::PropertyReader> {
-                return std::make_shared<amqp::internal::reader::DoublePropertyReader> (
-                        amqp::internal::reader::DoublePropertyReader());
+            "double", []() -> std::shared_ptr<PropertyReader> {
+                return std::make_shared<DoublePropertyReader> ();
             }
         }
     };

@@ -91,13 +91,12 @@ class ValidatingNotaryServiceTests {
             aliceNode.services.signInitialTransaction(tx)
         }
 
-        // Expecting SignaturesMissingException instead of NotaryException, since the exception should originate from
-        // the client flow.
-        val ex = assertFailsWith<SignedTransaction.SignaturesMissingException> {
+        val ex = assertFailsWith<NotaryException> {
             val future = runNotaryClient(stx)
             future.getOrThrow()
         }
-        val missingKeys = ex.missing
+        val exception = (ex.error as NotaryError.TransactionInvalid).cause as SignedTransaction.SignaturesMissingException
+        val missingKeys = exception.missing
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 
@@ -349,7 +348,7 @@ class ValidatingNotaryServiceTests {
     }
 
     private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
-        val flow = NotaryFlow.Client(stx)
+        val flow = NotaryFlow.Client(stx, skipVerification = true)
         val future = aliceNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         return future

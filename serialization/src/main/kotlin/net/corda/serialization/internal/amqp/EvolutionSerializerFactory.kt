@@ -42,6 +42,9 @@ class DefaultEvolutionSerializerFactory(
         private val mustPreserveDataWhenEvolving: Boolean,
         override val primitiveTypes: Map<Class<*>, Class<*>>
 ): EvolutionSerializerFactory {
+    // Invert the "primitive -> boxed primitive" mapping.
+    private val primitiveBoxedTypes: Map<Class<*>, Class<*>>
+        = primitiveTypes.entries.associateBy(Map.Entry<Class<*>,Class<*>>::value, Map.Entry<Class<*>,Class<*>>::key)
 
     override fun getEvolutionSerializer(remote: RemoteTypeInformation,
                                         local: LocalTypeInformation): AMQPSerializer<Any>? =
@@ -104,10 +107,22 @@ class DefaultEvolutionSerializerFactory(
             // We have a match if all mandatory evolver properties have a type-compatible property in the remote type.
             evolverProperties.all { (name, evolverProperty) ->
                 val propertyType = propertyTypes[name]
-                if (propertyType == null) !evolverProperty.isMandatory
-                else evolverProperty.type.observedType.asClass().isAssignableFrom(propertyType)
+                if (propertyType == null) {
+                    !evolverProperty.isMandatory
+                } else {
+                    // Check that we can assign the remote property value to its local equivalent.
+                    // This includes assigning a primitive type to its equivalent "boxed" type.
+                    val evolverPropertyType = evolverProperty.type.observedType.asClass()
+                    evolverPropertyType.isAssignableFrom(propertyType)
+                        || (propertyType.isPrimitive && evolverPropertyType.isAssignableFrom(boxed(propertyType)))
+                        || (evolverPropertyType.isPrimitive && boxed(evolverPropertyType).isAssignableFrom(propertyType))
+                }
             }
         }
+    }
+
+    private fun boxed(primitiveType: Class<*>): Class<*> {
+        return primitiveBoxedTypes[primitiveType] ?: throw IllegalStateException("Unknown primitive type '$primitiveType'")
     }
 
     private fun RemoteTypeInformation.Composable.validateEvolvability(localProperties: Map<PropertyName, LocalPropertyInformation>) {

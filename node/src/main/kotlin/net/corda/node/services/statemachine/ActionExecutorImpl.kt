@@ -2,7 +2,12 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import com.codahale.metrics.*
+import com.codahale.metrics.Gauge
+import com.codahale.metrics.Histogram
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.Reservoir
+import com.codahale.metrics.SlidingTimeWindowArrayReservoir
+import com.codahale.metrics.SlidingTimeWindowReservoir
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -239,7 +244,7 @@ class ActionExecutorImpl(
                         fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
                     },
                     failure = { exception ->
-                        fiber.scheduleEvent(Event.Error(exception))
+                        fiber.scheduleEvent(Event.AsyncOperationThrows(exception))
                     }
             )
         } catch (e: Exception) {

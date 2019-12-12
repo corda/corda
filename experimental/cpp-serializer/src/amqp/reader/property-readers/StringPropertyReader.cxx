@@ -19,8 +19,8 @@ StringPropertyReader::m_type { // NOLINT
 /******************************************************************************/
 
 const std::string
-        amqp::internal::reader::
-        StringPropertyReader::m_name { // NOLINT
+amqp::internal::reader::
+StringPropertyReader::m_name { // NOLINT
         "String Reader"
 };
 

@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toProperties
 import net.corda.webserver.WebServerConfig
 import org.junit.Test
 import java.nio.file.Path
@@ -43,7 +44,6 @@ class NodeConfigTest {
 
         // No custom configuration is created by default.
         assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("custom") }
-        assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("systemProperties") }
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)
@@ -67,7 +67,7 @@ class NodeConfigTest {
         )
 
         val nodeConfig = config.nodeConf()
-                .withValue("systemProperties", valueFor(mapOf("property" to "value")))
+                .withValue("systemProperties", valueFor(mapOf("property.name" to "value")))
                 .withValue("custom.jvmArgs", valueFor("-Xmx1000G"))
                 .withValue("baseDirectory", valueFor(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
@@ -76,7 +76,7 @@ class NodeConfigTest {
         val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
 
         assertEquals("-Xmx1000G", nodeConfig.getConfig("custom").getString("jvmArgs"))
-        assertEquals("value", nodeConfig.getConfig("systemProperties").getString("property"))
+        assertEquals("value", nodeConfig.getConfig("systemProperties").toProperties().getProperty("property.name"))
 
         assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)
@@ -130,6 +130,7 @@ class NodeConfigTest {
         assertEquals("cordacadevpass", webConfig.keyStorePassword)
     }
 
+    @Suppress("LongParameterList")
     private fun createConfig(
             legalName: CordaX500Name = CordaX500Name(organisation = "Unknown", locality = "Nowhere", country = "GB"),
             p2pPort: Int = -1,
@@ -139,7 +140,8 @@ class NodeConfigTest {
             h2port: Int = -1,
             notary: NotaryService?,
             users: List<User> = listOf(user("guest")),
-            issuableCurrencies: List<String> = emptyList()
+            issuableCurrencies: List<String> = emptyList(),
+            systemProperties: Map<String, Any?> = emptyMap()
     ): NodeConfig {
         return NodeConfig(
                 myLegalName = legalName,
@@ -152,7 +154,8 @@ class NodeConfigTest {
                 h2port = h2port,
                 notary = notary,
                 rpcUsers = users,
-                issuableCurrencies = issuableCurrencies
+                issuableCurrencies = issuableCurrencies,
+                systemProperties = systemProperties
         )
     }
 

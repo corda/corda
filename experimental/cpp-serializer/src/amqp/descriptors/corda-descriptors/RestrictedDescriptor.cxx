@@ -3,6 +3,7 @@
 #include "types.h"
 #include "debug.h"
 
+#include "amqp/schema/Choice.h"
 #include "amqp/schema/restricted-types/Restricted.h"
 #include "amqp/descriptors/AMQPDescriptors.h"
 
@@ -36,23 +37,50 @@ RestrictedDescriptor::build (pn_data_t * data_) const {
     auto name  = proton::readAndNext<std::string>(data_);
     auto label = proton::readAndNext<std::string>(data_, true);
 
+    DBG ("  name: " << name << ", label: \"" << label << "\"" << std::endl);
+
     std::vector<std::string> provides;
     {
         proton::auto_list_enter ae2 (data_);
         while (pn_data_next(data_)) {
             provides.push_back (proton::get_string (data_));
+
+            DBG ("  provides: " << provides.back() << std::endl);
         }
     }
 
     pn_data_next (data_);
 
     auto source = proton::readAndNext<std::string> (data_);
+
+    DBG ("source: " << source << std::endl);
+
     auto descriptor = descriptors::dispatchDescribed<schema::Descriptor> (data_);
 
-    // SKIP the choices section **FOR NOW**
+    pn_data_next (data_);
 
-    return schema::Restricted::make (descriptor, name,
-                                     label, provides, source);
+    DBG ("choices: " << data_ << std::endl);
+
+    std::vector<std::unique_ptr<schema::Choice>> choices;
+    {
+        proton::auto_list_enter ae2 (data_);
+        while (pn_data_next (data_)) {
+            choices.push_back (
+                descriptors::dispatchDescribed<schema::Choice> (data_));
+
+            DBG (" choice: " << choices.back()->choice() << std::endl);
+        }
+    }
+
+    DBG (data_ << std::endl);
+
+    return schema::Restricted::make (
+            std::move (descriptor),
+            std::move (name),
+            std::move (label),
+            std::move (provides),
+            std::move (source),
+            std::move (choices));
 }
 
 /******************************************************************************/

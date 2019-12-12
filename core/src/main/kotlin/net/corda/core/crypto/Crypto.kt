@@ -1,9 +1,16 @@
 package net.corda.core.crypto
 
+import net.corda.core.CordaOID
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
-import net.corda.core.crypto.internal.*
+import net.corda.core.crypto.internal.AliasPrivateKey
+import net.corda.core.crypto.internal.Instances.withSignature
+import net.corda.core.crypto.internal.`id-Curve25519ph`
+import net.corda.core.crypto.internal.bouncyCastlePQCProvider
+import net.corda.core.crypto.internal.cordaBouncyCastleProvider
+import net.corda.core.crypto.internal.cordaSecurityProvider
+import net.corda.core.crypto.internal.providerMap
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -14,7 +21,9 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
+import org.bouncycastle.asn1.DERUTF8String
 import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
@@ -42,7 +51,15 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
-import java.security.*
+import java.security.InvalidKeyException
+import java.security.Key
+import java.security.KeyFactory
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.PrivateKey
+import java.security.Provider
+import java.security.PublicKey
+import java.security.SignatureException
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -289,9 +306,19 @@ object Crypto {
     @JvmStatic
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
+        if (keyInfo.privateKeyAlgorithm.algorithm == ASN1ObjectIdentifier(CordaOID.ALIAS_PRIVATE_KEY)) {
+            return decodeAliasPrivateKey(keyInfo)
+        }
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
         val keyFactory = keyFactory(signatureScheme)
         return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+    }
+
+    private fun decodeAliasPrivateKey(keyInfo: PrivateKeyInfo): PrivateKey {
+        val encodable = keyInfo.parsePrivateKey() as DLSequence
+        val derutF8String = encodable.getObjectAt(0)
+        val alias = (derutF8String as DERUTF8String).string
+        return AliasPrivateKey(alias)
     }
 
     /**
@@ -436,23 +463,24 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
-        val signature = Instances.getSignatureInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
-        // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
-        // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
-        // SecureRandom implementation. Also, SPHINCS-256 implementation in BouncyCastle 1.60 fails with
-        // ClassCastException if we invoke initSign with a SecureRandom as an input.
-        // TODO Although we handle the above issue here, consider updating to BC 1.61+ which provides a fix.
-        if (signatureScheme == EDDSA_ED25519_SHA512
-                || signatureScheme == SPHINCS256_SHA256
-                || signatureScheme == RSA_SHA256) {
-            signature.initSign(privateKey)
-        } else {
-            // The rest of the algorithms will require a SecureRandom input (i.e., ECDSA or any new algorithm for which
-            // we don't know if it's deterministic).
-            signature.initSign(privateKey, newSecureRandom())
+        return withSignature(signatureScheme) { signature ->
+            // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
+            // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
+            // SecureRandom implementation. Also, SPHINCS-256 implementation in BouncyCastle 1.60 fails with
+            // ClassCastException if we invoke initSign with a SecureRandom as an input.
+            // TODO Although we handle the above issue here, consider updating to BC 1.61+ which provides a fix.
+            if (signatureScheme == EDDSA_ED25519_SHA512
+                    || signatureScheme == SPHINCS256_SHA256
+                    || signatureScheme == RSA_SHA256) {
+                signature.initSign(privateKey)
+            } else {
+                // The rest of the algorithms will require a SecureRandom input (i.e., ECDSA or any new algorithm for which
+                // we don't know if it's deterministic).
+                signature.initSign(privateKey, newSecureRandom())
+            }
+            signature.update(clearData)
+            signature.sign()
         }
-        signature.update(clearData)
-        return signature.sign()
     }
 
     /**
@@ -640,10 +668,11 @@ object Crypto {
         require(isSupportedSignatureScheme(signatureScheme)) {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
-        val signature = Instances.getSignatureInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
-        signature.initVerify(publicKey)
-        signature.update(clearData)
-        return signature.verify(signatureData)
+        return withSignature(signatureScheme) { signature ->
+            signature.initVerify(publicKey)
+            signature.update(clearData)
+            signature.verify(signatureData)
+        }
     }
 
     /**

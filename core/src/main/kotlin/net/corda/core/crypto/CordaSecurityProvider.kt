@@ -7,6 +7,8 @@ import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
 import net.corda.core.crypto.internal.PlatformSecureRandomService
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.Provider
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 @KeepForDJVM
 @Suppress("DEPRECATION")    // JDK11: should replace with Provider(String name, double version, String info) (since 9)
@@ -28,6 +30,40 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
     @StubOutForDJVM
     private fun putPlatformSecureRandomService() {
         putService(PlatformSecureRandomService(this))
+    }
+
+    override fun getService(type: String, algorithm: String): Service? = serviceFactory(type, algorithm)
+
+    // Used to work around banning of ConcurrentHashMap in DJVM
+    @Suppress("TooGenericExceptionCaught")
+    private val serviceFactory: (String, String) -> Service? = try {
+        // Will throw UnsupportedOperationException in DJVM
+        makeCachingFactory()
+    } catch (e: Exception) {
+        makeFactory()
+    }
+
+    private fun superGetService(type: String, algorithm: String): Service? = super.getService(type, algorithm)
+
+    @StubOutForDJVM
+    private fun makeCachingFactory(): Function2<String, String, Service?> {
+        return object : Function2<String, String, Service?> {
+            private val services = ConcurrentHashMap<Pair<String, String>, Optional<Service>>()
+
+            override fun invoke(type: String, algorithm: String): Service? {
+                return services.getOrPut(Pair(type, algorithm)) {
+                    Optional.ofNullable(superGetService(type, algorithm))
+                }.orElse(null)
+            }
+        }
+    }
+
+    private fun makeFactory(): Function2<String, String, Service?> {
+        return object : Function2<String, String, Service?> {
+            override fun invoke(type: String, algorithm: String): Service? {
+                return superGetService(type, algorithm)
+            }
+        }
     }
 }
 

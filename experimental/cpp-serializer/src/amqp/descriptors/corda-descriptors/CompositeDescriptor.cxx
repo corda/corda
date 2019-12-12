@@ -77,7 +77,12 @@ CompositeDescriptor::build (pn_data_t * data_) const {
     }
 
     return std::make_unique<schema::Composite> (
-            schema::Composite (name, label, provides, descriptor, fields));
+            schema::Composite (
+                    std::move (name),
+                    std::move (label),
+                    std::move (provides),
+                    std::move (descriptor),
+                    std::move (fields)));
 }
 
 /******************************************************************************/

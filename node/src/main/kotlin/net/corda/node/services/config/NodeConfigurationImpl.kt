@@ -59,6 +59,8 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = Defaults.additionalNodeInfoPollingFrequencyMsec,
         override val sshd: SSHDConfiguration? = Defaults.sshd,
+        override val localShellAllowExitInSafeMode: Boolean = Defaults.localShellAllowExitInSafeMode,
+        override val localShellUnsafe: Boolean = Defaults.localShellUnsafe,
         override val database: DatabaseConfig = Defaults.database(devMode),
         private val transactionCacheSizeMegaBytes: Int? = Defaults.transactionCacheSizeMegaBytes,
         private val attachmentContentCacheSizeMegaBytes: Int? = Defaults.attachmentContentCacheSizeMegaBytes,
@@ -98,6 +100,8 @@ data class NodeConfigurationImpl(
         const val detectPublicIp: Boolean = false
         val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
         val sshd: SSHDConfiguration? = null
+        const val localShellAllowExitInSafeMode: Boolean = true
+        const val localShellUnsafe: Boolean = false
         val transactionCacheSizeMegaBytes: Int? = null
         val attachmentContentCacheSizeMegaBytes: Int? = null
         const val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
