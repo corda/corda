@@ -1,9 +1,9 @@
 package net.corda.flows.serialization.missing
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.serialization.missing.contract.CustomData
-import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.CustomDataState
-import net.corda.contracts.serialization.missing.contract.MissingSerializerContract.Operate
+import net.corda.contracts.serialization.missing.CustomData
+import net.corda.contracts.serialization.missing.MissingSerializerContract.CustomDataState
+import net.corda.contracts.serialization.missing.MissingSerializerContract.Operate
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState

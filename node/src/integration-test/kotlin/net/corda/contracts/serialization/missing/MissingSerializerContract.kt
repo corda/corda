@@ -1,4 +1,4 @@
-package net.corda.contracts.serialization.missing.contract
+package net.corda.contracts.serialization.missing
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
