@@ -31,8 +31,11 @@ namespace proton {
     void is_string (pn_data_t *, bool allowNull = false);
     void is_described (pn_data_t *);
 
+    /**
+     * Specialised in the CXX file
+     */
     template<typename T>
-    T get_symbol (pn_data_t * data_) {
+    T get_symbol (pn_data_t *) {
         return T {};
     }
 
@@ -73,6 +76,18 @@ namespace proton {
         public :
             explicit auto_list_enter (pn_data_t *, bool next_ = false);
             ~auto_list_enter();
+
+            size_t elements() const;
+    };
+
+    class auto_map_enter {
+        private :
+            size_t      m_elements;
+            pn_data_t * m_data;
+
+        public :
+            explicit auto_map_enter (pn_data_t *, bool next_ = false);
+            ~auto_map_enter();
 
             size_t elements() const;
     };

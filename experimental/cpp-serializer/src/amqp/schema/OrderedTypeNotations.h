@@ -4,6 +4,7 @@
 #include <ostream>
 #include <iostream>
 
+#include "debug.h"
 #include "types.h"
 #include "colours.h"
 
@@ -60,18 +61,18 @@ namespace amqp::internal::schema {
                     typename std::list<std::list<uPtr<T>>>::iterator &);
 
         public :
-            void insert(uPtr<T> && ptr);
+            void insert (uPtr<T> && ptr);
 
             friend std::ostream & ::operator << <> (
                     std::ostream &,
                     const amqp::internal::schema::OrderedTypeNotations<T> &);
 
-            decltype (m_schemas.crbegin()) begin() const {
-                return m_schemas.crbegin();
+            decltype (m_schemas.cbegin()) begin() const {
+                return m_schemas.cbegin();
             }
 
-            decltype (m_schemas.crend()) end() const {
-                return m_schemas.crend();
+            decltype (m_schemas.cend()) end() const {
+                return m_schemas.cend();
             }
     };
 
@@ -85,7 +86,7 @@ operator << (
         std::ostream &stream_,
         const amqp::internal::schema::OrderedTypeNotations<T> &otn_
 ) {
-    int idx1{0};
+    int idx1 {0};
     for (const auto &i : otn_.m_schemas) {
         stream_ << "level " << ++idx1 << std::endl;
         for (const auto &j : i) {
@@ -145,6 +146,7 @@ OrderedTypeNotations<T>::insert (
         uPtr<T> && ptr,
         amqp::internal::schema::OrderedTypeNotations<T>::iterator l_
 ) {
+    DBG ("Insert: " << ptr->name() << std::endl);
     /*
      * First we find where this element needs to be added
      */

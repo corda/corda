@@ -54,11 +54,12 @@ namespace {
 
 }
 
-/******************************************************************************/
+/******************************************************************************
+ *
+ * Static methods
+ *
+ ******************************************************************************/
 
-/**
- * Static factory method
- */
 std::shared_ptr<amqp::internal::reader::PropertyReader>
 amqp::internal::reader::
 PropertyReader::make (const FieldPtr & field_) {
@@ -75,4 +76,10 @@ PropertyReader::make (const std::string & type_) {
 
 /******************************************************************************/
 
+std::shared_ptr<amqp::internal::reader::PropertyReader>
+amqp::internal::reader::
+PropertyReader::make (const internal::schema::Field & field_) {
+    return propertyMap[field_.type()]();
+}
 
+/******************************************************************************/

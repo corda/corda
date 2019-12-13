@@ -237,6 +237,38 @@ auto_list_enter::elements() const {
 
 /******************************************************************************
  *
+ * proton::auto_map_enter
+ *
+ ******************************************************************************/
+
+proton::
+auto_map_enter::auto_map_enter (pn_data_t * data_, bool next_)
+        : m_elements (pn_data_get_map (data_))
+        , m_data (data_)
+{
+    ::pn_data_enter(m_data);
+    if (next_) {
+        pn_data_next (m_data);
+    }
+}
+
+/******************************************************************************/
+
+proton::
+auto_map_enter::~auto_map_enter() {
+    pn_data_exit (m_data);
+}
+
+/******************************************************************************/
+
+size_t
+proton::
+auto_map_enter::elements() const {
+    return m_elements;
+}
+
+/******************************************************************************
+ *
  *
  *
  ******************************************************************************/
@@ -315,7 +347,7 @@ readAndNext<long> (
     bool tolerateDeviance_
 ) {
     long rtn = pn_data_get_long (data_);
-    pn_data_next(data_);
+    pn_data_next (data_);
     return rtn;
 }
 
@@ -329,7 +361,7 @@ readAndNext<u_long > (
         bool tolerateDeviance_
 ) {
     long rtn = pn_data_get_ulong (data_);
-    pn_data_next(data_);
+    pn_data_next (data_);
     return rtn;
 }
 

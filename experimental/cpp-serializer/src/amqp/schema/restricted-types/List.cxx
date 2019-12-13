@@ -1,27 +1,35 @@
 #include <iostream>
 #include "List.h"
+#include "Map.h"
+#include "Enum.h"
 
 #include "debug.h"
 #include "colours.h"
 
-#include "schema/Composite.h"
+#include "amqp/schema/described-types/Composite.h"
 
-/******************************************************************************/
+/******************************************************************************
+ *
+ * Static member functions
+ *
+ ******************************************************************************/
 
-namespace {
+std::pair<std::string, std::string>
+amqp::internal::schema::
+List::listType (const std::string & list_) {
+    auto pos = list_.find ('<');
 
-    std::pair<std::string, std::string>
-    listType (const std::string & list_) {
-        auto pos = list_.find ('<');
-
-        return std::make_pair (
-               std::string { list_.substr (0, pos) },
-               std::string { list_.substr(pos + 1, list_.size() - pos - 2) }
-        );
-    }
+    return std::make_pair (
+           std::string { unbox (list_.substr (0, pos)) },
+           std::string { unbox (list_.substr(pos + 1, list_.size() - pos - 2)) }
+    );
 }
 
-/******************************************************************************/
+/******************************************************************************
+ *
+ * Non static member functions
+ *
+ ******************************************************************************/
 
 amqp::internal::schema::
 List::List (
@@ -35,10 +43,10 @@ List::List (
         std::move (name_),
         std::move (label_),
         std::move (provides_),
-        amqp::internal::schema::Restricted::RestrictedTypes::List)
-  , m_listOf { listType(name_).second }
+        amqp::internal::schema::Restricted::RestrictedTypes::list_t)
+  , m_listOf { listType (name()).second }
+  , m_source { std::move (source_) }
 {
-
 }
 
 /******************************************************************************/
@@ -69,48 +77,78 @@ List::listOf() const {
 
 int
 amqp::internal::schema::
-List::dependsOn (const amqp::internal::schema::Restricted & lhs_) const {
-    auto rtn { 0 };
-    switch (lhs_.restrictedType()) {
-        case RestrictedTypes::List : {
-            const auto & list { dynamic_cast<const List &>(lhs_) };
-
-            // does the left hand side depend on us
-            DBG ("  L/L a) " << list.listOf() << " == " << name() << std::endl); // NOLINT
-            if (list.listOf() == name()) {
-                rtn = 1;
-            }
-
-            // do we depend on the lhs
-            DBG ("  L/L b) " << listOf() << " == " << list.name() << std::endl); // NOLINT
-            if (listOf() == list.name()) {
-                rtn = 2;
-            }
-        }
+List::dependsOnMap (const amqp::internal::schema::Map & map_) const {
+    // do we depend on the lhs
+    if (listOf() == map_.name()) {
+        return 1;
     }
 
-    return rtn;
+    // does lhs_ depend on us
+    auto lhsMapOf { map_.mapOf() };
+
+    if (lhsMapOf.first.get() == name() || lhsMapOf.second.get() == name()) {
+        return 2;
+    }
+
+    return 0;
 }
 
 /******************************************************************************/
 
 int
 amqp::internal::schema::
-List::dependsOn (const amqp::internal::schema::Composite & lhs_) const {
-    auto rtn { 0 };
+List::dependsOnList (const amqp::internal::schema::List & list_) const {
+    // do we depend on the lhs
+    if (listOf() == list_.name()) {
+        return 1;
+    }
+
+    // does the left hand side depend on us
+    if (list_.listOf() == name()) {
+        return 2;
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+
+int
+amqp::internal::schema::
+List::dependsOnArray (const amqp::internal::schema::Array & array_) const {
+    return 0;
+}
+
+/******************************************************************************/
+
+int
+amqp::internal::schema::
+List::dependsOnEnum (const amqp::internal::schema::Enum & enum_) const {
+    // an enum cannot depend on us so don't bother checking, lets just check
+    // if we depend on it
+    if (listOf() == enum_.name()) {
+        return 1;
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+
+int
+amqp::internal::schema::
+List::dependsOnRHS (const amqp::internal::schema::Composite & lhs_) const {
+    if (listOf() == lhs_.name()) {
+        return 1;
+    }
+
     for (const auto & field : lhs_.fields()) {
-        DBG ("  L/C a) " << field->resolvedType() << " == " << name() << std::endl); // NOLINT
         if (field->resolvedType() == name()) {
-            rtn = 1;
+            return 2;
         }
     }
 
-    DBG ("  L/C b) " << listOf() << " == " << lhs_.name() << std::endl); // NOLINT
-    if (listOf() == lhs_.name()) {
-        rtn = 2;
-    }
-
-    return rtn;
+    return 0;
 }
 
 /*********************************************************o*********************/

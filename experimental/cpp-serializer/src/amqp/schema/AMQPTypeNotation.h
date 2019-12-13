@@ -5,7 +5,7 @@
 #include <memory>
 #include <types.h>
 
-#include "Descriptor.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "OrderedTypeNotations.h"
 
 /******************************************************************************
@@ -37,16 +37,16 @@ namespace amqp::internal::schema {
                     std::ostream &,
                     const AMQPTypeNotation &);
 
-            enum Type { Composite, Restricted };
+            enum Type { composite_t, restricted_t };
 
         private :
-            std::string                 m_name;
-            std::unique_ptr<Descriptor> m_descriptor;
+            std::string      m_name;
+            uPtr<Descriptor> m_descriptor;
 
         public :
             AMQPTypeNotation (
                 std::string name_,
-                std::unique_ptr<Descriptor> descriptor_
+                uPtr<Descriptor> descriptor_
             ) : m_name (std::move (name_))
               , m_descriptor (std::move (descriptor_))
             { }
@@ -57,9 +57,8 @@ namespace amqp::internal::schema {
 
             virtual Type type() const = 0;
 
-            int dependsOn (const OrderedTypeNotation &) const override = 0;
-            virtual int dependsOn (const class Restricted &) const = 0;
-            virtual int dependsOn (const class Composite &) const = 0;
+            virtual int dependsOnRHS (const Restricted &) const = 0;
+            virtual int dependsOnRHS (const Composite &) const = 0;
     };
 
 }

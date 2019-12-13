@@ -2,8 +2,12 @@ set (EXE "amqp-test")
 
 set (amqp-test-sources
         main.cxx
+        Map.cxx
         Pair.cxx
+        List.cxx
         Single.cxx
+        TestUtils.cxx
+        RestrictedDescriptor.cxx
         OrderedTypeNotationTest.cxx
 )
 

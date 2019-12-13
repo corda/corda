@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-#include "amqp/schema/Schema.h"
+#include "amqp/schema/described-types/Schema.h"
 #include "amqp/reader/IReader.h"
 
 /******************************************************************************/
@@ -22,6 +22,19 @@ namespace amqp::internal::reader {
             ~Value() override = default;
     };
 
+    /*
+     * A Single represents some value read out of a proton tree that
+     * exists without an association. The canonical example is an
+     * element of a list. The list itself would be a pair,
+     *
+     * e.g. a : [ ]
+     *
+     * but the values of the list
+     *
+     * e.g. a : [ A, B, C ]
+     *
+     * are Singles
+     */
     class Single : public Value {
         public :
             std::string dump() const override = 0;
@@ -57,13 +70,19 @@ namespace amqp::internal::reader {
             std::string dump() const override;
     };
 
+    /*
+     * A Pair represents an association between a property and
+     * the value of the property, i.e. a : b where property
+     * a has value b
+     */
     class Pair : public Value {
         protected :
             std::string m_property;
 
         public:
             explicit Pair (std::string property_)
-                : m_property (std::move (property_))
+                : Value()
+                , m_property (std::move (property_))
             { }
 
             ~Pair() override = default;
@@ -104,6 +123,29 @@ namespace amqp::internal::reader {
             std::string dump() const override;
     };
 
+    /**
+     * Similar to [Pair] where k : v relationships  are modelled. In this
+     * case, however, rather than modelling a property : value relationship
+     * we are modelling a key : value one. The primary difference is that
+     * keys need not be simple strings.
+     */
+    class ValuePair : public Value {
+        private :
+            uPtr<amqp::reader::IValue> m_key;
+            uPtr<amqp::reader::IValue> m_value;
+
+        public :
+            ValuePair (
+                decltype (m_key) key_,
+                decltype (m_value) value_
+            ) : Value ()
+              , m_key (std::move (key_))
+              , m_value (std::move (value_))
+        { }
+
+        std::string dump() const override;
+    };
+
 }
 
 /******************************************************************************
@@ -116,7 +158,7 @@ template<typename T>
 inline std::string
 amqp::internal::reader::
 TypedSingle<T>::dump() const {
-    return std::to_string(m_value);
+    return std::to_string (m_value);
 }
 
 template<>
@@ -176,7 +218,6 @@ std::string
 amqp::internal::reader::
 TypedPair<sList<uPtr<amqp::reader::IValue>>>::dump() const;
 
-
 template<>
 std::string
 amqp::internal::reader::
@@ -191,13 +232,23 @@ TypedPair<sList<uPtr<amqp::internal::reader::Pair>>>::dump() const;
  *
  *
  *
- *
  ******************************************************************************/
 
 namespace amqp::internal::reader  {
 
     using IReader = amqp::reader::IReader<schema::SchemaMap::const_iterator>;
 
+    /**
+     * Interface that represents an object that has the ability to consume
+     * the payload of a Corda serialized blob in a way defined by some
+     * prior construction. This construction will usually come from
+     * analysis of the schema, although in the JVM versions it will come
+     * from reflection of the type definitions.
+     *
+     * In other words, when encountering a graph of nodes with values, an
+     * instance of [Reader] will give a sub tree of that graph contextual
+     * meaning.
+     */
     class Reader : public IReader {
         public :
             ~Reader() override = default;

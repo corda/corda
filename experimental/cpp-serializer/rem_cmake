@@ -9,9 +9,13 @@ function cmake_rem_func {
 }
 
 rm -f BLOB-INSPECTOR.cbp
+rm -rf cmake-build-debug
 
 cmake_rem_func .
 cmake_rem_func ./bin
+cmake_rem_func ./bin/blob-inspector
+cmake_rem_func ./bin/blob-inspector/test
+cmake_rem_func ./bin/schema-dumper
 cmake_rem_func ./src
 cmake_rem_func ./src/amqp
 cmake_rem_func ./src/amqp/test

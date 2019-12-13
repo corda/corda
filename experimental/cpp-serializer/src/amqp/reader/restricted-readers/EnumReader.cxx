@@ -1,7 +1,8 @@
 #include "EnumReader.h"
 
 #include "amqp/reader/IReader.h"
-#include "amqp/descriptors/AMQPDescriptorRegistory.h"
+#include "amqp/schema/Descriptors.h"
+#include "amqp/schema/descriptors/AMQPDescriptorRegistory.h"
 #include "proton/proton_wrapper.h"
 
 /******************************************************************************/
@@ -19,6 +20,7 @@ EnumReader::EnumReader (
 /******************************************************************************/
 
 namespace {
+
     std::string
     getValue (pn_data_t * data_) {
         proton::is_described (data_);
@@ -34,7 +36,7 @@ namespace {
              */
             if (pn_data_type (data_) == PN_ULONG) {
                 if (amqp::stripCorda(pn_data_get_ulong(data_)) ==
-                amqp::internal::REFERENCED_OBJECT
+                amqp::schema::descriptors::REFERENCED_OBJECT
             ) {
                     throw std::runtime_error (
                             "Currently don't support referenced objects");
@@ -54,9 +56,7 @@ namespace {
              * here I'll forget its even a thing
              */
             // auto idx = proton::readAndNext<int>(data_);
-
         }
-
     }
 }
 
@@ -89,7 +89,6 @@ EnumReader::dump(
     proton::is_described (data_);
 
     return std::make_unique<TypedSingle<std::string>> (getValue(data_));
-
 }
 
 /******************************************************************************/

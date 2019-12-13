@@ -37,7 +37,7 @@ IntPropertyReader::m_type { // NOLINT
 std::any
 amqp::internal::reader::
 IntPropertyReader::read (pn_data_t * data_) const {
-    return std::any (1);
+    return std::any { proton::readAndNext<int> (data_) };
 }
 
 /******************************************************************************/
@@ -53,9 +53,9 @@ IntPropertyReader::readString (pn_data_t * data_) const {
 uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 IntPropertyReader::dump (
-        const std::string & name_,
-        pn_data_t * data_,
-        const SchemaType & schema_) const
+    const std::string & name_,
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedPair<std::string>> (
             name_,
@@ -67,8 +67,8 @@ IntPropertyReader::dump (
 uPtr<amqp::reader::IValue>
 amqp::internal::reader::
 IntPropertyReader::dump (
-        pn_data_t * data_,
-        const SchemaType & schema_) const
+    pn_data_t * data_,
+    const SchemaType & schema_) const
 {
     return std::make_unique<TypedSingle<std::string>> (
             std::to_string (proton::readAndNext<int> (data_)));

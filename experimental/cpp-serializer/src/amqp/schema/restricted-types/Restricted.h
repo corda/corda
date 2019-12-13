@@ -7,9 +7,9 @@
 #include <iosfwd>
 #include <string>
 
-#include "schema/Field.h"
-#include "schema/Choice.h"
-#include "schema/Descriptor.h"
+#include "schema/field-types/Field.h"
+#include "amqp/schema/described-types/Choice.h"
+#include "amqp/schema/described-types/Descriptor.h"
 #include "schema/AMQPTypeNotation.h"
 
 #include "amqp/AMQPDescribed.h"
@@ -25,9 +25,18 @@ namespace amqp::internal::schema {
     class Composite;
     class OrderedTypeNotation;
 
+    class Map;
+    class Enum;
+    class List;
+    class Array;
+
 }
 
-/******************************************************************************/
+/******************************************************************************
+ *
+ * class Restricted
+ *
+ ******************************************************************************/
 
 namespace amqp::internal::schema {
 
@@ -35,7 +44,9 @@ namespace amqp::internal::schema {
         public :
             friend std::ostream & operator << (std::ostream &, const Restricted&);
 
-            enum RestrictedTypes { List, Map, Enum };
+            enum RestrictedTypes { list_t, map_t, enum_t, array_t };
+
+            static std::string unbox (const std::string &);
 
         private :
             // could be null in the stream... not sure that information is
@@ -65,6 +76,11 @@ namespace amqp::internal::schema {
                 std::vector<std::string>,
                 RestrictedTypes);
 
+            virtual int dependsOnMap (const Map &) const = 0;
+            virtual int dependsOnList (const List &) const = 0;
+            virtual int dependsOnArray (const Array &) const = 0;
+            virtual int dependsOnEnum (const Enum &) const = 0;
+
         public :
             static std::unique_ptr<Restricted> make(
                     std::unique_ptr<Descriptor>,
@@ -89,8 +105,13 @@ namespace amqp::internal::schema {
             virtual std::vector<std::string>::const_iterator end() const = 0;
 
             int dependsOn (const OrderedTypeNotation &) const override;
-            int dependsOn (const Restricted &) const override = 0;
-            int dependsOn (const class Composite &) const override = 0;
+            int dependsOnRHS (const Restricted &) const override;
+
+            int dependsOnRHS (const Composite &) const override = 0;
+
+            const decltype (m_provides) & provides() const { return m_provides; }
+            const decltype (m_label) & label() const { return m_label; }
+            const decltype (m_source) & source() const { return m_source; }
     };
 
 

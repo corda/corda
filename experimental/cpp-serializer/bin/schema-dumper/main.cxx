@@ -10,15 +10,15 @@
 #include <sys/stat.h>
 #include <sstream>
 
-#import "debug.h"
+#include "debug.h"
 
 #include "proton/proton_wrapper.h"
 
 #include "amqp/AMQPHeader.h"
 #include "amqp/AMQPSectionId.h"
-#include "amqp/descriptors/AMQPDescriptorRegistory.h"
+#include "amqp/schema/descriptors/AMQPDescriptorRegistory.h"
 
-#include "amqp/schema/Envelope.h"
+#include "amqp/schema/described-types/Envelope.h"
 #include "amqp/CompositeFactory.h"
 
 /******************************************************************************/
@@ -28,7 +28,7 @@ printNode (pn_data_t * d_) {
     std::stringstream ss;
 
     if (pn_data_is_described (d_)) {
-        amqp::AMQPDescriptorRegistory[22UL]->read (d_, ss);
+        amqp::internal::AMQPDescriptorRegistory[22UL]->read (d_, ss);
     }
 
     std::cout << ss.str() << std::endl;
