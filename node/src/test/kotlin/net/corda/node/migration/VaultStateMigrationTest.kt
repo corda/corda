@@ -50,6 +50,7 @@ import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -208,7 +209,8 @@ class VaultStateMigrationTest {
                     txId = tx.id.toString(),
                     stateMachineRunId = null,
                     transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes,
-                    status = DBTransactionStorage.TransactionStatus.VERIFIED
+                    status = DBTransactionStorage.TransactionStatus.VERIFIED,
+                    timestamp = Instant.now()
             )
             session.save(persistentTx)
         }
