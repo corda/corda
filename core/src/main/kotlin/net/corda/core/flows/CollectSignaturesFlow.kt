@@ -115,43 +115,54 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         val wellKnownSessions = sessionsToCollectFrom.filter { it.destination is Party }
         val anonymousSessions = sessionsToCollectFrom.filter { it.destination is AnonymousParty }
 
-        val wellKnownSessionsToPartyMap: Map<Party, List<FlowSession>> = wellKnownSessions.groupBy { (it.destination as Party) }
-        val anonymousSessionsToAnonymousPartyMap: Map<AnonymousParty, List<FlowSession>> = anonymousSessions.groupBy { (it.destination as AnonymousParty) }
+        require(wellKnownSessions.size + anonymousSessions.size == sessionsToCollectFrom.size) {
+            "Unrecognized Destination type used to initiate a flow session"
+        }
+
+        val wellKnownPartyToSessionMap: Map<Party, List<FlowSession>> = wellKnownSessions.groupBy { (it.destination as Party) }
+        val anonymousPartyToSessionMap: Map<AnonymousParty, List<FlowSession>> = anonymousSessions.groupBy { (it.destination as AnonymousParty) }
 
         //check that there is at most one session for each not well known party
-        for (entry in anonymousSessionsToAnonymousPartyMap) {
-            require(entry.value.size == 1)
-            { "There are multiple sessions initiated for Anonymous Party ${entry.key.owningKey.toStringShort()}" }
+        for (entry in anonymousPartyToSessionMap) {
+            require(entry.value.size == 1) {
+                "There are multiple sessions initiated for Anonymous Party ${entry.key.owningKey.toStringShort()}"
+            }
         }
 
         //all keys that were used to initate a session must be sent to that session
-        val keysToSendToAnonymousSessions = unsigned.intersect(anonymousSessionsToAnonymousPartyMap.keys.map { it.owningKey })
+        val keysToSendToAnonymousSessions: Set<PublicKey> = unsigned.intersect(anonymousPartyToSessionMap.keys.map { it.owningKey })
 
         //all keys that are left over MUST map back to a
-        val keysThatMustMapToAWellKnownSession = unsigned - keysToSendToAnonymousSessions
-        //if a key does not have a well known identity associated with it, it does not map to a wellKnown sessions
-        val keysThatDoNotMapToAWellKnownSession = keysThatMustMapToAWellKnownSession
+        val keysThatMustMapToAWellKnownSession: Set<PublicKey> = unsigned - keysToSendToAnonymousSessions
+        //if a key does not have a well known identity associated with it, it does not map to a wellKnown session
+        val keysThatDoNotMapToAWellKnownSession: List<PublicKey> = keysThatMustMapToAWellKnownSession
                 .filter { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it)) == null }
         //ensure that no keys are impossible to map to a session
-        require(keysThatDoNotMapToAWellKnownSession.isEmpty())
-        { " Unable to match key(s): $keysThatDoNotMapToAWellKnownSession to a session to collect signatures from" }
+        require(keysThatDoNotMapToAWellKnownSession.isEmpty()) {
+            " Unable to match key(s): $keysThatDoNotMapToAWellKnownSession to a session to collect signatures from"
+        }
 
         //we now know that all the keys are either related to a specific session due to being used as a Destination for that session
         //OR map back to a wellKnown party
         //now we must check that each wellKnown party has a session passed for it
         val groupedByPartyKeys = groupPublicKeysByWellKnownParty(serviceHub, keysThatMustMapToAWellKnownSession)
         for (entry in groupedByPartyKeys) {
-            require(wellKnownSessionsToPartyMap.contains(entry.key))
-            { "${entry.key} is a required signer, but no session has been passed in for them" }
+            require(wellKnownPartyToSessionMap.contains(entry.key)) {
+                "${entry.key} is a required signer, but no session has been passed in for them"
+            }
         }
 
         //so we now know that all keys are linked to a session in some way
         //we need to check that there are no extra sessions
-        val extraNotWellKnownSessions = anonymousSessions.filterNot { (it.destination as AbstractParty).owningKey in unsigned }
+        val extraNotWellKnownSessions = anonymousSessions.filterNot { (it.destination as AnonymousParty).owningKey in unsigned }
         val extraWellKnownSessions = wellKnownSessions.filterNot { it.counterparty in groupedByPartyKeys }
 
-        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty())
-        { "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction." }
+        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty()) {
+            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction, " +
+                    "the following extra sessions were passed in: " +
+                    (extraWellKnownSessions.map { it.counterparty.name.toString() } +
+                            extraNotWellKnownSessions.map { (it.destination as AbstractParty).owningKey.toString() })
+        }
 
         //OK let's collect some signatures!
 
