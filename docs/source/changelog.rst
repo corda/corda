@@ -7,6 +7,11 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Custom serializer classes implementing ``SerializationCustomSerializer`` should ideally be packaged in the same CorDapp as the
+  contract classes. Corda 4 could therefore fail to verify transactions created with Corda 3 if their custom serializer classes
+  had been packaged somewhere else. Add a "fallback mechanism" to Corda's transaction verification logic which will attempt to
+  include any missing custom serializers from CorDapps installed with the Node.
+
 * ``AppServiceHub`` been extended to provide access to ``database`` which will enable the Service class to perform DB transactions
   from the threads managed by the custom Service.
 
