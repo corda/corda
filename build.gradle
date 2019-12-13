@@ -637,6 +637,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     coresPerFork 5
     memoryInGbPerFork 12
     distribute DistributeTestsBy.METHOD
+    nodeTaints "big"
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
@@ -655,6 +656,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     coresPerFork 6
     memoryInGbPerFork 10
     distribute DistributeTestsBy.METHOD
+    nodeTaints "big"
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
@@ -663,6 +665,7 @@ task parallelRegressionTest(type: ParallelTestGroup) {
     coresPerFork 6
     memoryInGbPerFork 10
     distribute DistributeTestsBy.METHOD
+    nodeTaints "big"
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest", "smokeTest"
@@ -671,6 +674,7 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
     coresPerFork 6
     memoryInGbPerFork 10
     distribute DistributeTestsBy.CLASS
+    nodeTaints "big"
 }
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: 'com.r3.testing.image-building'
