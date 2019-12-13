@@ -5,7 +5,8 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'k8s' }
-    options { timestamps() }
+    options { timestamps() 
+              overrideIndexTriggers(false) }
 
     triggers {
         issueCommentTrigger('.*smoke tests.*')
