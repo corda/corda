@@ -120,7 +120,8 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         }
 
         val wellKnownPartyToSessionMap: Map<Party, List<FlowSession>> = wellKnownSessions.groupBy { (it.destination as Party) }
-        val anonymousPartyToSessionMap: Map<AnonymousParty, List<FlowSession>> = anonymousSessions.groupBy { (it.destination as AnonymousParty) }
+        val anonymousPartyToSessionMap: Map<AnonymousParty, List<FlowSession>> = anonymousSessions
+                .groupBy { (it.destination as AnonymousParty) }
 
         //check that there is at most one session for each not well known party
         for (entry in anonymousPartyToSessionMap) {
