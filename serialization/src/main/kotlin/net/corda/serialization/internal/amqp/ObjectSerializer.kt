@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.serialization.internal.model.LocalConstructorInformation
 import net.corda.serialization.internal.model.LocalPropertyInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -21,7 +22,11 @@ interface ObjectSerializer : AMQPSerializer<Any> {
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
             if (typeInformation is LocalTypeInformation.NonComposable) {
-                throw NotSerializableException(nonComposableExceptionMessage(typeInformation, factory))
+                val typeNames = typeInformation.nonComposableTypes.map { it.observedType.typeName }
+                throw MissingSerializerException(
+                    message = nonComposableExceptionMessage(typeInformation, factory),
+                    typeNames = typeNames
+                )
             }
 
             val typeDescriptor = factory.createDescriptor(typeInformation)

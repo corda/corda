@@ -2,15 +2,17 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.KeepForDJVM
 import java.io.NotSerializableException
-import java.net.URL
 
 /**
  * Thrown by the serialization framework, probably indicating that a custom serializer
  * needs to be included in a transaction.
  */
 @KeepForDJVM
-open class MissingSerializerException(
+open class MissingSerializerException private constructor(
     message: String,
-    val typeDescriptor: String,
-    val serializerLocation: URL? = null
-) : NotSerializableException(message)
+    val typeDescriptor: String?,
+    val typeNames: List<String>
+) : NotSerializableException(message) {
+    constructor(message: String, typeDescriptor: String) : this(message, typeDescriptor, emptyList())
+    constructor(message: String, typeNames: List<String>) : this(message, null, typeNames)
+}

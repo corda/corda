@@ -7,12 +7,9 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.hash
 import net.corda.core.internal.internalFindTrustedAttachmentForClass
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -23,10 +20,7 @@ import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import java.io.File
-import java.io.InputStream
 import java.io.NotSerializableException
-import java.net.URL
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -252,10 +246,9 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     private fun retryVerification(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction, services: ServiceHub) {
         when (cause) {
             is MissingSerializerException -> {
-                val jarURL = cause.serializerLocation
-                if (jarURL != null && networkParametersHash == null) {
-                    log.warn("Missing serializer for {} located in {}", cause.typeDescriptor, jarURL)
-                    verifyWithExtraCordapp(jarURL, ltx, services)
+                if (networkParametersHash == null) {
+                    log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
+                    verifyWithExtraSerializersFor(cause.typeDescriptor, cause.typeNames, ltx, services)
                 } else {
                     throw ex
                 }
@@ -300,12 +293,14 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     // Transactions created before Corda 4 can be missing dependencies on other CorDapps.
-    // This code has located a missing custom serializer inside an installed CorDapp - probably a workflow.
-    // We need to repackage this CorDapp as an extra attachment and try verifying this transaction again.
-    private fun verifyWithExtraCordapp(jarURL: URL, ltx: LedgerTransaction, services: ServiceHub) {
-        (services.transactionVerifierService as TransactionVerifierServiceInternal)
-            .verify(ltx, listOf(CordappAttachment(jarURL)))
-            .getOrThrow()
+    // This code has located a missing custom serializer inside another CorDapp - probably a workflow.
+    // We need to locate this CorDapp from AttachmentStorage and try verifying this transaction again.
+    @DeleteForDJVM
+    private fun verifyWithExtraSerializersFor(
+            typeDescriptor: String?, typeNames: List<String>, ltx: LedgerTransaction, services: ServiceHub) {
+//        (services.transactionVerifierService as TransactionVerifierServiceInternal)
+//            .verify(ltx, listOf(CordappAttachment(jarURL)))
+//            .getOrThrow()
     }
 
     /**
@@ -392,14 +387,4 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @Deprecated("No replacement, this should not be used outside of Corda core")
     fun isNotaryChangeTransaction() = this.coreTransaction is NotaryChangeWireTransaction
     //endregion
-}
-
-/**
- * Represent a CorDapp JAR as a trusted attachment.
- */
-@DeleteForDJVM
-private class CordappAttachment(private val jarURL: URL) : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER) {
-    override fun open(): InputStream = jarURL.openStream()
-    override val size: Int = File(jarURL.toURI()).length().toInt()
-    override val id: SecureHash = open().hash()
 }

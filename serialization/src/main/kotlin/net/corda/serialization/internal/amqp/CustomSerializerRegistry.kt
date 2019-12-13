@@ -3,7 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.CordaThrowable
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.model.DefaultCacheProvider
 import net.corda.serialization.internal.model.TypeIdentifier
@@ -88,7 +87,6 @@ class CachingCustomSerializerRegistry(
 
     private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
     private val customSerializers: MutableList<SerializerFor> = mutableListOf()
-    private val disabledSerializers: MutableMap<String, CorDappCustomSerializer> = DefaultCacheProvider.createCache()
 
     /**
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
@@ -128,38 +126,13 @@ class CachingCustomSerializerRegistry(
                     "All serializers must be registered before the cache comes into use.")
         }
 
-        val typeDescriptor = customSerializer.typeDescriptor.toString()
-        if (customSerializer.isEnabled) {
-            descriptorBasedSerializerRegistry.getOrBuild(typeDescriptor) {
-                customSerializers += customSerializer
-                customSerializer
-            }
-        } else {
-            // We can only handle the case where we can determine the URL of the serializer class.
-            customSerializer.serializerLocation?.apply {
-                if (descriptorBasedSerializerRegistry.setDisabled(typeDescriptor, this)) {
-                    // Only disable this custom serializer if we were first able
-                    // to disable its descriptor within the registry.
-                    disabledSerializers.putIfAbsent(customSerializer.type.typeName, customSerializer)
-                }
-            }
+        descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
+            customSerializers += customSerializer
+            customSerializer
         }
     }
 
     override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        val disabledSerializer = disabledSerializers[clazz.name]
-        if (disabledSerializer != null) {
-            // We disable serializers that are not defined by the context's
-            // deserialization classloader because the JVM will almost certainly be
-            // unable to link them with any class within the serialization context.
-            val descriptor = disabledSerializer.typeDescriptor.toString()
-            throw MissingSerializerException(
-                message = "Serializer for descriptor $descriptor is outside context",
-                typeDescriptor = descriptor,
-                serializerLocation =  disabledSerializer.serializerLocation
-            )
-        }
-
         val typeIdentifier = CustomSerializerIdentifier(
                 TypeIdentifier.forClass(clazz),
                 TypeIdentifier.forGenericType(declaredType))

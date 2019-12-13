@@ -78,7 +78,7 @@ class ContractWithMissingCustomSerializerTest {
             }
             assertThat(ex)
                 .hasMessageContaining("TransactionDeserialisationException:")
-                .hasMessageFindingMatch("Serializer for descriptor .*:${CustomData::class.java.name} is outside context")
+                .hasMessageFindingMatch(CustomData::class.java.name)
         }
     }
 }

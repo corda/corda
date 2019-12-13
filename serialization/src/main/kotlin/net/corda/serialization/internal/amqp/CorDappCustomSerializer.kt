@@ -7,7 +7,6 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.net.URL
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 
@@ -35,23 +34,18 @@ const val PROXY_TYPE = 1
  *
  * @property serializer in instance of a user written serialization proxy, normally scanned and loaded
  * automatically
- * @property isEnabled Whether this serializer should be added to the descriptor-based registry.
  * @property type the Java [Type] of the class which this serializes, inferred via reflection of the
  * [serializer]'s super type
  * @property proxyType the Java [Type] of the class into which instances of [type] are proxied for use by
  * the underlying serialization engine
- * @property serializerLocation URL of the JAR that contains [serializer].
  *
  * @param factory a [SerializerFactory] belonging to the context this serializer is being instantiated
  * for
  */
 class CorDappCustomSerializer(
         private val serializer: SerializationCustomSerializer<*, *>,
-        val isEnabled: Boolean,
         factory: SerializerFactory
 ) : AMQPSerializer<Any>, SerializerFor {
-    constructor(serializer: SerializationCustomSerializer<*, *>, factory: SerializerFactory) : this(serializer, true, factory)
-
     override val revealSubclassesInSchema: Boolean get() = false
 
     private val types = serializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
@@ -73,7 +67,6 @@ class CorDappCustomSerializer(
     private val proxySerializer: ObjectSerializer by lazy {
         ObjectSerializer.make(factory.getTypeInformation(proxyType), factory)
     }
-    val serializerLocation: URL? get() = serializer::class.java.protectionDomain?.codeSource?.location
 
     override fun writeClassInfo(output: SerializationOutput) {}
 

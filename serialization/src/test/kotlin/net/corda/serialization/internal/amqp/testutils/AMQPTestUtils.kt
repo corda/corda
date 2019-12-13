@@ -13,7 +13,6 @@ import org.apache.qpid.proton.codec.Data
 import org.junit.Test
 import java.io.File.separatorChar
 import java.io.NotSerializableException
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
@@ -27,10 +26,6 @@ class TestDescriptorBasedSerializerRegistry : DescriptorBasedSerializerRegistry 
 
     override fun set(descriptor: String, serializer: AMQPSerializer<Any>) {
         contents.putIfAbsent(descriptor, serializer)
-    }
-
-    override fun setDisabled(descriptor: String, serializerLocation: URL): Boolean {
-        throw UnsupportedOperationException("Not implemented")
     }
 
     override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
