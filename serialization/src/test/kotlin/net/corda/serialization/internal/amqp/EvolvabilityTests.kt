@@ -820,9 +820,9 @@ class EvolvabilityTests {
     }
 
     @Test
-    fun removeExistingNullableIntField() {
+    fun removeExistingNullableIntFieldWithAltConstructor() {
         val sf = testDefaultFactory()
-        val resource = "EvolvabilityTests.removeExistingNullableIntField"
+        val resource = "EvolvabilityTests.removeExistingNullableIntFieldWithAltConstructor"
 
         // Original version of the class as it was serialised
 //         data class CC(val data: String, val a: Int?)
