@@ -45,7 +45,7 @@ The second set of topics describe the core **CorDapp Concepts**:
 .. note:: 
    When you build a custom CorDapp, your CorDapp will have state, transaction, contract and flow classes.
    
-The following **Adavnced Corda Concepts** describe important conceptual information:
+The following **Advanced Corda Concepts** describe important conceptual information:
 
  * :doc:`key-concepts-consensus` - How parties on the network reach consensus about shared facts on the ledger
  * :doc:`key-concepts-notaries` - The component that assures uniqueness consensus (prevents double spends)
