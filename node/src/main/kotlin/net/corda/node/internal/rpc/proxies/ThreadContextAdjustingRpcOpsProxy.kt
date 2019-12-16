@@ -3,7 +3,7 @@ package net.corda.node.internal.rpc.proxies
 import net.corda.core.internal.executeWithThreadContextClassLoader
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.internal.InvocationHandlerTemplate
+import net.corda.core.internal.utilities.InvocationHandlerTemplate
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 
