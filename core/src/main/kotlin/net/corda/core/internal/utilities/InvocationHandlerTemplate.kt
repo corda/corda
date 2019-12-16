@@ -1,4 +1,4 @@
-package net.corda.node.internal
+package net.corda.core.internal.utilities
 
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
@@ -7,7 +7,7 @@ import java.lang.reflect.Method
 /**
  * Helps writing correct [InvocationHandler]s.
  */
-internal interface InvocationHandlerTemplate : InvocationHandler {
+interface InvocationHandlerTemplate : InvocationHandler {
     val delegate: Any
 
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {

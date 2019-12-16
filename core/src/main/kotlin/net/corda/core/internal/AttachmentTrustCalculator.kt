@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.core.CordaInternal
 import net.corda.core.contracts.Attachment
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -7,6 +8,7 @@ import net.corda.core.serialization.CordaSerializable
 /**
  * Calculates the trust of attachments stored in the node.
  */
+@CordaInternal
 interface AttachmentTrustCalculator {
 
     /**
