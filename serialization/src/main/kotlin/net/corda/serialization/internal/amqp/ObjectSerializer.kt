@@ -195,7 +195,8 @@ class EvolutionObjectSerializer(
 
     companion object {
         fun make(localTypeInformation: LocalTypeInformation.Composable,
-                 remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
+                 remoteTypeInformation: RemoteTypeInformation.Composable,
+                 constructor: LocalConstructorInformation,
                  properties: Map<String, LocalPropertyInformation>,
                  classLoader: ClassLoader,
                  mustPreserveData: Boolean): EvolutionObjectSerializer {
