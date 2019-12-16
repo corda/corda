@@ -57,17 +57,21 @@ pipeline {
         unsuccessful {
             script {
                 def lastCommitterEmail = sh returnStdout: true, script: 'git log -1 --pretty=format:"%ae"'
-                def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'R3 Jira', failOnError: false
-                def testIssue = [fields: [ project: [key: 'TM'],
-                                         summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
-                                         description: currentBuild.absoluteUrl,
-                                         assignee: users.data[0],
-                                         issuetype: [name: 'Bug']]]
+                try {
+                    def users = jiraUserSearch queryStr: lastCommitterEmail, site: 'R3 Jira', failOnError: false
+                    def testIssue = [fields: [ project: [key: 'TM'],
+                                             summary: 'Regression build failed for: ' + currentBuild.fullDisplayName,
+                                             description: currentBuild.absoluteUrl,
+                                             assignee: users.data[0],
+                                             issuetype: [name: 'Bug']]]
+                    response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
 
-                response = jiraNewIssue issue: testIssue, site: 'R3 Jira'
+                    echo response.successful.toString()
+                    echo response.data.toString()
+                } catch (Exception e) {
+                    echo "There was an issue when attempting to use the Jira API. Please verify Jira connectivity"
+                }
 
-                echo response.successful.toString()
-                echo response.data.toString()
             }
         }
 
