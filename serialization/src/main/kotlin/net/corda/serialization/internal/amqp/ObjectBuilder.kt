@@ -100,15 +100,13 @@ interface ObjectBuilder {
                 typeIdentifier: TypeIdentifier,
                 constructor: LocalConstructorInformation
         ): ObjectBuilderProvider {
-            require(run {
-                properties.values.all {
-                    when (it) {
-                        is LocalPropertyInformation.ConstructorPairedProperty ->
-                            it.constructorSlot.constructorInformation == constructor
-                        is LocalPropertyInformation.PrivateConstructorPairedProperty ->
-                            it.constructorSlot.constructorInformation == constructor
-                        else -> true
-                    }
+            require(properties.values.all {
+                when (it) {
+                    is LocalPropertyInformation.ConstructorPairedProperty ->
+                        it.constructorSlot.constructorInformation == constructor
+                    is LocalPropertyInformation.PrivateConstructorPairedProperty ->
+                        it.constructorSlot.constructorInformation == constructor
+                    else -> true
                 }
             }) { "Constructor passed in must match the constructor the properties are referring to" }
             val constructorIndices = properties.mapValues { (name, property) ->
