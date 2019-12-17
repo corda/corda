@@ -212,9 +212,11 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
     }
 
+
+
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        val notarised = if (needsNotarySignature(transaction)) {
+        val notaryCandidate = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
             val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
             transaction + notarySignatures
@@ -222,22 +224,41 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             logger.info("No need to notarise this transaction.")
             transaction
         }
-        logger.info("Recording transaction locally.")
-        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
-        logger.info("Recorded transaction locally successfully.")
-        return notarised
+
+        return try {
+            logger.info("Recording transaction locally.")
+            serviceHub.recordTransactions(statesToRecord, listOf(notaryCandidate))
+            logger.info("Recorded transaction locally successfully.")
+            notaryCandidate
+        } catch (e: Exception) {
+            throw if (hasNotarySignature(notaryCandidate)) {
+                logger.warn(
+                    "Caught an Exception for the notarised transaction ${notaryCandidate.id} when trying to record it locally. " +
+                            "If this flow exits we will end up having the transaction notarised meaning its input states " +
+                            "consumed within the Notary. At the same time the transaction will not exist in the ledger " +
+                            "meaning none the transaction nor any of its output states will be recorded in any vault. " +
+                            "However, re-consuming its input states with a new flow and a new transaction is no longer possible " +
+                            "since these states are now recorded as consumed within the Notary. " +
+                            "*** Therefore, we need not loose, by any means, the current transaction (${notaryCandidate.id}) *** " +
+                            "To achieve this, the current flow will be sent to the hospital for observation. ", e
+                )
+                HospitalizeFlowException("Transaction ${notaryCandidate.id} was notarised but failed to record locally", e)
+            } else {
+                e
+            }
+        }
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
         val wtx = stx.tx
         val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
-        return needsNotarisation && hasNoNotarySignature(stx)
+        return needsNotarisation && !hasNotarySignature(stx)
     }
 
-    private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
+    private fun hasNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.asSequence().map { it.by }.toSet()
-        return notaryKey?.isFulfilledBy(signers) != true
+        return notaryKey?.isFulfilledBy(signers) == true
     }
 
     private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {

@@ -2,16 +2,23 @@ package net.corda.coretests.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.FungibleAsset
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.CordappResolver
+import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.coretests.flows.WithFinality.FinalityInvoker
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.flows.CashPaymentReceiverFlow
 import net.corda.finance.issuedBy
+import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
@@ -19,6 +26,10 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
+import java.util.*
+import java.util.concurrent.TimeoutException
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FinalityFlowTests : WithFinality {
     companion object {
@@ -83,6 +94,112 @@ class FinalityFlowTests : WithFinality {
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 
+    @Test
+    fun `not notarised transaction will not get hospitalised when fail to record locally`() {
+        var observationCounter: Int = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observationCounter
+        }
+        aliceNode.services.vaultService.rawUpdates.subscribe {
+            // register a -throwing Exception- Observer.
+            throw Exception("Error in Observer#onNext");
+        }
+
+        val stx = aliceNode.selfIssuesCash(1000.POUNDS) // returns a transaction having one output state. No input states.
+        assertThat(
+            aliceNode.finalise(stx), // FinalityFlow will try to record this transaction locally without notarising it.
+            willThrow<Exception>()
+        )
+        assertEquals(0, observationCounter)
+    }
+
+    @Test
+    fun `notarised transaction will get hospitalised when fail to record locally - fails with OnErrorNotImplementedException`() {
+        val bobNode = createBob()
+        bobNode.registerInitiatedFlow(CashPaymentFlow::class.java, CashPaymentReceiverFlow::class.java)
+
+        var observationCounter: Int = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observationCounter
+        }
+
+        val stx = aliceNode.selfIssuesCash(1000.POUNDS)
+        aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
+
+        aliceNode.services.vaultService.rawUpdates.subscribe { // register a -throwing Exception- Observer.
+            throw Exception("Error in Observer#onNext");
+        }
+
+        val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
+        mockNet.runNetwork()
+
+        assertFailsWith<TimeoutException> {
+            future.getOrThrow(5.seconds)
+        }
+
+        assertEquals(1, observationCounter)
+    }
+
+    @Test
+    fun `notarised transaction will get hospitalised when fail to record locally - fails with OnErrorFailedException`() {
+        val bobNode = createBob()
+        bobNode.registerInitiatedFlow(CashPaymentFlow::class.java, CashPaymentReceiverFlow::class.java)
+
+        var observationCounter: Int = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observationCounter
+        }
+
+        val stx = aliceNode.selfIssuesCash(1000.POUNDS)
+        aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
+
+        aliceNode.services.vaultService.rawUpdates.subscribe(
+            { throw Exception("Error in Observer#onNext") },
+            { throw Exception("Error in Observer#onError") }) // register a -throwing Exception- Observer.
+
+        val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
+        mockNet.runNetwork()
+
+        assertFailsWith<TimeoutException> {
+            future.getOrThrow(5.seconds)
+        }
+
+        assertEquals(1, observationCounter)
+    }
+
+    @Test
+    fun `notarised but failed to record locally transaction, gets hospitalised and will be retried after observer fix`() {
+        val bobNode = createBob()
+        bobNode.registerInitiatedFlow(CashPaymentFlow::class.java, CashPaymentReceiverFlow::class.java)
+
+        var observationCounter: Int = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observationCounter
+        }
+
+        val stx = aliceNode.selfIssuesCash(1000.POUNDS)
+        aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
+
+        aliceNode.services.vaultService.rawUpdates.subscribe(
+            { throw Exception("Error in Observer#onNext") },
+            { throw Exception("Error in Observer#onError") }) // register a -throwing Exception- Observer.
+
+        val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
+        mockNet.runNetwork()
+
+        assertFailsWith<TimeoutException> {
+            future.getOrThrow(5.seconds)
+        }
+        assertEquals(1, observationCounter)
+
+        observationCounter = 0
+        mockNet.restartNode(aliceNode, parameters = InternalMockNodeParameters(additionalCordapps = listOf(FINANCE_CONTRACTS_CORDAPP)))
+        mockNet.runNetwork()
+        assertEquals(0, observationCounter)
+        assertThat(aliceNode.services.vaultService.queryBy<FungibleAsset<*>>().states).isEmpty()
+        assertThat(bobNode.services.vaultService.queryBy<Cash.State>().states.single().state.data.amount.quantity == 1000.toLong())
+    }
+
     private fun createBob(cordapps: List<TestCordappInternal> = emptyList()): TestStartedNode {
         return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps))
     }
@@ -91,11 +208,15 @@ class FinalityFlowTests : WithFinality {
         return issuesCashTo(recipient.info.singleIdentity())
     }
 
-    private fun TestStartedNode.issuesCashTo(other: Party): SignedTransaction {
-        val amount = 1000.POUNDS.issuedBy(info.singleIdentity().ref(0))
+    private fun TestStartedNode.issuesCashTo(other: Party, _amount: Amount<Currency> = 1000.POUNDS): SignedTransaction {
+        val amount = _amount.issuedBy(info.singleIdentity().ref(0))
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, other, notary)
         return services.signInitialTransaction(builder)
+    }
+
+    private fun TestStartedNode.selfIssuesCash(amount: Amount<Currency>): SignedTransaction {
+        return issuesCashTo(this.info.singleIdentity(), amount)
     }
 
     /** "Old" CorDapp which will force its node to keep its FinalityHandler enabled */

@@ -3999,6 +3999,7 @@
     <ID>TooGenericExceptionCaught:Expect.kt$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:Explorer.kt$Explorer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FiberDeserializationCheckingInterceptor.kt$FiberDeserializationChecker$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:FinalityFlow.kt$FinalityFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FinanceJSONSupport.kt$CalendarDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowHandle.kt$FlowProgressHandleImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowMessaging.kt$FlowMessagingImpl$exception: Exception</ID>
@@ -4128,6 +4129,8 @@
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however they only have $senderQuantity!" )</ID>
+    <ID>TooGenericExceptionThrown:FinalityFlowTests.kt$FinalityFlowTests$throw Exception("Error in Observer#onError")</ID>
+    <ID>TooGenericExceptionThrown:FinalityFlowTests.kt$FinalityFlowTests$throw Exception("Error in Observer#onNext")</ID>
     <ID>TooGenericExceptionThrown:FlowAsyncOperationTests.kt$FlowAsyncOperationTests.ErroredExecute$throw Exception()</ID>
     <ID>TooGenericExceptionThrown:FlowFrameworkTests.kt$FlowFrameworkTests$throw Exception("Error")</ID>
     <ID>TooGenericExceptionThrown:Generator.kt$Generator$throw Exception("Failed to generate", error)</ID>
