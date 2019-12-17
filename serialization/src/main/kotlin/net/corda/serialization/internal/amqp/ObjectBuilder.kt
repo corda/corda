@@ -18,8 +18,10 @@ private const val IGNORE_COMPUTED = -1
  * @property propertySlots The slot indices of the properties written by the provided [ObjectBuilder], by property name.
  * @param provider The thunk that provides a new, empty [ObjectBuilder]
  */
-data class ObjectBuilderProvider(val propertySlots: Map<String, Int>, private val provider: () -> ObjectBuilder)
-    : () -> ObjectBuilder by provider
+data class ObjectBuilderProvider(
+        val propertySlots: Map<String, Int>,
+        private val provider: () -> ObjectBuilder
+) : () -> ObjectBuilder by provider
 
 /**
  * Wraps the operation of calling a constructor, with helpful exception handling.
@@ -33,12 +35,14 @@ private class ConstructorCaller(private val javaConstructor: Constructor<Any>) :
                 @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
                 throw NotSerializableException(
                         "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                                "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
+                                "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}"
+                )
             } catch (e: IllegalAccessException) {
                 @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
                 throw NotSerializableException(
                         "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                                "not accessible: ${e.message}")
+                                "not accessible: ${e.message}"
+                )
             }
 }
 
@@ -53,12 +57,14 @@ private class SetterCaller(val setter: Method) : (Any, Any?) -> Unit {
             @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                            "failed when called with parameter $value: ${e.cause!!.message}")
+                            "failed when called with parameter $value: ${e.cause!!.message}"
+            )
         } catch (e: IllegalAccessException) {
             @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                            "not accessible: ${e.message}")
+                            "not accessible: ${e.message}"
+            )
         }
     }
 }
@@ -81,10 +87,11 @@ interface ObjectBuilder {
          * The [EvolutionObjectBuilder] uses this to create [ObjectBuilderProvider]s for objects initialised via an
          * evolution constructor (i.e. a constructor annotated with [DeprecatedConstructorForDeserialization]).
          */
-        fun makeProvider(typeIdentifier: TypeIdentifier,
-                         constructor: LocalConstructorInformation,
-                         properties: Map<String, LocalPropertyInformation>,
-                         remoteTypeInformation: RemoteTypeInformation.Composable?
+        fun makeProvider(
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation,
+                properties: Map<String, LocalPropertyInformation>,
+                remoteTypeInformation: RemoteTypeInformation.Composable?
         ): ObjectBuilderProvider =
                 if (constructor.hasParameters)
                     remoteTypeInformation?.let { makeConstructorBasedProviderWithRemote(properties, typeIdentifier, constructor, it) }
@@ -97,12 +104,11 @@ interface ObjectBuilder {
                 constructor: LocalConstructorInformation,
                 remote: RemoteTypeInformation.Composable
         ): ObjectBuilderProvider? {
-            val newPropertyCount = constructor.parameters.count { p -> remote.properties.none { rp -> rp.key == p.name } }
-            val propertySlots = remote.properties.entries.mapIndexed { slot, entry -> entry.key to slot }.toMap()
-            return ObjectBuilderProvider(propertySlots) {
+            val remotePropertySlots = remote.properties.entries.mapIndexed { slot, entry -> entry.key to slot }.toMap()
+            return ObjectBuilderProvider(remotePropertySlots) {
                 ConstructorBasedObjectBuilder(
                         constructor,
-                        propertySlots
+                        remotePropertySlots
                                 .map { (name, slot) ->
                                     val ctorIdx = constructor.parameters.indexOfFirst { paramInfo -> paramInfo.name == name }
                                     slot to ctorIdx
@@ -120,6 +126,16 @@ interface ObjectBuilder {
                 typeIdentifier: TypeIdentifier,
                 constructor: LocalConstructorInformation
         ): ObjectBuilderProvider {
+            require(run {
+                val ctor = constructor.observedMethod
+                properties.values.all {
+                    when (it) {
+                        is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.constructorInformation.observedMethod == ctor
+                        is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.constructorInformation.observedMethod == ctor
+                        else -> true
+                    }
+                }
+            })
             val constructorIndices = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
@@ -227,10 +243,12 @@ private class ConstructorBasedObjectBuilder(
  * An [ObjectBuilder] that wraps an underlying [ObjectBuilder], routing the property values assigned to its slots to the
  * matching slots in the underlying builder, and discarding values for which the underlying builder has no slot.
  */
-class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
-                             private val slotAssignments: IntArray,
-                             private val remoteProperties: List<String>,
-                             private val mustPreserveData: Boolean) : ObjectBuilder {
+class EvolutionObjectBuilder(
+        private val localBuilder: ObjectBuilder,
+        private val slotAssignments: IntArray,
+        private val remoteProperties: List<String>,
+        private val mustPreserveData: Boolean
+) : ObjectBuilder {
 
     companion object {
 
@@ -241,11 +259,13 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
          * properties defined in the remote type into the matching slots on the local type's [ObjectBuilder], and discarding
          * any for which there is no matching slot.
          */
-        fun makeProvider(typeIdentifier: TypeIdentifier,
-                         constructor: LocalConstructorInformation,
-                         localProperties: Map<String, LocalPropertyInformation>,
-                         remoteTypeInformation: RemoteTypeInformation.Composable,
-                         mustPreserveData: Boolean): () -> ObjectBuilder {
+        fun makeProvider(
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation,
+                localProperties: Map<String, LocalPropertyInformation>,
+                remoteTypeInformation: RemoteTypeInformation.Composable,
+                mustPreserveData: Boolean
+        ): () -> ObjectBuilder {
             val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties, remoteTypeInformation)
 
             val remotePropertyNames = remoteTypeInformation.properties.keys.sorted()
@@ -258,7 +278,8 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
                         localBuilderProvider(),
                         reroutedIndices,
                         remotePropertyNames,
-                        mustPreserveData)
+                        mustPreserveData
+                )
             }
         }
     }

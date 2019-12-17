@@ -5,6 +5,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.NotSerializableException
 import kotlin.test.*
 
@@ -14,13 +15,15 @@ class EvolutionSerializerFactoryTests {
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
-            mustPreserveDataWhenEvolving = false)
+            mustPreserveDataWhenEvolving = false
+    )
 
     private val strictFactory = SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
-            mustPreserveDataWhenEvolving = true)
+            mustPreserveDataWhenEvolving = true
+    )
 
     // Version of the class as it was serialised
     //
@@ -56,13 +59,9 @@ class EvolutionSerializerFactoryTests {
         assertEquals(1, withNonNullTarget.a)
 
         // The strict factory cannot deserialize the evolved instance where the original value of 'b' is non-null.
-        try {
+        val e = assertThrows<NotSerializableException> {
             DeserializationInput(strictFactory).deserialize(SerializedBytes<C>(withoutNullUrl.readBytes()))
-            fail("Expected deserialisation of object with non-null value for 'b' to fail")
-        } catch (e: NotSerializableException) {
-            assertTrue(e.message!!.contains(
-                    "Non-null value 1 provided for property b, which is not supported in this version"))
         }
+        assertTrue(e.message!!.contains("Non-null value 1 provided for property b, which is not supported in this version"))
     }
-
 }
