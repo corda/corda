@@ -14,22 +14,8 @@ apply plugin: 'com.bmuschko.docker-remote-api'
 mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-repositories {
-    maven {
-        url "${artifactory_contextUrl}/corda-releases"
-    }
-    maven {
-        url "${artifactory_contextUrl}/corda-dev"
-    }
-}
-
-configurations {
-    artifactoryCorda
-}
-
 dependencies{
     compile project(':node')
-    artifactoryCorda "net.corda:corda:${project.version}"
 }
 
 shadowJar {
@@ -48,23 +34,22 @@ docker{
     }
 }
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
-    doLast {
-        def cordaJar = configurations.artifactoryCorda.singleFile
-        project.copy {
-            into new File(project.buildDir, "docker-temp")
-            from "src/bash/run-corda.sh"
-            from cordaJar.path
-            from shadowJar.archivePath
-            from "src/config/starting-node.conf"
-            from "src/bash/generate-config.sh"
-            from "src/docker/DockerfileAL"
-            from "src/docker/Dockerfile"
-            from "src/docker/Dockerfile11"
-            rename(cordaJar.name, "corda.jar")
-            rename(shadowJar.archivePath.name, "config-exporter.jar")
-        }
+final dockerTempDir = file("$buildDir/docker-temp")
+
+task buildDockerFolder(type: Copy) {
+    into dockerTempDir
+    from "src/bash/run-corda.sh"
+    from(project(':node:capsule').tasks.buildCordaJAR) {
+        rename 'corda-(.*)', 'corda.jar'
     }
+    from(shadowJar) {
+        rename 'config-exporter-(.*).jar', 'config-exporter.jar'
+    }
+    from "src/config/starting-node.conf"
+    from "src/bash/generate-config.sh"
+    from "src/docker/DockerfileAL"
+    from "src/docker/Dockerfile"
+    from "src/docker/Dockerfile11"
 }
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
@@ -73,21 +58,21 @@ final zuluBuildTags = ["corda/corda-zulu-java${JavaVersion.current()}-${project.
 final correttoBuildTags = ["corda/corda-corretto-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-corretto-java${JavaVersion.current()}-${project.version.toString().toLowerCase()}:latest"]
 
 task buildOfficialZuluDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    inputDir = new File(project.buildDir, "docker-temp")
+    inputDir = dockerTempDir
     tags = zuluBuildTags
-    dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile")
+    dockerFile = new File(dockerTempDir, "Dockerfile")
 }
 
 task buildOfficialZuluJDK11DockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    inputDir = new File(project.buildDir, "docker-temp")
+    inputDir = dockerTempDir
     tags = zuluBuildTags
-    dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile11")
+    dockerFile = new File(dockerTempDir, "Dockerfile11")
 }
 
 task buildOfficialCorrettoDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    inputDir = new File(project.buildDir, "docker-temp")
+    inputDir = dockerTempDir
     tags = correttoBuildTags
-    dockerFile = new File(new File(project.buildDir, "docker-temp"), "DockerfileAL")
+    dockerFile = new File(dockerTempDir, "DockerfileAL")
 }
 
 task pushZuluTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDockerImage]){

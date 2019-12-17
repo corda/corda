@@ -4,7 +4,7 @@ import net.corda.client.rpc.PermissionException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.internal.InvocationHandlerTemplate
+import net.corda.core.internal.utilities.InvocationHandlerTemplate
 import net.corda.node.services.rpc.RpcAuthContext
 import net.corda.node.services.rpc.rpcContext
 import java.lang.reflect.Method

@@ -1,21 +1,3 @@
-// Import private compile time constants
-buildscript {
-    def properties = new Properties()
-    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
-
-
-    Properties constants = new Properties()
-    file("$rootDir/constants.properties").withInputStream { constants.load(it) }
-
-
-    ext.jolokia_version = constants.getProperty('jolokiaAgentVersion')
-
-    dependencies {
-        classpath group: 'com.github.docker-java', name: 'docker-java', version: '3.1.5'
-    }
-}
-
-
 plugins {
     id 'com.google.cloud.tools.jib' version '0.9.4'
 }
@@ -30,6 +12,13 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
+
+ext {
+    Properties constants = new Properties()
+    file("$rootDir/constants.properties").withInputStream { constants.load(it) }
+
+    jolokia_version = constants.getProperty('jolokiaAgentVersion')
+}
 
 //noinspection GroovyAssignabilityCheck
 configurations {

@@ -8,7 +8,7 @@ import kotlin.annotation.AnnotationTarget.*
  *
  * These are only meant to be used by Corda internally, and are not intended to be part of the public API.
  */
-@Target(PROPERTY_GETTER, PROPERTY_SETTER, FUNCTION, ANNOTATION_CLASS)
+@Target(PROPERTY_GETTER, PROPERTY_SETTER, PROPERTY, FUNCTION, ANNOTATION_CLASS, CLASS)
 @Retention(BINARY)
 @MustBeDocumented
 annotation class CordaInternal
