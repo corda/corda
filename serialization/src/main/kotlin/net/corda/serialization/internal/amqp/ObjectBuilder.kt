@@ -89,28 +89,37 @@ interface ObjectBuilder {
                 if (constructor.hasParameters)
                     remoteTypeInformation?.let { makeConstructorBasedProviderWithRemote(properties, typeIdentifier, constructor, it) }
                             ?: makeConstructorBasedProvider(properties, typeIdentifier, constructor)
-                else makeGetterSetterProvider(properties, typeIdentifier, constructor)
+                else makeSetterBasedProvider(properties, typeIdentifier, constructor)
 
-        private fun makeConstructorBasedProviderWithRemote(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation, remote: RemoteTypeInformation.Composable): ObjectBuilderProvider? {
+        private fun makeConstructorBasedProviderWithRemote(
+                properties: Map<String, LocalPropertyInformation>,
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation,
+                remote: RemoteTypeInformation.Composable
+        ): ObjectBuilderProvider? {
             val newPropertyCount = constructor.parameters.count { p -> remote.properties.none { rp -> rp.key == p.name } }
             val propertySlots = remote.properties.entries.mapIndexed { slot, entry -> entry.key to slot }.toMap()
             return ObjectBuilderProvider(propertySlots) {
                 ConstructorBasedObjectBuilder(
-                        ConstructorCaller(constructor.observedMethod),
-                        (propertySlots
+                        constructor,
+                        propertySlots
                                 .map { (name, slot) ->
                                     val ctorIdx = constructor.parameters.indexOfFirst { paramInfo -> paramInfo.name == name }
                                     slot to ctorIdx
                                 }
                                 .toList()
                                 .sortedBy { it.first }
-                                .map { it.second } + (0 until newPropertyCount).map { Int.MIN_VALUE })
+                                .map { it.second }
                                 .toIntArray()
                 )
             }
         }
 
-        private fun makeConstructorBasedProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+        private fun makeConstructorBasedProvider(
+                properties: Map<String, LocalPropertyInformation>,
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation
+        ): ObjectBuilderProvider {
             val constructorIndices = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
@@ -126,11 +135,15 @@ interface ObjectBuilder {
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                ConstructorBasedObjectBuilder(ConstructorCaller(constructor.observedMethod), constructorIndices.values.toIntArray())
+                ConstructorBasedObjectBuilder(constructor, constructorIndices.values.toIntArray())
             }
         }
 
-        private fun makeGetterSetterProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+        private fun makeSetterBasedProvider(
+                properties: Map<String, LocalPropertyInformation>,
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation
+        ): ObjectBuilderProvider {
             val setters = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.GetterSetterProperty -> SetterCaller(property.observedSetter)
@@ -172,7 +185,8 @@ interface ObjectBuilder {
  */
 private class SetterBasedObjectBuilder(
         private val constructor: ConstructorCaller,
-        private val setters: List<SetterCaller?>) : ObjectBuilder {
+        private val setters: List<SetterCaller?>
+) : ObjectBuilder {
 
     private lateinit var target: Any
 
@@ -192,10 +206,12 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        private val constructor: ConstructorCaller,
-        private val parameterIndices: IntArray) : ObjectBuilder {
+        private val constructorInfo: LocalConstructorInformation,
+        private val parameterIndices: IntArray
+) : ObjectBuilder {
 
-    private val params = arrayOfNulls<Any>(parameterIndices.count { it != IGNORE_COMPUTED })
+    private val constructor = ConstructorCaller(constructorInfo.observedMethod)
+    private val params = arrayOfNulls<Any>(constructorInfo.parameters.size)
 
     override fun initialize() {}
 
