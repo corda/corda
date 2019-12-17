@@ -96,16 +96,13 @@ class FinalityFlowTests : WithFinality {
 
     @Test
     fun `not notarised transaction will not get hospitalised when fail to record locally`() {
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
-        aliceNode.services.vaultService.rawUpdates.subscribe {
-            // register a -throwing Exception- Observer.
-            throw Exception("Error in Observer#onNext");
-        }
+        aliceNode.services.vaultService.rawUpdates.subscribe { throw Exception("Error in Observer#onNext") }
 
-        val stx = aliceNode.selfIssuesCash(1000.POUNDS) // returns a transaction having one output state. No input states.
+        val stx = aliceNode.selfIssuesCash(1000.POUNDS)
         assertThat(
             aliceNode.finalise(stx), // FinalityFlow will try to record this transaction locally without notarising it.
             willThrow<Exception>()
@@ -118,25 +115,19 @@ class FinalityFlowTests : WithFinality {
         val bobNode = createBob()
         bobNode.registerInitiatedFlow(CashPaymentFlow::class.java, CashPaymentReceiverFlow::class.java)
 
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
 
         val stx = aliceNode.selfIssuesCash(1000.POUNDS)
         aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
-
-        aliceNode.services.vaultService.rawUpdates.subscribe { // register a -throwing Exception- Observer.
-            throw Exception("Error in Observer#onNext");
-        }
+        aliceNode.services.vaultService.rawUpdates.subscribe { throw Exception("Error in Observer#onNext") }
 
         val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
         mockNet.runNetwork()
 
-        assertFailsWith<TimeoutException> {
-            future.getOrThrow(5.seconds)
-        }
-
+        assertFailsWith<TimeoutException> { future.getOrThrow(5.seconds) }
         assertEquals(1, observationCounter)
     }
 
@@ -152,18 +143,14 @@ class FinalityFlowTests : WithFinality {
 
         val stx = aliceNode.selfIssuesCash(1000.POUNDS)
         aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
-
         aliceNode.services.vaultService.rawUpdates.subscribe(
-            { throw Exception("Error in Observer#onNext") },
-            { throw Exception("Error in Observer#onError") }) // register a -throwing Exception- Observer.
+                { throw Exception("Error in Observer#onNext") },
+                { throw Exception("Error in Observer#onError") })
 
         val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
         mockNet.runNetwork()
 
-        assertFailsWith<TimeoutException> {
-            future.getOrThrow(5.seconds)
-        }
-
+        assertFailsWith<TimeoutException> { future.getOrThrow(5.seconds) }
         assertEquals(1, observationCounter)
     }
 
@@ -172,7 +159,7 @@ class FinalityFlowTests : WithFinality {
         val bobNode = createBob()
         bobNode.registerInitiatedFlow(CashPaymentFlow::class.java, CashPaymentReceiverFlow::class.java)
 
-        var observationCounter: Int = 0
+        var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
@@ -181,15 +168,12 @@ class FinalityFlowTests : WithFinality {
         aliceNode.finalise(stx) // there is no erroneous observer subscribed yet => this will succeed.
 
         aliceNode.services.vaultService.rawUpdates.subscribe(
-            { throw Exception("Error in Observer#onNext") },
-            { throw Exception("Error in Observer#onError") }) // register a -throwing Exception- Observer.
+                { throw Exception("Error in Observer#onNext") },
+                { throw Exception("Error in Observer#onError") })
 
         val future = aliceNode.services.startFlow(CashPaymentFlow(1000.POUNDS, bobNode.info.singleIdentity())).resultFuture
         mockNet.runNetwork()
-
-        assertFailsWith<TimeoutException> {
-            future.getOrThrow(5.seconds)
-        }
+        assertFailsWith<TimeoutException> { future.getOrThrow(5.seconds) }
         assertEquals(1, observationCounter)
 
         observationCounter = 0
