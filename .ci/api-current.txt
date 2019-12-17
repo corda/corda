@@ -2876,7 +2876,7 @@ public static final class net.corda.core.flows.WithReferencedStatesFlow$Companio
 ##
 @DoNotImplement
 @CordaSerializable
-public abstract class net.corda.core.identity.AbstractParty extends java.lang.Object
+public abstract class net.corda.core.identity.AbstractParty extends java.lang.Object implements net.corda.core.flows.Destination
   public <init>(java.security.PublicKey)
   public boolean equals(Object)
   @NotNull

@@ -5,13 +5,31 @@ import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.flows.*
-import net.corda.core.identity.*
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.SignTransactionFlow
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.excludeHostNode
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.internal.rigorousMock
@@ -107,6 +125,36 @@ class CollectSignaturesFlowTests : WithContracts {
         val stx = future.get()
         val missingSigners = stx.getMissingSigners()
         Assert.assertThat(missingSigners, `is`(emptySet()))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `throws exception when extra sessions are initiated`() {
+        bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
+        charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
+        val future = aliceNode.startFlow(ExtraSessionsFlow(
+                listOf(
+                        bobNode.info.singleIdentity(),
+                        charlieNode.info.singleIdentity()
+                ),
+                listOf(bobNode.info.singleIdentity(), alice)))
+                .resultFuture
+        mockNet.runNetwork()
+        future.getOrThrow()
+    }
+
+    @Test
+    fun `it is possible to collect from multiple well known sessions`() {
+        bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
+        charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
+        val future = aliceNode.startFlow(ExtraSessionsFlow(listOf(
+                bobNode.info.singleIdentity(),
+                bobNode.info.singleIdentity(),
+                bobNode.info.singleIdentity(),
+                bobNode.info.singleIdentity()),
+                listOf(bobNode.info.singleIdentity(), alice))).resultFuture
+        mockNet.runNetwork()
+        val signedTx = future.getOrThrow()
+        Assert.assertThat(signedTx.getMissingSigners(), `is`(emptySet()))
     }
 
     @Test
@@ -260,6 +308,36 @@ class MixAndMatchAnonymousSessionTestFlow(private val cis: List<PartyAndCertific
 
 @InitiatedBy(MixAndMatchAnonymousSessionTestFlow::class)
 class MixAndMatchAnonymousSessionTestFlowResponder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val signFlow = object : SignTransactionFlow(otherSideSession) {
+            @Suspendable
+            override fun checkTransaction(stx: SignedTransaction) = requireThat {
+            }
+        }
+        subFlow(signFlow)
+    }
+}
+
+@InitiatingFlow
+class ExtraSessionsFlow(private val openFor: List<Party>, private val involve: List<Party>) : FlowLogic<SignedTransaction>() {
+    @Suspendable
+    override fun call(): SignedTransaction {
+
+        val sessions = openFor.map { initiateFlow(it) }
+        val state = DummyContract.MultiOwnerState(owners = involve.map { AnonymousParty(it.owningKey) })
+        val create = net.corda.testing.contracts.DummyContract.Commands.Create()
+        val txBuilder = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
+                .addOutputState(state)
+                .addCommand(create, involve.map { it.owningKey })
+
+        val signedByUsTx = serviceHub.signInitialTransaction(txBuilder)
+        return subFlow(CollectSignaturesFlow(signedByUsTx, sessions))
+    }
+}
+
+@InitiatedBy(ExtraSessionsFlow::class)
+class ExtraSessionsFlowResponder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val signFlow = object : SignTransactionFlow(otherSideSession) {

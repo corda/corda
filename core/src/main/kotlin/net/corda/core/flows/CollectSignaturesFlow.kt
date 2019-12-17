@@ -4,10 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
-import net.corda.core.internal.toMultiMap
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -112,63 +112,72 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // If the unsigned counterparties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
-        val setOfAllSessionKeys: Map<PublicKey, FlowSession> = sessionsToCollectFrom
-                .groupBy {
-                    val destination = it.destination
-                    when (destination) {
-                        is Party -> destination.owningKey
-                        is AnonymousParty -> destination.owningKey
-                        else -> throw IllegalArgumentException("Signatures can only be collected from Party or AnonymousParty, not $destination")
-                    }
-                }
-                .mapValues {
-                    require(it.value.size == 1) { "There are multiple sessions initiated for party key ${it.key.toStringShort()}" }
-                    it.value.first()
-                }
+        val wellKnownSessions = sessionsToCollectFrom.filter { it.destination is Party }
+        val anonymousSessions = sessionsToCollectFrom.filter { it.destination is AnonymousParty }
 
-        val partyToKeysItSignsFor: Map<Party, List<PublicKey>> = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
-        val keyToSigningParty: Map<PublicKey, Party> = partyToKeysItSignsFor
-                .flatMap { (wellKnown, allKeysItSignsFor) -> allKeysItSignsFor.map { it to wellKnown } }
-                .toMap()
+        require(wellKnownSessions.size + anonymousSessions.size == sessionsToCollectFrom.size) {
+            "Unrecognized Destination type used to initiate a flow session"
+        }
 
-        val unrelatedSessions = sessionsToCollectFrom.filterNot {
-            if (it.destination is Party) {
-                // The session must have a corresponding unsigned.
-                it.destination in partyToKeysItSignsFor
-            } else {
-                // setOfAllSessionKeys has already checked for valid destination types so we can safely cast to AnonoymousParty here.
-                // This session was not initiated by a wellKnownParty so must directly exist in the unsigned.
-                (it.destination as AnonymousParty).owningKey in unsigned
+        val wellKnownPartyToSessionMap: Map<Party, List<FlowSession>> = wellKnownSessions.groupBy { (it.destination as Party) }
+        val anonymousPartyToSessionMap: Map<AnonymousParty, List<FlowSession>> = anonymousSessions
+                .groupBy { (it.destination as AnonymousParty) }
+
+        //check that there is at most one session for each not well known party
+        for (entry in anonymousPartyToSessionMap) {
+            require(entry.value.size == 1) {
+                "There are multiple sessions initiated for Anonymous Party ${entry.key.owningKey.toStringShort()}"
             }
         }
 
-        val keyToSessionList = unsigned.map {
-            val session = setOfAllSessionKeys[it]
-            if (session != null) {
-                // The unsigned key exists directly as a sessionKey, so use that session
-                it to session
-            } else {
-                // It might be delegated to a wellKnownParty
-                val wellKnownParty = checkNotNull(keyToSigningParty[it]) { "Could not find a session or wellKnown party for key ${it.toStringShort()}" }
-                // There is a wellKnownParty for this key, check if it has a session, and if so - use that session
-                val sessionForWellKnownParty = checkNotNull(setOfAllSessionKeys[wellKnownParty.owningKey]) {
-                    "No session available to request signature for key: ${it.toStringShort()}"
-                }
-                it to sessionForWellKnownParty
+        //all keys that were used to initate a session must be sent to that session
+        val keysToSendToAnonymousSessions: Set<PublicKey> = unsigned.intersect(anonymousPartyToSessionMap.keys.map { it.owningKey })
+
+        //all keys that are left over MUST map back to a
+        val keysThatMustMapToAWellKnownSession: Set<PublicKey> = unsigned - keysToSendToAnonymousSessions
+        //if a key does not have a well known identity associated with it, it does not map to a wellKnown session
+        val keysThatDoNotMapToAWellKnownSession: List<PublicKey> = keysThatMustMapToAWellKnownSession
+                .filter { serviceHub.identityService.wellKnownPartyFromAnonymous(AnonymousParty(it)) == null }
+        //ensure that no keys are impossible to map to a session
+        require(keysThatDoNotMapToAWellKnownSession.isEmpty()) {
+            " Unable to match key(s): $keysThatDoNotMapToAWellKnownSession to a session to collect signatures from"
+        }
+
+        //we now know that all the keys are either related to a specific session due to being used as a Destination for that session
+        //OR map back to a wellKnown party
+        //now we must check that each wellKnown party has a session passed for it
+        val groupedByPartyKeys = groupPublicKeysByWellKnownParty(serviceHub, keysThatMustMapToAWellKnownSession)
+        for (entry in groupedByPartyKeys) {
+            require(wellKnownPartyToSessionMap.contains(entry.key)) {
+                "${entry.key} is a required signer, but no session has been passed in for them"
             }
         }
 
-        // Now invert the map to find the keys per session
-        val sessionToKeysMap = keyToSessionList.map { it.second to it.first }.toMultiMap()
+        //so we now know that all keys are linked to a session in some way
+        //we need to check that there are no extra sessions
+        val extraNotWellKnownSessions = anonymousSessions.filterNot { (it.destination as AnonymousParty).owningKey in unsigned }
+        val extraWellKnownSessions = wellKnownSessions.filterNot { it.counterparty in groupedByPartyKeys }
 
-        require(unrelatedSessions.isEmpty()) {
-            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
+        require(extraNotWellKnownSessions.isEmpty() && extraWellKnownSessions.isEmpty()) {
+            "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction, " +
+                    "the following extra sessions were passed in: " +
+                    (extraWellKnownSessions.map { it.counterparty.name.toString() } +
+                            extraNotWellKnownSessions.map { (it.destination as AbstractParty).owningKey.toString() })
         }
-        // Collect signatures from all counterparties and append them to the partially signed transaction.
-        val counterpartySignatures = sessionToKeysMap.flatMap { (session, keys) ->
-            subFlow(CollectSignatureFlow(partiallySignedTx, session, keys))
+
+        //OK let's collect some signatures!
+
+        val sigsFromNotWellKnownSessions = anonymousSessions.flatMap { flowSession ->
+            //anonymous sessions will only ever sign for their own key
+            subFlow(CollectSignatureFlow(partiallySignedTx, flowSession, (flowSession.destination as AbstractParty).owningKey))
         }
-        val stx = partiallySignedTx + counterpartySignatures
+
+        val sigsFromWellKnownSessions = wellKnownSessions.flatMap { flowSession ->
+            val keysToAskThisSessionFor = groupedByPartyKeys[flowSession.counterparty] ?: emptyList()
+            subFlow(CollectSignatureFlow(partiallySignedTx, flowSession, keysToAskThisSessionFor))
+        }
+
+        val stx = partiallySignedTx + (sigsFromNotWellKnownSessions + sigsFromWellKnownSessions).toSet()
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
