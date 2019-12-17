@@ -214,10 +214,6 @@
     <ID>EmptyCatchBlock:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests${ }</ID>
     <ID>EmptyCatchBlock:TransactionCallbackTest.kt$TransactionCallbackTest${ }</ID>
     <ID>EmptyCatchBlock:WebServer.kt$WebServer${ }</ID>
-    <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$BaseInterface</ID>
-    <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$BaseInterface2</ID>
-    <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithEmptyConstructor : BaseInterface</ID>
-    <ID>EmptyClassBlock:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$ConcreteClassWithNonEmptyConstructor : BaseInterface2</ID>
     <ID>EmptyClassBlock:CordaRPCClient.kt$CordaRPCClient$Companion</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
@@ -543,7 +539,6 @@
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Double): Amount&lt;Currency&gt;</ID>
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Int): Amount&lt;Currency&gt;</ID>
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Long): Amount&lt;Currency&gt;</ID>
-    <ID>FunctionNaming:InteractiveShell.kt$InteractiveShell$private fun _startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null)</ID>
     <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun AnonymousParty()</ID>
     <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun ByteSequence()</ID>
     <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun CertPath()</ID>
@@ -753,7 +748,6 @@
     <ID>LongParameterList:X509Utilities.kt$X509Utilities$(certificateType: CertificateType, issuer: X500Principal, issuerPublicKey: PublicKey, subject: X500Principal, subjectPublicKey: PublicKey, validityWindow: Pair&lt;Date, Date&gt;, nameConstraints: NameConstraints? = null, crlDistPoint: String? = null, crlIssuer: X500Name? = null)</ID>
     <ID>LongParameterList:X509Utilities.kt$X509Utilities$(certificateType: CertificateType, issuerCertificate: X509Certificate, issuerKeyPair: KeyPair, subject: X500Principal, subjectPublicKey: PublicKey, validityWindow: Pair&lt;Duration, Duration&gt; = DEFAULT_VALIDITY_WINDOW, nameConstraints: NameConstraints? = null, crlDistPoint: String? = null, crlIssuer: X500Name? = null)</ID>
     <ID>LongParameterList:internalAccessTestHelpers.kt$( inputs: List&lt;StateAndRef&lt;ContractState&gt;&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;CommandWithParties&lt;CommandData&gt;&gt;, attachments: List&lt;Attachment&gt;, id: SecureHash, notary: Party?, timeWindow: TimeWindow?, privacySalt: PrivacySalt, networkParameters: NetworkParameters, references: List&lt;StateAndRef&lt;ContractState&gt;&gt;, componentGroups: List&lt;ComponentGroup&gt;? = null, serializedInputs: List&lt;SerializedStateAndRef&gt;? = null, serializedReferences: List&lt;SerializedStateAndRef&gt;? = null, isAttachmentTrusted: (Attachment) -&gt; Boolean )</ID>
-    <ID>MagicNumber:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$128</ID>
     <ID>MagicNumber:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$128</ID>
     <ID>MagicNumber:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$128</ID>
     <ID>MagicNumber:AMQPServer.kt$AMQPServer$100</ID>
@@ -780,10 +774,6 @@
     <ID>MagicNumber:BFTSmart.kt$BFTSmart.Replica.&lt;no name provided&gt;$20000</ID>
     <ID>MagicNumber:BFTSmartConfigInternal.kt$3</ID>
     <ID>MagicNumber:BFTSmartConfigInternal.kt$BFTSmartConfigInternal$200</ID>
-    <ID>MagicNumber:BlobWriter.kt$3</ID>
-    <ID>MagicNumber:BlobWriter.kt$4</ID>
-    <ID>MagicNumber:BlobWriter.kt$5</ID>
-    <ID>MagicNumber:BlobWriter.kt$6</ID>
     <ID>MagicNumber:BootstrapperView.kt$BootstrapperView$4</ID>
     <ID>MagicNumber:BusinessCalendar.kt$BusinessCalendar.Companion$30.0</ID>
     <ID>MagicNumber:BusinessCalendar.kt$BusinessCalendar.Companion$360.0</ID>
@@ -1181,8 +1171,6 @@
     <ID>MagicNumber:TransactionDSLInterpreter.kt$TransactionDSL$30</ID>
     <ID>MagicNumber:TransactionUtils.kt$4</ID>
     <ID>MagicNumber:TransactionVerificationException.kt$TransactionVerificationException.ConstraintPropagationRejection$3</ID>
-    <ID>MagicNumber:TransactionVerifierServiceInternal.kt$Verifier$4</ID>
-    <ID>MagicNumber:TransactionVerifierServiceInternal.kt$Verifier$5</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$15.0</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$20.0</ID>
     <ID>MagicNumber:TransactionViewer.kt$TransactionViewer$200.0</ID>
@@ -1265,9 +1253,6 @@
     <ID>MaxLineLength:AMQPBridgeTest.kt$AMQPBridgeTest$private</ID>
     <ID>MaxLineLength:AMQPChannelHandler.kt$AMQPChannelHandler$eventProcessor = EventProcessor(ch, serverMode, localCert!!.subjectX500Principal.toString(), remoteCert!!.subjectX500Principal.toString(), userName, password)</ID>
     <ID>MaxLineLength:AMQPChannelHandler.kt$AMQPChannelHandler${ logWarnWithMDC("SSL Handshake closed early.") }</ID>
-    <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$@Suppress("UNUSED") constructor() : this(emptySet(), emptySet(), AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised())</ID>
-    <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$constructor(cordapps: List&lt;Cordapp&gt;) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised())</ID>
-    <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$constructor(cordapps: List&lt;Cordapp&gt;, serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;) : this(cordapps.customSerializers, cordapps.serializationWhitelists, serializerFactoriesForContexts)</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$return SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply { register(RpcClientObservableDeSerializer) register(RpcClientCordaFutureSerializer(this)) register(RxNotificationSerializer(this)) }</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$ fun initialiseSerialization(classLoader: ClassLoader? = null, customSerializers: Set&lt;SerializationCustomSerializer&lt;*, *&gt;&gt; = emptySet(), serializationWhitelists: Set&lt;SerializationWhitelist&gt; = emptySet(), serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt; = AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised())</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$fun createSerializationEnv(classLoader: ClassLoader? = null, customSerializers: Set&lt;SerializationCustomSerializer&lt;*, *&gt;&gt; = emptySet(), serializationWhitelists: Set&lt;SerializationWhitelist&gt; = emptySet(), serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt; = AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised()): SerializationEnvironment</ID>
@@ -1344,9 +1329,6 @@
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$@Test fun `rpc admin address`()</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") }</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true)</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest${ val alias = "01234567890" val aliasPrivateKey = AliasPrivateKey(alias) val certificatesDirectory = tempFolder.root.toPath() val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true) signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") } // We can retrieve the certificate. assertTrue { signingCertStore.contains(alias) } // We can retrieve the certificate. assertEquals(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT, signingCertStore[alias]) // Although we can store an AliasPrivateKey, we cannot retrieve it. But, it's fine as we use certStore for storing/handling certs only. assertThatIllegalArgumentException().isThrownBy { signingCertStore.query { getPrivateKey(alias, "entrypassword") } }.withMessage("Unrecognised algorithm: 1.3.6.1.4.1.50530.1.2") }</ID>
     <ID>MaxLineLength:AllButBlacklisted.kt$AllButBlacklisted$throw IllegalStateException("The $matchType $aMatch of ${type.name} is blacklisted, so it cannot be used in serialization.")</ID>
     <ID>MaxLineLength:Amount.kt$Amount&lt;T : Any&gt; : Comparable</ID>
     <ID>MaxLineLength:Amount.kt$AmountTransfer$remaining = SourceAndAmount(payer, balance.amount.copy(quantity = Math.subtractExact(balance.amount.quantity, residual)), newRef)</ID>
@@ -1482,8 +1464,6 @@
     <ID>MaxLineLength:BFTSmartNotaryService.kt$BFTSmartNotaryService$CommittedState : BaseComittedState</ID>
     <ID>MaxLineLength:BFTSmartNotaryService.kt$BFTSmartNotaryService.Replica$private</ID>
     <ID>MaxLineLength:BFTSmartNotaryService.kt$BFTSmartNotaryService.Replica$val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity, commitRequest.payload.requestSignature)</ID>
-    <ID>MaxLineLength:BackpressureAwareTimedFlow.kt$BackpressureAwareTimedFlow$else -&gt; throw throw IllegalArgumentException("We were expecting a ${ReceiveType::class.java.name} or WaitTimeUpdate but we instead got a ${unwrapped.javaClass.name} ($unwrapped)")</ID>
-    <ID>MaxLineLength:BackpressureAwareTimedFlow.kt$BackpressureAwareTimedFlow$logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTime} seconds for completion.")</ID>
     <ID>MaxLineLength:BankOfCordaWebApi.kt$BankOfCordaWebApi$?:</ID>
     <ID>MaxLineLength:BankOfCordaWebApi.kt$BankOfCordaWebApi$rpc.startFlow(::CashIssueAndPaymentFlow, params.amount, issuerBankPartyRef, issueToParty, anonymous, notaryParty).returnValue.getOrThrow()</ID>
     <ID>MaxLineLength:BankOfCordaWebApi.kt$BankOfCordaWebApi$rpc.wellKnownPartyFromX500Name(params.issuerBankName) ?: return Response.status(Response.Status.FORBIDDEN).entity("Unable to locate ${params.issuerBankName} in identity service").build()</ID>
@@ -1999,7 +1979,6 @@
     <ID>MaxLineLength:DBRunnerExtension.kt$DBRunnerExtension : ExtensionBeforeAllCallbackAfterAllCallbackBeforeEachCallbackAfterEachCallback</ID>
     <ID>MaxLineLength:DBTransactionMappingStorage.kt$DBTransactionMappingStorage$cq.multiselect(from.get&lt;String&gt;(DBTransactionStorage.DBTransaction::stateMachineRunId.name), from.get&lt;String&gt;(DBTransactionStorage.DBTransaction::txId.name))</ID>
     <ID>MaxLineLength:DBTransactionMappingStorage.kt$DBTransactionMappingStorage$val flowIds = session.createQuery(cq).resultList.map { StateMachineTransactionMapping(StateMachineRunId(UUID.fromString(it[0] as String)), SecureHash.parse(it[1] as String)) }</ID>
-    <ID>MaxLineLength:DBTransactionStorage.kt$DBTransactionStorage : WritableTransactionStorageSingletonSerializeAsToken</ID>
     <ID>MaxLineLength:DBTransactionStorage.kt$DBTransactionStorage.TransactionStatus$UnexpectedStatusValueException : Exception</ID>
     <ID>MaxLineLength:DBTransactionStorageTests.kt$DBTransactionStorageTests$listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID)))</ID>
     <ID>MaxLineLength:DatabaseTransaction.kt$get() = if (_prohibitDatabaseAccess.get() == true) throw IllegalAccessException("Database access is disabled in this context.") else _contextTransaction.get()</ID>
@@ -2837,7 +2816,6 @@
     <ID>MaxLineLength:OGSwapPricingExample.kt$SwapPricingExample$val receiveLeg = RateCalculationSwapLeg.builder().payReceive(PayReceive.RECEIVE).accrualSchedule(PeriodicSchedule.builder().startDate(LocalDate.of(2014, 9, 12)).endDate(LocalDate.of(2016, 7, 12)).stubConvention(StubConvention.SHORT_INITIAL).frequency(Frequency.P6M).businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, HolidayCalendarIds.USNY)).build()).paymentSchedule(PaymentSchedule.builder().paymentFrequency(Frequency.P6M).paymentDateOffset(DaysAdjustment.NONE).build()).notionalSchedule(notional).calculation(FixedRateCalculation.of(0.01, DayCounts.THIRTY_U_360)).build()</ID>
     <ID>MaxLineLength:OGSwapPricingExample.kt$SwapPricingExample$val receiveLeg = RateCalculationSwapLeg.builder().payReceive(PayReceive.RECEIVE).accrualSchedule(PeriodicSchedule.builder().startDate(LocalDate.of(2014, 9, 12)).endDate(LocalDate.of(2020, 9, 12)).frequency(Frequency.P3M).businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, HolidayCalendarIds.USNY)).build()).paymentSchedule(PaymentSchedule.builder().paymentFrequency(Frequency.P3M).paymentDateOffset(DaysAdjustment.NONE).build()).notionalSchedule(notional).calculation(OvernightRateCalculation.builder().index(OvernightIndices.USD_FED_FUND).accrualMethod(OvernightAccrualMethod.AVERAGED).build()).build()</ID>
     <ID>MaxLineLength:OGSwapPricingExample.kt$SwapPricingExample$val receiveLeg = RateCalculationSwapLeg.builder().payReceive(PayReceive.RECEIVE).accrualSchedule(PeriodicSchedule.builder().startDate(LocalDate.of(2014, 9, 12)).endDate(LocalDate.of(2021, 9, 12)).frequency(Frequency.P3M).businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, HolidayCalendarIds.USNY)).build()).paymentSchedule(PaymentSchedule.builder().paymentFrequency(Frequency.TERM).paymentDateOffset(DaysAdjustment.NONE).compoundingMethod(CompoundingMethod.STRAIGHT).build()).notionalSchedule(notional).calculation(IborRateCalculation.of(IborIndices.USD_LIBOR_3M)).build()</ID>
-    <ID>MaxLineLength:ObjectBuilder.kt$ObjectBuilder.Companion$private</ID>
     <ID>MaxLineLength:ObjectSerializer.kt$AbstractObjectSerializer$override</ID>
     <ID>MaxLineLength:ObjectSerializer.kt$ComposableObjectSerializer$override</ID>
     <ID>MaxLineLength:ObjectSerializer.kt$EvolutionObjectSerializer$override</ID>
@@ -3758,7 +3736,6 @@
     <ID>NestedBlockDepth:StartedFlowTransition.kt$StartedFlowTransition$private fun TransitionBuilder.sendToSessionsTransition(sourceSessionIdToMessage: Map&lt;SessionId, SerializedBytes&lt;Any&gt;&gt;)</ID>
     <ID>NestedBlockDepth:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>NestedBlockDepth:ThrowableSerializer.kt$ThrowableSerializer$override fun fromProxy(proxy: ThrowableProxy): Throwable</ID>
-    <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraints(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
     <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraintsValidity(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
     <ID>SpreadOperator:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$(*it.whitelist.toTypedArray())</ID>
     <ID>SpreadOperator:AbstractNode.kt$FlowStarterImpl$(logicType, *args)</ID>
@@ -4363,7 +4340,6 @@
     <ID>WildcardImport:ANSIProgressRendererTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
     <ID>WildcardImport:AbstractCashFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:AbstractCashSelection.kt$import net.corda.core.utilities.*</ID>
-    <ID>WildcardImport:ActionExecutorImpl.kt$import com.codahale.metrics.*</ID>
     <ID>WildcardImport:AdvancedExceptionDialog.kt$import javafx.scene.control.*</ID>
     <ID>WildcardImport:AffinityExecutorTests.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:AliasPrivateKey.kt$import org.bouncycastle.asn1.*</ID>
@@ -4512,11 +4488,8 @@
     <ID>WildcardImport:CordappSmokeTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:CordappSmokeTest.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:CoreFlowHandlers.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:Crypto.kt$import java.security.*</ID>
-    <ID>WildcardImport:Crypto.kt$import net.corda.core.crypto.internal.*</ID>
     <ID>WildcardImport:CryptoSignUtils.kt$import java.security.*</ID>
     <ID>WildcardImport:CryptoSignUtils.kt$import net.corda.core.crypto.*</ID>
-    <ID>WildcardImport:CryptoUtils.kt$import java.security.*</ID>
     <ID>WildcardImport:CryptoUtilsTest.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:CustomCordapp.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:CustomVaultQuery.kt$import net.corda.core.flows.*</ID>
@@ -4565,7 +4538,6 @@
     <ID>WildcardImport:EvolutionSerializerFactory.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:EvolutionSerializerFactoryTests.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:EvolutionSerializerFactoryTests.kt$import net.corda.serialization.internal.amqp.testutils.*</ID>
-    <ID>WildcardImport:EvolvabilityTests.kt$import net.corda.serialization.internal.amqp.testutils.*</ID>
     <ID>WildcardImport:Explorer.kt$import tornadofx.*</ID>
     <ID>WildcardImport:FiberDeserializationCheckingInterceptor.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:FinalityFlowMigration.kt$import net.corda.core.flows.*</ID>
@@ -4577,7 +4549,6 @@
     <ID>WildcardImport:FixingFlow.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:FixingFlow.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FixingFlow.kt$import net.corda.core.utilities.*</ID>
-    <ID>WildcardImport:FlowAsyncOperationTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowCheckpointCordapp.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowCheckpointVersionNodeStartupCheckTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowCheckpointVersionNodeStartupCheckTest.kt$import net.corda.core.internal.*</ID>
@@ -4815,8 +4786,6 @@
     <ID>WildcardImport:NotaryWhitelistTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:OGSwapPricingExample.kt$import com.opengamma.strata.product.swap.*</ID>
     <ID>WildcardImport:OGTrade.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:ObjectBuilder.kt$import net.corda.serialization.internal.model.*</ID>
-    <ID>WildcardImport:ObjectSerializer.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:ObligationTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:ObligationTests.kt$import net.corda.finance.*</ID>
     <ID>WildcardImport:ObligationTests.kt$import net.corda.testing.core.*</ID>
@@ -4922,7 +4891,6 @@
     <ID>WildcardImport:SerializeAsTokenContextImpl.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:SerializerFactoryBuilder.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:ServiceHub.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:ServiceHub.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:ServiceHub.kt$import net.corda.core.node.services.*</ID>
     <ID>WildcardImport:ServiceHubInternal.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:ServicesForResolutionImpl.kt$import net.corda.core.contracts.*</ID>
@@ -4960,7 +4928,6 @@
     <ID>WildcardImport:TimedFlowTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:TimedFlowTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:TlsDiffProtocolsTest.kt$import javax.net.ssl.*</ID>
-    <ID>WildcardImport:TopLevelTransition.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:TraderDemoTest.kt$import net.corda.testing.driver.*</ID>
     <ID>WildcardImport:TransactionBuilder.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:TransactionBuilder.kt$import net.corda.core.internal.*</ID>
@@ -4986,7 +4953,6 @@
     <ID>WildcardImport:TransactionViewer.kt$import net.corda.client.jfx.utils.*</ID>
     <ID>WildcardImport:TransactionViewer.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:TransactionViewer.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:TransitionBuilder.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:TutorialContract.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:TutorialTestDSL.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:TwoPartyDealFlow.kt$import net.corda.core.flows.*</ID>
