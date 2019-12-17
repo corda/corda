@@ -79,7 +79,7 @@ interface ObjectBuilder {
          * Create an [ObjectBuilderProvider] for the given [LocalTypeInformation.Composable].
          */
         fun makeProvider(typeInformation: LocalTypeInformation.Composable): ObjectBuilderProvider =
-                makeProvider(typeInformation.typeIdentifier, typeInformation.constructor, typeInformation.properties, null)
+                makeProvider(typeInformation.typeIdentifier, typeInformation.constructor, typeInformation.properties)
 
         /**
          * Create an [ObjectBuilderProvider] for the given type, constructor and set of properties.
@@ -90,36 +90,10 @@ interface ObjectBuilder {
         fun makeProvider(
                 typeIdentifier: TypeIdentifier,
                 constructor: LocalConstructorInformation,
-                properties: Map<String, LocalPropertyInformation>,
-                remoteTypeInformation: RemoteTypeInformation.Composable?
+                properties: Map<String, LocalPropertyInformation>
         ): ObjectBuilderProvider =
-                if (constructor.hasParameters)
-                    remoteTypeInformation?.let { makeConstructorBasedProviderWithRemote(properties, typeIdentifier, constructor, it) }
-                            ?: makeConstructorBasedProvider(properties, typeIdentifier, constructor)
+                if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor)
                 else makeSetterBasedProvider(properties, typeIdentifier, constructor)
-
-        private fun makeConstructorBasedProviderWithRemote(
-                properties: Map<String, LocalPropertyInformation>,
-                typeIdentifier: TypeIdentifier,
-                constructor: LocalConstructorInformation,
-                remote: RemoteTypeInformation.Composable
-        ): ObjectBuilderProvider? {
-            val remotePropertySlots = remote.properties.entries.mapIndexed { slot, entry -> entry.key to slot }.toMap()
-            return ObjectBuilderProvider(remotePropertySlots) {
-                ConstructorBasedObjectBuilder(
-                        constructor,
-                        remotePropertySlots
-                                .map { (name, slot) ->
-                                    val ctorIdx = constructor.parameters.indexOfFirst { paramInfo -> paramInfo.name == name }
-                                    slot to ctorIdx
-                                }
-                                .toList()
-                                .sortedBy { it.first }
-                                .map { it.second }
-                                .toIntArray()
-                )
-            }
-        }
 
         private fun makeConstructorBasedProvider(
                 properties: Map<String, LocalPropertyInformation>,
@@ -266,7 +240,7 @@ class EvolutionObjectBuilder(
                 remoteTypeInformation: RemoteTypeInformation.Composable,
                 mustPreserveData: Boolean
         ): () -> ObjectBuilder {
-            val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties, remoteTypeInformation)
+            val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties)
 
             val remotePropertyNames = remoteTypeInformation.properties.keys.sorted()
             val reroutedIndices = remotePropertyNames.map { propertyName ->
