@@ -92,19 +92,21 @@ interface ObjectBuilder {
                 else makeGetterSetterProvider(properties, typeIdentifier, constructor)
 
         private fun makeConstructorBasedProviderWithRemote(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation, remote: RemoteTypeInformation.Composable): ObjectBuilderProvider? {
-            val propertySlots = constructor.parameters.mapIndexed { slot, param -> param.name to slot }.toMap()
+            val newPropertyCount = constructor.parameters.count { p -> remote.properties.none { rp -> rp.key == p.name } }
+            val propertySlots = remote.properties.entries.mapIndexed { slot, entry -> entry.key to slot }.toMap()
+//            val propertySlots = constructor.parameters.mapIndexed { slot, param -> param.name to slot }.toMap()
             // TODO property slots are probably wrong here, slot is the name ordered, map that to ctor param idx
             return ObjectBuilderProvider(propertySlots) {
                 ConstructorBasedObjectBuilder(
                         ConstructorCaller(constructor.observedMethod),
-                        propertySlots
+                        (propertySlots
                                 .map { (name, slot) ->
-                                    val idxRemote = remote.properties.entries.indexOfFirst { (remoteName, _) -> remoteName == name }
-                                    slot to idxRemote
+                                    val ctorIdx = constructor.parameters.indexOfFirst { paramInfo -> paramInfo.name == name }
+                                    slot to ctorIdx
                                 }
                                 .toList()
                                 .sortedBy { it.first }
-                                .map { it.second }
+                                .map { it.second } + (0 until newPropertyCount).map { Int.MIN_VALUE })
                                 .toIntArray()
                 )
             }
