@@ -85,7 +85,7 @@ interface ObjectBuilder {
          * Create an [ObjectBuilderProvider] for the given type, constructor and set of properties.
          *
          * The [EvolutionObjectBuilder] uses this to create [ObjectBuilderProvider]s for objects initialised via an
-         * evolution constructor (i.e. a constructor annotated with [DeprecatedConstructorForDeserialization]).
+         * evolution constructor (i.e. a constructor annotated with [net.corda.core.serialization.DeprecatedConstructorForDeserialization]).
          */
         fun makeProvider(
                 typeIdentifier: TypeIdentifier,
@@ -104,12 +104,14 @@ interface ObjectBuilder {
                 val ctor = constructor.observedMethod
                 properties.values.all {
                     when (it) {
-                        is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.constructorInformation.observedMethod == ctor
-                        is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.constructorInformation.observedMethod == ctor
+                        is LocalPropertyInformation.ConstructorPairedProperty ->
+                            it.constructorSlot.constructorInformation.observedMethod == ctor
+                        is LocalPropertyInformation.PrivateConstructorPairedProperty ->
+                            it.constructorSlot.constructorInformation.observedMethod == ctor
                         else -> true
                     }
                 }
-            })
+            }) { "Constructor passed in must match the constructor the properties are referring to" }
             val constructorIndices = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
@@ -196,7 +198,7 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        private val constructorInfo: LocalConstructorInformation,
+        constructorInfo: LocalConstructorInformation,
         private val parameterIndices: IntArray
 ) : ObjectBuilder {
 
