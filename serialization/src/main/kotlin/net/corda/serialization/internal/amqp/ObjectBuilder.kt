@@ -196,16 +196,22 @@ private class SetterBasedObjectBuilder(
  */
 private class ConstructorBasedObjectBuilder(
         constructorInfo: LocalConstructorInformation,
-        private val parameterIndices: IntArray
+        private val slotToCtorArgIdx: IntArray
 ) : ObjectBuilder {
 
     private val constructor = ConstructorCaller(constructorInfo.observedMethod)
     private val params = arrayOfNulls<Any>(constructorInfo.parameters.size)
 
+    init {
+        require(slotToCtorArgIdx.all { (0 <= it && it < params.size) || it == IGNORE_COMPUTED }) {
+            "Argument indexes must be in range [0..${params.size}). Slot to arg indexes passed in are ${slotToCtorArgIdx.toList()}"
+        }
+    }
+
     override fun initialize() {}
 
     override fun populate(slot: Int, value: Any?) {
-        val parameterIndex = parameterIndices[slot]
+        val parameterIndex = slotToCtorArgIdx[slot]
         if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
     }
 
