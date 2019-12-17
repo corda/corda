@@ -101,13 +101,12 @@ interface ObjectBuilder {
                 constructor: LocalConstructorInformation
         ): ObjectBuilderProvider {
             require(run {
-                val ctor = constructor.observedMethod
                 properties.values.all {
                     when (it) {
                         is LocalPropertyInformation.ConstructorPairedProperty ->
-                            it.constructorSlot.constructorInformation.observedMethod == ctor
+                            it.constructorSlot.constructorInformation == constructor
                         is LocalPropertyInformation.PrivateConstructorPairedProperty ->
-                            it.constructorSlot.constructorInformation.observedMethod == ctor
+                            it.constructorSlot.constructorInformation == constructor
                         else -> true
                     }
                 }
