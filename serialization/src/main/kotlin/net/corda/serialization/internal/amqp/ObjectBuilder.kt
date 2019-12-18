@@ -216,10 +216,13 @@ private class ConstructorBasedObjectBuilder(
     }
 
     override fun build(): Any {
-        requireForSer(
-                constructorInfo.parameters.zip(params)
-                        .all { (param, value) -> !param.isMandatory || value != null }
-        ) { "Some mandatory constructor parameters are not set" }
+        // CORDA-3504
+        // The check below would cause failures, because in some cases objects ARE instantiated with
+        // parameters that are detected as mandatory but not actually set
+//        requireForSer(
+//                constructorInfo.parameters.zip(params)
+//                        .all { (param, value) -> !param.isMandatory || value != null }
+//        ) { "Some mandatory constructor parameters are not set" }
         return constructor.invoke(params)
     }
 }
