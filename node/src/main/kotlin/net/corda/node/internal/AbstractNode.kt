@@ -150,8 +150,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
-import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
-import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
@@ -969,7 +970,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
      */
     private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
-        val legalIdentityPrivateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
+        val legalIdentityPrivateKeyAlias = "$NODE_IDENTITY_KEY_ALIAS"
 
         var signingCertificateStore = configuration.signingCertificateStore.get()
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
@@ -1000,7 +1001,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
         val legalName = configuration.myLegalName
         if (subject != legalName) {
-            throw ConfigurationException("The name '$legalName' for $NODE_IDENTITY_ALIAS_PREFIX doesn't match what's in the key store: $subject")
+            throw ConfigurationException("The configured legalName '$legalName' doesn't match what's in the key store: $subject")
         }
 
         return getPartyAndCertificatePlusAliasKeyPair(certificates, legalIdentityPrivateKeyAlias)
@@ -1016,8 +1017,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     /** Loads pre-generated notary service cluster identity. */
     private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
-        val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
-        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
+        val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
+        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
 
         val signingCertificateStore = configuration.signingCertificateStore.get()
         val privateKeyAliasCertChain = try {
@@ -1040,7 +1041,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
         if (subject != serviceLegalName) {
-            throw ConfigurationException("The name of the notary service '$serviceLegalName' for $DISTRIBUTED_NOTARY_ALIAS_PREFIX doesn't " +
+            throw ConfigurationException("The name of the notary service '$serviceLegalName' doesn't " +
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
         return getPartyAndCertificatePlusAliasKeyPair(certificates, privateKeyAlias)

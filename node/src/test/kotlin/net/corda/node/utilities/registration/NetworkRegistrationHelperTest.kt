@@ -21,7 +21,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.createSelfSignedCACertificate
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -193,7 +193,7 @@ class NetworkRegistrationHelperTest {
         assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
         assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
 
-        val serviceIdentityAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
+        val serviceIdentityAlias = DISTRIBUTED_NOTARY_KEY_ALIAS
 
         nodeKeystore.run {
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -255,7 +255,7 @@ class NetworkRegistrationHelperTest {
                     certService,
                     config.certificatesDirectory / networkRootTrustStoreFileName,
                     networkRootTrustStorePassword,
-                    "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+                    DISTRIBUTED_NOTARY_KEY_ALIAS,
                     CertRole.SERVICE_IDENTITY)
             else -> throw IllegalArgumentException("Unsupported cert role.")
         }

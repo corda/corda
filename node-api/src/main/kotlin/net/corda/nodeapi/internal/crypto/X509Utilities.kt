@@ -37,6 +37,8 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 object X509Utilities {
+    // Note that this default value only applies to BCCryptoService. Other implementations of CryptoService may have to use different
+    // schemes (for instance `UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME`).
     val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.EDDSA_ED25519_SHA512
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
@@ -47,15 +49,31 @@ object X509Utilities {
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
 
-    // TODO These don't need to be prefixes, but can be the full aliases. However, because they are used as key aliases
-    //      we should ensure that:
-    //      a) they always contain valid characters, preferably [A-Za-z0-9] in order to be supported by the majority of
-    //         crypto service implementations (i.e., HSMs).
-    //      b) they are at most 127 chars in length (i.e., as of 2018, Azure Key Vault does not support bigger aliases).
-    const val NODE_IDENTITY_ALIAS_PREFIX = "identity"
     // TODO Hyphen (-) seems to be supported by the major HSM vendors, but we should consider remove it in the
     //      future and stick to [A-Za-z0-9].
-    const val DISTRIBUTED_NOTARY_ALIAS_PREFIX = "distributed-notary"
+    const val NODE_IDENTITY_KEY_ALIAS = "identity-private-key"
+    const val DISTRIBUTED_NOTARY_KEY_ALIAS = "distributed-notary-private-key"
+    const val DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS = "distributed-notary-composite-key"
+
+    const val TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD = 30
+    private const val KEY_ALIAS_REGEX = "[a-z0-9-]+"
+    private const val KEY_ALIAS_MAX_LENGTH = 100
+
+    /**
+     * Checks if the provided key alias does not exceed maximum length and
+     * only contains alphanumeric characters.
+     */
+    fun isKeyAliasValid(alias: String): Boolean {
+        if (alias.length > KEY_ALIAS_MAX_LENGTH) return false
+        return KEY_ALIAS_REGEX.toRegex().matches(alias)
+    }
+
+    /**
+     * The error message to be displayed to the user when the alias validation fails.
+     */
+    fun invalidKeyAliasErrorMessage(alias: String): String {
+        return "Alias '$alias' must contain only lowercase alphanumeric characters and not exceed 100 characters length."
+    }
 
     val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
@@ -376,6 +394,24 @@ val Array<Certificate>.x509: List<X509Certificate> get() = map { it.x509 }
  */
 fun PKCS10CertificationRequest.isSignatureValid(): Boolean {
     return this.isSignatureValid(JcaContentVerifierProviderBuilder().build(this.subjectPublicKeyInfo))
+}
+
+/**
+ * Check certificate validity or print warning if expiry is within 30 days
+ */
+fun X509Certificate.checkValidity(errorMessage: () -> Any, warningBlock: (daysToExpiry: Int) -> Unit, date: Date = Date()) {
+    try {
+        checkValidity(date)
+    }
+    catch (e: CertificateException) {
+        throw IllegalArgumentException(errorMessage().toString(), e)
+    }
+    // Number of full days until midnight of expiry date: today is not included
+    val daysToExpiry = ChronoUnit.DAYS.between(date.toInstant(), notAfter.toInstant()).toInt()
+    if (daysToExpiry < X509Utilities.TLS_CERTIFICATE_DAYS_TO_EXPIRY_WARNING_THRESHOLD) {
+        // Also include today, e.g. return 1 for tomorrow expiry
+        warningBlock(daysToExpiry + 1)
+    }
 }
 
 /**

@@ -12,8 +12,9 @@ import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
-import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.KeyPair
@@ -41,7 +42,7 @@ object DevIdentityGenerator {
         val nodeKeyStore = signingCertStore.get(true).also { it.installDevNodeCaCertPath(legalName) }
         p2pSslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(legalName) }
 
-        val identity = nodeKeyStore.storeLegalIdentity("$NODE_IDENTITY_ALIAS_PREFIX-private-key")
+        val identity = nodeKeyStore.storeLegalIdentity(NODE_IDENTITY_KEY_ALIAS)
         return identity.party
     }
 
@@ -86,7 +87,7 @@ object DevIdentityGenerator {
     private fun setPrivateKey(keyStore: X509KeyStore, keyPair: KeyPair, notaryPrincipal: X500Principal) {
         val serviceKeyCert = createCertificate(keyPair.public, notaryPrincipal)
         keyStore.setPrivateKey(
-                "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
+                DISTRIBUTED_NOTARY_KEY_ALIAS,
                 keyPair.private,
                 listOf(serviceKeyCert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate),
                 DEV_CA_KEY_STORE_PASS // Unfortunately we have to use the same password for private key due to Artemis limitation, for more details please see:
@@ -97,7 +98,7 @@ object DevIdentityGenerator {
 
     private fun setCompositeKey(keyStore: X509KeyStore, compositeKey: PublicKey, notaryPrincipal: X500Principal) {
         val compositeKeyCert = createCertificate(compositeKey, notaryPrincipal)
-        keyStore.setCertificate("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert)
+        keyStore.setCertificate(DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS, compositeKeyCert)
     }
 
     private fun createCertificate(publicKey: PublicKey, principal: X500Principal): X509Certificate {
