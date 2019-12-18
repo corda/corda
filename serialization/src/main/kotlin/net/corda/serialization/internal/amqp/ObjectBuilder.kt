@@ -218,7 +218,7 @@ private class ConstructorBasedObjectBuilder(
     override fun build(): Any {
         requireForSer(
                 constructorInfo.parameters.zip(params)
-                        .all { (param, value) -> param.isMandatory && value != null || !param.isMandatory }
+                        .all { (param, value) -> !param.isMandatory || value != null }
         ) { "Some mandatory constructor parameters are not set" }
         return constructor.invoke(params)
     }
