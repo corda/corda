@@ -203,8 +203,8 @@ private class ConstructorBasedObjectBuilder(
     private val params = arrayOfNulls<Any>(constructorInfo.parameters.size)
 
     init {
-        requireForSer(slotToCtorArgIdx.all { (0 <= it && it < params.size) || it == IGNORE_COMPUTED }) {
-            "Argument indexes must be in range [0..${params.size}). Slot to arg indexes passed in are ${slotToCtorArgIdx.toList()}"
+        requireForSer(slotToCtorArgIdx.all { it in params.indices || it == IGNORE_COMPUTED }) {
+            "Argument indexes must be in ${params.indices}. Slot to arg indexes passed in are ${slotToCtorArgIdx.toList()}"
         }
     }
 
