@@ -100,7 +100,7 @@ interface ObjectBuilder {
                 typeIdentifier: TypeIdentifier,
                 constructor: LocalConstructorInformation
         ): ObjectBuilderProvider {
-            require(properties.values.all {
+            requireForSer(properties.values.all {
                 when (it) {
                     is LocalPropertyInformation.ConstructorPairedProperty ->
                         it.constructorSlot.constructorInformation == constructor
@@ -195,7 +195,7 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        constructorInfo: LocalConstructorInformation,
+        private val constructorInfo: LocalConstructorInformation,
         private val slotToCtorArgIdx: IntArray
 ) : ObjectBuilder {
 
@@ -203,7 +203,7 @@ private class ConstructorBasedObjectBuilder(
     private val params = arrayOfNulls<Any>(constructorInfo.parameters.size)
 
     init {
-        require(slotToCtorArgIdx.all { (0 <= it && it < params.size) || it == IGNORE_COMPUTED }) {
+        requireForSer(slotToCtorArgIdx.all { (0 <= it && it < params.size) || it == IGNORE_COMPUTED }) {
             "Argument indexes must be in range [0..${params.size}). Slot to arg indexes passed in are ${slotToCtorArgIdx.toList()}"
         }
     }
@@ -215,7 +215,13 @@ private class ConstructorBasedObjectBuilder(
         if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
     }
 
-    override fun build(): Any = constructor.invoke(params)
+    override fun build(): Any {
+        requireForSer(
+                constructorInfo.parameters.zip(params)
+                        .all { (param, value) -> param.isMandatory && value != null || !param.isMandatory }
+        ) { "Some mandatory constructor parameters are not set" }
+        return constructor.invoke(params)
+    }
 }
 
 /**
@@ -282,4 +288,8 @@ class EvolutionObjectBuilder(
     }
 
     override fun build(): Any = localBuilder.build()
+}
+
+private fun requireForSer(requirement: Boolean, message: () -> String) {
+    if (!requirement) throw NotSerializableException(message())
 }
