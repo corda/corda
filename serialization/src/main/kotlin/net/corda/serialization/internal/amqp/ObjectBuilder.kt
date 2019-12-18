@@ -1,6 +1,10 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.model.LocalConstructorInformation
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeIdentifier
 import java.io.NotSerializableException
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
@@ -99,7 +103,7 @@ interface ObjectBuilder {
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                ConstructorBasedObjectBuilder(ConstructorCaller(constructor.observedMethod), constructorIndices.values.toIntArray())
+                ConstructorBasedObjectBuilder(constructor, ConstructorCaller(constructor.observedMethod), constructorIndices.values.toIntArray())
             }
         }
 
@@ -165,6 +169,7 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
+        private val constructorInfo: LocalConstructorInformation,
         private val constructor: ConstructorCaller,
         private val parameterIndices: IntArray): ObjectBuilder {
 
@@ -177,8 +182,19 @@ private class ConstructorBasedObjectBuilder(
         if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
     }
 
-    override fun build(): Any = constructor.invoke(params)
+    override fun build(): Any {
+        requireForSer(
+                constructorInfo.parameters.zip(params)
+                        .all { (param, value) -> !param.isMandatory || value != null }
+        ) { "Some mandatory constructor parameters are not set" }
+        return constructor.invoke(params)
+    }
+
+    private fun requireForSer(check: Boolean, message: () -> String) {
+        if(!check) throw NotSerializableException(message())
+    }
 }
+
 
 /**
  * An [ObjectBuilder] that wraps an underlying [ObjectBuilder], routing the property values assigned to its slots to the
