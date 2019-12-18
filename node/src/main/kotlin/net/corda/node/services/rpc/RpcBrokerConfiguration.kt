@@ -41,7 +41,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
                 "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
                     maxSizeBytes = 5L * maxMessageSize
                     addressFullMessagePolicy = AddressFullMessagePolicy.PAGE
-                    pageSizeBytes = 1L * maxMessageSize
+                    pageSizeBytes = maxMessageSize
                 }
         )
 
