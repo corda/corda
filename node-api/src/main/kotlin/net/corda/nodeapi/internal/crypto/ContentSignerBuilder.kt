@@ -16,9 +16,15 @@ import java.security.Signature
  *  This builder will use BouncyCastle's JcaContentSignerBuilder as fallback for unknown algorithm.
  */
 object ContentSignerBuilder {
-    fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider, random: SecureRandom? = null): ContentSigner {
+    fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider,
+              random: SecureRandom? = null, optimised: Boolean = true): ContentSigner {
         val sigAlgId = signatureScheme.signatureOID
-        val sig = Instances.getSignatureInstance(signatureScheme.signatureName, provider).apply {
+        val signatureInstance = if (optimised)
+            Instances.getSignatureInstance(signatureScheme.signatureName, provider)
+        else
+            Signature.getInstance(signatureScheme.signatureName, provider)
+
+        val sig = signatureInstance.apply {
             // TODO special handling for Sphincs due to a known BouncyCastle's Sphincs bug we reported.
             //      It is fixed in BC 161b12, so consider updating the below if-statement after updating BouncyCastle.
             if (random != null && signatureScheme != SPHINCS256_SHA256) {
@@ -28,17 +34,28 @@ object ContentSignerBuilder {
             }
         }
         return object : ContentSigner {
-            private val stream = SignatureOutputStream(sig)
+            private val stream = SignatureOutputStream(sig, optimised)
             override fun getAlgorithmIdentifier(): AlgorithmIdentifier = sigAlgId
             override fun getOutputStream(): OutputStream = stream
             override fun getSignature(): ByteArray = stream.signature
         }
     }
 
-    private class SignatureOutputStream(private val sig: Signature) : OutputStream() {
-        internal val signature: ByteArray get() = sig.sign()
-        override fun write(bytes: ByteArray, off: Int, len: Int) = sig.update(bytes, off, len)
-        override fun write(bytes: ByteArray) = sig.update(bytes)
-        override fun write(b: Int) = sig.update(b.toByte())
+    private class SignatureOutputStream(private val sig: Signature, private val optimised: Boolean) : OutputStream() {
+        private var alreadySigned = false
+        internal val signature: ByteArray by lazy {
+            try {
+                alreadySigned = true
+                sig.sign()
+            } finally {
+                if (optimised) {
+                    Instances.releaseSignatureInstance(sig)
+                }
+            }
+        }
+        private fun checkNotSigned(func: () -> Unit) { if (alreadySigned) throw IllegalStateException("Cannot write to already signed object"); func()}
+        override fun write(bytes: ByteArray, off: Int, len: Int) = checkNotSigned { sig.update(bytes, off, len) }
+        override fun write(bytes: ByteArray) = checkNotSigned { sig.update(bytes) }
+        override fun write(b: Int) = checkNotSigned { sig.update(b.toByte()) }
     }
 }

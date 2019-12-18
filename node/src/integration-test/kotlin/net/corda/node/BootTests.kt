@@ -10,7 +10,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.installDevNodeCaCertPath
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -92,7 +92,7 @@ class BootTests {
             }
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { a -> a.isRegularFile() && a.fileName.toString().startsWith("node") }.findFirst().get() }
-            val lines = logFile.readLines { lines -> lines.filter { "$NODE_IDENTITY_ALIAS_PREFIX-private-key" in it }.toArray() }
+            val lines = logFile.readLines { lines -> lines.filter { NODE_IDENTITY_KEY_ALIAS in it }.toArray() }
             assertTrue(lines.count() > 0)
         }
     }
