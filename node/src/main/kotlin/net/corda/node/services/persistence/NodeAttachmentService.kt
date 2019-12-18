@@ -438,7 +438,7 @@ class NodeAttachmentService @JvmOverloads constructor(
     }
 
     private fun getSigners(attachmentBytes: ByteArray) =
-            JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+            JarInputStream(attachmentBytes.inputStream()).use(JarSignatureCollector::collectSigners)
 
     private fun getVersion(attachmentBytes: ByteArray) =
             JarInputStream(attachmentBytes.inputStream()).use {

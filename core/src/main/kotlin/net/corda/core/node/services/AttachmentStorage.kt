@@ -13,6 +13,7 @@ import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
 
 typealias AttachmentId = SecureHash
+typealias AttachmentFixup = Pair<Set<AttachmentId>, Set<AttachmentId>>
 
 /**
  * An attachment store records potentially large binary objects, identified by their hash.

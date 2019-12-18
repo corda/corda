@@ -248,7 +248,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             is MissingSerializerException -> {
                 if (networkParametersHash == null) {
                     log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
-                    verifyWithExtraSerializersFor(cause.typeDescriptor, cause.typeNames, ltx, services)
+                    reverifyWithFixups(ltx, services)
                 } else {
                     throw ex
                 }
@@ -296,11 +296,15 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     // This code has located a missing custom serializer inside another CorDapp - probably a workflow.
     // We need to locate this CorDapp from AttachmentStorage and try verifying this transaction again.
     @DeleteForDJVM
-    private fun verifyWithExtraSerializersFor(
-            typeDescriptor: String?, typeNames: List<String>, ltx: LedgerTransaction, services: ServiceHub) {
-//        (services.transactionVerifierService as TransactionVerifierServiceInternal)
-//            .verify(ltx, listOf(CordappAttachment(jarURL)))
-//            .getOrThrow()
+    private fun reverifyWithFixups(ltx: LedgerTransaction, services: ServiceHub) {
+        log.warn("""Detected that transaction $id does not contain all cordapp dependencies.
+                    |This may be the result of a bug in a previous version of Corda.
+                    |Attempting to re-verify having applied this node's fix-up rules.
+                    |Please check with the originator that this is a valid transaction.""".trimMargin())
+
+        (services.transactionVerifierService as TransactionVerifierServiceInternal)
+            .reverifyWithFixups(ltx)
+            .getOrThrow()
     }
 
     /**

@@ -19,12 +19,19 @@ interface TransactionVerifierServiceInternal {
      * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
      */
     fun verify(transaction: LedgerTransaction, extraAttachments: List<Attachment>): CordaFuture<*>
+
+    /**
+     * Reverifies the [transaction] having applied the Node's "fix-up" rules to its attachments.
+     * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
+     */
+    fun reverifyWithFixups(transaction: LedgerTransaction): CordaFuture<*>
 }
 
 /**
  * Defined here for visibility reasons.
  */
-fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.internalPrepareVerify(extraAttachments)
+fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = internalPrepareVerify(extraAttachments)
+fun LedgerTransaction.prepareReverify(replacementAttachments: List<Attachment>) = internalPrepareReverify(replacementAttachments)
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the

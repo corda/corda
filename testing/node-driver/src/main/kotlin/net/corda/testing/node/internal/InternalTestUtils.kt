@@ -13,6 +13,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.services.AttachmentFixup
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._allEnabledSerializationEnvs
 import net.corda.core.serialization.internal._driverSerializationEnv
@@ -93,6 +94,8 @@ fun cordappWithPackages(vararg packageNames: String): CustomCordapp = CustomCord
 /** Create a *custom* CorDapp which contains just the given classes. */
 // TODO Rename to cordappWithClasses
 fun cordappForClasses(vararg classes: Class<*>): CustomCordapp = CustomCordapp(packages = emptySet(), classes = classes.toSet())
+
+fun cordappWithFixups(fixups: List<AttachmentFixup>) = CustomCordapp(fixups = fixups)
 
 /**
  * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for

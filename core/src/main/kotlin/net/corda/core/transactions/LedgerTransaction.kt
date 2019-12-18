@@ -212,10 +212,18 @@ private constructor(
      */
     @CordaInternal
     internal fun internalPrepareVerify(extraAttachments: List<Attachment>): Verifier {
+        return internalPrepareReverify(attachments + extraAttachments)
+    }
+
+    /**
+     * This method has to be called in a context where it has access to the database.
+     */
+    @CordaInternal
+    internal fun internalPrepareReverify(replacementAttachments: List<Attachment>): Verifier {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(
-                attachments + extraAttachments,
+                replacementAttachments,
                 getParamsWithGoo(),
                 id,
                 isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->

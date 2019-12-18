@@ -425,10 +425,13 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
-    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }
+    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(
+        numberOfWorkers = 2,
+        cordappProvider = mockCordappProvider
+    )
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
