@@ -158,6 +158,7 @@ This file is based on or incorporates material from the projects listed below (T
 150.	snappy
 151.	sshd-core
 152.	sshd-pam
+153.	netty-tcnative-boringssl-static
 
 ================================================
 ================================================
@@ -392,6 +393,10 @@ https://netty.io/
 https://github.com/netty/netty/blob/4.1/LICENSE.txt
 
 netty-resolver	4.1.29.Final
+https://netty.io/
+https://github.com/netty/netty/blob/4.1/LICENSE.txt
+
+netty-tcnative-boringssl-static	2.0.14.Final
 https://netty.io/
 https://github.com/netty/netty/blob/4.1/LICENSE.txt
 

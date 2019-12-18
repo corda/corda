@@ -50,7 +50,7 @@ object X509Utilities {
     const val CORDA_CLIENT_CA = "cordaclientca"
 
     // TODO Hyphen (-) seems to be supported by the major HSM vendors, but we should consider remove it in the
-    //      future and stick to [A-Za-z0-9].
+    //      future and stick to [a-z0-9].
     const val NODE_IDENTITY_KEY_ALIAS = "identity-private-key"
     const val DISTRIBUTED_NOTARY_KEY_ALIAS = "distributed-notary-private-key"
     const val DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS = "distributed-notary-composite-key"

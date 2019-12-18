@@ -1,5 +1,9 @@
 package net.corda.nodeapi.internal.crypto
 
+
+import io.netty.handler.ssl.ClientAuth
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.COMPOSITE_KEY
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
@@ -15,6 +19,8 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.days
+import net.corda.core.utilities.hours
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -30,12 +36,15 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.NettyTestClient
+import net.corda.testing.internal.NettyTestHandler
+import net.corda.testing.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
-import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +75,9 @@ class X509UtilitiesTest {
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
+
+        val portAllocation = incrementalPortAllocation()
+
         // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
         // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.
         val certChainSchemeCombinations = listOf(
@@ -349,6 +361,65 @@ class X509UtilitiesTest {
         assertTrue(done)
     }
 
+    @Test
+    fun `create server cert and use in OpenSSL channel`() {
+        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
+
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+
+        // Generate server cert and private key and populate another keystore suitable for SSL
+        sslConfig.keyStore.get(true).registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        sslConfig.createTrustStore(rootCa.certificate)
+
+        val keyStore = sslConfig.keyStore.get()
+        val trustStore = sslConfig.trustStore.get()
+
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        keyManagerFactory.init(keyStore)
+
+        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustManagerFactory.init(trustStore)
+
+
+        val sslServerContext = SslContextBuilder
+                .forServer(keyManagerFactory)
+                .trustManager(trustManagerFactory)
+                .clientAuth(ClientAuth.REQUIRE)
+                .ciphers(CIPHER_SUITES.toMutableList())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols("TLSv1.2")
+                .build()
+        val sslClientContext = SslContextBuilder
+                .forClient()
+                .keyManager(keyManagerFactory)
+                .trustManager(trustManagerFactory)
+                .ciphers(CIPHER_SUITES.toMutableList())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols("TLSv1.2")
+                .build()
+        val serverHandler = NettyTestHandler { ctx, msg -> ctx?.writeAndFlush(msg) }
+        val clientHandler = NettyTestHandler { _, msg -> assertEquals("Hello", NettyTestHandler.readString(msg)) }
+        NettyTestServer(sslServerContext, serverHandler, portAllocation.nextPort()).use { server ->
+            server.start()
+            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler).use { client ->
+                client.start()
+
+                clientHandler.writeString("Hello")
+                val readCalled = clientHandler.waitForReadCalled()
+                clientHandler.rethrowIfFailed()
+                serverHandler.rethrowIfFailed()
+                assertTrue(readCalled)
+                assertEquals(1, serverHandler.readCalledCounter)
+                assertEquals(1, clientHandler.readCalledCounter)
+
+                val peerChain = client.engine!!.session.peerCertificates.x509
+                val peerX500Principal = peerChain[0].subjectX500Principal
+                assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
+                X509Utilities.validateCertificateChain(rootCa.certificate, peerChain)
+            }
+        }
+    }
+
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
     private fun MutualSslConfiguration.createTrustStore(rootCert: X509Certificate) {
@@ -451,5 +522,35 @@ class X509UtilitiesTest {
         assertNotNull(reloadedPrivateKey)
         assertEquals(childKeyPair.public, reloadedPublicKey)
         assertEquals(childKeyPair.private, reloadedPrivateKey)
+    }
+
+    @Test
+    fun `check certificate validity or print warning if expiry is within 30 days`() {
+        val keyPair = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+        val cert = X509Utilities.createSelfSignedCACertificate(testName, keyPair, 0.days to 50.days)
+        val today = cert.notBefore
+        var warnings = 0
+        cert.checkValidity({ "No error expected" }, { fail("No warning expected") }, today)
+        cert.checkValidity({ "No error expected" }, { fail("No warning expected") }, Date.from(today.toInstant() + 20.days))
+        cert.checkValidity({ "No error expected" }, { daysToExpiry ->
+            assertEquals(30, daysToExpiry)
+            warnings++
+        }, Date.from(today.toInstant() + 20.days + 3.hours))
+        cert.checkValidity({ "No error expected" }, { daysToExpiry ->
+            assertEquals(11, daysToExpiry)
+            warnings++
+        }, Date.from(today.toInstant() + 40.days))
+        cert.checkValidity({ "No error expected" }, { daysToExpiry ->
+            assertEquals(1, daysToExpiry)
+            warnings++
+        }, Date.from(today.toInstant() + 49.days + 20.hours))
+        assertEquals(3, warnings)
+        assertFailsWith(IllegalArgumentException::class, "Error text") {
+            cert.checkValidity({ "Error text" }, { }, Date.from(today.toInstant() + 50.days + 1.hours))
+        }
+        assertFailsWith(IllegalArgumentException::class, "Error text") {
+            cert.checkValidity({ "Error text" }, { }, Date.from(today.toInstant() + 51.days))
+        }
     }
 }

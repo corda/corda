@@ -29,8 +29,6 @@ class AliasPrivateKeyTest {
         assertTrue { signingCertStore.contains(alias) }
         // We can retrieve the certificate.
         assertEquals(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT, signingCertStore[alias])
-        // Although we can store an AliasPrivateKey, we cannot retrieve it. But, it's fine as we use certStore for storing/handling certs
-        // only.
         assertEquals(aliasPrivateKey, signingCertStore.query { getPrivateKey(alias, "entrypassword") })
     }
 }
