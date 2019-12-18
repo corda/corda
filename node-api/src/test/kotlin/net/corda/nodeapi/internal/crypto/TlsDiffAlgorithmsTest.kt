@@ -6,7 +6,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import org.assertj.core.api.Assertions
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -18,65 +17,37 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import javax.net.ssl.*
-import javax.net.ssl.SNIHostName
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * This test checks compatibility of TLS 1.2 and 1.3 communication using different cipher suites with SNI header
- */
-@Ignore("Disabled till we switched to Java 11 where TLS 1.3 becomes available")
 @RunWith(Parameterized::class)
-class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlgo: String,
-                           private val cipherSuites: CipherSuites, private val shouldFail: Boolean,
-                           private val serverProtocols: TlsProtocols, private val clientProtocols: TlsProtocols) {
+class TlsDiffAlgorithmsTest(private val serverAlgo: String, private val clientAlgo: String,
+                            private val cipherSuites: Array<String>, private val shouldFail: Boolean) {
     companion object {
-        @Parameterized.Parameters(name = "ServerAlgo: {0}, ClientAlgo: {1}, CipherSuites: {2}, Should fail: {3}, ServerProtocols: {4}, ClientProtocols: {5}")
-        @JvmStatic
-        fun data(): List<Array<Any>> {
+        private val CIPHER_SUITES_ALL = arrayOf(
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        )
 
-            val allAlgos = listOf("ec", "rsa")
-            return allAlgos.flatMap {
-                serverAlgo -> allAlgos.flatMap {
-                    clientAlgo -> listOf(
-                        // newServerOldClient
-                        arrayOf(serverAlgo, clientAlgo, Companion.CipherSuites.CIPHER_SUITES_ALL, false, Companion.TlsProtocols.BOTH, Companion.TlsProtocols.ONE_2),
-                        // oldServerNewClient
-                        arrayOf(serverAlgo, clientAlgo, Companion.CipherSuites.CIPHER_SUITES_ALL, false, Companion.TlsProtocols.ONE_2, Companion.TlsProtocols.BOTH),
-                        // newServerNewClient
-                        arrayOf(serverAlgo, clientAlgo, Companion.CipherSuites.CIPHER_SUITES_ALL, false, Companion.TlsProtocols.BOTH, Companion.TlsProtocols.BOTH),
-                        // TLS 1.2 eliminated state
-                        arrayOf(serverAlgo, clientAlgo, Companion.CipherSuites.CIPHER_SUITES_ALL, false, Companion.TlsProtocols.ONE_3, Companion.TlsProtocols.ONE_3),
-                        // Old client connecting post TLS 1.2 eliminated state
-                        arrayOf(serverAlgo, clientAlgo, Companion.CipherSuites.CIPHER_SUITES_ALL, true, Companion.TlsProtocols.ONE_3, Companion.TlsProtocols.ONE_2)
-                    )
-                }
-            }
-        }
+        private val CIPHER_SUITES_JUST_RSA = arrayOf(
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        )
+
+        private val CIPHER_SUITES_JUST_EC = arrayOf(
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        )
+
+        @Parameterized.Parameters(name = "ServerAlgo: {0}, ClientAlgo: {1}, Should fail: {3}")
+        @JvmStatic
+        fun data() = listOf(
+                arrayOf("ec", "ec", CIPHER_SUITES_ALL, false), arrayOf("rsa", "rsa", CIPHER_SUITES_ALL, false), arrayOf("ec", "rsa", CIPHER_SUITES_ALL, false), arrayOf("rsa", "ec", CIPHER_SUITES_ALL, false),
+                arrayOf("ec", "ec", CIPHER_SUITES_JUST_RSA, true), arrayOf("rsa", "rsa", CIPHER_SUITES_JUST_RSA, false), arrayOf("ec", "rsa", CIPHER_SUITES_JUST_RSA, true), arrayOf("rsa", "ec", CIPHER_SUITES_JUST_RSA, false),
+                arrayOf("ec", "ec", CIPHER_SUITES_JUST_EC, false), arrayOf("rsa", "rsa", CIPHER_SUITES_JUST_EC, true), arrayOf("ec", "rsa", CIPHER_SUITES_JUST_EC, false), arrayOf("rsa", "ec", CIPHER_SUITES_JUST_EC, true)
+        )
 
         private val logger = contextLogger()
-
-        enum class TlsProtocols(val versions: Array<String>) {
-            BOTH(arrayOf("TLSv1.2", "TLSv1.3")),
-            ONE_2(arrayOf("TLSv1.2")),
-            ONE_3(arrayOf("TLSv1.3"))
-        }
-
-        enum class CipherSuites(val algos: Array<String>) {
-            CIPHER_SUITES_ALL(arrayOf(
-                    // 1.3 only
-                    "TLS_AES_128_GCM_SHA256",
-//                    Unsupported CipherSuite: TLS_CHACHA20_POLY1305_SHA256 (java version "11.0.2" 2019-01-15 LTS)
-//                    Works with: openjdk version "12.0.1" 2019-04-16 (OpenJDK Runtime Environment (build 12.0.1+12))
-//                    "TLS_CHACHA20_POLY1305_SHA256",
-                    // 1.2 only
-                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-            ))
-        }
     }
 
     @Rule
@@ -88,7 +59,7 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
 
         //System.setProperty("javax.net.debug", "all")
 
-        logger.info("Testing: ServerAlgo: $serverAlgo, ClientAlgo: $clientAlgo, Suites: $cipherSuites, Server protocols: $serverProtocols, Client protocols: $clientProtocols, Should fail: $shouldFail")
+        logger.info("Testing: ServerAlgo: $serverAlgo, ClientAlgo: $clientAlgo, Suites: ${cipherSuites.toList()}, Should fail: $shouldFail")
 
         val trustStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/trust.jks", "trustpass", "trustpass")
         val rootCa = trustStore.value.getCertificate("root")
@@ -102,26 +73,19 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
         val serverSocketFactory = createSslContext(serverKeyStore, trustStore).serverSocketFactory
         val clientSocketFactory = createSslContext(clientKeyStore, trustStore).socketFactory
 
-        val sniServerName = "myServerName.com"
         val serverSocket = (serverSocketFactory.createServerSocket(0) as SSLServerSocket).apply {
             // use 0 to get first free socket
-            val serverParams = SSLParameters(cipherSuites.algos, serverProtocols.versions)
+            val serverParams = SSLParameters(cipherSuites, arrayOf("TLSv1.2"))
             serverParams.wantClientAuth = true
             serverParams.needClientAuth = true
             serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
-
-            // SNI server setup
-            serverParams.sniMatchers = listOf(SNIHostName.createSNIMatcher(sniServerName))
-
             sslParameters = serverParams
             useClientMode = false
         }
 
         val clientSocket = (clientSocketFactory.createSocket() as SSLSocket).apply {
-            val clientParams = SSLParameters(cipherSuites.algos, clientProtocols.versions)
+            val clientParams = SSLParameters(cipherSuites, arrayOf("TLSv1.2"))
             clientParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
-            // SNI Client setup
-            clientParams.serverNames = listOf(SNIHostName(sniServerName))
             sslParameters = clientParams
             useClientMode = true
             // We need to specify this explicitly because by default the client binds to 'localhost' and we want it to bind
@@ -137,20 +101,8 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
         val testPhrase = "Hello World"
         val serverThread = thread {
             try {
-                val sslServerSocket = serverSocket.accept() as SSLSocket
+                val sslServerSocket = serverSocket.accept()
                 assertTrue(sslServerSocket.isConnected)
-
-                // Validate SNI once connected
-                val extendedSession = sslServerSocket.session as ExtendedSSLSession
-                val requestedNames = extendedSession.requestedServerNames
-                assertNotNull(requestedNames)
-                assertEquals(1, requestedNames.size)
-                val serverName = requestedNames[0]
-                assertEquals(StandardConstants.SNI_HOST_NAME, serverName.type)
-                val serverHostName = serverName as SNIHostName
-                assertEquals(sniServerName, serverHostName.asciiName)
-
-                // Validate test phrase received
                 val serverInput = DataInputStream(sslServerSocket.inputStream)
                 val receivedString = serverInput.readUTF()
                 assertEquals(testPhrase, receivedString)
@@ -169,7 +121,7 @@ class TlsDiffProtocolsTest(private val serverAlgo: String, private val clientAlg
 
         // Double check hostname manually
         val peerChainTry = Try.on { clientSocket.session.peerCertificates.x509 }
-        assertEquals(!shouldFail, peerChainTry.isSuccess, "Unexpected outcome: $peerChainTry")
+        assertEquals(!shouldFail, peerChainTry.isSuccess)
         when(peerChainTry) {
             is Try.Success -> {
                 val peerChain = peerChainTry.getOrThrow()
