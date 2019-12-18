@@ -117,7 +117,7 @@ buildscript {
     ext.ghostdriver_version = '2.1.0'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.55'
-    ext.protonj_version = '0.33.0' // Overide Artemis version
+    ext.protonj_version = '0.33.3' // Overide Artemis version
     ext.snappy_version = '0.4'
     ext.class_graph_version = constants.getProperty('classgraphVersion')
     ext.jcabi_manifests_version = '1.1'
