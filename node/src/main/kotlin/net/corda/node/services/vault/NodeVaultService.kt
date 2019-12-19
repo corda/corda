@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
@@ -23,6 +24,7 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
+import rx.exceptions.OnErrorFailedException
 import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -393,12 +395,30 @@ class NodeVaultService(
                 persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 try {
                     updatesPublisher.onNext(vaultUpdate)
-                } catch (e: OnErrorNotImplementedException) {
-                    log.warn("Caught an Rx.OnErrorNotImplementedException " +
-                            "- caused by an exception in an RX observer that was unhandled " +
-                            "- the observer has been unsubscribed! The underlying exception will be rethrown.", e)
-                    // if the observer code threw, unwrap their exception from the RX wrapper
-                    throw e.cause ?: e
+                } catch (e: Exception) {
+                    // e thrown will cause the recording of the states to the vault being rolled back
+                    // it could cause the ledger go into an inconsistent state, therefore we should hospitalise this flow
+                    // observer code should either be fixed or ignored and have the flow retry
+                    val initCause = when (e) {
+                        is OnErrorNotImplementedException -> {
+                            "- caused by an exception thrown within a rx.Observer#onNext that was unhandled " +
+                                    "(the observer has been unsubscribed!)"
+                        }
+                        is OnErrorFailedException -> {
+                            "- caused by an exception thrown within a rx.Observer#onError " +
+                                    "(the observer has been unsubscribed!)"
+                        }
+                        else -> {
+                            "" // any other exception type here is quite unexpected
+                        }
+                    }
+                    log.warn(
+                        "Caught an ${e::class.java.canonicalName} $initCause " +
+                                "- while trying to record states locally " +
+                                "- the node could be now in an inconsistent state with other peers or the notary. Hospitalising the flow.",
+                        e
+                    )
+                    throw HospitalizeFlowException("Failed to record states locally $initCause", e)
                 }
             }
         }
