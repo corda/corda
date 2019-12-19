@@ -12,6 +12,9 @@ API: Contract Constraints
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-contracts`.
 
+.. note::  As of Corda |corda_version| the `minimumPlatformVersion` required to use these features is 4
+   (see :ref:`Network Parameters <network-parameters>` and :doc:`features-versions` for more details).
+
 .. contents::
 
 Reasons for Contract Constraints
