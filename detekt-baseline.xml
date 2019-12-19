@@ -120,7 +120,6 @@
     <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$fun dump()</ID>
     <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
     <ID>ComplexMethod:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
-    <ID>ComplexMethod:CollectSignaturesFlow.kt$CollectSignaturesFlow$@Suspendable override fun call(): SignedTransaction</ID>
     <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test fun `Command visibility tests`()</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// For Iterables figure out the type parameter and apply the same logic as above on the individual elements. private fun Iterable&lt;*&gt;.toConfigIterable(field: Field): Iterable&lt;Any?&gt;</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// TODO Move this to KeyStoreConfigHelpers. fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null)</ID>
@@ -1262,7 +1261,6 @@
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme$return SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply { register(RpcClientObservableDeSerializer) register(RpcClientCordaFutureSerializer(this)) register(RxNotificationSerializer(this)) }</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$ fun initialiseSerialization(classLoader: ClassLoader? = null, customSerializers: Set&lt;SerializationCustomSerializer&lt;*, *&gt;&gt; = emptySet(), serializationWhitelists: Set&lt;SerializationWhitelist&gt; = emptySet(), serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt; = AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised())</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$fun createSerializationEnv(classLoader: ClassLoader? = null, customSerializers: Set&lt;SerializationCustomSerializer&lt;*, *&gt;&gt; = emptySet(), serializationWhitelists: Set&lt;SerializationWhitelist&gt; = emptySet(), serializerFactoriesForContexts: MutableMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt; = AccessOrderLinkedHashMap&lt;SerializationFactoryCacheKey, SerializerFactory&gt;(128).toSynchronised()): SerializationEnvironment</ID>
-    <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$nodeSerializationEnv = createSerializationEnv(classLoader, customSerializers, serializationWhitelists, serializerFactoriesForContexts)</ID>
     <ID>MaxLineLength:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$registerScheme(AMQPClientSerializationScheme(customSerializers, serializationWhitelists, serializerFactoriesForContexts))</ID>
     <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss, context.customSerializers)</ID>
     <ID>MaxLineLength:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme${ // This is a hack introduced in version 3 to fix a spring boot issue - CORDA-1747. // It breaks the shell because it overwrites the CordappClassloader with the system classloader that doesn't know about any CorDapps. // In case a spring boot serialization issue with generics is found, a better solution needs to be found to address it. // var contextToUse = context // if (context.useCase == SerializationContext.UseCase.RPCClient) { // contextToUse = context.withClassLoader(getContextClassLoader()) // } val serializerFactory = getSerializerFactory(context) return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz, context) }</ID>
@@ -1621,9 +1619,7 @@
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")</ID>
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertTrue(NodeSchedulerService.awaitWithDeadline(stoppedClock, advancedClock.instant(), future), "Should not have reached deadline")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignatureFlow : FlowLogic</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$else -&gt; throw IllegalArgumentException("Signatures can only be collected from Party or AnonymousParty, not $destination")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$val wellKnownParty = checkNotNull(keyToSigningParty[it]) { "Could not find a session or wellKnown party for key ${it.toStringShort()}" }</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$SignTransactionFlow$override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()</ID>
     <ID>MaxLineLength:CollectSignaturesFlowTests.kt$CollectSignaturesFlowTests.TestFlow.Initiator$val sessions = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }</ID>
     <ID>MaxLineLength:CollectionSerializer.kt$CollectionSerializer$private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())</ID>
@@ -4224,6 +4220,7 @@
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _contextSerializationEnv = ThreadLocalToggleField&lt;SerializationEnvironment&gt;("contextSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _driverSerializationEnv = SimpleToggleField&lt;SerializationEnvironment&gt;("driverSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField&lt;SerializationEnvironment&gt;("inheritableContextSerializationEnv") { stack -&gt; stack.fold(false) { isAGlobalThreadBeingCreated, e -&gt; isAGlobalThreadBeingCreated || (e.className == "io.netty.util.concurrent.GlobalEventExecutor" &amp;&amp; e.methodName == "startThread") || (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" &amp;&amp; e.methodName == "newThread") } }</ID>
+    <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _rpcClientSerializationEnv = SimpleToggleField&lt;SerializationEnvironment&gt;("rpcClientSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationFormat.kt$const val encodingNotPermittedFormat = "Encoding not permitted: %s"</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party</ID>
@@ -4432,9 +4429,6 @@
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:CloseableTab.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.identity.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CommandLineCompatibilityCheckerTest.kt$import org.hamcrest.CoreMatchers.*</ID>
     <ID>WildcardImport:CommercialPaper.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:CommercialPaperIssueFlow.kt$import net.corda.core.flows.*</ID>

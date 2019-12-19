@@ -75,6 +75,8 @@ var nodeSerializationEnv by _nodeSerializationEnv
 
 val _driverSerializationEnv = SimpleToggleField<SerializationEnvironment>("driverSerializationEnv")
 
+val _rpcClientSerializationEnv = SimpleToggleField<SerializationEnvironment>("rpcClientSerializationEnv")
+
 val _contextSerializationEnv = ThreadLocalToggleField<SerializationEnvironment>("contextSerializationEnv")
 
 val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv") { stack ->
@@ -89,7 +91,8 @@ private val serializationEnvFields = listOf(
         _nodeSerializationEnv,
         _driverSerializationEnv,
         _contextSerializationEnv,
-        _inheritableContextSerializationEnv
+        _inheritableContextSerializationEnv,
+        _rpcClientSerializationEnv
 )
 
 val _allEnabledSerializationEnvs: List<Pair<String, SerializationEnvironment>>
