@@ -398,7 +398,7 @@ class NodeVaultService(
                 } catch (e: Exception) {
                     // e thrown will cause the recording of the states to the vault being rolled back
                     // it could cause the ledger go into an inconsistent state, therefore we should hospitalise this flow
-                    // observer code should either be fixed or ignored and have the flow retry
+                    // observer code should either be fixed or ignored and have the flow retry from previous checkpoint, with a node restart
                     val initCause = when (e) {
                         is OnErrorNotImplementedException -> {
                             "- caused by an exception thrown within a rx.Observer#onNext that was unhandled " +
@@ -414,11 +414,11 @@ class NodeVaultService(
                     }
                     log.error(
                         "Caught an ${e::class.java.canonicalName} $initCause " +
-                                "- while trying to record states locally " +
+                                "- while trying to record transaction states locally " +
                                 "- the node could be now in an inconsistent state with other peers or the notary. Hospitalising the flow.",
                         e
                     )
-                    throw HospitalizeFlowException("Failed to record states locally $initCause", e)
+                    throw HospitalizeFlowException("Failed to record transaction states locally $initCause", e)
                 }
             }
         }
