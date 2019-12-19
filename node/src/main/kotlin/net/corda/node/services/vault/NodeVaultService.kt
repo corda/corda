@@ -412,7 +412,7 @@ class NodeVaultService(
                             "" // any other exception type here is quite unexpected
                         }
                     }
-                    log.warn(
+                    log.error(
                         "Caught an ${e::class.java.canonicalName} $initCause " +
                                 "- while trying to record states locally " +
                                 "- the node could be now in an inconsistent state with other peers or the notary. Hospitalising the flow.",
