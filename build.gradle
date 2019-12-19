@@ -80,6 +80,7 @@ buildscript {
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
     ext.netty_version = '4.1.44.Final'
+    ext.tcnative_version = '2.0.14.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
     // Legacy JUnit 4 version
@@ -376,7 +377,11 @@ allprojects {
                 // Demand that everything uses our given version of Netty.
                 eachDependency { details ->
                     if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
-                        details.useVersion netty_version
+                        if (details.requested.name.startsWith('netty-tcnative')){
+                            details.useVersion tcnative_version
+                        } else {
+                            details.useVersion netty_version
+                        }
                     }
                 }
             }

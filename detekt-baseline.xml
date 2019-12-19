@@ -195,6 +195,7 @@
     <ID>ComplexMethod:StartedFlowTransition.kt$StartedFlowTransition$override fun transition(): TransitionResult</ID>
     <ID>ComplexMethod:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parse(target: T?, command: String): ParsedMethodCall</ID>
+    <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TransactionBuilder.kt$TransactionBuilder$ fun withItems(vararg items: Any)</ID>
     <ID>ComplexMethod:TransactionBuilder.kt$TransactionBuilder$ private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean</ID>
@@ -986,6 +987,10 @@
     <ID>MagicNumber:MockNetworkParametersService.kt$MockNetworkParametersStorage$20</ID>
     <ID>MagicNumber:MockServices.kt$MockServices$10000</ID>
     <ID>MagicNumber:MockServices.kt$MockServices.Companion.&lt;no name provided&gt;$512</ID>
+    <ID>MagicNumber:NettyTestClient.kt$NettyTestClient$5</ID>
+    <ID>MagicNumber:NettyTestHandler.kt$NettyTestHandler$5</ID>
+    <ID>MagicNumber:NettyTestServer.kt$NettyTestServer$100</ID>
+    <ID>MagicNumber:NettyTestServer.kt$NettyTestServer$5</ID>
     <ID>MagicNumber:Network.kt$Network$0.8</ID>
     <ID>MagicNumber:Network.kt$Network$1.2</ID>
     <ID>MagicNumber:Network.kt$Network$10</ID>
@@ -1343,9 +1348,6 @@
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$@Test fun `rpc admin address`()</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")</ID>
     <ID>MaxLineLength:AddressBindingFailureTests.kt$AddressBindingFailureTests$assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") }</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest$val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true)</ID>
-    <ID>MaxLineLength:AliasPrivateKeyTest.kt$AliasPrivateKeyTest${ val alias = "01234567890" val aliasPrivateKey = AliasPrivateKey(alias) val certificatesDirectory = tempFolder.root.toPath() val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "keystorepass").get(createNew = true) signingCertStore.query { setPrivateKey(alias, aliasPrivateKey, listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), "entrypassword") } // We can retrieve the certificate. assertTrue { signingCertStore.contains(alias) } // We can retrieve the certificate. assertEquals(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT, signingCertStore[alias]) // Although we can store an AliasPrivateKey, we cannot retrieve it. But, it's fine as we use certStore for storing/handling certs only. assertThatIllegalArgumentException().isThrownBy { signingCertStore.query { getPrivateKey(alias, "entrypassword") } }.withMessage("Unrecognised algorithm: 1.3.6.1.4.1.50530.1.2") }</ID>
     <ID>MaxLineLength:AllButBlacklisted.kt$AllButBlacklisted$throw IllegalStateException("The $matchType $aMatch of ${type.name} is blacklisted, so it cannot be used in serialization.")</ID>
     <ID>MaxLineLength:Amount.kt$Amount&lt;T : Any&gt; : Comparable</ID>
     <ID>MaxLineLength:Amount.kt$AmountTransfer$remaining = SourceAndAmount(payer, balance.amount.copy(quantity = Math.subtractExact(balance.amount.quantity, residual)), newRef)</ID>
@@ -1464,8 +1466,12 @@
     <ID>MaxLineLength:AutoOfferFlow.kt$AutoOfferFlow.Requester$val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.</ID>
     <ID>MaxLineLength:AutoOfferFlow.kt$AutoOfferFlow.Requester$val otherParty = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, dealToBeOffered.participants)).keys.single()</ID>
     <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService : CryptoService</ID>
+    <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService$/** * JKS keystore does not support storage for secret keys, so the existing keystore cannot be re-used. * JCEKS keystore supports storage of symmetric keys according to the spec, but there are several issues around classloaders and deserialization filtering (see links below). * - https://stackoverflow.com/questions/49990904/what-is-the-cause-of-java-security-unrecoverablekeyexception-rejected-by-the-j * - https://stackoverflow.com/questions/50393533/java-io-ioexception-invalid-secret-key-format-when-opening-jceks-key-store-wi * Thus, PKCS12 is used for storing the wrapping key. */ private val wrappingKeyStore: KeyStore by lazy { loadOrCreateKeyStore(wrappingKeyStorePath!!, certificateStore.password, "PKCS12") }</ID>
     <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService$return ContentSignerBuilder.build(signatureScheme, privateKey, Crypto.findProvider(signatureScheme.providerName), newSecureRandom())</ID>
     <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService$throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme ${scheme.schemeCodeName} (id ${scheme.schemeNumberID})", e)</ID>
+    <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService$val privateKey = cipher.unwrap(wrappedPrivateKey.keyMaterial, keyAlgorithmFromScheme(wrappedPrivateKey.signatureScheme), Cipher.PRIVATE_KEY) as PrivateKey</ID>
+    <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService$wrappingKeyStore.setEntry(alias, KeyStore.SecretKeyEntry(wrappingKey), KeyStore.PasswordProtection(certificateStore.entryPassword.toCharArray()))</ID>
+    <ID>MaxLineLength:BCCryptoServiceTests.kt$BCCryptoServiceTests$private</ID>
     <ID>MaxLineLength:BFTNotaryServiceTests.kt$BFTNotaryServiceTests$addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)</ID>
     <ID>MaxLineLength:BFTNotaryServiceTests.kt$BFTNotaryServiceTests.Companion$fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair&lt;Party, TestStartedNode&gt;</ID>
     <ID>MaxLineLength:BFTSmart.kt$BFTSmart$Client : SingletonSerializeAsToken</ID>
@@ -1966,6 +1972,9 @@
     <ID>MaxLineLength:Crypto.kt$Crypto$is BCRSAPrivateKey, is BCSphincs256PrivateKey -&gt; true</ID>
     <ID>MaxLineLength:Crypto.kt$Crypto$is BCRSAPublicKey -&gt; key.modulus.bitLength() &gt;= 2048</ID>
     <ID>MaxLineLength:Crypto.kt$Crypto$val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)</ID>
+    <ID>MaxLineLength:CryptoService.kt$CryptoService$ fun createWrappingKey(alias: String, failIfExists: Boolean = true)</ID>
+    <ID>MaxLineLength:CryptoService.kt$CryptoService$ fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme = defaultWrappingSignatureScheme()): Pair&lt;PublicKey, WrappedPrivateKey&gt;</ID>
+    <ID>MaxLineLength:CryptoService.kt$CryptoService$ fun getWrappingMode(): WrappingMode?</ID>
     <ID>MaxLineLength:CryptoServiceFactory.kt$CryptoServiceFactory.Companion$throw IllegalArgumentException("Currently only BouncyCastle is used as a crypto service. A valid signing certificate store is required.")</ID>
     <ID>MaxLineLength:CryptoUtils.kt$ @DeleteForDJVM @Throws(NoSuchAlgorithmException::class) fun newSecureRandom(): SecureRandom</ID>
     <ID>MaxLineLength:CryptoUtils.kt$ @DeleteForDJVM @Throws(NoSuchAlgorithmException::class) fun secureRandomBytes(numOfBytes: Int): ByteArray</ID>
@@ -2479,6 +2488,8 @@
     <ID>MaxLineLength:MockAttachmentStorage.kt$MockAttachmentStorage$val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)) } catch (e: Exception) { DEFAULT_CORDAPP_VERSION }</ID>
     <ID>MaxLineLength:MockContractAttachment.kt$// A valid zip file with 1 entry. val simpleZip = byteArrayOf(80, 75, 3, 4, 20, 0, 8, 8, 8, 0, 15, 113, 79, 78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 4, 0, 47, 97, -2, -54, 0, 0, 75, 4, 0, 80, 75, 7, 8, 67, -66, -73, -24, 3, 0, 0, 0, 1, 0, 0, 0, 80, 75, 1, 2, 20, 0, 20, 0, 8, 8, 8, 0, 15, 113, 79, 78, 67, -66, -73, -24, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 97, -2, -54, 0, 0, 80, 75, 5, 6, 0, 0, 0, 0, 1, 0, 1, 0, 52, 0, 0, 0, 55, 0, 0, 0, 0, 0)</ID>
     <ID>MaxLineLength:MockCryptoService.kt$MockCryptoService$return ContentSignerBuilder.build(signatureScheme, privateKey, Crypto.findProvider(signatureScheme.providerName), newSecureRandom())</ID>
+    <ID>MaxLineLength:MockCryptoService.kt$MockCryptoService$val privateKey = cipher.unwrap(wrappedPrivateKey.keyMaterial, keyAlgorithmFromScheme(wrappedPrivateKey.signatureScheme), Cipher.PRIVATE_KEY) as PrivateKey</ID>
+    <ID>MaxLineLength:MockCryptoService.kt$MockCryptoService$val wrappingKey = wrappingKeys[masterKeyAlias] ?: throw IllegalStateException("There is no master key under the alias: $masterKeyAlias")</ID>
     <ID>MaxLineLength:MockNetwork.kt$MockNetwork$ fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode</ID>
     <ID>MaxLineLength:MockNetwork.kt$MockNetwork$val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy</ID>
     <ID>MaxLineLength:MockNetwork.kt$MockNetworkParameters$fun withCordappsForAllNodes(cordappsForAllNodes: Collection&lt;TestCordapp&gt;): MockNetworkParameters</ID>
@@ -3368,6 +3379,11 @@
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService$override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic&lt;Void?&gt;</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService$private</ID>
     <ID>MaxLineLength:TimedFlowTests.kt$TimedFlowTests.TestNotaryService.&lt;no name provided&gt;$override</ID>
+    <ID>MaxLineLength:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$val clientKeyStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/bridge_$clientAlgo.jks", "bridgepass", "bridgepass")</ID>
+    <ID>MaxLineLength:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$val serverKeyStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/float_$serverAlgo.jks", "floatpass", "floatpass")</ID>
+    <ID>MaxLineLength:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest.Companion$arrayOf("ec", "ec", CIPHER_SUITES_ALL, false)</ID>
+    <ID>MaxLineLength:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest.Companion$arrayOf("ec", "ec", CIPHER_SUITES_JUST_EC, false)</ID>
+    <ID>MaxLineLength:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest.Companion$arrayOf("ec", "ec", CIPHER_SUITES_JUST_RSA, true)</ID>
     <ID>MaxLineLength:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$logger.info("Testing: ServerAlgo: $serverAlgo, ClientAlgo: $clientAlgo, Suites: $cipherSuites, Server protocols: $serverProtocols, Client protocols: $clientProtocols, Should fail: $shouldFail")</ID>
     <ID>MaxLineLength:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$val clientKeyStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/bridge_$clientAlgo.jks", "bridgepass", "bridgepass")</ID>
     <ID>MaxLineLength:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$val serverKeyStore = CertificateStore.fromResource("net/corda/nodeapi/internal/crypto/keystores/float_$serverAlgo.jks", "floatpass", "floatpass")</ID>
@@ -4043,6 +4059,7 @@
     <ID>TooGenericExceptionCaught:MockNodeMessagingService.kt$MockNodeMessagingService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MyCustomNotaryService.kt$MyValidatingNotaryFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NamedCacheTest.kt$NamedCacheTest$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:NettyTestHandler.kt$NettyTestHandler$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:NetworkBootstrapper.kt$NetworkBootstrapper$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NetworkMapServer.kt$NetworkMapServer.InMemoryNetworkMapService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NetworkMapUpdater.kt$NetworkMapUpdater$e: Exception</ID>
@@ -4101,6 +4118,7 @@
     <ID>TooGenericExceptionCaught:StringToMethodCallParser.kt$StringToMethodCallParser$e: Exception</ID>
     <ID>TooGenericExceptionCaught:TLSAuthenticationTests.kt$TLSAuthenticationTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ThrowableSerializer.kt$ThrowableSerializer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:TraderDemo.kt$TraderDemo$e: Exception</ID>
     <ID>TooGenericExceptionCaught:TransactionBuilder.kt$TransactionBuilder$e: Throwable</ID>
@@ -4151,6 +4169,7 @@
     <ID>TooManyFunctions:ActionExecutorImpl.kt$ActionExecutorImpl : ActionExecutor</ID>
     <ID>TooManyFunctions:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase&lt;K, V, E, out EK&gt;</ID>
     <ID>TooManyFunctions:ArtemisTcpTransport.kt$ArtemisTcpTransport$Companion</ID>
+    <ID>TooManyFunctions:BCCryptoService.kt$BCCryptoService : CryptoService</ID>
     <ID>TooManyFunctions:BFTSmart.kt$BFTSmart$Replica : DefaultRecoverable</ID>
     <ID>TooManyFunctions:BaseTransaction.kt$BaseTransaction : NamedByHash</ID>
     <ID>TooManyFunctions:ClassCarpenter.kt$ClassCarpenterImpl : ClassCarpenter</ID>
@@ -4387,6 +4406,8 @@
     <ID>WildcardImport:AttachmentsClassLoader.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:AttachmentsClassLoaderStaticContractTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:AutoOfferFlow.kt$import net.corda.core.flows.*</ID>
+    <ID>WildcardImport:BCCryptoService.kt$import java.security.*</ID>
+    <ID>WildcardImport:BCCryptoService.kt$import net.corda.nodeapi.internal.cryptoservice.*</ID>
     <ID>WildcardImport:BCCryptoServiceTests.kt$import java.security.*</ID>
     <ID>WildcardImport:BFTNotaryServiceTests.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:BFTNotaryServiceTests.kt$import net.corda.testing.node.internal.*</ID>
@@ -4709,6 +4730,7 @@
     <ID>WildcardImport:MessageState.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:MigrationServicesForResolution.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:MockAttachmentStorage.kt$import net.corda.core.node.services.vault.*</ID>
+    <ID>WildcardImport:MockCryptoService.kt$import net.corda.nodeapi.internal.cryptoservice.*</ID>
     <ID>WildcardImport:MockKeyManagementService.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:MockNetworkTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:MockNodeMessagingService.kt$import net.corda.node.services.messaging.*</ID>
@@ -4959,6 +4981,7 @@
     <ID>WildcardImport:ThrowableSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:TimedFlowTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:TimedFlowTests.kt$import net.corda.testing.node.internal.*</ID>
+    <ID>WildcardImport:TlsDiffAlgorithmsTest.kt$import javax.net.ssl.*</ID>
     <ID>WildcardImport:TlsDiffProtocolsTest.kt$import javax.net.ssl.*</ID>
     <ID>WildcardImport:TopLevelTransition.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:TraderDemoTest.kt$import net.corda.testing.driver.*</ID>
