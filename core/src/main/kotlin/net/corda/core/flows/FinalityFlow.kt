@@ -212,11 +212,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         }
     }
 
-
-
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
-        val notaryCandidate = if (needsNotarySignature(transaction)) {
+        val notarised = if (needsNotarySignature(transaction)) {
             progressTracker.currentStep = NOTARISING
             val notarySignatures = subFlow(NotaryFlow.Client(transaction, skipVerification = true))
             transaction + notarySignatures
@@ -224,29 +222,10 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             logger.info("No need to notarise this transaction.")
             transaction
         }
-
-        return try {
-            logger.info("Recording transaction locally.")
-            serviceHub.recordTransactions(statesToRecord, listOf(notaryCandidate))
-            logger.info("Recorded transaction locally successfully.")
-            notaryCandidate
-        } catch (e: Exception) {
-            throw if (hasNotarySignature(notaryCandidate)) {
-                logger.warn(
-                    "Caught an Exception for the notarised transaction ${notaryCandidate.id} when trying to record it locally. " +
-                            "If this flow exits we will end up having the transaction notarised meaning its input states " +
-                            "consumed within the Notary. At the same time the transaction will not exist in the ledger " +
-                            "meaning none the transaction nor any of its output states will be recorded in any vault. " +
-                            "However, re-consuming its input states with a new flow and a new transaction is no longer possible " +
-                            "since these states are now recorded as consumed within the Notary. " +
-                            "*** Therefore, we need not loose, by any means, the current transaction (${notaryCandidate.id}) *** " +
-                            "To achieve this, the current flow will be sent to the hospital for observation. ", e
-                )
-                HospitalizeFlowException("Transaction ${notaryCandidate.id} was notarised but failed to record locally", e)
-            } else {
-                e
-            }
-        }
+        logger.info("Recording transaction locally.")
+        serviceHub.recordTransactions(statesToRecord, listOf(notarised))
+        logger.info("Recorded transaction locally successfully.")
+        return notarised
     }
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
