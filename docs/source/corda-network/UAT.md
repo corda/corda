@@ -1,9 +1,9 @@
-Corda Network: UAT Environment
+Corda Network: Pre-Production Environment
 =============================
 
-Corda Network UAT seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.
+Corda Network Pre-Production (or UAT) seeks to provide a test environment which is as close as possible to Corda Network in its make-up and operation.
 
-For owners of tested CorDapps with a firm plan to take them into production, a bespoke UAT environment can be provided by R3. Here, such CorDapps can be further tested in the network configuration they will experience in production, utilising relevant Corda Network Services (including the Identity Operator, and trusted notaries). 
+For owners of tested CorDapps with a firm plan to take them into production, a bespoke Pre-Production environment is provided. Here, such CorDapps can be further tested in the network configuration they will experience in production, utilising relevant Corda Network Services (including the Identity Operator, Network Map and notaries). 
 
 Corda UAT is not intended for customers' full test cycles, as it is expected that the bulk of CorDapp testing will occur in simpler network configurations run by the CorDapp provider, but is available for testing of functionally complete and tested CorDapps in realistic network settings to simulate the real-world business environment, including the production settings of network parameters, Corda network services and supported Corda versions. 
 
@@ -12,10 +12,10 @@ UAT is therefore more aligned to the testing of the operational characteristics 
 More information about UAT will continue to be uploaded on this site or related sub-sites.
 
 
-Joining the UAT environment
+Joining the Pre-Production environment
 ---------------------------
 
-*The below joining steps assume the potential participant is joining the UAT environment directly, and as such is not “sponsoring” or onboarding other participants. If this is the case, please contact your Corda representative for how to ‘sponsor’ end-participants onto UAT.*
+*The below joining steps assume the potential participant is joining the Pre-Production environment directly, and as such is not “sponsoring” or onboarding other participants. If this is the case, please contact your Corda representative for how to ‘sponsor’ end-participants on.*
 
 **Pre-requisites:**
 
@@ -29,12 +29,12 @@ Joining the UAT environment
 * Access to the appropriate environment has been agreed with your project representative with sufficient advance notice (4 weeks standard but may be longer if you have special service requirements) to ensure appropriate SLAs can be in place. Your project representative will be able to supply the booking template.
 
 **Note**: 
-Corda Network UAT is governed by an [independent Foundation](https://corda.network/governance/index.html). 
+Corda Network Pre-Production is governed by an [independent Foundation](https://corda.network/governance/index.html). 
 
 
-Steps to join UAT environment
------------------------------
+Steps to join the Pre-Production environment
+-------------------------------------------
 
-Steps to join are outlined on the [Corda Network UAT microsite](http://uat.network.r3.com/pages/joining/joining.html)
+Steps to join are outlined on the [Corda Network microsite](https://corda.network/participation/index.html) - follow any specific instructions for 'Pre-Production'.
 
-For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network
+For further questions on this process, please contact us - preferably on the mailing list: https://groups.io/g/corda-network or at info@corda.network
