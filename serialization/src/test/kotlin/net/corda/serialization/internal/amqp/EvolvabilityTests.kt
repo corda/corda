@@ -12,17 +12,21 @@ import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
-import net.corda.serialization.internal.amqp.testutils.*
+import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
+import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
+import net.corda.serialization.internal.amqp.testutils.deserialize
+import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
+import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
+import net.corda.serialization.internal.amqp.testutils.testName
 import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
+import java.math.BigInteger
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
-import net.corda.serialization.internal.amqp.custom.InstantSerializer
-import net.corda.serialization.internal.amqp.testutils.ProjectStructure.projectRootDir
-import java.math.BigInteger
 import kotlin.test.fail
 
 // To regenerate any of the binary test files do the following
@@ -790,5 +794,50 @@ class EvolvabilityTests {
 
         assertEquals(-1, deserializedCC.a)
         assertEquals(42, deserializedCC.b)
+    }
+
+    @Test
+    fun addMandatoryFieldAndRemoveExistingNullableIntField() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.addMandatoryFieldAndRemoveExistingNullableIntField"
+
+        // Original version of the class as it was serialised
+        // data class CC(val data: String, val a: Int?)
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC("written", null)).bytes)
+
+        data class CC(val data: String, val b: String) {
+            @DeprecatedConstructorForDeserialization(1)
+            @Suppress("unused")
+            constructor(data: String, a: Int?) : this(data, a?.toString() ?: "<not provided>")
+        }
+
+        val url = EvolvabilityTests::class.java.getResource(resource) ?: fail("Not found!")
+        val sc2 = url.readBytes()
+        val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
+
+        assertEquals("written", deserializedCC.data)
+        assertEquals("<not provided>", deserializedCC.b)
+    }
+
+    @Test
+    fun removeExistingNullableIntFieldWithAltConstructor() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.removeExistingNullableIntFieldWithAltConstructor"
+
+        // Original version of the class as it was serialised
+//         data class CC(val data: String, val a: Int?)
+//         File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC("written", null)).bytes)
+
+        data class CC(val data: String) {
+            @DeprecatedConstructorForDeserialization(1)
+            @Suppress("unused")
+            constructor(data: String, a: Int?) : this(data + (a?.toString() ?: "<not provided>"))
+        }
+
+        val url = EvolvabilityTests::class.java.getResource(resource) ?: fail("Not found!")
+        val sc2 = url.readBytes()
+        val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
+
+        assertEquals("written<not provided>", deserializedCC.data)
     }
 }

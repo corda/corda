@@ -1,6 +1,10 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.model.LocalConstructorInformation
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeIdentifier
 import java.io.NotSerializableException
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
@@ -14,34 +18,38 @@ private const val IGNORE_COMPUTED = -1
  * @property propertySlots The slot indices of the properties written by the provided [ObjectBuilder], by property name.
  * @param provider The thunk that provides a new, empty [ObjectBuilder]
  */
-data class ObjectBuilderProvider(val propertySlots: Map<String, Int>, private val provider: () -> ObjectBuilder)
-    : () -> ObjectBuilder by provider
+data class ObjectBuilderProvider(
+        val propertySlots: Map<String, Int>,
+        private val provider: () -> ObjectBuilder
+) : () -> ObjectBuilder by provider
 
 /**
  * Wraps the operation of calling a constructor, with helpful exception handling.
  */
-private class ConstructorCaller(private val javaConstructor: Constructor<Any>): (Array<Any?>) -> Any {
+private class ConstructorCaller(private val javaConstructor: Constructor<Any>) : (Array<Any?>) -> Any {
 
     override fun invoke(parameters: Array<Any?>): Any =
-        try {
-            javaConstructor.newInstance(*parameters)
-        } catch (e: InvocationTargetException) {
-            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-            throw NotSerializableException(
-                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                    "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
-        } catch (e: IllegalAccessException) {
-            @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
-            throw NotSerializableException(
-                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                    "not accessible: ${e.message}")
-        }
+            try {
+                javaConstructor.newInstance(*parameters)
+            } catch (e: InvocationTargetException) {
+                @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
+                throw NotSerializableException(
+                        "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
+                                "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}"
+                )
+            } catch (e: IllegalAccessException) {
+                @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
+                throw NotSerializableException(
+                        "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
+                                "not accessible: ${e.message}"
+                )
+            }
 }
 
 /**
  * Wraps the operation of calling a setter, with helpful exception handling.
  */
-private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
+private class SetterCaller(val setter: Method) : (Any, Any?) -> Unit {
     override fun invoke(target: Any, value: Any?) {
         try {
             setter.invoke(target, value)
@@ -49,12 +57,14 @@ private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
             @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                            "failed when called with parameter $value: ${e.cause!!.message}")
+                            "failed when called with parameter $value: ${e.cause!!.message}"
+            )
         } catch (e: IllegalAccessException) {
             @Suppress("DEPRECATION")    // JDK11: isAccessible() should be replaced with canAccess() (since 9)
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
-                    "not accessible: ${e.message}")
+                            "not accessible: ${e.message}"
+            )
         }
     }
 }
@@ -75,15 +85,30 @@ interface ObjectBuilder {
          * Create an [ObjectBuilderProvider] for the given type, constructor and set of properties.
          *
          * The [EvolutionObjectBuilder] uses this to create [ObjectBuilderProvider]s for objects initialised via an
-         * evolution constructor (i.e. a constructor annotated with [DeprecatedConstructorForDeserialization]).
+         * evolution constructor (i.e. a constructor annotated with [net.corda.core.serialization.DeprecatedConstructorForDeserialization]).
          */
-        fun makeProvider(typeIdentifier: TypeIdentifier,
-                         constructor: LocalConstructorInformation,
-                         properties: Map<String, LocalPropertyInformation>): ObjectBuilderProvider =
-            if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor)
-            else makeGetterSetterProvider(properties, typeIdentifier, constructor)
+        fun makeProvider(
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation,
+                properties: Map<String, LocalPropertyInformation>
+        ): ObjectBuilderProvider =
+                if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor)
+                else makeSetterBasedProvider(properties, typeIdentifier, constructor)
 
-        private fun makeConstructorBasedProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+        private fun makeConstructorBasedProvider(
+                properties: Map<String, LocalPropertyInformation>,
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation
+        ): ObjectBuilderProvider {
+            requireForSer(properties.values.all {
+                when (it) {
+                    is LocalPropertyInformation.ConstructorPairedProperty ->
+                        it.constructorSlot.constructorInformation == constructor
+                    is LocalPropertyInformation.PrivateConstructorPairedProperty ->
+                        it.constructorSlot.constructorInformation == constructor
+                    else -> true
+                }
+            }) { "Constructor passed in must match the constructor the properties are referring to" }
             val constructorIndices = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
@@ -99,11 +124,15 @@ interface ObjectBuilder {
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                ConstructorBasedObjectBuilder(ConstructorCaller(constructor.observedMethod), constructorIndices.values.toIntArray())
+                ConstructorBasedObjectBuilder(constructor, constructorIndices.values.toIntArray())
             }
         }
 
-        private fun makeGetterSetterProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+        private fun makeSetterBasedProvider(
+                properties: Map<String, LocalPropertyInformation>,
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation
+        ): ObjectBuilderProvider {
             val setters = properties.mapValues { (name, property) ->
                 when (property) {
                     is LocalPropertyInformation.GetterSetterProperty -> SetterCaller(property.observedSetter)
@@ -145,7 +174,8 @@ interface ObjectBuilder {
  */
 private class SetterBasedObjectBuilder(
         private val constructor: ConstructorCaller,
-        private val setters: List<SetterCaller?>): ObjectBuilder {
+        private val setters: List<SetterCaller?>
+) : ObjectBuilder {
 
     private lateinit var target: Any
 
@@ -165,44 +195,65 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        private val constructor: ConstructorCaller,
-        private val parameterIndices: IntArray): ObjectBuilder {
+        private val constructorInfo: LocalConstructorInformation,
+        private val slotToCtorArgIdx: IntArray
+) : ObjectBuilder {
 
-    private val params = arrayOfNulls<Any>(parameterIndices.count { it != IGNORE_COMPUTED })
+    private val constructor = ConstructorCaller(constructorInfo.observedMethod)
+    private val params = arrayOfNulls<Any>(constructorInfo.parameters.size)
+
+    init {
+        requireForSer(slotToCtorArgIdx.all { it in params.indices || it == IGNORE_COMPUTED }) {
+            "Argument indexes must be in ${params.indices}. Slot to arg indexes passed in are ${slotToCtorArgIdx.toList()}"
+        }
+    }
 
     override fun initialize() {}
 
     override fun populate(slot: Int, value: Any?) {
-        val parameterIndex = parameterIndices[slot]
+        val parameterIndex = slotToCtorArgIdx[slot]
         if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
     }
 
-    override fun build(): Any = constructor.invoke(params)
+    override fun build(): Any {
+        // CORDA-3504
+        // The check below would cause failures, because in some cases objects ARE instantiated with
+        // parameters that are detected as mandatory but not actually set
+//        requireForSer(
+//                constructorInfo.parameters.zip(params)
+//                        .all { (param, value) -> !param.isMandatory || value != null }
+//        ) { "Some mandatory constructor parameters are not set" }
+        return constructor.invoke(params)
+    }
 }
 
 /**
  * An [ObjectBuilder] that wraps an underlying [ObjectBuilder], routing the property values assigned to its slots to the
  * matching slots in the underlying builder, and discarding values for which the underlying builder has no slot.
  */
-class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
-                             private val slotAssignments: IntArray,
-                             private val remoteProperties: List<String>,
-                             private val mustPreserveData: Boolean): ObjectBuilder {
+class EvolutionObjectBuilder(
+        private val localBuilder: ObjectBuilder,
+        private val slotAssignments: IntArray,
+        private val remoteProperties: List<String>,
+        private val mustPreserveData: Boolean
+) : ObjectBuilder {
 
     companion object {
 
-        const val DISCARDED : Int = -1
+        const val DISCARDED: Int = -1
 
         /**
          * Construct an [EvolutionObjectBuilder] for the specified type, constructor and properties, mapping the list of
          * properties defined in the remote type into the matching slots on the local type's [ObjectBuilder], and discarding
          * any for which there is no matching slot.
          */
-        fun makeProvider(typeIdentifier: TypeIdentifier,
-                         constructor: LocalConstructorInformation,
-                         localProperties: Map<String, LocalPropertyInformation>,
-                         remoteTypeInformation: RemoteTypeInformation.Composable,
-                         mustPreserveData: Boolean): () -> ObjectBuilder {
+        fun makeProvider(
+                typeIdentifier: TypeIdentifier,
+                constructor: LocalConstructorInformation,
+                localProperties: Map<String, LocalPropertyInformation>,
+                remoteTypeInformation: RemoteTypeInformation.Composable,
+                mustPreserveData: Boolean
+        ): () -> ObjectBuilder {
             val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties)
 
             val remotePropertyNames = remoteTypeInformation.properties.keys.sorted()
@@ -215,7 +266,8 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
                         localBuilderProvider(),
                         reroutedIndices,
                         remotePropertyNames,
-                        mustPreserveData)
+                        mustPreserveData
+                )
             }
         }
     }
@@ -230,7 +282,7 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
             if (mustPreserveData && value != null) {
                 throw NotSerializableException(
                         "Non-null value $value provided for property ${remoteProperties[slot]}, " +
-                        "which is not supported in this version"
+                                "which is not supported in this version"
                 )
             }
         } else {
@@ -239,4 +291,8 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
     }
 
     override fun build(): Any = localBuilder.build()
+}
+
+private fun requireForSer(requirement: Boolean, message: () -> String) {
+    if (!requirement) throw NotSerializableException(message())
 }

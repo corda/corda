@@ -1,7 +1,13 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.model.*
+import net.corda.serialization.internal.model.LocalConstructorInformation
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.PropertyName
+import net.corda.serialization.internal.model.RemotePropertyInformation
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -158,9 +164,9 @@ class ComposableObjectReader(
                 builder.initialize()
                 obj.asSequence().zip(propertySerializers.values.asSequence())
                         // Read _all_ properties from the stream
-                        .map { (item, property) -> property to property.readProperty(item, schemas, input, context) }
+                        .map { (item, property) -> property.readProperty(item, schemas, input, context) }
                         // Write them into the builder (computed properties will be thrown away)
-                        .forEachIndexed { slot, (_, propertyValue) -> builder.populate(slot, propertyValue) }
+                        .forEachIndexed { slot, propertyValue -> builder.populate(slot, propertyValue) }
                 return builder.build()
             }
 }
@@ -189,7 +195,8 @@ class EvolutionObjectSerializer(
 
     companion object {
         fun make(localTypeInformation: LocalTypeInformation.Composable,
-                 remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
+                 remoteTypeInformation: RemoteTypeInformation.Composable,
+                 constructor: LocalConstructorInformation,
                  properties: Map<String, LocalPropertyInformation>,
                  classLoader: ClassLoader,
                  mustPreserveData: Boolean): EvolutionObjectSerializer {
