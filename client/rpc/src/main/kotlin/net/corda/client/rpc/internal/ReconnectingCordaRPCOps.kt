@@ -303,9 +303,7 @@ class ReconnectingCordaRPCOps private constructor(
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
-            if (reconnectingRPCConnection.isClosed()) {
-                throw RPCException("Cannot execute RPC command after client has shut down.")
-            }
+            checkIsClosed()
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
             while (remainingAttempts != 0) {
@@ -346,6 +344,12 @@ class ReconnectingCordaRPCOps private constructor(
             }
 
             throw MaxRpcRetryException(maxNumberOfAttempts, lastException)
+        }
+
+        private fun checkIsClosed() {
+            if (reconnectingRPCConnection.isClosed()) {
+                throw RPCException("Cannot execute RPC command after client has shut down.")
+            }
         }
 
         override fun invoke(proxy: Any, method: Method, args: Array<out Any>?): Any? {
