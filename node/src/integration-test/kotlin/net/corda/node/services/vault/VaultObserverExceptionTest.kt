@@ -20,7 +20,6 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Test
 import rx.exceptions.OnErrorNotImplementedException
-import java.sql.SQLException
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
@@ -46,21 +45,15 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
-     * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation
+     * Causing an SqlException via a syntax error in a vault observer will be wrapped within a HospitalizeFlowException
+     * causes the flow to hit the SedationNurse in the FlowHospital and being kept for overnight observation
      */
     @Test
     fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
-        val testControlFuture = openFuture<Boolean>().toCompletableFuture()
+        val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
 
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
-            when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
-                is SQLException -> {
-                    testControlFuture.complete(true)
-                }
-            }
-            false
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
+            testStaffFuture.complete(staff) // get staff members that treated the flow
         }
 
         driver(DriverParameters(
@@ -72,10 +65,11 @@ class VaultObserverExceptionTest {
                     ::Initiator,
                     "Syntax Error in Custom SQL",
                     CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
-            ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
+            ).returnValue.then { testStaffFuture.complete(listOf()) }
+            val staff = testStaffFuture.getOrThrow(30.seconds)
 
-            Assert.assertTrue(foundExpectedException)
+            // flow should have been treated by the SedationNurse
+            Assert.assertTrue(staff.isNotEmpty() && staff.any { it.contains("SedationNurse") })
         }
     }
 
