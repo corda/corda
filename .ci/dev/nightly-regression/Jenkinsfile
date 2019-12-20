@@ -4,10 +4,14 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'gke' }
+    agent { label 'k8s' }
     options {
         timestamps()
+        overrideIndexTriggers(false)
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+    }
+    triggers {
+        pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
     }
 
     environment {
@@ -18,7 +22,7 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
+        stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -51,50 +55,11 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
-
-            script {
-                try {
-                    /*
-                     * Copy all JUnit results files into a single top level directory.
-                     * This is necessary to stop the allure plugin from hitting out
-                     * of memory errors due to being passed many directories with
-                     * long paths.
-                     *
-                     * File names are pre-pended with the pod number when
-                     * copied to avoid collisions between files where the same test
-                     * classes have run on multiple pods.
-                     */
-                    sh label: 'Compact test results',
-                       script:
-                           '''#!/bin/bash
-                              shopt -s globstar
-                              rm -rf allure-input
-                              mkdir allure-input
-
-                              for i in **/test-results-xml/**/test-runs/test-reports/**
-                              do
-                                  [ -f $i ] &&
-                                  cp $i allure-input/$(echo $i | sed -e \\
-                                      \'s/.*test-results-xml\\/.*-\\(.*\\)\\/test-runs\\/.*\\/\\(.*\\)$/\\1\\-\\2/\')
-                              done
-
-                              echo "Finished compacting JUnit results"
-                       '''
-                    allure includeProperties: false,
-                           jdk: '',
-                           results: [[path: '**/allure-input']]
-                } catch (err) {
-                    echo("Allure report generation failed: $err")
-
-                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
-                        currentBuild.result = 'UNSTABLE'
-                    }
-                }
-            }
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
     }
 }
+
