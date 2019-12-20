@@ -7,12 +7,15 @@ SET (${PROJECT_NAME}_MINOR_VERSION 0)
 SET (${PROJECT_NAME}_PATCH_LEVEL 1)
 
 ADD_DEFINITIONS ("-Wall -g -ansi -pedantic")
-#ADD_DEFINITIONS ("-Wall -g -ansi")
-
-#ADD_DEFINITIONS ("-DSRC_DEBUG")
 
 #
+# Enable for help debugging the code, will cause verbose output from
+# the code to be enabled
 #
+# ADD_DEFINITIONS ("-DSRC_DEBUG")
+
+#
+# Set this to true to help debug any issues with cmake
 #
 set (CMAKE_VERBOSE_MAKEFILE "FALSE" CACHE BOOL "" FORCE)
 
