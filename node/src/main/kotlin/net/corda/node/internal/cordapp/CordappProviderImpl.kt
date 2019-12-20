@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.node.services.AttachmentFixup
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
@@ -19,7 +20,7 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.streams.asSequence
+import kotlin.streams.toList
 
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
@@ -43,6 +44,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     fun start() {
         cordappAttachments.putAll(loadContractsIntoAttachmentStore())
         verifyInstalledCordapps()
+        // Load the fix-ups after uploading any new contracts into attachment storage.
         attachmentFixups.addAll(loadAttachmentFixups())
     }
 
@@ -103,17 +105,19 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
 
     private fun loadAttachmentFixups(): List<AttachmentFixup> {
         return cordappLoader.appClassLoader.getResources("META-INF/Corda-Fixups").asSequence().flatMapTo(ArrayList()) { fixup ->
-            fixup.openStream().bufferedReader().lines().asSequence().map { line ->
-                val tokens = line.split("=>", limit = 2)
-                require(tokens.size == 2) {
-                    "Invalid fix-up line '$line' in $fixup"
-                }
-                val source = parseIds(tokens[0])
-                require(source.isNotEmpty()) {
-                    "Forbidden empty list of source attachment IDs in $fixup"
-                }
-                val target = parseIds(tokens[1])
-                Pair(source, target)
+            fixup.openStream().bufferedReader().lines().use { lines ->
+                lines.filter(String::isNotBlank).map { line ->
+                    val tokens = line.split("=>", limit = 2)
+                    require(tokens.size == 2) {
+                        "Invalid fix-up line '$line' in $fixup"
+                    }
+                    val source = parseIds(tokens[0])
+                    require(source.isNotEmpty()) {
+                        "Forbidden empty list of source attachment IDs in $fixup"
+                    }
+                    val target = parseIds(tokens[1])
+                    Pair(source, target)
+                }.toList().asSequence()
             }
         }
     }
@@ -124,7 +128,13 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
         }
     }
 
-    private fun fixupAttachmentIds(attachmentIds: Collection<AttachmentId>): Set<AttachmentId> {
+    /**
+     * Apply this node's attachment fix-up rules to the given attachment IDs.
+     *
+     * @param attachmentIds A collection of [AttachmentId]s, e.g. as provided by a transaction.
+     * @return The [attachmentIds] with the fix-up rules applied.
+     */
+    override fun fixupAttachmentIds(attachmentIds: Collection<AttachmentId>): Set<AttachmentId> {
         val replacementIds = LinkedHashSet(attachmentIds)
         attachmentFixups.forEach { (source, target) ->
             if (replacementIds.containsAll(source)) {
@@ -146,7 +156,10 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
         val replacementIds = fixupAttachmentIds(attachmentsById.keys)
         attachmentsById.keys.retainAll(replacementIds)
         (replacementIds - attachmentsById.keys).forEach { extraId ->
-            val extraAttachment = attachmentStorage.openAttachment(extraId) ?: throw MissingAttachmentsException(listOf(extraId))
+            val extraAttachment = attachmentStorage.openAttachment(extraId)
+            if (extraAttachment == null || !extraAttachment.isUploaderTrusted()) {
+                throw MissingAttachmentsException(listOf(extraId))
+            }
             attachmentsById[extraId] = extraAttachment
         }
         return attachmentsById.values

@@ -23,6 +23,8 @@ data class IRSState(val swap: SwapData,
 
     override fun generateAgreement(notary: Party): TransactionBuilder {
         val state = IRSState(swap, buyer, seller)
-        return TransactionBuilder(notary).withItems(StateAndContract(state, IRS_PROGRAM_ID), Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
+        return TransactionBuilder(notary)
+            .withItems(StateAndContract(state, IRS_PROGRAM_ID), Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
+            .withExternalCordapps()
     }
 }

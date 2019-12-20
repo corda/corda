@@ -3,6 +3,24 @@ apply plugin: 'net.corda.plugins.cordapp'
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
 
+import java.security.NoSuchAlgorithmException
+import java.security.MessageDigest
+
+static String sha256(File jarFile) throws FileNotFoundException, NoSuchAlgorithmException {
+    InputStream input = new FileInputStream(jarFile)
+    try {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256")
+        byte[] buffer = new byte[8192]
+        int bytesRead
+        while ((bytesRead = input.read(buffer)) != -1) {
+            digest.update(buffer, 0, bytesRead)
+        }
+        return digest.digest().encodeHex().toString()
+    } finally {
+        input.close()
+    }
+}
+
 cordapp {
     targetPlatformVersion = corda_platform_version.toInteger()
     minimumPlatformVersion 1
@@ -41,6 +59,18 @@ dependencies {
     compile "com.opengamma.strata:strata-product:$strata_version"
     compile "com.opengamma.strata:strata-market:$strata_version"
 }
+
+def cordappDependencies = file("${sourceSets['main'].output.resourcesDir}/META-INF/Cordapp-Dependencies")
+task generateDependencies {
+    dependsOn project(':finance:contracts').tasks.jar
+    outputs.files(cordappDependencies)
+    doLast {
+        configurations.cordapp.forEach { cordapp ->
+            cordappDependencies << sha256(cordapp) << System.lineSeparator()
+        }
+    }
+}
+processResources.finalizedBy generateDependencies
 
 jar {
     classifier = 'fat'

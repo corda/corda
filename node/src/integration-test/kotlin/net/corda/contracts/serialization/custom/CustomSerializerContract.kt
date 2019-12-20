@@ -20,7 +20,7 @@ class CustomSerializerContract : Contract {
 
         currantsyData.forEach {
             require(it.currantsy in Currantsy(0)..Currantsy(MAX_CURRANT)) {
-                "Too many currants! ${it.currantsy} is unraisinable!"
+                "Too many currants! $it is unraisinable!"
             }
         }
     }

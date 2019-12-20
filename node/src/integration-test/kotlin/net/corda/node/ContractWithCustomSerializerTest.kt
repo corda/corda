@@ -16,6 +16,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -23,6 +24,12 @@ import org.junit.jupiter.api.assertThrows
 class ContractWithCustomSerializerTest {
     companion object {
         const val CURRANTS = 5000L
+
+        @BeforeClass
+        @JvmStatic
+        fun checkData() {
+            assertNotCordaSerializable(Currantsy::class)
+        }
     }
 
     @Test

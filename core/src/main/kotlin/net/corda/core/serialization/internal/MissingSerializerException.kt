@@ -15,4 +15,10 @@ open class MissingSerializerException private constructor(
 ) : NotSerializableException(message) {
     constructor(message: String, typeDescriptor: String) : this(message, typeDescriptor, emptyList())
     constructor(message: String, typeNames: List<String>) : this(message, null, typeNames)
+
+    /**
+     * This constructor allows instances of this exception to escape the DJVM sandbox.
+     */
+    @Suppress("unused")
+    private constructor(message: String) : this(message, null, emptyList())
 }

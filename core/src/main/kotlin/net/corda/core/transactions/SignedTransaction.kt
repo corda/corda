@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.internalFindTrustedAttachmentForClass
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
@@ -229,34 +228,42 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             // TODO: allow non-blocking verification.
             services.transactionVerifierService.verify(ltx).getOrThrow()
         } catch (e: NoClassDefFoundError) {
-            if (e.message != null) {
-                verifyWithExtraDependency(e.message!!, ltx, services, e)
-            } else {
-                throw e
-            }
+            checkReverifyAllowed(e)
+            val missingClass = e.message ?: throw e
+            log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
+            reverifyWithFixups(ltx, services)
         } catch (e: NotSerializableException) {
+            checkReverifyAllowed(e)
             retryVerification(e, e, ltx, services)
         } catch (e: TransactionDeserialisationException) {
+            checkReverifyAllowed(e)
             retryVerification(e.cause, e, ltx, services)
         }
     }
 
-    @Suppress("ThrowsCount")
+    private fun checkReverifyAllowed(ex: Throwable) {
+        // If that transaction was created with and after Corda 4 then just fail.
+        // The lenient dependency verification is only supported for Corda 3 transactions.
+        // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
+        if (networkParametersHash != null) {
+            throw ex
+        }
+    }
+
     @DeleteForDJVM
+    @Suppress("ThrowsCount")
     private fun retryVerification(cause: Throwable?, ex: Throwable, ltx: LedgerTransaction, services: ServiceHub) {
         when (cause) {
             is MissingSerializerException -> {
-                if (networkParametersHash == null) {
-                    log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
-                    reverifyWithFixups(ltx, services)
-                } else {
-                    throw ex
-                }
+                log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
+                reverifyWithFixups(ltx, services)
             }
             is NotSerializableException -> {
                 val underlying = cause.cause
-                if (underlying is ClassNotFoundException && underlying.message != null) {
-                    verifyWithExtraDependency(underlying.message!!.replace('.', '/'), ltx, services, ex)
+                if (underlying is ClassNotFoundException) {
+                    val missingClass = underlying.message?.replace('.', '/') ?: throw ex
+                    log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
+                    reverifyWithFixups(ltx, services)
                 } else {
                     throw ex
                 }
@@ -266,35 +273,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     // Transactions created before Corda 4 can be missing dependencies on other CorDapps.
-    // This code attempts to find the missing dependency in the attachment storage among the trusted attachments.
-    // When it finds one, it instructs the verifier to use it to create the transaction classloader.
-    private fun verifyWithExtraDependency(missingClass: String, ltx: LedgerTransaction, services: ServiceHub, exception: Throwable) {
-        // If that transaction was created with and after Corda 4 then just fail.
-        // The lenient dependency verification is only supported for Corda 3 transactions.
-        // To detect if the transaction was created before Corda 4 we check if the transaction has the NetworkParameters component group.
-        if (this.networkParametersHash != null) {
-            throw exception
-        }
-
-        val attachment = requireNotNull(services.attachments.internalFindTrustedAttachmentForClass(missingClass)) {
-            """Transaction $ltx is incorrectly formed. Most likely it was created during version 3 of Corda when the verification logic was more lenient.
-                |Attempted to find local dependency for class: $missingClass, but could not find one.
-                |If you wish to verify this transaction, please contact the originator of the transaction and install the provided missing JAR.
-                |You can install it using the RPC command: `uploadAttachment` without restarting the node.
-                |""".trimMargin()
-        }
-
-        log.warn("""Detected that transaction ${this.id} does not contain all cordapp dependencies.
-                    |This may be the result of a bug in a previous version of Corda.
-                    |Attempting to verify using the additional trusted dependency: $attachment for class $missingClass.
-                    |Please check with the originator that this is a valid transaction.""".trimMargin())
-
-        (services.transactionVerifierService as TransactionVerifierServiceInternal).verify(ltx, listOf(attachment)).getOrThrow()
-    }
-
-    // Transactions created before Corda 4 can be missing dependencies on other CorDapps.
-    // This code has located a missing custom serializer inside another CorDapp - probably a workflow.
-    // We need to locate this CorDapp from AttachmentStorage and try verifying this transaction again.
+    // This code has detected a missing custom serializer - probably located inside a workflow CorDapp.
+    // We need to extract this CorDapp from AttachmentStorage and try verifying this transaction again.
     @DeleteForDJVM
     private fun reverifyWithFixups(ltx: LedgerTransaction, services: ServiceHub) {
         log.warn("""Detected that transaction $id does not contain all cordapp dependencies.
