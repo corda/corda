@@ -331,6 +331,9 @@ class ReconnectingCordaRPCOps private constructor(
                             Thread.sleep(1000) // TODO - explain why this sleep is necessary
                             checkIfIsStartFlow(method, e)
                         }
+                        is PermissionException -> {
+                            throw RPCException("User does not have permission to perform operation ${method.name}.  Will not retry.", e)
+                        }
                         else -> {
                             log.warn("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
                             reconnectingRPCConnection.reconnectOnError(e)
