@@ -5,11 +5,18 @@ import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.internal.artemis.*
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
+import net.corda.node.internal.artemis.NodeJaasConfig
+import net.corda.node.internal.artemis.P2PJaasConfig
+import net.corda.node.internal.artemis.SecureArtemisConfiguration
+import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
@@ -25,12 +32,14 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.core.security.Role
+import org.apache.activemq.artemis.core.server.ActivateCallback
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
 import java.lang.Long.max
 import java.security.KeyStoreException
+import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED
@@ -92,8 +101,6 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
-            // Throw any exceptions which are detected during startup
-            registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { log.debug { "Queue Created: $it" } }
@@ -101,7 +108,26 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
 
         try {
+            // start does not throw an exception if the startup was unsuccessful, so we need to add a failure listener
+            val res = CompletableFuture<Try<Unit?>>()
+            val failListener: (java.lang.Exception) -> Unit = {
+                res.complete(Try.Failure(it))
+            }
+            activeMQServer.registerActivationFailureListener(failListener)
+            val activateCallback = object : ActivateCallback {
+                override fun activationComplete() {
+                    res.complete(Try.Success(null))
+                }
+            }
+            activeMQServer.registerActivateCallback(activateCallback)
+
+            // start and wait on the listeners to fire
             activeMQServer.start()
+            res.get().getOrThrow()
+
+            // unregister listeners added for startup
+            activeMQServer.unregisterActivationFailureListener(failListener)
+            activeMQServer.unregisterActivateCallback(activateCallback)
         } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)

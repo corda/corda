@@ -104,7 +104,7 @@ class ArtemisMessagingTest {
     @Test
     fun `server starting with the port already bound should throw`() {
         ServerSocket(serverPort).use {
-            val messagingServer = createMessagingServer()
+            val messagingServer = createMessagingServer(local = serverPort)
             assertThatThrownBy { messagingServer.start() }
         }
     }
