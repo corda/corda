@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import co.paralleluniverse.strands.concurrent.Semaphore
 import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
@@ -46,7 +47,7 @@ class VaultObserverExceptionTest {
 
     /**
      * Causing an SqlException via a syntax error in a vault observer will be wrapped within a HospitalizeFlowException
-     * causes the flow to hit the SedationNurse in the FlowHospital and being kept for overnight observation
+     * causes the flow to hit SedationNurse in the FlowHospital and being kept for overnight observation
      */
     @Test
     fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
@@ -95,11 +96,21 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * A random exception from a VaultObserver will bring the Rx Observer down, but can be handled in the flow
-     * triggering the observer, and the flow will continue successfully (for some values of success)
+     * No Exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * because the recording of transaction states failed. The flow will be hospitalized.
+     * The exception will bring the rx.Observer down.
      */
     @Test
-    fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
+    fun noExceptionFromVaultObserverCanBeSuppressedInFlow() {
+        // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
+        // changed into asserting the same exception getting hospitalised
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
@@ -108,9 +119,10 @@ class VaultObserverExceptionTest {
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-                    .returnValue.getOrThrow(30.seconds)
-
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
+
+        Assert.assertEquals(1, observation)
     }
 
     /**
