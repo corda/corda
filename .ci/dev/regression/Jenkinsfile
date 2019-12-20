@@ -52,7 +52,46 @@ pipeline {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
-            allure includeProperties: false, jdk: '', results: [[path: '**/build/test-results-xml/**']]
+
+            script {
+                try {
+                    /*
+                     * Copy all JUnit results files into a single top level directory.
+                     * This is necessary to stop the allure plugin from hitting out
+                     * of memory errors due to being passed many directories with
+                     * long paths.
+                     *
+                     * File names are pre-pended with the pod number when
+                     * copied to avoid collisions between files where the same test
+                     * classes have run on multiple pods.
+                     */
+                    sh label: 'Compact test results',
+                       script:
+                           '''#!/bin/bash
+                              shopt -s globstar
+                              rm -rf allure-input
+                              mkdir allure-input
+
+                              for i in **/test-results-xml/**/test-runs/test-reports/**
+                              do
+                                  [ -f $i ] &&
+                                  cp $i allure-input/$(echo $i | sed -e \\
+                                      \'s/.*test-results-xml\\/.*-\\(.*\\)\\/test-runs\\/.*\\/\\(.*\\)$/\\1\\-\\2/\')
+                              done
+
+                              echo "Finished compacting JUnit results"
+                       '''
+                    allure includeProperties: false,
+                           jdk: '',
+                           results: [[path: '**/allure-input']]
+                } catch (err) {
+                    echo("Allure report generation failed: $err")
+
+                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
         }
         cleanup {
             deleteDir() /* clean up our workspace */
