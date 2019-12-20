@@ -2,22 +2,29 @@ package net.corda.node.services.rpc
 
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.artemis.*
+import net.corda.node.internal.artemis.ArtemisBroker
+import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
+import net.corda.node.internal.artemis.NodeJaasConfig
+import net.corda.node.internal.artemis.RPCJaasConfig
+import net.corda.node.internal.artemis.isBindingError
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
+import org.apache.activemq.artemis.core.server.ActivateCallback
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
-import java.lang.RuntimeException
 import java.nio.file.Path
 import java.security.KeyStoreException
+import java.util.concurrent.CompletableFuture
 import javax.security.auth.login.AppConfigurationEntry
 
 class ArtemisRpcBroker internal constructor(
@@ -47,7 +54,26 @@ class ArtemisRpcBroker internal constructor(
     override fun start() {
         logger.debug("Artemis RPC broker is starting.")
         try {
+            // start does not throw an exception if the startup was unsuccessful, so we need to add a failure listener
+            val res = CompletableFuture<Try<Unit?>>()
+            val failListener: (java.lang.Exception) -> Unit = {
+                res.complete(Try.Failure(it))
+            }
+            server.registerActivationFailureListener(failListener)
+            val activateCallback = object : ActivateCallback {
+                override fun activationComplete() {
+                    res.complete(Try.Success(null))
+                }
+            }
+            server.registerActivateCallback(activateCallback)
+
+            // start and wait on the listeners to fire
             server.start()
+            res.get().getOrThrow()
+
+            // unregister listeners added for startup
+            server.unregisterActivationFailureListener(failListener)
+            server.unregisterActivateCallback(activateCallback)
         } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
                 throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
@@ -78,7 +104,6 @@ class ArtemisRpcBroker internal constructor(
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
-            registerActivationFailureListener { exception -> throw exception }
             registerPostQueueDeletionCallback { address, qName -> logger.debug("Queue deleted: $qName for $address") }
         }
     }
