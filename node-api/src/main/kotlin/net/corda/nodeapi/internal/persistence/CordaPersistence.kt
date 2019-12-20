@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -242,6 +243,9 @@ class CordaPersistence(
         } catch (persistenceException: PersistenceException) {
             errorHandler(persistenceException)
             throw persistenceException
+        } catch (hospitalizeFlowException: HospitalizeFlowException) {
+            errorHandler(hospitalizeFlowException)
+            throw hospitalizeFlowException
         }
     }
 
