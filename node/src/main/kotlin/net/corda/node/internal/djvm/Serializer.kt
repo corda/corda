@@ -11,12 +11,16 @@ import net.corda.node.djvm.ComponentBuilder
 import net.corda.serialization.djvm.createSandboxSerializationEnv
 import java.util.function.Function
 
-class Serializer(private val classLoader: SandboxClassLoader) {
+class Serializer(
+    private val classLoader: SandboxClassLoader,
+    customSerializerNames: Set<String>,
+    serializationWhitelists: Set<String>
+) {
     private val factory: SerializationFactory
     private val context: SerializationContext
 
     init {
-        val env = createSandboxSerializationEnv(classLoader)
+        val env = createSandboxSerializationEnv(classLoader, customSerializerNames, serializationWhitelists)
         factory = env.serializationFactory
         context = env.p2pContext
     }

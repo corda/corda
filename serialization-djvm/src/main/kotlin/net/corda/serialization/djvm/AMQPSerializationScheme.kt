@@ -1,14 +1,18 @@
 package net.corda.serialization.djvm
 
+import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.djvm.rewiring.SandboxClassLoader
+import net.corda.serialization.djvm.deserializers.MergeWhitelists
 import net.corda.serialization.djvm.serializers.SandboxBitSetSerializer
 import net.corda.serialization.djvm.serializers.SandboxCertPathSerializer
 import net.corda.serialization.djvm.serializers.SandboxCharacterSerializer
 import net.corda.serialization.djvm.serializers.SandboxCollectionSerializer
+import net.corda.serialization.djvm.serializers.SandboxCorDappCustomSerializer
 import net.corda.serialization.djvm.serializers.SandboxCurrencySerializer
 import net.corda.serialization.djvm.serializers.SandboxDecimal128Serializer
 import net.corda.serialization.djvm.serializers.SandboxDecimal32Serializer
@@ -48,6 +52,7 @@ import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.SerializerFactoryFactory
+import net.corda.serialization.internal.amqp.addToWhitelist
 import net.corda.serialization.internal.amqp.amqpMagic
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -59,6 +64,8 @@ class AMQPSerializationScheme(
     private val classLoader: SandboxClassLoader,
     private val sandboxBasicInput: Function<in Any?, out Any?>,
     private val taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    private val customSerializerClassNames: Set<String>,
+    private val serializationWhitelistNames: Set<String>,
     private val serializerFactoryFactory: SerializerFactoryFactory
 ) : SerializationScheme {
 
@@ -112,7 +119,31 @@ class AMQPSerializationScheme(
             register(SandboxDecimal64Serializer(classLoader, taskFactory))
             register(SandboxDecimal32Serializer(classLoader, taskFactory))
             register(SandboxSymbolSerializer(classLoader, taskFactory, sandboxBasicInput))
+
+            for (customSerializerName in customSerializerClassNames) {
+                register(SandboxCorDappCustomSerializer(customSerializerName, classLoader, taskFactory, this))
+            }
+            registerWhitelists(this)
         }
+    }
+
+    private fun registerWhitelists(factory: SerializerFactory) {
+        if (serializationWhitelistNames.isEmpty()) {
+            return
+        }
+
+        val serializationWhitelists = serializationWhitelistNames.map { whitelistClass ->
+            classLoader.toSandboxClass(whitelistClass).kotlin.objectOrNewInstance()
+        }.toArrayOf(classLoader.toSandboxClass(SerializationWhitelist::class.java))
+        @Suppress("unchecked_cast")
+        val mergeTask = classLoader.createTaskFor(taskFactory, MergeWhitelists::class.java) as Function<in Array<*>, out Array<Class<*>>>
+        factory.addToWhitelist(mergeTask.apply(serializationWhitelists).toSet())
+    }
+
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    private fun Collection<*>.toArrayOf(type: Class<*>): Array<*> {
+        val typedArray = java.lang.reflect.Array.newInstance(type, 0) as Array<*>
+        return (this as java.util.Collection<*>).toArray(typedArray)
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {

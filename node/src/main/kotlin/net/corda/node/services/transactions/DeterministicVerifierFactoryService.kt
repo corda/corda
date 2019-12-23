@@ -46,8 +46,7 @@ class DeterministicVerifierFactoryService(
 
         baseSandboxConfiguration = SandboxConfiguration.createFor(
             analysisConfiguration = baseAnalysisConfiguration,
-            profile = NODE_PROFILE,
-            enableTracing = true
+            profile = NODE_PROFILE
         )
     }
 

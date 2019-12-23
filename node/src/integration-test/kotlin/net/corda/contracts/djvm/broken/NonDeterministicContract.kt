@@ -11,11 +11,11 @@ import java.util.*
 class NonDeterministicContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         when {
-            tx.commandsOfType(InstantNow::class.java).isNotEmpty() -> verifyInstantNow()
-            tx.commandsOfType(CurrentTimeMillis::class.java).isNotEmpty() -> verifyCurrentTimeMillis()
-            tx.commandsOfType(NanoTime::class.java).isNotEmpty() -> verifyNanoTime()
-            tx.commandsOfType(RandomUUID::class.java).isNotEmpty() -> UUID.randomUUID()
-            tx.commandsOfType(WithReflection::class.java).isNotEmpty() -> verifyNoReflection()
+            tx.commandsOfType<InstantNow>().isNotEmpty() -> verifyInstantNow()
+            tx.commandsOfType<CurrentTimeMillis>().isNotEmpty() -> verifyCurrentTimeMillis()
+            tx.commandsOfType<NanoTime>().isNotEmpty() -> verifyNanoTime()
+            tx.commandsOfType<RandomUUID>().isNotEmpty() -> UUID.randomUUID()
+            tx.commandsOfType<WithReflection>().isNotEmpty() -> verifyNoReflection()
             else -> {}
         }
     }

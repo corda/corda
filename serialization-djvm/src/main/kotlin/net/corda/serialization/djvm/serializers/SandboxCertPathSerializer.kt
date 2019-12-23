@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.CertPathSerializer.CertPathProxy
 import java.security.cert.CertPath
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxCertPathSerializer(
@@ -21,7 +20,7 @@ class SandboxCertPathSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, CertPathDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(CertPath::class.java)
+    override val deserializationAliases = aliasFor(CertPath::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

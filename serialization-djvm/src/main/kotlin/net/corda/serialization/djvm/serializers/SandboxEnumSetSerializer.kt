@@ -25,7 +25,7 @@ class SandboxEnumSetSerializer(
         SandboxClassSerializer(classLoader, taskFactory, factory)
     )
 
-    override val deserializationAliases: Set<Class<*>> = singleton(EnumSet::class.java)
+    override val deserializationAliases = aliasFor(EnumSet::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

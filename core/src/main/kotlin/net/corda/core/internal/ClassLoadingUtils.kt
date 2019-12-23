@@ -19,6 +19,20 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  */
 @StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
+    return getNamesOfClassesImplementing(classloader, clazz)
+        .map { classloader.loadClass(it).asSubclass(clazz) }
+        .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
+}
+
+/**
+ * Scans for all the non-abstract classes in the classpath of the provided classloader which implement the interface of the provided class.
+ * @param classloader the classloader, which will be searched for the classes.
+ * @param clazz the class of the interface, which the classes - to be returned - must implement.
+ *
+ * @return names of the identified classes.
+ */
+@StubOutForDJVM
+fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
@@ -27,8 +41,7 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
         .use { result ->
             result.getClassesImplementing(clazz.name)
                 .filterNot(ClassInfo::isAbstract)
-                .map { classloader.loadClass(it.name).asSubclass(clazz) }
-                .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
+                .mapTo(LinkedHashSet(), ClassInfo::getName)
         }
 }
 

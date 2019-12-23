@@ -6,7 +6,6 @@ import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.OptionalSerializer.OptionalProxy
-import java.util.Collections.singleton
 import java.util.Optional
 import java.util.function.Function
 
@@ -21,7 +20,7 @@ class SandboxOptionalSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, OptionalDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(Optional::class.java)
+    override val deserializationAliases = aliasFor(Optional::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

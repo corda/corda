@@ -12,7 +12,6 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.PublicKey
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxPublicKeySerializer(
@@ -25,7 +24,7 @@ class SandboxPublicKeySerializer(
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 
-    override val deserializationAliases: Set<Class<*>> = singleton(PublicKey::class.java)
+    override val deserializationAliases = aliasFor(PublicKey::class.java)
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray

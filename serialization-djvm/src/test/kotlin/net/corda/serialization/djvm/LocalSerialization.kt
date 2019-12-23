@@ -20,7 +20,10 @@ import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 
-class LocalSerialization : BeforeEachCallback, AfterEachCallback {
+class LocalSerialization(
+    private val customSerializers: Set<SerializationCustomSerializer<*,*>>,
+    private val serializationWhitelists: Set<SerializationWhitelist>
+) : BeforeEachCallback, AfterEachCallback {
     private companion object {
         private val AMQP_P2P_CONTEXT = SerializationContextImpl(
             amqpMagic,
@@ -33,6 +36,8 @@ class LocalSerialization : BeforeEachCallback, AfterEachCallback {
         )
     }
 
+    constructor() : this(emptySet(), emptySet())
+
     override fun beforeEach(context: ExtensionContext) {
         _contextSerializationEnv.set(createTestSerializationEnv())
     }
@@ -43,7 +48,7 @@ class LocalSerialization : BeforeEachCallback, AfterEachCallback {
 
     private fun createTestSerializationEnv(): SerializationEnvironment {
         val factory = SerializationFactoryImpl(mutableMapOf()).apply {
-            registerScheme(AMQPSerializationScheme(emptySet(), emptySet(), AccessOrderLinkedHashMap(128)))
+            registerScheme(AMQPSerializationScheme(customSerializers, serializationWhitelists, AccessOrderLinkedHashMap(128)))
         }
         return SerializationEnvironment.with(factory, AMQP_P2P_CONTEXT)
     }

@@ -9,6 +9,9 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.ContractVerifier
 import net.corda.core.internal.Verifier
+import net.corda.core.internal.getNamesOfClassesImplementing
+import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.djvm.SandboxConfiguration
@@ -20,14 +23,29 @@ import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ClassSource
 import net.corda.node.djvm.LtxFactory
 import java.util.function.Function
+import kotlin.collections.LinkedHashSet
 
 class DeterministicVerifier(
     ltx: LedgerTransaction,
     transactionClassLoader: ClassLoader,
     private val sandboxConfiguration: SandboxConfiguration
 ) : Verifier(ltx, transactionClassLoader) {
+    /**
+     * Read the whitelisted classes without using the [java.util.ServiceLoader] mechanism
+     * because the whitelists themselves are untrusted.
+     */
+    private fun getSerializationWhitelistNames(classLoader: ClassLoader): Set<String> {
+        return classLoader.getResources("META-INF/services/${SerializationWhitelist::class.java.name}").asSequence()
+            .flatMapTo(LinkedHashSet()) { url ->
+                url.openStream().bufferedReader().useLines { lines ->
+                    lines.filter(String::isNotBlank).toList()
+                }.asSequence()
+            }
+    }
 
     override fun verifyContracts() {
+        val customSerializerNames = getNamesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+        val serializationWhitelistNames = getSerializationWhitelistNames(transactionClassLoader)
         val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run<Any>(Function { classLoader ->
             (classLoader.parent as? SandboxClassLoader)?.apply {
                 /**
@@ -49,7 +67,7 @@ class DeterministicVerifier(
              * that we can execute inside the DJVM's sandbox.
              */
             val sandboxTx = ltx.transform { componentGroups, serializedInputs, serializedReferences ->
-                val serializer = Serializer(classLoader)
+                val serializer = Serializer(classLoader, customSerializerNames, serializationWhitelistNames)
                 val componentFactory = ComponentFactory(
                     classLoader,
                     taskFactory,

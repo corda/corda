@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.InstantSerializer.InstantProxy
 import java.time.Instant
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxInstantSerializer(
@@ -21,7 +20,7 @@ class SandboxInstantSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, InstantDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(Instant::class.java)
+    override val deserializationAliases = aliasFor(Instant::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 
