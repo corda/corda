@@ -1,9 +1,13 @@
 package net.corda.node.services.rpc
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -14,12 +18,17 @@ import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.TestClock
+import org.apache.commons.io.FileUtils
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Paths
+import java.time.Clock
+import java.time.Instant
 
 class CheckpointDumperTest {
 
@@ -29,7 +38,7 @@ class CheckpointDumperTest {
 
     private val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     private lateinit var database: CordaPersistence
-    private lateinit var services: MockServices
+    private lateinit var services: ServiceHub
     private lateinit var checkpointStorage: DBCheckpointStorage
 
     @Before
@@ -41,7 +50,13 @@ class CheckpointDumperTest {
                 moreKeys = emptySet()
         )
         database = db
-        services = mockServices
+        services = object : ServiceHub by mockServices {
+            // Set fixed point in time
+            override val clock: Clock
+                get() = TestClock(mock<Clock>().also {
+                    doReturn(Instant.parse("2019-12-25T10:15:30.00Z")).whenever(it).instant()
+                })
+        }
         newCheckpointStorage()
     }
 
@@ -52,7 +67,8 @@ class CheckpointDumperTest {
 
     @Test
     fun testDumpCheckpoints() {
-        val dumper = CheckpointDumper(checkpointStorage, database, services, Paths.get("."))
+        val baseDirectory = Paths.get(".")
+        val dumper = CheckpointDumper(checkpointStorage, database, services, baseDirectory)
         dumper.start(emptyList())
 
         // add a checkpoint
@@ -62,6 +78,7 @@ class CheckpointDumperTest {
         }
 
         dumper.dump()
+        //FileUtils.
         // check existence of output zip file: checkpoints_dump-<data>.zip
     }
 
