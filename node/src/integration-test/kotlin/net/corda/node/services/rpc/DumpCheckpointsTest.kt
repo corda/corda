@@ -1,5 +1,6 @@
 package net.corda.node.services.rpc
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -53,6 +54,7 @@ class DumpCheckpointsTest {
 
     @StartableByRPC
     class GetNumberOfCheckpointsFlow : FlowLogic<Int>() {
+        @Suspendable
         override fun call(): Int {
             var count = 0
             serviceHub.jdbcSession().prepareStatement("select * from node_checkpoints").use { ps ->
@@ -62,9 +64,14 @@ class DumpCheckpointsTest {
                     }
                 }
             }
+            syncUp()
+            return count
+        }
+
+        @Suspendable
+        private fun syncUp() {
             dumpCheckPointLatch.countDown()
             flowProceedLatch.await()
-            return count
         }
     }
 }
