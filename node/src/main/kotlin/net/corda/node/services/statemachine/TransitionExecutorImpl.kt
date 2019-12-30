@@ -55,7 +55,6 @@ class TransitionExecutorImpl(
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    log.info("Error while executing $action, with event $event, erroring state", exception)
                     if(previousState.isRemoved && exception is OptimisticLockException) {
                         log.debug("Flow has been killed and the following error is likely due to the flow's checkpoint being deleted. " +
                                 "Occurred while executing $action, with event $event", exception)
