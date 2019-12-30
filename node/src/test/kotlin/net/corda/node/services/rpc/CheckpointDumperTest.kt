@@ -1,12 +1,25 @@
 package net.corda.node.services.rpc
 
+import com.natpryce.hamkrest.assertion.assertThat
+import com.natpryce.hamkrest.containsSubstring
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteIfExists
+import net.corda.core.internal.deleteRecursively
+import net.corda.core.internal.div
+import net.corda.core.internal.inputStream
+import net.corda.core.internal.readFully
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowStart
@@ -15,11 +28,16 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.TestClock
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.Clock
+import java.time.Instant
+import java.util.zip.ZipInputStream
 
 class CheckpointDumperTest {
 
@@ -27,9 +45,15 @@ class CheckpointDumperTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
+    private val organisation = "MeTheMyself"
+    private val myself = TestIdentity(CordaX500Name(organisation, "London", "GB"))
+    private val currentTimestamp = Instant.parse("2019-12-25T10:15:30.00Z")
+    private val baseDirectory = Files.createTempDirectory("CheckpointDumperTest")
+    private val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME /
+            "checkpoints_dump-${CheckpointDumper.TIME_FORMATTER.format(currentTimestamp)}.zip"
+
     private lateinit var database: CordaPersistence
-    private lateinit var services: MockServices
+    private lateinit var services: ServiceHub
     private lateinit var checkpointStorage: DBCheckpointStorage
 
     @Before
@@ -41,18 +65,29 @@ class CheckpointDumperTest {
                 moreKeys = emptySet()
         )
         database = db
-        services = mockServices
+        services = object : ServiceHub by mockServices {
+            // Set fixed point in time
+            override val clock: Clock
+                get() {
+                    return TestClock(mock<Clock>().also {
+                        doReturn(currentTimestamp).whenever(it).instant()
+                    })
+                }
+        }
         newCheckpointStorage()
+        file.parent.createDirectories()
+        file.deleteIfExists()
     }
 
     @After
     fun cleanUp() {
         database.close()
+        baseDirectory.deleteRecursively()
     }
 
     @Test
     fun testDumpCheckpoints() {
-        val dumper = CheckpointDumper(checkpointStorage, database, services, Paths.get("."))
+        val dumper = CheckpointDumper(checkpointStorage, database, services, baseDirectory)
         dumper.start(emptyList())
 
         // add a checkpoint
@@ -62,7 +97,16 @@ class CheckpointDumperTest {
         }
 
         dumper.dump()
-        // check existence of output zip file: checkpoints_dump-<data>.zip
+        checkDumpFile()
+    }
+
+    private fun checkDumpFile() {
+        ZipInputStream(file.inputStream()).use { zip ->
+            val entry = zip.nextEntry
+            assertThat(entry.name, containsSubstring("json"))
+            val content = zip.readFully()
+            assertThat(String(content), containsSubstring(organisation))
+        }
     }
 
     // This test will only succeed when the VM startup includes the "checkpoint-agent":
