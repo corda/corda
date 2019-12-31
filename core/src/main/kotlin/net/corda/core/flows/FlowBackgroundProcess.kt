@@ -5,9 +5,9 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.concurrent.CordaFutureImpl
+import net.corda.core.node.ServiceHub
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import java.util.function.Supplier
 
 // new executor pool
@@ -30,26 +30,16 @@ import java.util.function.Supplier
 // create extension functions to be able to call the same code from within a service??
 
 // does this need to be @CordaSerializable?
-interface FlowBackgroundProcess<R : Any> : FlowAsyncOperation<R> /* extending this interface just to get things to compile */ {
-    /**
-     * Performs the operation in a non-blocking fashion.
-     * @param deduplicationId  If the flow restarts from a checkpoint (due to node restart, or via a visit to the flow
-     * hospital following an error) the execute method might be called more than once by the Corda flow state machine.
-     * For each duplicate call, the deduplicationId is guaranteed to be the same allowing duplicate requests to be
-     * de-duplicated if necessary inside the execute method.
-     */
-    // commented out due to extending interface
-//    fun execute(deduplicationId: String): CordaFuture<R>
-}
-// DOCEND FlowAsyncOperation
+interface FlowBackgroundProcess<R : Any> : FlowAsyncOperation<R>
+
+private abstract class FlowBackgroundProcessImpl<R : Any>(internal val serviceHub: ServiceHub) : FlowBackgroundProcess<R>
 
 // Need to provide a way to configure the size of this thread pool
 val executorService = Executors.newFixedThreadPool(8)
 
-// DOCSTART executeAsync
 /** Executes the specified [operation] and suspends until operation completion. */
 @Suspendable
-fun <T, R : Any> FlowLogic<T>.async(operation: FlowBackgroundProcess<R>): R {
+fun <T, R : Any> FlowLogic<T>.await(operation: FlowBackgroundProcess<R>): R {
     val request = FlowIORequest.ExecuteAsyncOperation(operation)
     return stateMachine.suspend(request, false)
 }
@@ -57,93 +47,74 @@ fun <T, R : Any> FlowLogic<T>.async(operation: FlowBackgroundProcess<R>): R {
 @Suspendable
 // probably shouldn't allow this as the deduplication id is never used
 // instead, we can add our own deduplication handling here
-fun <T, R : Any> FlowLogic<T>.async(operation: CordaFuture<R>): R {
-    val asyncOperation = object : FlowBackgroundProcess<R> {
+fun <T, R : Any> FlowLogic<T>.awaitFuture(operation: CordaFuture<R>): R {
+    val process = object : FlowBackgroundProcess<R> {
         override fun execute(deduplicationId: String): CordaFuture<R> {
             // return the future that the user created themselves
             return operation
         }
     }
-    return async(asyncOperation)
+    return await(process)
 }
 
+// Requires specifying the servicehub as it is lost from the transient values when replaying a flow
+// the transient values get set to null which causes the flow to blow up when accessing servicehub
+// I am not sure why it is set to null, it seems to be set correctly and used by other parts of the flow but not from inside the background process
+// this means you cannot access any transient values or transient state from inside function passed into here
 @Suspendable
-fun <T, R : Any> FlowLogic<T>.async(operation: (deduplicationId: String) -> CordaFuture<R>): R {
-    val asyncOperation = object : FlowBackgroundProcess<R> {
+fun <T, R : Any> FlowLogic<T>.awaitFuture(operation: (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>): R {
+    val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
         override fun execute(deduplicationId: String): CordaFuture<R> {
-            // return the future that the user created themselves
-            return operation(deduplicationId)
+            return operation(serviceHub, deduplicationId)
         }
     }
-    return async(asyncOperation)
+    return await(process)
 }
 
 @Suspendable
-fun <T, R : Any> FlowLogic<T>.blockingAsync(operation: (deduplicationId: String) -> R): R {
-    val asyncOperation = object : FlowBackgroundProcess<R> {
+fun <T, R : Any> FlowLogic<T>.await(operation: (serviceHub: ServiceHub, deduplicationId: String) -> R): R {
+    val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
         override fun execute(deduplicationId: String): CordaFuture<R> {
             // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
             // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
-            return CordaFutureImpl(CompletableFuture.supplyAsync(Supplier { operation(deduplicationId) }, executorService))
+            return CordaFutureImpl(CompletableFuture.supplyAsync(Supplier { operation(serviceHub, deduplicationId) }, executorService))
         }
     }
-    return async(asyncOperation)
+    return await(process)
 }
 
 // provide an overload that handled deduplication for the user
 // probably wont actually provide this
 @Suspendable
-fun <T, R : Any> FlowLogic<T>.blockingAsync(operation: () -> R): R {
-    val asyncOperation = object : FlowBackgroundProcess<R> {
+fun <T, R : Any> FlowLogic<T>.await(operation: (serviceHub: ServiceHub) -> R): R {
+    val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
         override fun execute(deduplicationId: String): CordaFuture<R> {
             val supplier = Supplier {
                 // add deduplication code
                 // persist the deduplication id to a table (this is an extra commit though)
                 // check the id here for the user
-                operation()
+                operation(serviceHub)
             }
             return CordaFutureImpl(CompletableFuture.supplyAsync(supplier, executorService))
         }
     }
-    return async(asyncOperation)
+    return await(process)
 }
 
 @Suspendable
 // probably shouldn't allow this as the deduplication id is never used
 // instead, we can add our own deduplication handling here
 // probably wont actually provide this
-fun <T, R : Any> FlowLogic<T>.blockingAsync(operation: R): R {
-    val asyncOperation = object : FlowBackgroundProcess<R> {
+fun <T, R : Any> FlowLogic<T>.await(operation: R): R {
+    val process = object : FlowBackgroundProcess<R> {
         override fun execute(deduplicationId: String): CordaFuture<R> {
             // take the input function
             // run it on a new thread (using the threadpool and return a future
             return CordaFutureImpl(CompletableFuture.supplyAsync(Supplier { operation }, executorService))
         }
     }
-    return async(asyncOperation)
+    return await(process)
 }
-
-//fun <T, R : Any> FlowLogic<T>.blockingAsync(operation: (deduplicationId: String) -> CordaFuture<R>): R {
-//    val asyncOperation = object : FlowAsync<R> {
-//        override fun execute(deduplicationId: String): CordaFuture<R> {
-//            return operation(deduplicationId)
-//        }
-//    }
-//    val request = FlowIORequest.ExecuteAsyncOperation(asyncOperation)
-//    return stateMachine.suspend(request, false)
-//}
-
-// do i need to do this one?
-// will require changes to the statemachine? (in action executor)
-//fun <T, R : Any> FlowLogic<T>.nonBlockingAsync(operation: (deduplicationId: String) -> CordaFuture<R>): CordaFuture<R> {
-//    val asyncOperation = object : FlowAsync<R> {
-//        override fun execute(deduplicationId: String): CordaFuture<R> {
-//            return operation(deduplicationId)
-//        }
-//    }
-//    val request = FlowIORequest.ExecuteAsyncOperation(asyncOperation)
-//    return stateMachine.suspend(request, false)
-//}
 
 // all a developer should need to do is set the completed result or the exceptional result
 // the deduplication id needs to be passed into the function

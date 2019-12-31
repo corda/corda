@@ -3,7 +3,6 @@ package net.corda.core.internal
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowBackgroundProcess
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
 
@@ -28,7 +27,7 @@ interface FlowAsyncOperation<R : Any> {
 
 // DOCSTART executeAsync
 /** Executes the specified [operation] and suspends until operation completion. */
-@Deprecated("This has been replaced by [FlowBackgroundProcess.async]", replaceWith = ReplaceWith("net.corda.core.flows.FlowBackgroundProcess.async"))
+@Deprecated("This has been replaced by [FlowBackgroundProcess.await]", replaceWith = ReplaceWith("net.corda.core.flows.FlowBackgroundProcess.await"))
 @Suspendable
 fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, maySkipCheckpoint: Boolean = false): R {
     val request = FlowIORequest.ExecuteAsyncOperation(operation)
