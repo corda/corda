@@ -24,7 +24,7 @@ import kotlin.test.assertFailsWith
 class FlowBackgroundProcessInlineTest {
 
     @Test
-    fun `inline function works`() {
+    fun `inline function`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
@@ -36,7 +36,7 @@ class FlowBackgroundProcessInlineTest {
     }
 
     @Test
-    fun `inline future works`() {
+    fun `inline future`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
@@ -51,7 +51,7 @@ class FlowBackgroundProcessInlineTest {
     }
 
     @Test
-    fun `inline fork join works`() {
+    fun `inline starting multiple futures and joining on their results`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
@@ -231,14 +231,16 @@ class ForkJoinProcesses(party: Party) : FlowWithBackgroundProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        awaitFuture(serviceHub.cordaService(FutureService::class.java).forkJoinProcesses()).also { log.info("Result - $it") }
+        awaitFuture { serviceHub, _ ->
+            serviceHub.cordaService(FutureService::class.java).forkJoinProcesses()
+        }.also { log.info("Result - $it") }
 }
 
 @StartableByRPC
 class FlowWithBackgroundProcessThatThrowsException<T : Exception>(party: Party, private val exceptionType: Class<T>) :
     FlowWithBackgroundProcess(party) {
 
-    override fun testCode(): Any = await { deduplicationId ->
+    override fun testCode(): Any = await { _, deduplicationId ->
         logger.info("Inside of background process")
         throw when (exceptionType) {
             HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
@@ -253,7 +255,7 @@ class FlowWithBackgroundProcessThatThrowsExceptionAndCaughtInFlow(party: Party) 
     FlowWithBackgroundProcess(party) {
 
     override fun testCode(): Any = try {
-        await { deduplicationId ->
+        await { _, deduplicationId ->
             logger.info("Inside of background process")
             throw MyCordaException("boom")
         }

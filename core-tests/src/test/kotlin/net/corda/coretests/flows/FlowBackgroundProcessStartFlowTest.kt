@@ -31,7 +31,7 @@ class FlowBackgroundProcessStartFlowTest {
     }
 
     @Test
-    fun `flows can be forked and joined from inside a flow`() {
+    fun `multiple flows can be started and their futures joined from inside a flow`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()

@@ -44,19 +44,6 @@ fun <T, R : Any> FlowLogic<T>.await(operation: FlowBackgroundProcess<R>): R {
     return stateMachine.suspend(request, false)
 }
 
-@Suspendable
-// probably shouldn't allow this as the deduplication id is never used
-// instead, we can add our own deduplication handling here
-fun <T, R : Any> FlowLogic<T>.awaitFuture(operation: CordaFuture<R>): R {
-    val process = object : FlowBackgroundProcess<R> {
-        override fun execute(deduplicationId: String): CordaFuture<R> {
-            // return the future that the user created themselves
-            return operation
-        }
-    }
-    return await(process)
-}
-
 // Requires specifying the servicehub as it is lost from the transient values when replaying a flow
 // the transient values get set to null which causes the flow to blow up when accessing servicehub
 // I am not sure why it is set to null, it seems to be set correctly and used by other parts of the flow but not from inside the background process
@@ -82,41 +69,3 @@ fun <T, R : Any> FlowLogic<T>.await(operation: (serviceHub: ServiceHub, deduplic
     }
     return await(process)
 }
-
-// provide an overload that handled deduplication for the user
-// probably wont actually provide this
-@Suspendable
-fun <T, R : Any> FlowLogic<T>.await(operation: (serviceHub: ServiceHub) -> R): R {
-    val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
-        override fun execute(deduplicationId: String): CordaFuture<R> {
-            val supplier = Supplier {
-                // add deduplication code
-                // persist the deduplication id to a table (this is an extra commit though)
-                // check the id here for the user
-                operation(serviceHub)
-            }
-            return CordaFutureImpl(CompletableFuture.supplyAsync(supplier, executorService))
-        }
-    }
-    return await(process)
-}
-
-@Suspendable
-// probably shouldn't allow this as the deduplication id is never used
-// instead, we can add our own deduplication handling here
-// probably wont actually provide this
-fun <T, R : Any> FlowLogic<T>.await(operation: R): R {
-    val process = object : FlowBackgroundProcess<R> {
-        override fun execute(deduplicationId: String): CordaFuture<R> {
-            // take the input function
-            // run it on a new thread (using the threadpool and return a future
-            return CordaFutureImpl(CompletableFuture.supplyAsync(Supplier { operation }, executorService))
-        }
-    }
-    return await(process)
-}
-
-// all a developer should need to do is set the completed result or the exceptional result
-// the deduplication id needs to be passed into the function
-
-// can the async operation declaration be done inline inside of the flow (like a normal future?)

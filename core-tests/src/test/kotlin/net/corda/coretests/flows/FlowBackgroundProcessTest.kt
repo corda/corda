@@ -92,7 +92,7 @@ class FutureService(private val services: AppServiceHub) : SingletonSerializeAsT
     fun throwHospitalHandledException(): Nothing = throw SQLTransientConnectionException("fake exception - connection is not available")
 
     fun forkJoinProcesses(): CordaFuture<List<Any>> = executorService.fork {
-        log.info("Starting fork join")
+        log.info("Creating multiple futures")
         (1..5).map { createFuture().getOrThrow() }
     }
 
