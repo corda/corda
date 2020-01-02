@@ -396,29 +396,21 @@ class NodeVaultService(
                 try {
                     updatesPublisher.onNext(vaultUpdate)
                 } catch (e: Exception) {
-                    // e thrown will cause the recording of the states to the vault being rolled back
+                    // exception thrown here will cause the recording of transaction states to the vault being rolled back
                     // it could cause the ledger go into an inconsistent state, therefore we should hospitalise this flow
-                    // observer code should either be fixed or ignored and have the flow retry from previous checkpoint, with a node restart
-                    val initCause = when (e) {
-                        is OnErrorNotImplementedException -> {
-                            "- caused by an exception thrown within a rx.Observer#onNext that was unhandled " +
-                                    "(the observer has been unsubscribed!)"
-                        }
-                        is OnErrorFailedException -> {
-                            "- caused by an exception thrown within a rx.Observer#onError " +
-                                    "(the observer has been unsubscribed!)"
-                        }
-                        else -> {
-                            "" // any other exception type here is quite unexpected
-                        }
+                    // observer code should either be fixed or ignored and have the flow retry from previous checkpoint
+                    val causedBy = when (e) {
+                        is OnErrorNotImplementedException -> "- caused by an exception thrown in a rx.Observer#onNext that was unhandled (the observer has been unsubscribed!) "
+                        is OnErrorFailedException -> "- caused by an exception thrown in a rx.Observer#onError (the observer has been unsubscribed!) "
+                        else -> "" // other exception types here are quite unexpected
                     }
                     log.error(
-                        "Caught an ${e::class.java.canonicalName} $initCause " +
-                                "- while trying to record transaction states locally " +
-                                "- the node could be now in an inconsistent state with other peers or the notary. Hospitalising the flow.",
-                        e
-                    )
-                    throw HospitalizeFlowException("Failed to record transaction states locally $initCause", e)
+                        "Caught an ${e::class.java.canonicalName} while trying to record transaction states locally $causedBy" +
+                                "- the node could be now in an inconsistent state with other peers and/or the notary. Hospitalising the flow.", e)
+
+                    throw HospitalizeFlowException(
+                        "Failed to record transaction states locally $causedBy" +
+                                "- the node could be now in an inconsistent state with other peers and/or the notary", e)
                 }
             }
         }
