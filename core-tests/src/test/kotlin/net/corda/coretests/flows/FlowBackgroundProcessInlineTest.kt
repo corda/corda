@@ -290,6 +290,7 @@ class FlowWithBackgroundProcessThatUsesServiceHubFromFutureFunctionCanRetry(part
 @StartableByRPC
 class FlowWithBackgroundProcessThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithBackgroundProcess(party) {
 
+    @Suppress("TooGenericExceptionCaught")
     @Suspendable
     override fun testCode(): Any {
         try {

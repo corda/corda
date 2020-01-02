@@ -27,7 +27,10 @@ interface FlowAsyncOperation<R : Any> {
 
 // DOCSTART executeAsync
 /** Executes the specified [operation] and suspends until operation completion. */
-@Deprecated("This has been replaced by [FlowBackgroundProcess.await]", replaceWith = ReplaceWith("net.corda.core.flows.FlowBackgroundProcess.await"))
+@Deprecated(
+    "This has been replaced by [FlowBackgroundProcess.await] that provides an improved and public API",
+    ReplaceWith("net.corda.core.flows.FlowBackgroundProcess.await")
+)
 @Suspendable
 fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, maySkipCheckpoint: Boolean = false): R {
     val request = FlowIORequest.ExecuteAsyncOperation(operation)
