@@ -3,6 +3,7 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
@@ -338,6 +339,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * or [rx.internal.schedulers.CachedThreadScheduler] (with shutdown registered with [runOnStop]) for shared-JVM testing.
      */
     protected abstract val rxIoScheduler: Scheduler
+
+    val backgroundProcessExecutor = createBackgroundProcessExecutor(configuration.flowBackgroundProcessThreadPoolSize)
 
     /**
      * Completes once the node has successfully registered with the network map service
@@ -731,6 +734,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         ).tokenize()
     }
 
+    private fun createBackgroundProcessExecutor(numberOfThreads: Int): ExecutorService {
+        when (numberOfThreads) {
+            1 -> log.info("Flow background process executor has $numberOfThreads thread")
+            else -> log.info("Flow background process executor has $numberOfThreads threads")
+        }
+        return Executors.newFixedThreadPool(
+            numberOfThreads,
+            ThreadFactoryBuilder().setNameFormat("flow-background-process-thread").build()
+        )
+    }
+
     private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
         return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
     }
@@ -1111,6 +1125,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
+        override val backgroundProcessExecutor: ExecutorService get() = this@AbstractNode.backgroundProcessExecutor
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

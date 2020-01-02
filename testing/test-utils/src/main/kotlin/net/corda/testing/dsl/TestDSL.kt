@@ -1,5 +1,6 @@
 package net.corda.testing.dsl
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
@@ -26,6 +27,8 @@ import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -92,6 +95,11 @@ data class TestTransactionDSLInterpreter private constructor(
                 override fun getTransaction(id: SecureHash): SignedTransaction? =
                     ledgerInterpreter.getTransaction(id)
             }
+
+        override val backgroundProcessExecutor: ExecutorService = Executors.newFixedThreadPool(
+            2,
+            ThreadFactoryBuilder().setNameFormat("flow-background-process-thread").build()
+        )
 
         override val attachmentTrustCalculator: AttachmentTrustCalculator =
             ledgerInterpreter.services.attachments.let {

@@ -4,10 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.concurrent.CordaFutureImpl
 import net.corda.core.node.ServiceHub
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.function.Supplier
 
 // new executor pool
@@ -33,9 +33,6 @@ import java.util.function.Supplier
 interface FlowBackgroundProcess<R : Any> : FlowAsyncOperation<R>
 
 private abstract class FlowBackgroundProcessImpl<R : Any>(internal val serviceHub: ServiceHub) : FlowBackgroundProcess<R>
-
-// Need to provide a way to configure the size of this thread pool
-val executorService = Executors.newFixedThreadPool(8)
 
 /** Executes the specified [operation] and suspends until operation completion. */
 @Suspendable
@@ -64,7 +61,12 @@ fun <T, R : Any> FlowLogic<T>.await(operation: (serviceHub: ServiceHub, deduplic
         override fun execute(deduplicationId: String): CordaFuture<R> {
             // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
             // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
-            return CordaFutureImpl(CompletableFuture.supplyAsync(Supplier { operation(serviceHub, deduplicationId) }, executorService))
+            return CordaFutureImpl(
+                CompletableFuture.supplyAsync(
+                    Supplier { operation(serviceHub, deduplicationId) },
+                    (serviceHub as ServiceHubCoreInternal).backgroundProcessExecutor
+                )
+            )
         }
     }
     return await(process)

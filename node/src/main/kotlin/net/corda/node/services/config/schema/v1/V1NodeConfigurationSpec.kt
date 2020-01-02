@@ -63,6 +63,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val networkParameterAcceptanceSettings by nested(NetworkParameterAcceptanceSettingsSpec)
             .optional()
             .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
+    private val flowBackgroundProcessThreadPoolSize by int().optional().withDefaultValue(Defaults.flowBackgroundProcessThreadPoolSize)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -127,6 +128,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys],
                     networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings],
                     configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Validation.Options.defaults)
+                    flowBackgroundProcessThreadPoolSize = configuration[flowBackgroundProcessThreadPoolSize]
             ))
         } catch (e: Exception) {
             return when (e) {
