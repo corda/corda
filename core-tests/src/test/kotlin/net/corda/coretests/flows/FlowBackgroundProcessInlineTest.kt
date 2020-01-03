@@ -25,7 +25,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithBackgroundProcess, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow(20.seconds)
@@ -37,7 +37,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline future`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(
@@ -52,7 +52,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline starting multiple futures and joining on their results`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::ForkJoinProcesses, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow(20.seconds)
@@ -64,7 +64,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline future that checks deduplicationId is not rerun when flow is retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
@@ -81,7 +81,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function that throws exception is propagated up to the calling flow`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
@@ -99,7 +99,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function that throws exception can be caught and dealt with`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(
@@ -114,7 +114,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function with exception that hospital keeps for observation does not fail`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -132,7 +132,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function with exception that hospital discharges is retried and runs the background process again`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -150,7 +150,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function that uses serviceHub from function can be retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -167,7 +167,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline future function that uses serviceHub from function can be retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -184,7 +184,7 @@ class FlowBackgroundProcessInlineTest {
 
     @Test
     fun `inline function that accesses serviceHub from flow directly will fail when retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {

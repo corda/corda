@@ -28,7 +28,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process works`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithCustomBackgroundProcess, bob.nodeInfo.singleIdentity())
@@ -41,7 +41,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process propagates exception to calling flow`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
@@ -59,7 +59,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process exception can be caught in flow`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithCustomBackgroundProcessThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
@@ -72,7 +72,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process with exception that hospital keeps for observation does not fail`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -90,7 +90,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process with exception that hospital discharges is retried and runs the background process again`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -108,7 +108,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process that throws exception rather than completing future exceptionally fails with internal exception`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<StateTransitionException> {
@@ -123,7 +123,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process that passes serviceHub into process can be retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
@@ -140,7 +140,7 @@ class FlowBackgroundProcessCustomTest {
 
     @Test
     fun `custom background process that accesses serviceHub from flow directly will fail when retried`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<StateTransitionException> {

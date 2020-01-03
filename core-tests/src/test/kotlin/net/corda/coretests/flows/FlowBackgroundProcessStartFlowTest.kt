@@ -19,7 +19,7 @@ class FlowBackgroundProcessStartFlowTest {
 
     @Test
     fun `starting a flow inside of a flow that starts a future will succeed`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowThatStartsAnotherFlowInABackgroundProcess, bob.nodeInfo.singleIdentity())
@@ -32,7 +32,7 @@ class FlowBackgroundProcessStartFlowTest {
 
     @Test
     fun `multiple flows can be started and their futures joined from inside a flow`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::ForkJoinFlows, bob.nodeInfo.singleIdentity())
