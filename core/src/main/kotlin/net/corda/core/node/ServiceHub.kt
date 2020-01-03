@@ -158,6 +158,12 @@ interface ServiceHub : ServicesForResolution {
     val networkMapCache: NetworkMapCache
 
     /**
+     * The [DiagnosticsService] provides diagnostic level information about the node, including the current version of the node, and the
+     * CorDapps currently installed on the node.
+     */
+    val diagnosticsService: DiagnosticsService
+
+    /**
      * INTERNAL. DO NOT USE.
      * @suppress
      */

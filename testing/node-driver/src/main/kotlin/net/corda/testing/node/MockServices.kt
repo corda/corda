@@ -26,6 +26,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
+import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -429,6 +430,7 @@ open class MockServices private constructor(
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
+    override val diagnosticsService = NodeDiagnosticsService(mockCordappProvider)
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
