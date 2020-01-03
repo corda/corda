@@ -430,7 +430,7 @@ open class MockServices private constructor(
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
-    override val diagnosticsService = NodeDiagnosticsService(mockCordappProvider)
+    override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService(mockCordappProvider)
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)

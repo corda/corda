@@ -5,9 +5,10 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappInfo
 import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.services.DiagnosticsService
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.internal.cordapp.CordappProviderInternal
 
-class NodeDiagnosticsService(private val cordappProvider: CordappProviderInternal) : DiagnosticsService {
+class NodeDiagnosticsService(private val cordappProvider: CordappProviderInternal) : DiagnosticsService, SingletonSerializeAsToken() {
 
     override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
         return NodeDiagnosticInfo(

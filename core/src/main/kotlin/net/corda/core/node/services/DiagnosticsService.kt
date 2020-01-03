@@ -1,10 +1,12 @@
 package net.corda.core.node.services
 
+import net.corda.core.DoNotImplement
 import net.corda.core.node.NodeDiagnosticInfo
 
 /**
  * A [DiagnosticsService] provides APIs that allow CorDapps to query information about the node that CorDapp is currently running on.
  */
+@DoNotImplement
 interface DiagnosticsService {
 
     /**
