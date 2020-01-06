@@ -117,10 +117,9 @@
     <ID>ComplexMethod:CheckpointAgent.kt$CheckpointHook$private fun instrumentClass(clazz: CtClass): CtClass?</ID>
     <ID>ComplexMethod:CheckpointAgent.kt$CheckpointHook$private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, identityInfo: IdentityInfo, builder: StringBuilder)</ID>
     <ID>ComplexMethod:CheckpointAgent.kt$fun readTrees(events: List&lt;StatsEvent&gt;, index: Int, idMap: IdentityHashMap&lt;Any, IdentityInfo&gt;): Pair&lt;Int, List&lt;Pair&lt;StatsInfo, IdentityInfo&gt;&gt;&gt;</ID>
-    <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$fun dump()</ID>
-    <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
+    <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$override fun dumpCheckpoints()</ID>
+    <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
     <ID>ComplexMethod:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
-    <ID>ComplexMethod:CollectSignaturesFlow.kt$CollectSignaturesFlow$@Suspendable override fun call(): SignedTransaction</ID>
     <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test fun `Command visibility tests`()</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// For Iterables figure out the type parameter and apply the same logic as above on the individual elements. private fun Iterable&lt;*&gt;.toConfigIterable(field: Field): Iterable&lt;Any?&gt;</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// TODO Move this to KeyStoreConfigHelpers. fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null)</ID>
@@ -165,12 +164,12 @@
     <ID>ComplexMethod:MerkleTransaction.kt$FilteredTransaction.Companion$ private fun filterWithFun(wtx: WireTransaction, filtering: Predicate&lt;Any&gt;): List&lt;FilteredComponentGroup&gt;</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun bootstrap( directory: Path, cordappJars: List&lt;Path&gt;, copyCordapps: CopyCordapps, fromCordform: Boolean, networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides() )</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean</ID>
-    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$fun updateNetworkMapCache(): Duration</ID>
+    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$override fun updateNetworkMapCache(): Duration</ID>
     <ID>ComplexMethod:NetworkParametersReader.kt$NetworkParametersReader$fun read(): NetworkParametersAndSigned</ID>
     <ID>ComplexMethod:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$ private fun pollServerForCertificates(requestId: String): List&lt;X509Certificate&gt;</ID>
     <ID>ComplexMethod:NewTransaction.kt$NewTransaction$fun show(window: Window)</ID>
     <ID>ComplexMethod:NewTransaction.kt$NewTransaction$private fun newTransactionDialog(window: Window)</ID>
-    <ID>ComplexMethod:Node.kt$Node$override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters)</ID>
+    <ID>ComplexMethod:Node.kt$Node$override fun startMessagingService(rpcOps: List&lt;RPCOps&gt;, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters)</ID>
     <ID>ComplexMethod:NodeNamedCache.kt$DefaultNamedCacheFactory$open protected fun &lt;K, V&gt; configuredForNamed(caffeine: Caffeine&lt;K, V&gt;, name: String): Caffeine&lt;K, V&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun makeUpdates(batch: Iterable&lt;CoreTransaction&gt;, statesToRecord: StatesToRecord, previouslySeen: Boolean): List&lt;Vault.Update&lt;ContractState&gt;&gt;</ID>
@@ -215,6 +214,7 @@
     <ID>EmptyCatchBlock:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests${ }</ID>
     <ID>EmptyCatchBlock:TransactionCallbackTest.kt$TransactionCallbackTest${ }</ID>
     <ID>EmptyCatchBlock:WebServer.kt$WebServer${ }</ID>
+    <ID>EmptyClassBlock:AttachmentOperations.kt$AttachmentOperations : AttachmentTrustCalculatorAttachmentImporter</ID>
     <ID>EmptyClassBlock:CordaRPCClient.kt$CordaRPCClient$Companion</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
@@ -406,6 +406,8 @@
     <ID>ForbiddenComment:NodeInfoWatcher.kt$NodeInfoWatcher$// TODO: Use NIO watch service instead?</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.FixContainer$// TODO: the calendar data needs to be specified for every fix type in the input string</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.UnknownFix$// TODO: can we split into two? Fix not available (retryable/transient) and unknown (permanent)</ID>
+    <ID>ForbiddenComment:NodeLifecycleEventsDistributor.kt$NodeLifecycleEventsDistributor$// TODO: How shall we handle failed distribution events for different types and for different priorities?</ID>
+    <ID>ForbiddenComment:NodeLifecycleEventsDistributor.kt$NodeLifecycleEventsDistributor$// TODO: Should we do this asynchronously but maintaining priority order?</ID>
     <ID>ForbiddenComment:NodeTerminalView.kt$NodeTerminalView$// TODO: Remove this special case once Rick's serialisation work means we can deserialise states that weren't on our own classpath.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Optimise this.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Perhaps these can be stored in a batch?</ID>
@@ -809,6 +811,7 @@
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClient$128</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$3</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$5</ID>
+    <ID>MagicNumber:CordaSSHAuthInfo.kt$CordaSSHAuthInfo$10</ID>
     <ID>MagicNumber:CordaSecurityProvider.kt$CordaSecurityProvider$0.1</ID>
     <ID>MagicNumber:Crypto.kt$Crypto$2048</ID>
     <ID>MagicNumber:Crypto.kt$Crypto$256</ID>
@@ -1127,6 +1130,7 @@
     <ID>MagicNumber:RPCDriver.kt$RandomRpcUser.Companion$100</ID>
     <ID>MagicNumber:RPCDriver.kt$RandomRpcUser.Companion$3</ID>
     <ID>MagicNumber:RPCDriver.kt$RandomRpcUser.Companion$4</ID>
+    <ID>MagicNumber:RPCPermissionResolver.kt$RPCPermissionResolver$20</ID>
     <ID>MagicNumber:RPCServer.kt$RPCServer$5</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$4</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$1000</ID>
@@ -1310,6 +1314,7 @@
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$throw IllegalStateException("CryptoService and signingCertificateStore are not aligned, the entry for key-alias: $alias is only found in $keyExistsIn")</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also { attachments.servicesForResolution = it }</ID>
+    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.&lt;no name provided&gt;$(cordappLoader, services.nodeProperties, Consumer { shutdownExecutor.submit(::stop) }, // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will // be reflected in the `NodeAdmin` as well. However, since `NodeAdmin` only has access to immutable collection it can only read (but not modify) // the content. tokenizableServices!!)</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$override val database: CordaTransactionSupport</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex is HikariPool.PoolInitializationException -&gt; throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)</ID>
@@ -1443,11 +1448,7 @@
     <ID>MaxLineLength:AttachmentsClassLoaderTests.kt$AttachmentsClassLoaderTests$val untrustedClassJar = importAttachment(fakeAttachment("/com/example/something/MaliciousClass.class", "some malicious data").inputStream(), "untrusted", "file2.jar")</ID>
     <ID>MaxLineLength:AttachmentsClassLoaderTests.kt$AttachmentsClassLoaderTests$val untrustedResourceJar = importAttachment(fakeAttachment("file2.txt", "some malicious data").inputStream(), "untrusted", "file1.jar")</ID>
     <ID>MaxLineLength:AuthDBTests.kt$UsersDB$private</ID>
-    <ID>MaxLineLength:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy$override</ID>
-    <ID>MaxLineLength:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy.Companion$return Proxy.newProxyInstance(delegate::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java), handler) as InternalCordaRPCOps</ID>
-    <ID>MaxLineLength:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy.PermissionsEnforcingInvocationHandler$override fun invoke(proxy: Any, method: Method, arguments: Array&lt;out Any?&gt;?)</ID>
     <ID>MaxLineLength:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy.PermissionsEnforcingInvocationHandler$private</ID>
-    <ID>MaxLineLength:AuthenticatedRpcOpsProxy.kt$private fun &lt;RESULT&gt; guard(methodName: String, context: () -&gt; RpcAuthContext, action: () -&gt; RESULT)</ID>
     <ID>MaxLineLength:AutoOfferFlow.kt$AutoOfferFlow.Requester$val notary = serviceHub.networkMapCache.notaryIdentities.first() // TODO We should pass the notary as a parameter to the flow, not leave it to random choice.</ID>
     <ID>MaxLineLength:AutoOfferFlow.kt$AutoOfferFlow.Requester$val otherParty = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, dealToBeOffered.participants)).keys.single()</ID>
     <ID>MaxLineLength:BCCryptoService.kt$BCCryptoService : CryptoService</ID>
@@ -1600,9 +1601,8 @@
     <ID>MaxLineLength:CheckpointAgent.kt$log.debug { "Skipping repeated StatsEvent.Enter: ${exit.value} (hashcode:${exit.value!!.hashCode()}) (count:${idMap[exit.value]?.refCount})" }</ID>
     <ID>MaxLineLength:CheckpointAgent.kt$log.debug { "Skipping repeated StatsEvent.Exit: ${event.value} (hashcode:${event.value!!.hashCode()}) (count:${idMap[event.value]?.refCount})" }</ID>
     <ID>MaxLineLength:CheckpointAgent.kt$log.debug { "Skipping repeated StatsEvent.ObjectField: ${event.value} (hashcode:${event.value.hashCode()}) (count:${idMap[event.value]?.refCount})" }</ID>
-    <ID>MaxLineLength:CheckpointDumper.kt$CheckpointDumper</ID>
-    <ID>MaxLineLength:CheckpointDumper.kt$CheckpointDumper.CheckpointDumperBeanModifier$it.type.isTypeOrSubTypeOf(ProgressTracker::class.java) || it.name == "_stateMachine" || it.name == "deprecatedPartySessionMap"</ID>
-    <ID>MaxLineLength:CheckpointDumperTest.kt$CheckpointDumperTest$val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, myself.identity.party, SubFlowVersion.CoreFlow(version), false) .getOrThrow()</ID>
+    <ID>MaxLineLength:CheckpointDumperImpl.kt$CheckpointDumperImpl.CheckpointDumperBeanModifier$it.type.isTypeOrSubTypeOf(ProgressTracker::class.java) || it.name == "_stateMachine" || it.name == "deprecatedPartySessionMap"</ID>
+    <ID>MaxLineLength:CheckpointDumperImplTest.kt$CheckpointDumperImplTest$val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, myself.identity.party, SubFlowVersion.CoreFlow(version), false) .getOrThrow()</ID>
     <ID>MaxLineLength:CheckpointSerializationScheme.kt$CheckpointSerializationContextImpl$override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist</ID>
     <ID>MaxLineLength:CheckpointVerifier.kt$CheckpointIncompatibleException$FlowVersionIncompatibleException : CheckpointIncompatibleException</ID>
     <ID>MaxLineLength:CheckpointVerifier.kt$CheckpointIncompatibleException$SubFlowCoreVersionIncompatibleException : CheckpointIncompatibleException</ID>
@@ -1621,9 +1621,7 @@
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")</ID>
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertTrue(NodeSchedulerService.awaitWithDeadline(stoppedClock, advancedClock.instant(), future), "Should not have reached deadline")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignatureFlow : FlowLogic</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$else -&gt; throw IllegalArgumentException("Signatures can only be collected from Party or AnonymousParty, not $destination")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$val wellKnownParty = checkNotNull(keyToSigningParty[it]) { "Could not find a session or wellKnown party for key ${it.toStringShort()}" }</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$SignTransactionFlow$override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()</ID>
     <ID>MaxLineLength:CollectSignaturesFlowTests.kt$CollectSignaturesFlowTests.TestFlow.Initiator$val sessions = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }</ID>
     <ID>MaxLineLength:CollectionSerializer.kt$CollectionSerializer$private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())</ID>
@@ -1870,7 +1868,7 @@
     <ID>MaxLineLength:ContractsDSLTests.kt$SelectWithSingleInputsTests.Companion$arrayOf&lt;Any&gt;({ commands: Collection&lt;CommandWithParties&lt;CommandData&gt;&gt;, signer: PublicKey?, party: AbstractParty? -&gt; commands.select(TestCommands::class.java, signer, party) }, "Interop version")</ID>
     <ID>MaxLineLength:ContractsDSLTests.kt$SelectWithSingleInputsTests.Companion$arrayOf&lt;Any&gt;({ commands: Collection&lt;CommandWithParties&lt;CommandData&gt;&gt;, signer: PublicKey?, party: AbstractParty? -&gt; commands.select&lt;TestCommands&gt;(signer, party) }, "Inline version")</ID>
     <ID>MaxLineLength:ContractsDSLTests.kt$val validCommandOne = CommandWithParties(listOf(megaCorp.publicKey, miniCorp.publicKey), listOf(megaCorp.party, miniCorp.party), TestCommands.CommandOne())</ID>
-    <ID>MaxLineLength:CordaAuthenticationPlugin.kt$CordaAuthenticationPlugin : CRaSHPluginAuthenticationPlugin</ID>
+    <ID>MaxLineLength:CordaAuthenticationPlugin.kt$CordaAuthenticationPlugin$internal</ID>
     <ID>MaxLineLength:CordaClassResolver.kt$CordaClassResolver$// We don't allow the annotation for classes in attachments for now. The class will be on the main classpath if we have the CorDapp installed. // We also do not allow extension of KryoSerializable for annotated classes, or combination with @DefaultSerializer for custom serialisation. // TODO: Later we can support annotations on attachment classes and spin up a proxy via bytecode that we know is harmless. private fun checkForAnnotation(type: Class&lt;*&gt;): Boolean</ID>
     <ID>MaxLineLength:CordaClassResolver.kt$CordaClassResolver$if (type.isPrimitive || type == Any::class.java || type == String::class.java || (!type.isEnum &amp;&amp; isAbstract(type.modifiers))) return null</ID>
     <ID>MaxLineLength:CordaClassResolver.kt$CordaClassResolver$kotlin.jvm.internal.Lambda::class.java.isAssignableFrom(targetType)</ID>
@@ -1911,9 +1909,11 @@
     <ID>MaxLineLength:CordaRPCOps.kt$CordaRPCOps$fun &lt;T : ContractState&gt; vaultTrackByWithSorting(contractStateType: Class&lt;out T&gt;, criteria: QueryCriteria, sorting: Sort): DataFeed&lt;Vault.Page&lt;T&gt;, Vault.Update&lt;T&gt;&gt;</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$StateMachineInfo$return copy(id = id, flowLogicClassName = flowLogicClassName, initiator = initiator, progressTrackerStepAndUpdates = progressTrackerStepAndUpdates, invocationContext = invocationContext)</ID>
     <ID>MaxLineLength:CordaRPCOps.kt$sorting: Sort = Sort(emptySet())</ID>
-    <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()</ID>
+    <ID>MaxLineLength:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$override fun killFlow(id: StateMachineRunId): Boolean</ID>
+    <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$assertThatCode { rpc.startFlow(CordaRPCOpsImplTest::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType&lt;Cash.State&gt;().single()</ID>
-    <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo : AuthInfo</ID>
+    <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo$/** * It is necessary to have a cache to prevent creation of too many proxies for the same class. Proxy ensures that RPC connections gracefully * closed when cache entry is eliminated */ private val proxiesCache = Caffeine.newBuilder() .maximumSize(10) .removalListener(RemovalListener&lt;Class&lt;out RPCOps&gt;, Pair&lt;RPCOps, Closeable&gt;&gt; { _, value, _ -&gt; value?.second?.close() }) .executor(MoreExecutors.directExecutor()) .build(CacheLoader&lt;Class&lt;out RPCOps&gt;, Pair&lt;RPCOps, Closeable&gt;&gt; { key -&gt; createRpcOps(key) })</ID>
+    <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo$private val username: String</ID>
     <ID>MaxLineLength:CordaServiceTest.kt$CordaServiceTest$mockNet = MockNetwork(MockNetworkParameters(threadPerNode = true, cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp())))</ID>
     <ID>MaxLineLength:CordaServiceTest.kt$CordaServiceTest.CordaServiceThatRequiresThreadContextClassLoader$assertNotNull(Thread.currentThread().contextClassLoader, "thread context classloader should not be null during service initialisation")</ID>
     <ID>MaxLineLength:CordaUtils.kt$ private fun owns(packageName: String, fullClassName: String): Boolean</ID>
@@ -2273,6 +2273,8 @@
     <ID>MaxLineLength:InMemoryMessagingNetwork.kt$InMemoryMessagingNetwork$peersMapping[messagingService.myAddress.name] = messagingService.myAddress</ID>
     <ID>MaxLineLength:InMemoryMessagingNetwork.kt$InMemoryMessagingNetwork$private val servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()</ID>
     <ID>MaxLineLength:InMemoryMessagingNetwork.kt$InMemoryMessagingNetwork.Companion$servicePeerAllocationStrategy: ServicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()</ID>
+    <ID>MaxLineLength:InMemoryRpcPermissionsTest.kt$InMemoryRpcPermissionsTest$"InvokeRpc:net.corda.core.internal.messaging.InternalCordaRPCOps#getAttachmentTrustInfos"</ID>
+    <ID>MaxLineLength:InMemoryRpcPermissionsTest.kt$InMemoryRpcPermissionsTest$assertNotNull(proxy.startFlow(::CashIssueFlow, 10.POUNDS, OpaqueBytes("1".toByteArray()), notaryNodes.first().info.legalIdentities.first()))</ID>
     <ID>MaxLineLength:InMemoryTransactionVerifierService.kt$InMemoryTransactionVerifierService : SingletonSerializeAsTokenTransactionVerifierServiceTransactionVerifierServiceInternalAutoCloseable</ID>
     <ID>MaxLineLength:InfrequentlyMutatedCacheTest.kt$InfrequentlyMutatedCacheTest$@Test fun `fourth get outside first transaction from empty cache with invalidate in other thread in the middle returns result of second loader`()</ID>
     <ID>MaxLineLength:InitialRegistrationCli.kt$InitialRegistration : RunAfterNodeInitialisationNodeStartupLogging</ID>
@@ -2304,8 +2306,7 @@
     <ID>MaxLineLength:InternalMockNetworkConfigOverrides.kt$return NotaryConfig(validating = this.validating, extraConfig = this.extraConfig, serviceLegalName = this.serviceLegalName, className = this.className)</ID>
     <ID>MaxLineLength:InternalMockNetworkConfigOverrides.kt$this.flowTimeout?.also { fto -&gt; doReturn(FlowTimeoutConfiguration(fto.timeout, fto.maxRestartCount, fto.backoffBase)).whenever(config).flowTimeout }</ID>
     <ID>MaxLineLength:InternalMockNetworkIntegrationTests.kt$InternalMockNetworkIntegrationTests$assertEquals(0, startJavaProcess&lt;InternalMockNetworkIntegrationTests&gt;(emptyList(), extraJvmArguments = listOf("-javaagent:$quasar")).waitFor())</ID>
-    <ID>MaxLineLength:InternalRPCMessagingClient.kt$InternalRPCMessagingClient : SingletonSerializeAsTokenAutoCloseable</ID>
-    <ID>MaxLineLength:InternalRPCMessagingClient.kt$InternalRPCMessagingClient$rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)</ID>
+    <ID>MaxLineLength:InternalRPCMessagingClient.kt$InternalRPCMessagingClient$rpcServer = RPCServer(opsList, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)</ID>
     <ID>MaxLineLength:InternalTestUtils.kt$ fun cordappWithPackages(vararg packageNames: String): CustomCordapp</ID>
     <ID>MaxLineLength:InternalTestUtils.kt$/** * *Custom* CorDapp containing the contents of the `net.corda.testing.contracts` package, i.e. the dummy contracts. This is not a real CorDapp * in the way that [FINANCE_CONTRACTS_CORDAPP] and [FINANCE_WORKFLOWS_CORDAPP] are. */ @JvmField val DUMMY_CONTRACTS_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.testing.contracts")</ID>
     <ID>MaxLineLength:InternalTestUtils.kt$/** * Reference to the finance-contracts CorDapp in this repo. The metadata is taken directly from finance/contracts/build.gradle, including the * fact that the jar is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance.contracts")`. * * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the flows as well. */ @JvmField val FINANCE_CONTRACTS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.contracts")</ID>
@@ -2667,6 +2668,7 @@
     <ID>MaxLineLength:NodeKeystoreCheckTest.kt$NodeKeystoreCheckTest$setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, listOf(badNodeCACert, badRoot), signingCertStore.entryPassword)</ID>
     <ID>MaxLineLength:NodeKeystoreCheckTest.kt$NodeKeystoreCheckTest$val badNodeCACert = X509Utilities.createCertificate(CertificateType.NODE_CA, badRoot, badRootKeyPair, ALICE_NAME.x500Principal, nodeCA.keyPair.public)</ID>
     <ID>MaxLineLength:NodeKeystoreCheckTest.kt$NodeKeystoreCheckTest$val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = keystorePassword, trustStorePassword = keystorePassword)</ID>
+    <ID>MaxLineLength:NodeLifecycleEventsDistributor.kt$NodeLifecycleEventsDistributor</ID>
     <ID>MaxLineLength:NodeMonitorModel.kt$NodeMonitorModel${ rpc = CordaRPCClient(nodeHostAndPort).start(username, password, GracefulReconnect()) proxyObservable.value = rpc.proxy // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates val ( statesSnapshot, vaultUpdates ) = rpc.proxy.vaultTrackBy&lt;ContractState&gt;( QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL), PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE) ) val unconsumedStates = statesSnapshot.states.filterIndexed { index, _ -&gt; statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED }.toSet() val consumedStates = statesSnapshot.states.toSet() - unconsumedStates val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates, references = emptySet()) vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject::onNext) // Transactions val (transactions, newTransactions) = @Suppress("DEPRECATION") rpc.proxy.internalVerifiedTransactionsFeed() newTransactions.startWith(transactions).subscribe(transactionsSubject::onNext) // SM -&gt; TX mapping val (smTxMappings, futureSmTxMappings) = rpc.proxy.stateMachineRecordedTransactionMappingFeed() futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject::onNext) // Parties on network val (parties, futurePartyUpdate) = rpc.proxy.networkMapFeed() futurePartyUpdate.startWith(parties.map(MapChange::Added)).subscribe(networkMapSubject::onNext) val stateMachines = rpc.proxy.stateMachinesSnapshot() notaryIdentities = rpc.proxy.notaryIdentities() // Extract the flow tracking stream // TODO is there a nicer way of doing this? Stream of streams in general results in code like this... // TODO `progressTrackingSubject` doesn't seem to be used anymore - should it be removed? val currentProgressTrackerUpdates = stateMachines.mapNotNull { stateMachine -&gt; ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachine) } val futureProgressTrackerUpdates = stateMachineUpdatesSubject.map { stateMachineUpdate -&gt; if (stateMachineUpdate is StateMachineUpdate.Added) { ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachineUpdate.stateMachineInfo) ?: Observable.empty&lt;ProgressTrackingEvent&gt;() } else { Observable.empty&lt;ProgressTrackingEvent&gt;() } } // We need to retry, because when flow errors, we unsubscribe from progressTrackingSubject. So we end up with stream of state machine updates and no progress trackers. futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.retry().subscribe(progressTrackingSubject) }</ID>
     <ID>MaxLineLength:NodeNamedCache.kt$DefaultNamedCacheFactory$name.startsWith("RPCSecurityManagerShiroCache_") -&gt; with(security?.authService?.options?.cache!!) { caffeine.maximumSize(maxEntries).expireAfterWrite(expireAfterSecs, TimeUnit.SECONDS) }</ID>
     <ID>MaxLineLength:NodeNamedCache.kt$DefaultNamedCacheFactory$open</ID>
@@ -2931,6 +2933,7 @@
     <ID>MaxLineLength:PersistentUniquenessProvider.kt$PersistentUniquenessProvider : UniquenessProviderSingletonSerializeAsToken</ID>
     <ID>MaxLineLength:PersistentUniquenessProvider.kt$PersistentUniquenessProvider$commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)</ID>
     <ID>MaxLineLength:PersistentUniquenessProvider.kt$PersistentUniquenessProvider$private</ID>
+    <ID>MaxLineLength:PluggableRPCOps.kt$PluggableRPCOps&lt;T : RPCOps&gt; : RPCOps</ID>
     <ID>MaxLineLength:PortfolioApi.kt$PortfolioApi$ @POST @Path("{party}/portfolio/valuations/calculate") @Produces(MediaType.APPLICATION_JSON) fun startPortfolioCalculations(params: ValuationCreationParams = ValuationCreationParams(LocalDate.of(2016, 6, 6)), @PathParam("party") partyName: String): Response</ID>
     <ID>MaxLineLength:PortfolioApi.kt$PortfolioApi$counterparties = counterParties.flatMap { it.legalIdentitiesAndCerts.map { ApiParty(it.owningKey.toBase58String(), it.name) } }</ID>
     <ID>MaxLineLength:PortfolioApi.kt$PortfolioApi$val history = AggregatedHistoryView(state.valuation!!.trades, notional.toDouble(), LocalDate.now(), state.valuation!!.margin.first, mtm)</ID>
@@ -3046,8 +3049,9 @@
     <ID>MaxLineLength:RPCDriver.kt$SingleUserSecurityManager$override</ID>
     <ID>MaxLineLength:RPCDriver.kt$SingleUserSecurityManager$override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet&lt;Role&gt;?, checkType: CheckType?)</ID>
     <ID>MaxLineLength:RPCHighThroughputObservableTests.kt$RPCHighThroughputObservableTests$val proxy = testProxy() // This tests that the observations are transmitted correctly, also check that server side doesn't try to serialize the whole lot // till client consumed some of the output produced. val observations = proxy.makeObservable() val observationsList = observations.take(4).toBlocking().toIterable().toList() assertEquals(listOf(1, 2, 3, 4), observationsList)</ID>
-    <ID>MaxLineLength:RPCOpsWithContext.kt$fun makeRPCOps(getCordaRPCOps: (username: String, credential: String) -&gt; InternalCordaRPCOps, username: String, credential: String): InternalCordaRPCOps</ID>
-    <ID>MaxLineLength:RPCOpsWithContext.kt$return Proxy.newProxyInstance(InternalCordaRPCOps::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java)) { _, method, args -&gt; try { method.invoke(cordaRPCOps, *(args ?: arrayOf())) } catch (e: InvocationTargetException) { // Unpack exception. throw e.targetException } } as InternalCordaRPCOps</ID>
+    <ID>MaxLineLength:RPCOpsProducer.kt$DefaultRPCOpsProducer$internal</ID>
+    <ID>MaxLineLength:RPCPermissionResolver.kt$RPCPermissionResolver$private</ID>
+    <ID>MaxLineLength:RPCPermissionResolver.kt$RPCPermissionResolver${ "Method map for ${interfaceParts[0]} must not be null in the cache. There must have been error processing interface. " + "Please look at the error log lines above." }</ID>
     <ID>MaxLineLength:RPCSecurityManagerWithAdditionalUser.kt$RPCSecurityManagerWithAdditionalUser : RPCSecurityManager</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer</ID>
     <ID>MaxLineLength:RPCServer.kt$RPCServer$( ops: RPCOps, rpcServerUsername: String, rpcServerPassword: String, serverLocator: ServerLocator, securityManager: RPCSecurityManager, nodeLegalName: CordaX500Name, rpcConfiguration: RPCServerConfiguration, cacheFactory: NamedCacheFactory )</ID>
@@ -3347,10 +3351,8 @@
     <ID>MaxLineLength:TestingNamedCacheFactory.kt$TestingNamedCacheFactory : BindableNamedCacheFactorySingletonSerializeAsToken</ID>
     <ID>MaxLineLength:TestingNamedCacheFactory.kt$TestingNamedCacheFactory$override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory</ID>
     <ID>MaxLineLength:TestingNamedCacheFactory.kt$TestingNamedCacheFactory$override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory</ID>
-    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy : InternalCordaRPCOps</ID>
-    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy$internal</ID>
-    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy.Companion$return Proxy.newProxyInstance(delegate::class.java.classLoader, arrayOf(InternalCordaRPCOps::class.java), handler) as InternalCordaRPCOps</ID>
-    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy.ThreadContextAdjustingInvocationHandler$private</ID>
+    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy</ID>
+    <ID>MaxLineLength:ThreadContextAdjustingRpcOpsProxy.kt$ThreadContextAdjustingRpcOpsProxy.ThreadContextAdjustingInvocationHandler$internal</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer : Proxy</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer$override fun fromProxy(proxy: StackTraceElementProxy): StackTraceElement</ID>
     <ID>MaxLineLength:ThrowableSerializer.kt$StackTraceElementSerializer$override fun toProxy(obj: StackTraceElement): StackTraceElementProxy</ID>
@@ -3763,8 +3765,7 @@
     <ID>SpreadOperator:AssertingTestDatabaseContext.kt$AssertingTestDatabaseContext$(*expectedScripts)</ID>
     <ID>SpreadOperator:AttachmentDemo.kt$(*args)</ID>
     <ID>SpreadOperator:AttachmentsClassLoaderStaticContractTests.kt$AttachmentsClassLoaderStaticContractTests$(*packages.toTypedArray())</ID>
-    <ID>SpreadOperator:AuthenticatedRpcOpsProxy.kt$(methodName, *(args.map(Class&lt;*&gt;::getName).toTypedArray()))</ID>
-    <ID>SpreadOperator:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy$(logicType, *args)</ID>
+    <ID>SpreadOperator:AuthenticatedRpcOpsProxy.kt$AuthenticatedRpcOpsProxy.PermissionsEnforcingInvocationHandler$(methodFullName(method), *(args.map(Class&lt;*&gt;::getName).toTypedArray()))</ID>
     <ID>SpreadOperator:AzureInstantiator.kt$AzureInstantiator$(*portsToOpen.toIntArray())</ID>
     <ID>SpreadOperator:ByteArrays.kt$OpaqueBytes.Companion$(*b)</ID>
     <ID>SpreadOperator:CertificateRevocationListNodeTests.kt$CertificateRevocationListNodeTests$(newNodeCert, INTERMEDIATE_CA.certificate, *nodeKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.drop(2).toTypedArray())</ID>
@@ -3877,8 +3878,7 @@
     <ID>SpreadOperator:PropertyValidationTest.kt$PropertyValidationTest$(*key.split(".").toTypedArray(), nestedKey)</ID>
     <ID>SpreadOperator:RPCClient.kt$RPCClient$(*haPoolTransportConfigurations.toTypedArray())</ID>
     <ID>SpreadOperator:RPCDriver.kt$RandomRpcUser.Companion$(handle.proxy, *arguments.toTypedArray())</ID>
-    <ID>SpreadOperator:RPCOpsWithContext.kt$(cordaRPCOps, *(args ?: arrayOf()))</ID>
-    <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(request.first(), *args)</ID>
+    <ID>SpreadOperator:RPCSecurityManagerTest.kt$RPCSecurityManagerTest$(methodName, *args)</ID>
     <ID>SpreadOperator:RPCServer.kt$RPCServer$(invocationTarget.instance, *arguments.toTypedArray())</ID>
     <ID>SpreadOperator:ReactiveArtemisConsumer.kt$ReactiveArtemisConsumer.Companion$(queueName, *queueNames)</ID>
     <ID>SpreadOperator:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$(reconnectingRPCConnection.proxy, *(args ?: emptyArray()))</ID>
@@ -3966,7 +3966,7 @@
     <ID>TooGenericExceptionCaught:CertRole.kt$CertRole.Companion$ex: ArrayIndexOutOfBoundsException</ID>
     <ID>TooGenericExceptionCaught:CheckpointAgent.kt$CheckpointAgent.Companion$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CheckpointAgent.kt$CheckpointHook$throwable: Throwable</ID>
-    <ID>TooGenericExceptionCaught:CheckpointDumper.kt$CheckpointDumper$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CheckpointDumperImpl.kt$CheckpointDumperImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CheckpointVerifier.kt$CheckpointVerifier$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CollectSignaturesFlow.kt$SignTransactionFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ConcurrencyUtils.kt$t: Throwable</ID>
@@ -4074,6 +4074,7 @@
     <ID>TooGenericExceptionCaught:RPCClient.kt$RPCClient$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:RPCClientProxyHandler.kt$RPCClientProxyHandler$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RPCClientProxyHandler.kt$RPCClientProxyHandler$e: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:RPCPermissionResolver.kt$RPCPermissionResolver.InterfaceMethodMapCacheLoader$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:RPCServer.kt$RPCServer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RPCServer.kt$RPCServer$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:RPCServer.kt$RPCServer$throwable: Throwable</ID>
@@ -4083,6 +4084,8 @@
     <ID>TooGenericExceptionCaught:ReceiveTransactionFlow.kt$ReceiveTransactionFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ReconnectingObservable.kt$ReconnectingObservable.ReconnectingSubscriber$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:RpcImplementationsFactory.kt$RpcImplementationsFactory$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:RpcImplementationsFactory.kt$RpcImplementationsFactory.Companion$ex: Throwable</ID>
     <ID>TooGenericExceptionCaught:RpcServerObservableSerializerTests.kt$RpcServerObservableSerializerTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SSLHelper.kt$LoggingTrustManagerWrapper$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests$ex: Exception</ID>
@@ -4159,7 +4162,7 @@
     <ID>TooManyFunctions:ContractUpgradeTransactions.kt$ContractUpgradeLedgerTransaction : FullTransactionTransactionWithSignatures</ID>
     <ID>TooManyFunctions:CordaRPCOps.kt$CordaRPCOps : RPCOps</ID>
     <ID>TooManyFunctions:CordaRPCOps.kt$net.corda.core.messaging.CordaRPCOps.kt</ID>
-    <ID>TooManyFunctions:CordaRPCOpsImpl.kt$CordaRPCOpsImpl : InternalCordaRPCOpsAutoCloseable</ID>
+    <ID>TooManyFunctions:CordaRPCOpsImpl.kt$CordaRPCOpsImpl : InternalCordaRPCOpsNodeRpcOps</ID>
     <ID>TooManyFunctions:Crypto.kt$Crypto</ID>
     <ID>TooManyFunctions:CryptoUtils.kt$net.corda.core.crypto.CryptoUtils.kt</ID>
     <ID>TooManyFunctions:Currencies.kt$net.corda.finance.Currencies.kt</ID>
@@ -4424,17 +4427,14 @@
     <ID>WildcardImport:CertificateRevocationListNodeTests.kt$import net.corda.nodeapi.internal.crypto.*</ID>
     <ID>WildcardImport:CertificateRevocationListNodeTests.kt$import org.bouncycastle.asn1.x509.*</ID>
     <ID>WildcardImport:CertificatesUtils.kt$import net.corda.nodeapi.internal.crypto.*</ID>
-    <ID>WildcardImport:CheckpointDumper.kt$import com.fasterxml.jackson.databind.*</ID>
-    <ID>WildcardImport:CheckpointDumper.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:CheckpointDumper.kt$import net.corda.node.services.statemachine.*</ID>
+    <ID>WildcardImport:CheckpointDumperImpl.kt$import com.fasterxml.jackson.databind.*</ID>
+    <ID>WildcardImport:CheckpointDumperImpl.kt$import net.corda.core.internal.*</ID>
+    <ID>WildcardImport:CheckpointDumperImpl.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:CheckpointSerializationAPI.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:ClassCarpenter.kt$import org.objectweb.asm.Opcodes.*</ID>
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:CloseableTab.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.identity.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CommandLineCompatibilityCheckerTest.kt$import org.hamcrest.CoreMatchers.*</ID>
     <ID>WildcardImport:CommercialPaper.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:CommercialPaperIssueFlow.kt$import net.corda.core.flows.*</ID>
@@ -4497,6 +4497,7 @@
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CordaRPCOps.kt$import net.corda.core.node.services.vault.*</ID>
+    <ID>WildcardImport:CordaRPCOpsImpl.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import org.assertj.core.api.Assertions.*</ID>
     <ID>WildcardImport:CordaServiceTest.kt$import kotlin.test.*</ID>
@@ -4631,6 +4632,7 @@
     <ID>WildcardImport:InputStreamSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:InstallFactory.kt$import tornadofx.*</ID>
     <ID>WildcardImport:InstallShellExtensionsParser.kt$import net.corda.core.internal.*</ID>
+    <ID>WildcardImport:InteractiveShell.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:InteractiveShellIntegrationTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:InterestRatesSwapDemoAPI.kt$import org.springframework.web.bind.annotation.*</ID>
@@ -4859,6 +4861,7 @@
     <ID>WildcardImport:RPCMultipleInterfacesTests.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:RPCSecurityManagerImpl.kt$import org.apache.shiro.authc.*</ID>
     <ID>WildcardImport:RPCServer.kt$import net.corda.core.utilities.*</ID>
+    <ID>WildcardImport:RPCServer.kt$import net.corda.ext.internal.rpc.security.*</ID>
     <ID>WildcardImport:RPCServer.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.node.services.statemachine.StaffedFlowHospital.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.testing.node.internal.*</ID>
