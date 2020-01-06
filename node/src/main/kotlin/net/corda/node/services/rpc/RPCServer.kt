@@ -40,6 +40,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
+import org.slf4j.MDC
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method

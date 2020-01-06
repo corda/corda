@@ -19,8 +19,7 @@ class CordaRPCOpsImplFactoryTest {
     @Test
     fun testDiscoverAndCreate() {
         val discoveryResult = RpcImplementationsFactory().discoverAndCreate(mockContext).map { it.lifecycleInstance::class.java }.toSet()
-        assertEquals(2, discoveryResult.size)
+        assertEquals(1, discoveryResult.size)
         assertTrue(CordaRPCOpsImpl::class.java in discoveryResult)
-        assertTrue(NodeHealthCheckRpcOpsImpl::class.java in discoveryResult)
     }
 }

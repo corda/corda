@@ -48,7 +48,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.FlowStarter
 import net.corda.ext.api.admin.NodeAdmin
 import net.corda.ext.api.NodeInitialContext
 import net.corda.ext.api.lifecycle.NodeLifecycleEvent
@@ -60,12 +59,7 @@ import net.corda.ext.api.flow.StateMachineOperations
 import net.corda.ext.api.network.NetworkMapOperations
 import net.corda.ext.api.flow.CheckpointDumper
 import net.corda.ext.internal.rpc.security.rpcContext
-import net.corda.ext.api.flow.StateMachineStoppedException
 import net.corda.ext.api.flow.Change
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.rpc.CheckpointDumper
-import net.corda.node.services.rpc.context
-import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable

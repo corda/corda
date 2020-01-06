@@ -22,9 +22,6 @@ import net.corda.ext.api.network.NetworkMapOperations
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
-import org.junit.ClassRule
 import org.junit.Test
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -32,12 +29,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class RpcImplFullLifecycleTest : IntegrationTest() {
+class RpcImplFullLifecycleTest {
     companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME)
-
         const val testResponse = "testResponse"
 
         @Volatile
@@ -93,7 +86,7 @@ class RpcImplFullLifecycleTest : IntegrationTest() {
         private fun NodeInitialContext.checkOperational() {
             assertNotNull(platformVersion)
             val extractor = object : Configuration.Value.Extractor<String> {
-                override fun valueIn(configuration: Config, options: Configuration.Options): String {
+                override fun valueIn(configuration: Config): String {
                     return configuration.getString("baseDirectory")
                 }
 

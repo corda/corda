@@ -14,20 +14,13 @@ import net.corda.ext.api.lifecycle.NodeLifecycleObserver
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.enclosedCordapp
-import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class CordaServiceLifecycleTests : IntegrationTest() {
+class CordaServiceLifecycleTests {
 
     private companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME)
-
         const val TEST_PHRASE = "testPhrase"
 
         private val eventsCaptured: MutableList<NodeLifecycleEvent> = mutableListOf()
