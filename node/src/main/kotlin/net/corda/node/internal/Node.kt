@@ -22,7 +22,6 @@ import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.getJavaUpdateVersion
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.notary.NotaryService
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -41,7 +40,7 @@ import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
-import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
@@ -69,7 +68,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.BindableNamedCacheFactory
-import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
@@ -80,6 +78,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.serialization.internal.*
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -137,7 +136,7 @@ open class Node(configuration: NodeConfiguration,
         djvmCordaSource = djvmCordaSource
 ) {
 
-    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
+    override fun createStartedNode(nodeInfo: NodeInfo, rpcOpsList: List<RPCOps>, notaryService: NotaryService?): NodeInfo =
             nodeInfo
 
     companion object {
@@ -335,7 +334,7 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
+    override fun startMessagingService(rpcOps: List<RPCOps>, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
         network as P2PMessagingClient
@@ -354,7 +353,7 @@ open class Node(configuration: NodeConfiguration,
 
         val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
             if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this,
-                User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
+                    User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {

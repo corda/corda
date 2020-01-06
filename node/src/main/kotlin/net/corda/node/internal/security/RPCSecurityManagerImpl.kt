@@ -7,6 +7,9 @@ import com.google.common.primitives.Ints
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
+import net.corda.ext.internal.rpc.security.AuthorizingSubject
+import net.corda.ext.internal.rpc.security.Password
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.PasswordEncryption
@@ -16,10 +19,8 @@ import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher
 import org.apache.shiro.authz.AuthorizationInfo
-import org.apache.shiro.authz.Permission
 import org.apache.shiro.authz.SimpleAuthorizationInfo
 import org.apache.shiro.authz.permission.DomainPermission
-import org.apache.shiro.authz.permission.PermissionResolver
 import org.apache.shiro.cache.CacheManager
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.realm.AuthorizingRealm
@@ -106,7 +107,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCache
  * represented by instances of the [Permission] interface which offers a single method: [implies], to
  * test if the 'x implies y' binary predicate is satisfied.
  */
-private class RPCPermission : DomainPermission {
+internal class RPCPermission : DomainPermission {
 
     /**
      * Helper constructor directly setting actions and target field

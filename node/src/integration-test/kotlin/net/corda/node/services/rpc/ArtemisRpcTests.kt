@@ -9,7 +9,7 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.ArtemisBroker
-import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
@@ -129,7 +129,7 @@ class ArtemisRpcTests {
 
     private fun <OPS : RPCOps> InternalRPCMessagingClient.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
         apply {
-            init(ops, securityManager, TestingNamedCacheFactory())
+            init(listOf(ops), securityManager, TestingNamedCacheFactory())
             start(brokerControl)
         }
     }

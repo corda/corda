@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -39,6 +40,7 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.ext.api.flow.Change
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
@@ -107,7 +109,7 @@ interface TestStartedNode {
     val services: StartedNodeServices
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
-    val rpcOps: CordaRPCOps
+    val rpcOpsList: List<RPCOps>
     val network: MockNodeMessagingService
     val database: CordaPersistence
     val notaryService: NotaryService?
@@ -133,6 +135,9 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
+
+    @Deprecated("Deprecated in favour of `rpcOpsList`", ReplaceWith("rpcOpsList"))
+    val rpcOps: CordaRPCOps get() = rpcOpsList.mapNotNull { it as?  CordaRPCOps }.single()
 }
 
 open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
@@ -288,19 +293,19 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 override val info: NodeInfo,
                 override val smm: StateMachineManager,
                 override val database: CordaPersistence,
-                override val rpcOps: CordaRPCOps,
+                override val rpcOpsList: List<RPCOps>,
                 override val notaryService: NotaryService?) : TestStartedNode {
 
             override fun dispose() = internals.stop()
 
             override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
                 internals.flowManager.registerInitiatedFlow(initiatedFlowClass)
-                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                return smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
 
             override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
                 internals.flowManager.registerInitiatedFlow(initiatingFlowClass, initiatedFlowClass)
-                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                return smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
         }
 
@@ -327,7 +332,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
         override val started: TestStartedNode? get() = super.started
 
-        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode {
+        override fun createStartedNode(nodeInfo: NodeInfo, rpcOpsList: List<RPCOps>, notaryService: NotaryService?): TestStartedNode {
             return TestStartedNodeImpl(
                     this,
                     attachments,
@@ -336,7 +341,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                     nodeInfo,
                     smm,
                     database,
-                    rpcOps,
+                    rpcOpsList,
                     notaryService
             )
         }
@@ -360,7 +365,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             return MockNodeMessagingService(configuration, serverThread).closeOnStop()
         }
 
-        override fun startMessagingService(rpcOps: RPCOps,
+        override fun startMessagingService(rpcOps: List<RPCOps>,
                                            nodeInfo: NodeInfo,
                                            myNotaryIdentity: PartyAndCertificate?,
                                            networkParameters: NetworkParameters) {
@@ -423,7 +428,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         fun <T : FlowLogic<*>> registerInitiatedFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, factory: InitiatedFlowFactory<T>, track: Boolean): Observable<T> {
             mockFlowManager.registerTestingFactory(initiatingFlowClass, factory)
             return if (track) {
-                smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             } else {
                 Observable.empty<T>()
             }
@@ -616,6 +621,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
+        doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
     }
 }
 

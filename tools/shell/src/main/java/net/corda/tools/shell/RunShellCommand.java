@@ -23,7 +23,7 @@ import static java.util.Comparator.comparing;
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
 
-public class RunShellCommand extends InteractiveShellCommand {
+public class RunShellCommand extends CordaRpcOpsShellCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
 

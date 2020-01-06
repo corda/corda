@@ -30,6 +30,7 @@ dependencies {
 
     compile project(':node-api')
     compile project(':client:rpc')
+    compile project(':client:extensions-rpc')
 
     // Jackson support: serialisation to/from JSON, YAML, etc.
     compile project(':client:jackson')

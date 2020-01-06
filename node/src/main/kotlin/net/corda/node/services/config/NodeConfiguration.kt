@@ -2,6 +2,7 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.configuration.parsing.internal.ConfigurationWithOptionsContainer
 import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
@@ -25,7 +26,7 @@ import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
-interface NodeConfiguration {
+interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val myLegalName: CordaX500Name
     val emailAddress: String
     val jmxMonitoringHttpPort: Int?

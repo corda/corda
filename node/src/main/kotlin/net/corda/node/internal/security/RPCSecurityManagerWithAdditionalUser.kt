@@ -1,5 +1,8 @@
 package net.corda.node.internal.security
 
+import net.corda.ext.internal.rpc.security.AuthorizingSubject
+import net.corda.ext.internal.rpc.security.Password
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.nodeapi.internal.config.User
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.subject.SimplePrincipalCollection

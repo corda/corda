@@ -35,12 +35,10 @@ import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
@@ -66,19 +64,22 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.ext.api.NodeServicesContext
+import net.corda.ext.api.rpc.RpcImplementationsFactory
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
+import net.corda.ext.api.lifecycle.NodeLifecycleEvent
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
+import net.corda.node.internal.attachment.AttachmentOperationsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.VirtualCordapp
-import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
-import net.corda.node.internal.rpc.proxies.ThreadContextAdjustingRpcOpsProxy
+import net.corda.node.internal.flow.StateMachineOperationsImpl
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
@@ -87,7 +88,11 @@ import net.corda.node.services.api.DummyAuditService
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.api.NodePropertiesStore
+import net.corda.ext.api.admin.NodePropertiesStore
+import net.corda.ext.api.lifecycle.NodeLifecycleEventsDistributor
+import net.corda.ext.api.lifecycle.NodeLifecycleObserver
+import net.corda.ext.api.message.MessagingOperations
+import net.corda.node.internal.admin.NodeAdminImpl
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
@@ -120,7 +125,8 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
-import net.corda.node.services.rpc.CheckpointDumper
+import net.corda.node.services.persistence.asFeed
+import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExternalEvent
@@ -210,7 +216,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
-    private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
+    private var tokenizableServices: MutableList<SerializeAsToken>? = mutableListOf(platformClock, this)
 
     val metricRegistry = MetricRegistry()
     protected val cacheFactory = cacheFactoryPrototype.bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
@@ -242,7 +248,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory,
-            this.cordappLoader.appClassLoader)
+            cordappLoader.appClassLoader)
+
+    private val transactionSupport = CordaTransactionSupportImpl(database)
 
     init {
         // TODO Break cyclic dependency
@@ -351,8 +359,32 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Volatile
     private var _started: S? = null
 
+    private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
+
+    private val nodeServicesContext = object : NodeServicesContext {
+        override val serviceHub = services
+        override val networkMapOperations = services.networkMapUpdater
+        override val attachmentOperations = AttachmentOperationsImpl(services.attachments, services.attachmentTrustCalculator)
+        override val stateMachineOperations = StateMachineOperationsImpl(smm, this@AbstractNode.flowStarter, smm.flowHospital,
+                services.stateMachineRecordedTransactionMapping.asFeed(), checkpointDumper)
+        override val platformVersion = versionInfo.platformVersion
+        override val configurationWithOptions = configuration.configurationWithOptions
+        override val nodeAdmin = NodeAdminImpl(cordappLoader, services.nodeProperties, Consumer {
+            shutdownExecutor.submit(::stop)
+        },
+        // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will
+        // be reflected in the `NodeAdmin` as well. However, since `NodeAdmin` only has access to immutable collection it can only read (but not modify)
+        // the content.
+        tokenizableServices!!)
+        override val database = transactionSupport
+        override val messagingOperations = object : MessagingOperations {}
+    }
+
+    private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
+
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this)
+        tokenizableServices?.add(this as? SerializeAsToken ?:
+            throw IllegalStateException("${this::class.java} is expected to be extending from SerializeAsToken"))
                 ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
@@ -360,23 +392,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected fun <T : AutoCloseable> T.closeOnStop(): T {
         runOnStop += this::close
         return this
-    }
-
-    /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
-        val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
-                services,
-                smm,
-                flowStarter,
-                checkpointDumper
-        ) {
-            shutdownExecutor.submit(::stop)
-        }.also { it.closeOnStop() }
-        val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
-        // Mind that order is relevant here.
-        proxies += ::AuthenticatedRpcOpsProxy
-        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
-        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
     private fun initKeyStores(): X509Certificate {
@@ -422,6 +437,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (configuration.devMode && System.getProperty("co.paralleluniverse.fibers.verifyInstrumentation") == null) {
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
+
+        val implWithProxyList: List<RpcImplementationsFactory.ImplWithProxy> =
+                RpcImplementationsFactory().discoverAndCreate(nodeServicesContext)
+        nodeLifecycleEventsDistributor.addAll(implWithProxyList.map { it.lifecycleInstance })
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStores()
@@ -435,9 +455,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         installCoreFlows()
         registerCordappFlows()
-        services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services, services.configuration.baseDirectory)
-        val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
+
         startShell()
         networkMapClient?.start(trustRoot)
 
@@ -469,8 +487,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 netParams,
                 keyManagementService,
                 configuration.networkParameterAcceptanceSettings!!)
+        val rpcOpsProxies = implWithProxyList.map { it.proxy }
         try {
-            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+            startMessagingService(rpcOpsProxies, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
             stop()
@@ -498,7 +517,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            checkpointDumper.start(frozenTokenizableServices)
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
@@ -511,12 +529,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             flowMonitor.start()
             schedulerService.start()
 
-            createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
+            val resultingNodeInfo = createStartedNode(nodeInfo, rpcOpsProxies, notaryService).also { _started = it }
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterStart(nodeServicesContext))
+            resultingNodeInfo
         }
     }
 
     /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
-    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S
+    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOpsList: List<RPCOps>, notaryService: NotaryService?): S
 
     private fun verifyCheckpointsCompatible(tokenizableServices: List<Any>) {
         try {
@@ -793,7 +813,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
-            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, CordaTransactionSupportImpl(database))
+            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, transactionSupport)
             val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
             val service = extendedServiceConstructor.newInstance(serviceContext)
             serviceContext.serviceInstance = service
@@ -810,6 +830,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         cordappServices.putInstance(serviceClass, service)
 
         service.tokenize()
+        // Service can optionally be NodeLifecycleObserver - if so register it to receive node's lifecycle events.
+        if (service is NodeLifecycleObserver) {
+            nodeLifecycleEventsDistributor.add(service)
+        }
         log.info("Installed ${serviceClass.name} Corda service")
 
         return service
@@ -943,6 +967,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     open fun stop() {
+
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStop(nodeServicesContext))
+
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
         // network, including unsubscribing from updates from remote services. Possibly some sort of parameter to stop()
         // to indicate "Please shut down gracefully" vs "Shut down now".
@@ -956,11 +983,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         runOnStop.clear()
         shutdownExecutor.shutdown()
         _started = null
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterStop(nodeServicesContext))
     }
 
     protected abstract fun makeMessagingService(): MessagingService
 
-    protected abstract fun startMessagingService(rpcOps: RPCOps,
+    protected abstract fun startMessagingService(rpcOps: List<RPCOps>,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
@@ -1102,7 +1130,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
-        override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService
         override val keyManagementService: KeyManagementService get() = this@AbstractNode.keyManagementService

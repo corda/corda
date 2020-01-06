@@ -2,8 +2,8 @@ package net.corda.node.internal.artemis
 
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.contextLogger
-import net.corda.node.internal.security.Password
-import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.ext.internal.rpc.security.Password
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.node.services.rpc.LoginListener
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent

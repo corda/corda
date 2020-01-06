@@ -55,9 +55,10 @@ For further information on using the RPC API, see :doc:`tutorial-clientrpc-api`.
 
 RPC permissions
 ---------------
-For a node's owner to interact with their node via RPC, they must define one or more RPC users. Each user is
+In order to interact with Corda Node via RPC interface, a node's operator must define one or more RPC users. Each user is
 authenticated with a username and password, and is assigned a set of permissions that control which RPC operations they
-can perform. Permissions are not required to interact with the node via the shell, unless the shell is being accessed via SSH.
+can perform. Permissions are not required to interact with the node via the local shell. Permissions do, however, have effect on the shell
+started via SSH.
 
 RPC users are created by adding them to the ``rpcUsers`` list in the node's ``node.conf`` file:
 
@@ -72,12 +73,12 @@ RPC users are created by adding them to the ``rpcUsers`` list in the node's ``no
         ...
     ]
 
-By default, RPC users are not permissioned to perform any RPC operations.
+By default, RPC users are not allowed to perform any RPC operations.
 
 Granting flow permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-You provide an RPC user with the permission to start a specific flow using the syntax
-``StartFlow.<fully qualified flow name>``:
+In order to provide an RPC user with the permission to start a specific flow, the following syntax can be used:
+``StartFlow.<fully qualified flow name>``, e.g.:
 
 .. sourcecode:: groovy
 
@@ -93,8 +94,8 @@ You provide an RPC user with the permission to start a specific flow using the s
         ...
     ]
 
-You can also provide an RPC user with the permission to start any flow using the syntax
-``InvokeRpc.startFlow``:
+In order to provide an RPC user with the permission to start any flow, the following syntax can be used:
+``InvokeRpc.startFlow``, e.g.:
 
 .. sourcecode:: groovy
 
@@ -109,10 +110,10 @@ You can also provide an RPC user with the permission to start any flow using the
         ...
     ]
 
-Granting other RPC permissions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You provide an RPC user with the permission to perform a specific RPC operation using the syntax
-``InvokeRpc.<rpc method name>``:
+Deprecated method of granting other RPC permissions for ``CordaRPCOps`` interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In order to provide an RPC user with the permission to perform a specific RPC operation, the following syntax can be used:
+``InvokeRpc.<rpc method name>``, e.g.:
 
 .. sourcecode:: groovy
 
@@ -128,9 +129,63 @@ You provide an RPC user with the permission to perform a specific RPC operation 
         ...
     ]
 
+.. note:: Methods listed above ``nodeInfo`` and ``networkMapSnapshot`` are from ``CordaRPCOps`` interface. This is a legacy form of specifying
+    permissions in which ``CordaRPCOps`` interface is implied. Please see below for a way to provide permissions in case of multiple RPC interfaces.
+
+Granting permissions for RPC operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``InvokeRpc`` syntax mentioned above can be applied onto multiple RPC interfaces running within single node.
+
+The syntax has multiple forms:
+
+#. ``InvokeRpc:com.fully.qualified.package.CustomClientRpcOps#firstMethod``
+    Here, we are assuming that that there is a fully qualified interface ``com.fully.qualified.package.CustomClientRpcOps`` which has a method
+    ``firstMethod`` permission to which we are specifying explicitly;
+
+#. ``InvokeRpc:com.fully.qualified.package.CustomClientRpcOps#ALL``
+    Here we are granting permissions to all the methods of ``com.fully.qualified.package.CustomClientRpcOps`` interface.
+
+#. ``InvokeRpc:com.fully.qualified.package.CustomClientRpcOps#READ_ONLY``
+    Here we are granting permissions to a group of method or properties that been marked with ``@RpcPermissionGroup(READ_ONLY)``. It is possible
+    to define as many groups as necessary and mark ``RPCOps`` interface methods as necessary. Every method may belong to multiple groups.
+
+.. note:: It is not un-common for ``RPCOps`` interfaces to inherit from each other. Permissions to specific methods or methods groups should always be
+    expressed using declaring interface name. It is possible to say that when granting RPC permissions Node Operator should disregard ``RPCOps`` interfaces hierarchy.
+
+    Consider the following interface definition in ``com.fully.qualified.package`` package:
+
+    .. sourcecode:: kotlin
+
+        interface Alpha : RPCOps {
+            @RpcPermissionGroup(READ_ONLY)
+            fun readAlpha() : String
+        }
+
+        interface Beta : Alpha {
+            @RpcPermissionGroup(READ_ONLY, SENSITIVE)
+            val betaValue : Int
+
+            @RpcPermissionGroup(SENSITIVE)
+            fun writeBeta(foo: Int)
+
+            fun nothingSpecial() : Int
+        }
+
+    In order to grant permission to ``nothingSpecial()`` method, syntax ``InvokeRpc:com.fully.qualified.package.Beta#nothingSpecial`` should be used.
+
+    In order to grant permission to ``readAlpha()`` method, syntax ``InvokeRpc:com.fully.qualified.package.Alpha#readAlpha`` should be used.
+    Even though by inheritance ``readAlpha()`` method is also present in ``Beta`` interface.
+
+    Syntax ``InvokeRpc:com.fully.qualified.package.Beta#READ_ONLY`` will grant permission to property ``betaValue`` only, but not ``readAlpha()`` method.
+
+    Syntax ``InvokeRpc:com.fully.qualified.package.Alpha#READ_ONLY`` will grant permission to ``readAlpha()`` method only, but not ``betaValue`` property.
+
+.. note:: Permissions strings are case insensitive.
+
 Granting all permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~
-You can provide an RPC user with the permission to perform any RPC operation (including starting any flow) using the
+In order to provide an RPC user with the permission to perform any RPC operation (including starting any flow) using the
 ``ALL`` permission:
 
 .. sourcecode:: groovy

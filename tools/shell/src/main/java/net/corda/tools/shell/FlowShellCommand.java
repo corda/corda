@@ -26,7 +26,7 @@ import static net.corda.tools.shell.InteractiveShell.runStateMachinesView;
                 "command with either a full class name, or a substring of the class name that's unambiguous. The parameters to the \n" +
                 "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
 )
-public class FlowShellCommand extends InteractiveShellCommand {
+public class FlowShellCommand extends CordaRpcOpsShellCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(FlowShellCommand.class);
 
@@ -43,7 +43,8 @@ public class FlowShellCommand extends InteractiveShellCommand {
     // TODO Limit number of flows shown option?
     @Command
     @Usage("Watch information about state machines running on the node with result information.")
-    public void watch(InvocationContext<TableElement> context) throws Exception {
+    @SuppressWarnings("unused")
+    public void watch(InvocationContext<TableElement> context) {
         logger.info("Executing command \"flow watch\".");
         runStateMachinesView(out, ops());
     }

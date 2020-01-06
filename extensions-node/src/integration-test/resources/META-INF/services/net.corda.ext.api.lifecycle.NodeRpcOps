@@ -1,0 +1,2 @@
+# Test implementation of Node health check
+net.corda.extensions.node.rpc.RpcImplFullLifecycleTest$Companion$TestNodeHealthCheckRpcOpsImpl

@@ -15,6 +15,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.ext.api.network.NetworkMapOperations
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
@@ -50,7 +51,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val baseDirectory: Path,
                         private val extraNetworkMapKeys: List<UUID>,
                         private val networkParametersStorage: NetworkParametersStorage
-) : AutoCloseable {
+) : AutoCloseable, NetworkMapOperations {
     companion object {
         private val logger = contextLogger()
         private val defaultRetryInterval = 1.minutes
@@ -151,14 +152,14 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         })
     }
 
-    fun trackParametersUpdate(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
+    override fun trackParametersUpdate(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         val currentUpdateInfo = newNetworkParameters?.let {
             ParametersUpdateInfo(it.first.newParametersHash, it.second.verified(), it.first.description, it.first.updateDeadline)
         }
         return DataFeed(currentUpdateInfo, parametersUpdatesTrack)
     }
 
-    fun updateNetworkMapCache(): Duration {
+    override fun updateNetworkMapCache(): Duration {
         if (networkMapClient == null) {
             throw CordaRuntimeException("Network map cache can be updated only if network map/compatibility zone URL is specified")
         }
@@ -268,7 +269,7 @@ The node will shutdown now.""")
         }
     }
 
-    fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
+    override fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
         networkMapClient
                 ?: throw IllegalStateException("Network parameters updates are not supported without compatibility zone configured")
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them.

@@ -1,0 +1,87 @@
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils' // needed for running test with Quasar agent
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+description 'Node Extensions - pluggable functionality for Corda Node'
+
+dependencies {
+    compile project(":extensions-api")
+    compile project(':common-logging')
+    compile project(':client:extensions-rpc')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+    // Required by JVMAgentUtil (x-compatible java 8 & 11 agent lookup mechanism)
+    if (JavaVersion.current().isJava8Compatible())
+        compile files("${System.properties['java.home']}/../lib/tools.jar")
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+    testImplementation "junit:junit:$junit_version"
+
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junit_vintage_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
+
+    // Unit testing helpers.
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile project(':test-utils')
+    testCompile project(':node-driver')
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntimeClasspath
+    testCompile.extendsFrom shadow
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+jar {
+    enabled = false
+    baseName 'corda-extensions-node'
+}
+
+shadowJar {
+    baseName jar.baseName
+    configurations = [project.configurations.shadow]
+    archiveClassifier = jdkClassifier
+    // The 'LICENSE' file gets pulled in from multiple dependencies when generating the shadow JAR,
+    // and there's also a folder called 'license' being placed in the JAR. On case-insensitive file
+    // systems, the folder and file end up clashing, causing an error when trying to build the JAR.
+    relocate 'META-INF/LICENSE', 'META-INF/LICENCE-2'
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+artifacts {
+    testArtifacts testJar
+    compile shadowJar
+}
+
+publish {
+    name shadowJar.baseName
+}

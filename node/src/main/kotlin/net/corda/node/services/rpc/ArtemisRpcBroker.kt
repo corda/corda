@@ -6,7 +6,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
-import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -15,7 +15,6 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
-import java.lang.RuntimeException
 import java.nio.file.Path
 import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry

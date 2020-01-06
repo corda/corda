@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.ConfigException
+import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -79,7 +80,8 @@ data class NodeConfigurationImpl(
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings? =
                 Defaults.networkParameterAcceptanceSettings,
-        override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys
+        override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
+        override val configurationWithOptions: ConfigurationWithOptions
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null

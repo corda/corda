@@ -88,6 +88,7 @@ processTestResources {
 
 dependencies {
     compile project(':node-api')
+    compile project(':extensions-api')
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')
@@ -98,6 +99,10 @@ dependencies {
     // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
     // We could eventually gate this on a target-version check.
     compile project(':confidential-identities')
+
+    // Note: Runtime dependency only as all the extensions are meant to be "discovered" at runtime and none of the code in `node` module
+    // compiled against them.
+    runtime project(':extensions-node')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -173,6 +178,7 @@ dependencies {
     testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
+    testCompile project(':node-driver')
     testCompile project(':finance:contracts')
     testCompile project(':finance:workflows')
 

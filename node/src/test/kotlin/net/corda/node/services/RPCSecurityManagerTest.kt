@@ -3,9 +3,10 @@ package net.corda.node.services
 import net.corda.core.context.AuthServiceId
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.internal.security.Password
+import net.corda.ext.api.rpc.proxies.RpcAuthHelper
+import net.corda.ext.internal.rpc.security.Password
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.internal.security.tryAuthenticate
+import net.corda.ext.internal.rpc.security.tryAuthenticate
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.config.SecurityConfiguration
@@ -152,14 +153,14 @@ class RPCSecurityManagerTest {
                 userRealms.tryAuthenticate("user", Password("password"))!!,
                 userRealms.buildSubject("user"))) {
             for (request in permitted) {
-                val call = request.first()
+                val methodName = RpcAuthHelper.methodFullName(CordaRPCOps::class.java, request.first())
                 val args = request.drop(1).toTypedArray()
-                require(subject.isPermitted(request.first(), *args)) {
-                    "User ${subject.principal} should be permitted $call with target '${request.toList()}'"
+                require(subject.isPermitted(methodName, *args)) {
+                    "User ${subject.principal} should be permitted $methodName with target '${request.toList()}'"
                 }
                 if (args.isEmpty()) {
-                    require(subject.isPermitted(request.first(), "XXX")) {
-                        "User ${subject.principal} should be permitted $call with any target"
+                    require(subject.isPermitted(methodName, "XXX")) {
+                        "User ${subject.principal} should be permitted $methodName with any target"
                     }
                 }
             }

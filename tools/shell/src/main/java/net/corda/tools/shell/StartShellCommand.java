@@ -10,9 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static java.util.stream.Collectors.joining;
-
-public class StartShellCommand extends InteractiveShellCommand {
+public class StartShellCommand extends CordaRpcOpsShellCommand {
 
     private static Logger logger = LoggerFactory.getLogger(StartShellCommand.class);
 
@@ -21,7 +19,7 @@ public class StartShellCommand extends InteractiveShellCommand {
     public void main(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
                      @Usage("The data to pass as input") @Argument(unquote = false) List<String> input) {
 
-        logger.info("Executing command \"start {} {}\",", name, (input != null) ? input.stream().collect(joining(" ")) : "<no arguments>");
+        logger.info("Executing command \"start {} {}\",", name, (input != null) ? String.join(" ", input) : "<no arguments>");
         ANSIProgressRenderer ansiProgressRenderer = ansiProgressRenderer();
         FlowShellCommand.startFlow(name, input, out, ops(), ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHANSIProgressRenderer(out), objectMapper(null));
     }

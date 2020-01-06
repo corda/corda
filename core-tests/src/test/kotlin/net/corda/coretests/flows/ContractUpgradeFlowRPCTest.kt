@@ -83,6 +83,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
 
     //region RPC DSL
     private fun RPCDriverDSL.startProxy(node: TestStartedNode, user: User): CordaRPCOps {
+        @Suppress("Deprecation")
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,

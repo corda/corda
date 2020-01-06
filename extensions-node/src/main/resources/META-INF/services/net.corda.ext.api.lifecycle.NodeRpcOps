@@ -1,0 +1,5 @@
+# Standard Corda RPC Ops implementation every Corda node has
+net.corda.extensions.node.rpc.CordaRPCOpsImpl
+
+# For Node health check related operations
+net.corda.extensions.node.rpc.NodeHealthCheckRpcOpsImpl

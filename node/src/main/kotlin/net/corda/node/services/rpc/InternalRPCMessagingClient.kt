@@ -6,7 +6,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.ext.internal.rpc.security.RPCSecurityManager
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -17,11 +17,15 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 /**
  * Used by the Node to communicate with the RPC broker.
  */
-class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
+class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration,
+                                 private val serverAddress: NetworkHostAndPort,
+                                 val maxMessageSize: Int,
+                                 val nodeName: CordaX500Name,
+                                 private val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 
-    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
+    fun init(opsList: List<RPCOps>, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -33,7 +37,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
             isUseGlobalPools = nodeSerializationEnv != null
         }
 
-        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)
+        rpcServer = RPCServer(opsList, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)
     }
 
     fun start(serverControl: ActiveMQServerControl) = synchronized(this) {

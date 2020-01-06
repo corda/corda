@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Optional;
 
-public class HashLookupShellCommand extends InteractiveShellCommand {
+public class HashLookupShellCommand extends CordaRpcOpsShellCommand {
     private static Logger logger = LoggerFactory.getLogger(HashLookupShellCommand.class);
 
     @Command

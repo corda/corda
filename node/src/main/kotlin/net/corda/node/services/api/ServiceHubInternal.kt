@@ -16,6 +16,8 @@ import net.corda.core.node.services.NetworkMapCacheBase
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
+import net.corda.ext.api.flow.AsyncFlowStarter
+import net.corda.ext.api.admin.NodePropertiesStore
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.DbTransactionsResolver
@@ -143,7 +145,6 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     val schemaService: SchemaService
     override val networkMapCache: NetworkMapCacheInternal
     val auditService: AuditService
-    val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
     val database: CordaPersistence
     val configuration: NodeConfiguration
@@ -207,7 +208,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     }
 }
 
-interface FlowStarter {
+interface FlowStarter : AsyncFlowStarter {
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. This method
@@ -221,19 +222,6 @@ interface FlowStarter {
      * occurs during invocation, it will re-attempt to start the flow.
      */
     fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>>
-
-    /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method. [context] points how flow was started,
-     * See: [InvocationContext].
-     *
-     * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
-     * [logicType] or [args].
-     */
-    fun <T> invokeFlowAsync(
-            logicType: Class<out FlowLogic<T>>,
-            context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
@@ -245,7 +233,7 @@ interface WritableTransactionStorage : TransactionStorage {
     /**
      * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
+     * @return true if the transaction was recorded as a *new verified* transaction, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean

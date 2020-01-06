@@ -9,10 +9,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.notUsed
 import net.corda.core.CordaException
@@ -30,11 +27,7 @@ import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.rootCause
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.pendingFlowsCount
+import net.corda.core.messaging.*
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -94,8 +87,8 @@ const val STANDALONE_SHELL_PERMISSION = "ALL"
 @Suppress("MaxLineLength")
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
-    private lateinit var ops: InternalCordaRPCOps
+    private lateinit var rpcOpsProducer: RPCOpsProducer
+    private lateinit var startupValidation: Lazy<InternalCordaRPCOps>
     private lateinit var rpcConn: CordaRPCConnection
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
@@ -112,26 +105,7 @@ object InteractiveShell {
     }
 
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
-        rpcOps = { username: String, password: String ->
-            val connection = if (standalone) {
-                CordaRPCClient(
-                        configuration.hostAndPort,
-                        configuration.ssl,
-                        classLoader
-                ).start(username, password, gracefulReconnect = GracefulReconnect())
-            } else {
-                CordaRPCClient(
-                        hostAndPort = configuration.hostAndPort,
-                        configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                                maxReconnectAttempts = 1
-                        ),
-                        sslConfiguration = configuration.ssl,
-                        classLoader = classLoader
-                ).start(username, password)
-            }
-            rpcConn = connection
-            connection.proxy as InternalCordaRPCOps
-        }
+        rpcOpsProducer = DefaultRPCOpsProducer(configuration, classLoader, standalone)
         launchShell(configuration, standalone, classLoader)
     }
 
@@ -194,7 +168,11 @@ object InteractiveShell {
                 "Commands to extract information about checkpoints stored within the node",
                 CheckpointShellCommand::class.java
         )
-
+        ExternalResolver.INSTANCE.addCommand(
+                "healthcheck",
+                "Commands to extract health check information about running node",
+                HealthCheckShellCommand::class.java
+        )
         val shellSafety = ShellSafety().apply {
             setSafeShell(runShellInSafeMode)
             setInternal(!standalone)
@@ -229,7 +207,7 @@ object InteractiveShell {
     }
 
     class ShellLifecycle(private val shellCommands: Path, private val shellSafety: ShellSafety) : PluginLifeCycle() {
-        fun start(config: Properties, localUserName: String = "", localUserPassword: String = ""): Shell {
+        fun start(config: Properties, localUserName: String, localUserPassword: String): Shell {
             val classLoader = this.javaClass.classLoader
             val classpathDriver = ClassPathMountFactory(classLoader)
             val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
@@ -252,7 +230,7 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOpsProducer)
                 }
             }
             val attributes = emptyMap<String, Any>()
@@ -260,14 +238,15 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
-            ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops,
-                    StdoutANSIProgressRenderer), shellSafety)
+            startupValidation = lazy { rpcOpsProducer(localUserName, localUserPassword, InternalCordaRPCOps::class.java).first }
+            // For local shell create an artificial authInfo with super user permissions
+            val authInfo = CordaSSHAuthInfo(rpcOpsProducer, localUserName, localUserPassword, StdoutANSIProgressRenderer)
+            return context.getPlugin(ShellFactory::class.java).create(null, authInfo, shellSafety)
         }
     }
 
     fun nodeInfo() = try {
-        ops.nodeInfo()
+        startupValidation.value.nodeInfo()
     } catch (e: UndeclaredThrowableException) {
         throw e.cause ?: e
     }

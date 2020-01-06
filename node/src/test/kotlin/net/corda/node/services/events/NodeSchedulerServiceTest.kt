@@ -11,7 +11,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
-import net.corda.node.services.api.NodePropertiesStore
+import net.corda.ext.api.admin.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.nodeapi.internal.persistence.CordaPersistence
