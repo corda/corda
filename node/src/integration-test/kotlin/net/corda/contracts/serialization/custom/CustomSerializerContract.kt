@@ -13,7 +13,7 @@ class CustomSerializerContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val currantsyData = tx.outputsOfType(CurrantsyState::class.java)
+        val currantsyData = tx.outputsOfType<CurrantsyState>()
         require(currantsyData.isNotEmpty()) {
             "Requires at least one currantsy state"
         }

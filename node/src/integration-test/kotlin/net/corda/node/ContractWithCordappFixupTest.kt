@@ -40,7 +40,8 @@ class ContractWithCordappFixupTest {
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
-                cordappsForAllNodes = cordapps
+                cordappsForAllNodes = cordapps,
+                systemProperties = mapOf("net.corda.transactionbuilder.missingclass.disabled" to true.toString())
             )
         }
 
@@ -60,7 +61,7 @@ class ContractWithCordappFixupTest {
         val dependentContractId = dependentContractCorDapp.jarFile.hash
         val standaloneContractId = standaloneContractCorDapp.jarFile.hash
         val fixupCorDapp = cordappWithFixups(listOf(
-                setOf(dependentContractId) to setOf(dependentContractId, standaloneContractId)
+            setOf(dependentContractId) to setOf(dependentContractId, standaloneContractId)
         )).signed()
         val data = DependentData(BEANS)
 

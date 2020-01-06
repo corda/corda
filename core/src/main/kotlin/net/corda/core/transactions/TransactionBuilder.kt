@@ -1,3 +1,4 @@
+@file:Suppress("ThrowsCount", "ComplexMethod")
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
@@ -69,6 +70,7 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
+        private val MISSING_CLASS_DISABLED = java.lang.Boolean.getBoolean("net.corda.transactionbuilder.missingclass.disabled")
 
         private const val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP: Pattern = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
@@ -76,6 +78,10 @@ open class TransactionBuilder(
         private fun Collection<*>.deepEquals(other: Collection<*>): Boolean {
             return (size == other.size) && containsAll(other) && other.containsAll(this)
         }
+        private fun Collection<AttachmentId>.toPrettyString(): String = sorted().joinToString(
+            separator = System.lineSeparator(),
+            prefix = System.lineSeparator()
+        )
     }
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
@@ -131,10 +137,19 @@ open class TransactionBuilder(
      * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
 
     @CordaInternal
-    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+    internal fun toWireTransactionWithContext(
+        services: ServicesForResolution,
+        serializationContext: SerializationContext?
+    ) : WireTransaction = toWireTransactionWithContext(services, serializationContext, 0)
+
+    private tailrec fun toWireTransactionWithContext(
+        services: ServicesForResolution,
+        serializationContext: SerializationContext?,
+        tryCount: Int
+    ): WireTransaction {
         val referenceStates = referenceStates()
         if (referenceStates.isNotEmpty()) {
             services.ensureMinimumPlatformVersion(4, "Reference states")
@@ -168,10 +183,10 @@ open class TransactionBuilder(
         // This is a workaround as the current version of Corda does not support cordapp dependencies.
         // It works by running transaction validation and then scan the attachment storage for missing classes.
         // TODO - remove once proper support for cordapp dependencies is added.
-        val addedDependency = addMissingDependency(services, wireTx)
+        val addedDependency = addMissingDependency(services, wireTx, tryCount)
 
         return if (addedDependency)
-            toWireTransactionWithContext(services, serializationContext)
+            toWireTransactionWithContext(services, serializationContext, tryCount + 1)
         else
             wireTx
     }
@@ -186,7 +201,7 @@ open class TransactionBuilder(
     /**
      * @return true if a new dependency was successfully added.
      */
-    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
+    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction, tryCount: Int): Boolean {
         return try {
             wireTx.toLedgerTransaction(services).verify()
             // The transaction verified successfully without adding any extra dependency.
@@ -198,12 +213,12 @@ open class TransactionBuilder(
                 // Handle various exceptions that can be thrown during verification and drill down the wrappings.
                 // Note: this is a best effort to preserve backwards compatibility.
                 rootError is ClassNotFoundException -> {
-                    checkMissingClass((rootError.message ?: throw e).replace('.', '/'), e)
-                    fixupAttachments(wireTx.attachments, services, e)
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
+                        || addMissingAttachment((rootError.message ?: throw e).replace('.', '/'), services, e)
                 }
                 rootError is NoClassDefFoundError -> {
-                    checkMissingClass(rootError.message ?: throw e, e)
-                    fixupAttachments(wireTx.attachments, services, e)
+                    ((tryCount == 0) && fixupAttachments(wireTx.attachments, services, e))
+                        || addMissingAttachment(rootError.message ?: throw e, services, e)
                 }
 
                 // Ignore these exceptions as they will break unit tests.
@@ -225,19 +240,14 @@ open class TransactionBuilder(
         }
     }
 
-    private fun checkMissingClass(missingClass: String, originalException: Throwable) {
-        if (!isValidJavaClass(missingClass)) {
-            log.warn("Could not fix-up attachments for the transaction being built.")
-            throw originalException
-        }
-        log.warn("The transaction currently built is missing class {}", missingClass)
-    }
-
     private fun fixupAttachments(
-            txAttachments: List<AttachmentId>, services: ServicesForResolution, originalException: Throwable): Boolean {
+        txAttachments: List<AttachmentId>,
+        services: ServicesForResolution,
+        originalException: Throwable
+    ): Boolean {
         val replacementAttachments = services.cordappProvider.internalFixupAttachmentIds(txAttachments)
         if (replacementAttachments.deepEquals(txAttachments)) {
-            throw originalException
+            return false
         }
 
         val extraAttachments = replacementAttachments - txAttachments
@@ -251,18 +261,45 @@ open class TransactionBuilder(
             }
         }
 
-        log.warn("Attempting to rebuild transaction with these attachments:{}",
-            replacementAttachments.joinToString(
-                separator = System.lineSeparator(),
-                prefix = System.lineSeparator()
-            )
-        )
-
         attachments.addAll(extraAttachments)
         with(excludedAttachments) {
             clear()
             addAll(txAttachments - replacementAttachments)
         }
+
+        log.warn("Attempting to rebuild transaction with these extra attachments:{}{}and these attachments removed:{}",
+            extraAttachments.toPrettyString(),
+            System.lineSeparator(),
+            excludedAttachments.toPrettyString()
+        )
+        return true
+    }
+
+    private fun addMissingAttachment(missingClass: String, services: ServicesForResolution, originalException: Throwable): Boolean {
+        if (!isValidJavaClass(missingClass)) {
+            log.warn("Could not autodetect a valid attachment for the transaction being built.")
+            throw originalException
+        } else if (MISSING_CLASS_DISABLED) {
+            log.warn("BROKEN TRANSACTION, BUT AUTOMATIC DETECTION OF {} IS DISABLED!", missingClass)
+            throw originalException
+        }
+
+        val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass)
+
+        if (attachment == null) {
+            log.error("""The transaction currently built is missing an attachment for class: $missingClass.
+                        Attempted to find a suitable attachment but could not find any in the storage.
+                        Please contact the developer of the CorDapp for further instructions.
+                    """.trimIndent())
+            throw originalException
+        }
+
+        log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
+                        Automatically attaching contract dependency $attachment.
+                        Please contact the developer of the CorDapp and install the latest version, as this approach might be insecure.
+                    """.trimIndent())
+
+        addAttachment(attachment.id)
         return true
     }
 

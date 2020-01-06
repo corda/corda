@@ -1,7 +1,8 @@
 package net.corda.flows.fixup
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.contracts.fixup.dependent.DependentContract
+import net.corda.contracts.fixup.dependent.DependentContract.Operate
+import net.corda.contracts.fixup.dependent.DependentContract.State
 import net.corda.contracts.fixup.dependent.DependentData
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.SecureHash
@@ -18,8 +19,8 @@ class CordappFixupFlow(private val data: DependentData) : FlowLogic<SecureHash>(
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
         val stx = serviceHub.signInitialTransaction(
             TransactionBuilder(notary)
-                .addOutputState(DependentContract.State(ourIdentity, data))
-                .addCommand(Command(DependentContract.Operate(), ourIdentity.owningKey))
+                .addOutputState(State(ourIdentity, data))
+                .addCommand(Command(Operate(), ourIdentity.owningKey))
         )
         stx.verify(serviceHub, checkSufficientSignatures = false)
         return stx.id

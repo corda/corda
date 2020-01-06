@@ -14,10 +14,6 @@ import java.util.function.Function
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
-    /**
-     * Reverifies the [transaction] having applied the Node's "fix-up" rules to its attachments.
-     * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
-     */
     fun reverifyWithFixups(transaction: LedgerTransaction): CordaFuture<*>
 }
 

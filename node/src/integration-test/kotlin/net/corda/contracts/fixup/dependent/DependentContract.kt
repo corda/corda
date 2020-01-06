@@ -12,7 +12,7 @@ class DependentContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val states = tx.outputsOfType(State::class.java)
+        val states = tx.outputsOfType<State>()
         require(states.isNotEmpty()) {
             "Requires at least one dependent data state"
         }

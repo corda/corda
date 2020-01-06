@@ -13,7 +13,7 @@ class MissingSerializerContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val states = tx.outputsOfType(CustomDataState::class.java)
+        val states = tx.outputsOfType<CustomDataState>()
         require(states.isNotEmpty()) {
             "Requires at least one custom data state"
         }
