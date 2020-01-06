@@ -3,25 +3,14 @@ package net.corda.client.rpc
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal._driverSerializationEnv
 import net.corda.core.serialization.internal._rpcClientSerializationEnv
-import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.ClassRule
 import org.junit.Test
 
 class RpcCustomSerializersTest {
-
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
-    }
 
     @Test
     fun `when custom serializers are not provided, the classpath is scanned to identify any existing ones`() {
