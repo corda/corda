@@ -3,6 +3,8 @@ package net.corda.node.services.statemachine
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.HospitalizeFlowException
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
@@ -48,7 +50,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             TransientConnectionCardiologist,
             DatabaseEndocrinologist,
             TransitionErrorGeneralPractitioner,
-            SedationNurse
+            SedationNurse,
+            NotaryDoctor
         )
 
         @VisibleForTesting
@@ -575,6 +578,21 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
+    /**
+     * Retry notarisation if the flow errors with a [NotaryError.General]. Notary flows are idempotent and only success or conflict
+     * responses should be returned to the client.
+     */
+    object NotaryDoctor : Staff, Chronic {
+        override fun consult(flowFiber: FlowFiber,
+                             currentState: StateMachineState,
+                             newError: Throwable,
+                             history: FlowMedicalHistory): Diagnosis {
+            if (newError is NotaryException && newError.error is NotaryError.General) {
+                return Diagnosis.DISCHARGE
+            }
+            return Diagnosis.NOT_MY_SPECIALTY
+        }
+    }
 }
 
 private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
