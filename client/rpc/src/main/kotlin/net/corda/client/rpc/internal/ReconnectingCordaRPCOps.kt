@@ -303,7 +303,7 @@ class ReconnectingCordaRPCOps private constructor(
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
-            checkIsClosed()
+            checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
             while (remainingAttempts != 0) {
@@ -330,7 +330,7 @@ class ReconnectingCordaRPCOps private constructor(
                             checkIfIsStartFlow(method, e)
                         }
                         is PermissionException -> {
-                            throw RPCException("User does not have permission to perform operation ${method.name}.  Will not retry.", e)
+                            throw RPCException("User does not have permission to perform operation ${method.name}.", e)
                         }
                         else -> {
                             log.warn("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
@@ -346,7 +346,7 @@ class ReconnectingCordaRPCOps private constructor(
             throw MaxRpcRetryException(maxNumberOfAttempts, lastException)
         }
 
-        private fun checkIsClosed() {
+        private fun checkIfClosed() {
             if (reconnectingRPCConnection.isClosed()) {
                 throw RPCException("Cannot execute RPC command after client has shut down.")
             }
