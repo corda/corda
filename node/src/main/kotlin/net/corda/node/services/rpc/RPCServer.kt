@@ -18,7 +18,6 @@ import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
@@ -40,7 +39,6 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
-import org.slf4j.MDC
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -486,7 +484,7 @@ class RPCServer(
     ) : ObservableContextInterface {
         private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
                 observableContext = this,
-                serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
+                serializationContext = RPC_SERVER_CONTEXT)
 
         override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
             sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
@@ -507,47 +505,6 @@ class RPCServer(
     }
 }
 
-// TODO replace this by creating a new CordaRPCImpl for each request, passing the context, after we fix Shell and WebServer
-@JvmField
-internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcAuthContext> = CurrentRpcContext()
-
-internal class CurrentRpcContext : ThreadLocal<RpcAuthContext>() {
-
-    override fun remove() {
-        super.remove()
-        MDC.clear()
-    }
-
-    override fun set(context: RpcAuthContext?) {
-        when {
-            context != null -> {
-                super.set(context)
-                // this is needed here as well because the Shell sets the context without going through the RpcServer
-                context.invocation.pushToLoggingContext()
-            }
-            else -> remove()
-        }
-    }
-}
-
-/**
- * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
- * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
- * around explicitly.
- * The [InvocationContext] does not include permissions.
- */
-internal fun context(): InvocationContext = rpcContext().invocation
-
-/**
- * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
- * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
- * around explicitly.
- * The [RpcAuthContext] includes permissions.
- */
-fun rpcContext(): RpcAuthContext = CURRENT_RPC_CONTEXT.get()
-
 class ObservableSubscription(
         val subscription: Subscription
 )
-
-
