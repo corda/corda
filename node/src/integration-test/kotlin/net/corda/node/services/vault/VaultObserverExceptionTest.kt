@@ -100,12 +100,12 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * No Exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * None exception thrown from a vault observer can be suppressible in the flow that triggered the observer
      * because the recording of transaction states failed. The flow will be hospitalized.
      * The exception will bring the rx.Observer down.
      */
     @Test
-    fun noExceptionFromVaultObserverCanBeSuppressedInFlow() {
+    fun noneExceptionFromVaultObserverCanBeSuppressedInFlow() {
         // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
         // changed into asserting the same exception getting hospitalised
         var observation = 0
@@ -121,7 +121,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                    CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }

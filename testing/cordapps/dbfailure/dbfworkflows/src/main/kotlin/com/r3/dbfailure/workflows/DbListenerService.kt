@@ -80,6 +80,10 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             log.info("Throw InvalidParameterException")
                             throw InvalidParameterException("Toys out of pram")
                         }
+                        CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions -> {
+                            log.info("Throw Exception")
+                            throw Exception("Mother of all exceptions")
+                        }
                         else -> {
                             // do nothing, everything else must be handled elsewhere
                         }

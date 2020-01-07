@@ -26,6 +26,7 @@ object CreateStateFlow {
         ServiceReadState(4),
         ServiceCheckForState(5),
         ServiceThrowInvalidParameter(6),
+        ServiceThrowMotherOfAllExceptions(7),
         TxInvalidState(10),
         FlowSwallowErrors(100),
         ServiceSwallowErrors(1000)
