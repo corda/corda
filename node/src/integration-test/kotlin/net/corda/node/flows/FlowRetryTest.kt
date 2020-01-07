@@ -184,6 +184,23 @@ class FlowRetryTest {
             }
         }
     }
+
+    @Test
+    fun `Permission exceptions are not retried and propagate`() {
+        val user = User("mark", "dadada", setOf())
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+                    it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
+                }.withMessageStartingWith("User not authorized to perform RPC call")
+                // This stays at -1 since the flow never even got called
+                assertEquals(-1, GeneralExternalFailureFlow.retryCount)
+            }
+        }
+    }
 }
 
 fun isQuasarAgentSpecified(): Boolean {
