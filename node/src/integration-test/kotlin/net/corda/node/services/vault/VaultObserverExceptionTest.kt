@@ -198,45 +198,6 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws.
-     * Trying to catch and suppress that exception in the flow around the code triggering the vault observer
-     * does not change the outcome - the first exception in the service will bring the service down and will
-     * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
-     */
-    //TODO: never reaches vault observer, fails on persist
-    @Test
-    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
-        var counter = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
-            when (it) {
-                is PersistenceException -> {
-                    ++counter
-                    log.info("Got a PersistentException in the flow hospital count = $counter")
-                }
-            }
-            false
-        }
-
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(
-                    ::Initiator,
-                    "EntityManager",
-                    CreateStateFlow.errorTargetsToNum(
-                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
-                            CreateStateFlow.ErrorTarget.TxInvalidState,
-                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-            val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
-            Assert.assertTrue("Flow has not been to hospital", counter > 0)
-        }
-    }
-
-    /**
      * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
      * trying to catch and suppress that exception inside the flow does protect the flow, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
