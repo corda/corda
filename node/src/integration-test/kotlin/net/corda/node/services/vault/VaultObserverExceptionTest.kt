@@ -210,7 +210,6 @@ class VaultObserverExceptionTest {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped") // TODO: remove this line
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -249,7 +248,6 @@ class VaultObserverExceptionTest {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped") // TODO: remove this line
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
