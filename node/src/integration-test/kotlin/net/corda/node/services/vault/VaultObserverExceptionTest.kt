@@ -130,36 +130,6 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
-     * and keep it in for observation if errors persist.
-     */
-    //TODO: never reaches "On commit", fails on persist
-    @Test
-    fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
-        var admitted = 0
-        var observation = 0
-        StaffedFlowHospital.onFlowAdmitted.add {
-            ++admitted
-        }
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
-            ++observation
-        }
-
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith<TimeoutException> {
-                aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow(Duration.of(30, ChronoUnit.SECONDS))
-            }
-        }
-        Assert.assertTrue("Exception from service has not been to Hospital", admitted > 0)
-        Assert.assertEquals(1, observation)
-    }
-
-    /**
      * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
      * the flow will be kept in for observation.
      */
