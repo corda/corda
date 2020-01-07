@@ -49,7 +49,6 @@ class VaultObserverExceptionTest {
      * Causing an SqlException via a syntax error in a vault observer will be wrapped within a HospitalizeFlowException
      * causes the flow to hit SedationNurse in the FlowHospital and being kept for overnight observation
      */
-    // TODO: consolidate this
     @Test
     fun unhandledSqlExceptionFromVaultObserverGetsHospitalised() {
         val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
