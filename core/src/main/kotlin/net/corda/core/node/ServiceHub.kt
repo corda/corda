@@ -159,7 +159,8 @@ interface ServiceHub : ServicesForResolution {
 
     /**
      * The [DiagnosticsService] provides diagnostic level information about the node, including the current version of the node, and the
-     * CorDapps currently installed on the node.
+     * CorDapps currently installed on the node. Note that this information should be used to provide diagnostics only, and no functional
+     * decisions should be made based on this.
      */
     val diagnosticsService: DiagnosticsService
 
