@@ -9,7 +9,7 @@ import net.corda.core.node.services.diagnostics.NodeVersionInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.internal.cordapp.CordappProviderInternal
 
-class NodeDiagnosticsService() : DiagnosticsService, SingletonSerializeAsToken() {
+class NodeDiagnosticsService : DiagnosticsService, SingletonSerializeAsToken() {
 
     override fun nodeVersionInfo(): NodeVersionInfo {
         return NodeVersionInfo(
