@@ -48,13 +48,12 @@ import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeDiagnosticInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.DiagnosticsService
+import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TransactionVerifierService
@@ -272,7 +271,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
-    val diagnosticsService = NodeDiagnosticsService(cordappProvider).tokenize()
+    val diagnosticsService = NodeDiagnosticsService().tokenize()
     val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()

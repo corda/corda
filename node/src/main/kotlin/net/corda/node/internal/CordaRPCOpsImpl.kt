@@ -194,7 +194,32 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun nodeDiagnosticInfo(): NodeDiagnosticInfo {
-        return services.diagnosticsService.nodeDiagnosticInfo()
+        val versionInfo = services.diagnosticsService.nodeVersionInfo()
+        val cordapps = services.cordappProvider.cordapps
+                .filter { !it.jarPath.toString().endsWith("corda-core-${CordaVersion.releaseVersion}.jar") }
+                .map {
+                    CordappInfo(
+                            type = when (it.info) {
+                                is Cordapp.Info.Contract -> "Contract CorDapp"
+                                is Cordapp.Info.Workflow -> "Workflow CorDapp"
+                                else -> "CorDapp"
+                            },
+                            name = it.name,
+                            shortName = it.info.shortName,
+                            minimumPlatformVersion = it.minimumPlatformVersion,
+                            targetPlatformVersion = it.targetPlatformVersion,
+                            version = it.info.version,
+                            vendor = it.info.vendor,
+                            licence = it.info.licence,
+                            jarHash = it.jarHash)
+                }
+        return NodeDiagnosticInfo(
+                version = versionInfo.releaseVersion,
+                revision = versionInfo.revision,
+                platformVersion = versionInfo.platformVersion,
+                vendor = versionInfo.vendor,
+                cordapps = cordapps
+        )
     }
 
     override fun notaryIdentities(): List<Party> {

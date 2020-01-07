@@ -18,6 +18,7 @@ import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.*
 import net.corda.core.node.services.*
+import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
@@ -430,7 +431,7 @@ open class MockServices private constructor(
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
-    override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService(mockCordappProvider)
+    override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)

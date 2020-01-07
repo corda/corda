@@ -14,60 +14,14 @@ import kotlin.test.assertEquals
 
 class NodeDiagnosticsServiceTest {
 
-    private val cordappProviderMock = object : CordappProviderInternal {
-        override val cordapps: MutableList<CordappImpl> = mutableListOf()
-
-        override fun getCordappForFlow(flowLogic: FlowLogic<*>): Cordapp? {
-            throw NotImplementedError()
-        }
-
-        override fun getAppContext(): CordappContext {
-            throw NotImplementedError()
-        }
-
-        override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-            throw NotImplementedError()
-        }
-    }
-
-    private val diagnosticsService = NodeDiagnosticsService(cordappProviderMock)
-
-    private fun createCordappInfo(cordappImpl: CordappImpl) : CordappInfo {
-        val typeString = when (cordappImpl.info) {
-            is Cordapp.Info.Contract -> "Contract CorDapp"
-            is Cordapp.Info.Workflow -> "Workflow CorDapp"
-            else -> "CorDapp"
-        }
-        return CordappInfo(
-                typeString,
-                cordappImpl.name,
-                cordappImpl.info.shortName,
-                cordappImpl.minimumPlatformVersion,
-                cordappImpl.targetPlatformVersion,
-                cordappImpl.info.version,
-                cordappImpl.info.vendor,
-                cordappImpl.info.licence,
-                cordappImpl.jarHash
-        )
-    }
+    private val diagnosticsService = NodeDiagnosticsService()
 
     @Test
     fun `platform version info correctly returned from diagnostics service`() {
-        val info = diagnosticsService.nodeDiagnosticInfo()
-        assertEquals(CordaVersion.releaseVersion, info.version)
+        val info = diagnosticsService.nodeVersionInfo()
+        assertEquals(CordaVersion.releaseVersion, info.releaseVersion)
         assertEquals(CordaVersion.revision, info.revision)
         assertEquals(CordaVersion.platformVersion, info.platformVersion)
         assertEquals(CordaVersion.vendor, info.vendor)
-    }
-
-    @Test
-    fun `cordapp data correctly returned from diagnostics service`() {
-        // First try with no CorDapps installed
-        val noCordapps = diagnosticsService.nodeDiagnosticInfo()
-        assertEquals(emptyList(), noCordapps.cordapps)
-
-        cordappProviderMock.cordapps.add(CordappImpl.TEST_INSTANCE)
-        val cordapp = diagnosticsService.nodeDiagnosticInfo()
-        assertEquals(listOf(createCordappInfo(CordappImpl.TEST_INSTANCE)), cordapp.cordapps)
     }
 }
