@@ -49,12 +49,13 @@ class VaultObserverExceptionTest {
      * Causing an SqlException via a syntax error in a vault observer will be wrapped within a HospitalizeFlowException
      * causes the flow to hit SedationNurse in the FlowHospital and being kept for overnight observation
      */
+    // TODO: consolidate this
     @Test
-    fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
+    fun unhandledSqlExceptionFromVaultObserverGetsHospitalised() {
         val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
 
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
-            testStaffFuture.complete(staff) // get staff members that treated the flow
+            testStaffFuture.complete(staff) // get all staff members that will give an overnight observation diagnosis for this flow
         }
 
         driver(DriverParameters(
@@ -69,15 +70,18 @@ class VaultObserverExceptionTest {
             ).returnValue.then { testStaffFuture.complete(listOf()) }
             val staff = testStaffFuture.getOrThrow(30.seconds)
 
-            // flow should have been treated by the SedationNurse
+            // flow should have been given an overnight observation diagnosis by the SedationNurse
             Assert.assertTrue(staff.isNotEmpty() && staff.any { it.contains("SedationNurse") })
         }
     }
 
     /**
-     * Throwing a random (non-SQL releated) exception from a vault observer causes the flow to be
+     * Throwing a random (non-SQL related) exception from a vault observer causes the flow to be
      * aborted when unhandled in user code
      */
+    // TODO: this will now go to hospital; behaviour changed; test needs to change/ consolidate
+    // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
+    // changed into asserting the same exception getting hospitalised
     @Test
     fun otherExceptionsFromVaultObserverBringFlowDown() {
         driver(DriverParameters(
@@ -129,6 +133,7 @@ class VaultObserverExceptionTest {
      * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
      * and keep it in for observation if errors persist.
      */
+    //TODO: never reaches "On commit", fails on persist
     @Test
     fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
         var admitted = 0
@@ -199,12 +204,13 @@ class VaultObserverExceptionTest {
      * does not change the outcome - the first exception in the service will bring the service down and will
      * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
      */
+    //TODO: never reaches vault observer, fails on persist
     @Test
     fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
+                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped") // TODO: remove this line
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -237,12 +243,13 @@ class VaultObserverExceptionTest {
      * Trying to catch and suppress that exception inside the service does protect the service, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
+    //TODO: never reaches flush, fails on persist
     @Test
     fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
+                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped") // TODO: remove this line
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -273,6 +280,7 @@ class VaultObserverExceptionTest {
      * therefore handling it in flow code is no good, and the error will be passed to the flow hospital via the
      * interceptor.
      */
+    // TODO: this will apply for all exceptions; all exceptions thrown will get wrapped in HospitalizeFlowException; HospitalizeFlowException will not be suppressible
     @Test
     fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
