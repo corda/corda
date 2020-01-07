@@ -75,30 +75,6 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * Throwing a random (non-SQL related) exception from a vault observer causes the flow to be
-     * aborted when unhandled in user code
-     */
-    // TODO: this will now go to hospital; behaviour changed; test needs to change/ consolidate
-    // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
-    // changed into asserting the same exception getting hospitalised
-    @Test
-    fun otherExceptionsFromVaultObserverBringFlowDown() {
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith(CordaRuntimeException::class, "Toys out of pram") {
-                aliceNode.rpc.startFlow(
-                        ::Initiator,
-                        "InvalidParameterException",
-                        CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter)
-                ).returnValue.getOrThrow(30.seconds)
-            }
-        }
-    }
-
-    /**
      * None exception thrown from a vault observer can be suppressible in the flow that triggered the observer
      * because the recording of transaction states failed. The flow will be hospitalized.
      * The exception will bring the rx.Observer down.
