@@ -45,8 +45,7 @@ class InMemoryRpcPermissionsTest : NodeBasedTest(listOf("net.corda.finance"), no
                                                         "password" to "password",
                                                         "permissions" to listOf("StartFlow.net.corda.finance.flows.CashIssueFlow",
                                                                 "InvokeRpc:net.corda.core.messaging.CordaRPCOps#ALL",
-                                                                "InvokeRpc:net.corda.core.internal.messaging.InternalCordaRPCOps#getAttachmentTrustInfos",
-                                                                "InvokeRpc:net.corda.client.rpc.proxy.NodeHealthCheckRpcOps#READ_ONLY")
+                                                                "InvokeRpc:net.corda.core.internal.messaging.InternalCordaRPCOps#getAttachmentTrustInfos")
                                                 )
                                         )
                                 )
@@ -104,12 +103,5 @@ class InMemoryRpcPermissionsTest : NodeBasedTest(listOf("net.corda.finance"), no
                 proxy.dumpCheckpoints()
             }
         }
-
-        // HealthCheck operations
-        RPCClient<NodeHealthCheckRpcOps>(node.node.configuration.rpcOptions.address)
-            .start(NodeHealthCheckRpcOps::class.java, "newStyleUser", "password").use {
-                val proxy = it.proxy
-                assertNotNull(proxy.runtimeInfo())
-            }
     }
 }
