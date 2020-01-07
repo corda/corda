@@ -197,12 +197,11 @@ class CordaPersistence(
             _contextDatabase.set(this)
             currentDBSession().flush()
             return contextTransaction.connection
-        } catch (sqlException: SQLException) {
-            errorHandler(sqlException)
-            throw sqlException
-        } catch (persistenceException: PersistenceException) {
-            errorHandler(persistenceException)
-            throw persistenceException
+        } catch (e: Exception) {
+            if (e is SQLException || e is PersistenceException) {
+                errorHandler(e)
+            }
+            throw e
         }
     }
 
@@ -237,15 +236,11 @@ class CordaPersistence(
             } else {
                 inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
             }
-        } catch (sqlException: SQLException) {
-            errorHandler(sqlException)
-            throw sqlException
-        } catch (persistenceException: PersistenceException) {
-            errorHandler(persistenceException)
-            throw persistenceException
-        } catch (hospitalizeFlowException: HospitalizeFlowException) {
-            errorHandler(hospitalizeFlowException)
-            throw hospitalizeFlowException
+        } catch (e: Exception) {
+            if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
+                errorHandler(e)
+            }
+            throw e
         }
     }
 
