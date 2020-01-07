@@ -96,11 +96,12 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * InvalidParameterException thrown from a vault observer can not be suppressible in the flow that triggered the observer
-     * The flow will be hospitalized. The exception will bring the rx.Observer down.
+     * No Exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * because the recording of transaction states failed. The flow will be hospitalized.
+     * The exception will bring the rx.Observer down.
      */
     @Test
-    fun invalidParameterExceptionFromVaultObserverGetsKeptForObservation() {
+    fun noExceptionFromVaultObserverCanBeSuppressedInFlow() {
         // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
         // changed into asserting the same exception getting hospitalised
         var observation = 0
