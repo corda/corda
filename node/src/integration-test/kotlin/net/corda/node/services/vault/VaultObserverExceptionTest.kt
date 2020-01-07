@@ -160,15 +160,14 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be kept in for observation.
+     * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
+     * the flow will be kept in for observation.
      */
     @Test
-    fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
+    fun persistenceExceptionDuringRecordTransactionsGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -188,7 +187,6 @@ class VaultObserverExceptionTest {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith<TimeoutException>("PersistenceException") {
                 aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
-                        CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                         CreateStateFlow.ErrorTarget.TxInvalidState))
                         .returnValue.getOrThrow(30.seconds)
             }
