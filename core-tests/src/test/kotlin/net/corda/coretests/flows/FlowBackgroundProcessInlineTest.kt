@@ -294,7 +294,7 @@ class FlowWithBackgroundProcessThatDirectlyAccessesServiceHubFailsRetry(party: P
     @Suspendable
     override fun testCode(): Any {
         try {
-            await { _, deduplicationId ->
+            await { serviceHub, deduplicationId ->
                 serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
             }
         } catch (e: NullPointerException) {
