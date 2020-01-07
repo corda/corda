@@ -237,14 +237,12 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If we have a state causing a persistence exception lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws.
-     * Trying to catch and suppress that exception inside the service does protect the service, but the new
+     * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
+     * trying to catch and suppress that exception inside the flow does protect the flow, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
-    //TODO: never reaches flush, fails on persist
     @Test
-    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
+    fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -264,9 +262,8 @@ class VaultObserverExceptionTest {
             val flowHandle = aliceNode.rpc.startFlow(
                     ::Initiator, "EntityManager",
                     CreateStateFlow.errorTargetsToNum(
-                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                             CreateStateFlow.ErrorTarget.TxInvalidState,
-                            CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
+                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
             assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
