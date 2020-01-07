@@ -28,6 +28,8 @@ import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
@@ -38,6 +40,7 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FlowBackgroundProcessTest {
@@ -94,6 +97,22 @@ class FlowBackgroundProcessTest {
             val success = alice.rpc.startFlow(::FlowWithBackgroundProcessThatPersistsToDatabaseAndReadsFromBackgroundProcess)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
+        }
+    }
+
+    @Test
+    fun `background process can be retried when an error occurs inside of database transaction`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val success = alice.rpc.startFlow(
+                ::FlowWithBackgroundProcessThatErrorsInsideOfDatabaseTransaction,
+                bob.nodeInfo.singleIdentity()
+            ).returnValue.getOrThrow(20.seconds)
+            assertTrue(success as Boolean)
+            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
+            assertEquals(1, discharged)
+            assertEquals(0, observation)
         }
     }
 }
@@ -203,6 +222,28 @@ class FlowWithBackgroundProcessThatPersistsToDatabaseAndReadsFromBackgroundProce
 }
 
 @StartableByRPC
+class FlowWithBackgroundProcessThatErrorsInsideOfDatabaseTransaction(party: Party) : FlowWithBackgroundProcess(party) {
+
+    private companion object {
+        var flag = false
+    }
+
+    @Suspendable
+    override fun testCode(): Boolean {
+        return await { serviceHub, _ ->
+            if (!flag) {
+                flag = true
+                serviceHub.cordaService(FutureService::class.java).throwExceptionInsideOfDatabaseTransaction()
+            } else {
+                val entity = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entity)
+                return@await serviceHub.cordaService(FutureService::class.java).readFromDatabase(entity.name) != null
+            }
+        }
+    }
+}
+
+@StartableByRPC
 @InitiatingFlow
 @StartableByService
 open class FlowWithBackgroundProcess(val party: Party) : FlowLogic<Any>() {
@@ -302,6 +343,10 @@ class FutureService(private val services: AppServiceHub) : SingletonSerializeAsT
 
     fun saveToDatabaseWithDatabaseTransaction(entity: CustomTableEntity): Unit = services.database.transaction {
         session.save(entity)
+    }
+
+    fun throwExceptionInsideOfDatabaseTransaction(): Nothing = services.database.transaction {
+        throw SQLTransientConnectionException("connection is not available")
     }
 }
 
