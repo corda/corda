@@ -280,7 +280,6 @@ class VaultObserverExceptionTest {
      * therefore handling it in flow code is no good, and the error will be passed to the flow hospital via the
      * interceptor.
      */
-    // TODO: this will apply for all exceptions; all exceptions thrown will get wrapped in HospitalizeFlowException; HospitalizeFlowException will not be suppressible
     @Test
     fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
