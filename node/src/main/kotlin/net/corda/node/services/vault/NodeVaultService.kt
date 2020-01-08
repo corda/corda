@@ -406,7 +406,8 @@ class NodeVaultService(
                     }
                     log.error(
                         "Caught an ${e::class.java.canonicalName} while trying to record transaction states locally $causedBy" +
-                                "- the node could be now in an inconsistent state with other peers and/or the notary. Hospitalising the flow.", e)
+                                "- the node could be now in an inconsistent state with other peers and/or the notary" +
+                                "- hospitalising the flow", e)
 
                     throw HospitalizeFlowException(
                         "Failed to record transaction states locally $causedBy" +
