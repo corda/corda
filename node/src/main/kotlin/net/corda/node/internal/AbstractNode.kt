@@ -299,7 +299,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(
         numberOfWorkers = transactionVerifierWorkerCount,
-        cordappProvider = cordappProvider
+        cordappProvider = cordappProvider,
+        attachments = attachments
     ).tokenize()
     val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
         DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {

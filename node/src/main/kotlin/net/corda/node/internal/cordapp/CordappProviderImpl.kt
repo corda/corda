@@ -116,7 +116,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
      * CorDapp should not require them.
      */
     private fun loadAttachmentFixups(): List<AttachmentFixup> {
-         return cordappLoader.appClassLoader.getResources("META-INF/Corda-Fixups").asSequence()
+        return cordappLoader.appClassLoader.getResources("META-INF/Corda-Fixups").asSequence()
             .mapNotNull { fixup ->
                 fixup.openConnection() as? JarURLConnection
             }.filter { fixupConnection ->

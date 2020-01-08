@@ -231,7 +231,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             checkReverifyAllowed(e)
             val missingClass = e.message ?: throw e
             log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
-            reverifyWithFixups(ltx, services)
+            reverifyWithFixups(ltx, services, missingClass)
         } catch (e: NotSerializableException) {
             checkReverifyAllowed(e)
             retryVerification(e, e, ltx, services)
@@ -257,14 +257,14 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         when (cause) {
             is MissingSerializerException -> {
                 log.warn("Missing serializers: typeDescriptor={}, typeNames={}", cause.typeDescriptor ?: "<unknown>", cause.typeNames)
-                reverifyWithFixups(ltx, services)
+                reverifyWithFixups(ltx, services, null)
             }
             is NotSerializableException -> {
                 val underlying = cause.cause
                 if (underlying is ClassNotFoundException) {
                     val missingClass = underlying.message?.replace('.', '/') ?: throw ex
                     log.warn("Transaction {} has missing class: {}", ltx.id, missingClass)
-                    reverifyWithFixups(ltx, services)
+                    reverifyWithFixups(ltx, services, missingClass)
                 } else {
                     throw ex
                 }
@@ -277,14 +277,14 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     // This code has detected a missing custom serializer - probably located inside a workflow CorDapp.
     // We need to extract this CorDapp from AttachmentStorage and try verifying this transaction again.
     @DeleteForDJVM
-    private fun reverifyWithFixups(ltx: LedgerTransaction, services: ServiceHub) {
+    private fun reverifyWithFixups(ltx: LedgerTransaction, services: ServiceHub, missingClass: String?) {
         log.warn("""Detected that transaction $id does not contain all cordapp dependencies.
                     |This may be the result of a bug in a previous version of Corda.
                     |Attempting to re-verify having applied this node's fix-up rules.
                     |Please check with the originator that this is a valid transaction.""".trimMargin())
 
         (services.transactionVerifierService as TransactionVerifierServiceInternal)
-            .reverifyWithFixups(ltx)
+            .reverifyWithFixups(ltx, missingClass)
             .getOrThrow()
     }
 

@@ -2,8 +2,10 @@ package net.corda.node
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.contracts.serialization.missing.CustomData
+import net.corda.contracts.serialization.missing.MissingSerializerContract.CustomDataState
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.BrokenTransactionException
+import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
 import net.corda.core.messaging.startFlow
@@ -24,7 +26,7 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertFailsWith
 
 @Suppress("FunctionName")
 class ContractWithMissingCustomSerializerTest {
@@ -47,7 +49,7 @@ class ContractWithMissingCustomSerializerTest {
         @BeforeClass
         @JvmStatic
         fun checkData() {
-            assertNotCordaSerializable(CustomData::class)
+            assertNotCordaSerializable<CustomData>()
         }
     }
 
@@ -55,14 +57,14 @@ class ContractWithMissingCustomSerializerTest {
      * Test that we can still verify a transaction that is missing a custom serializer.
      */
     @Test
-    fun `flow with missing custom serializer by rpc`() {
+    fun `flow with missing custom serializer and fixup`() {
         val contractId = contractCorDapp.jarFile.hash
         val flowId = flowCorDapp.jarFile.hash
         val fixupCorDapp = cordappWithFixups(listOf(setOf(contractId) to setOf(contractId, flowId))).signed()
 
         driver(driverParameters(listOf(flowCorDapp, contractCorDapp, fixupCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val ex = assertThrows<TransactionVerificationException> {
+            val ex = assertFailsWith<ContractRejection> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
                     .use { client ->
@@ -77,6 +79,26 @@ class ContractWithMissingCustomSerializerTest {
     }
 
     /*
+     * Test we fail properly when we cannot fix-up a missing serializer.
+     */
+    @Test
+    fun `flow with missing custom serializer but without fixup`() {
+        driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
+            val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val ex = assertFailsWith<BrokenTransactionException> {
+                CordaRPCClient(hostAndPort = alice.rpcAddress)
+                    .start(user.username, user.password)
+                    .use { client ->
+                        client.proxy.startFlow(::MissingSerializerFlow, BOBBINS)
+                            .returnValue
+                            .getOrThrow()
+                    }
+            }
+            assertThat(ex).hasMessageContaining("No fix-up rules provided for broken attachments:")
+        }
+    }
+
+    /*
      * Test that TransactionBuilder prevents us from creating a
      * transaction that has a custom serializer missing.
      */
@@ -84,17 +106,19 @@ class ContractWithMissingCustomSerializerTest {
     fun `transaction builder flow with missing custom serializer by rpc`() {
         driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val ex = assertThrows<CordaRuntimeException> {
+            val ex = assertFailsWith<CordaRuntimeException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
-                    .proxy
-                    .startFlow(::MissingSerializerBuilderFlow, BOBBINS)
-                    .returnValue
-                    .getOrThrow()
+                    .use { client ->
+                        client.proxy.startFlow(::MissingSerializerBuilderFlow, BOBBINS)
+                            .returnValue
+                            .getOrThrow()
+                    }
             }
             assertThat(ex)
                 .hasMessageContaining("TransactionDeserialisationException:")
-                .hasMessageFindingMatch(CustomData::class.java.name)
+                    .hasMessageContaining(CustomDataState::class.java.name)
+                    .hasMessageContaining(CustomData::class.java.name)
         }
     }
 }

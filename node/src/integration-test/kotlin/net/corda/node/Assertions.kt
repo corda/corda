@@ -3,10 +3,9 @@ package net.corda.node
 
 import net.corda.core.serialization.CordaSerializable
 import org.junit.Assert.assertNull
-import kotlin.reflect.KClass
 
-fun assertNotCordaSerializable(klass: KClass<out Any>) {
-    assertNotCordaSerializable(klass.java)
+inline fun <reified T> assertNotCordaSerializable() {
+    assertNotCordaSerializable(T::class.java)
 }
 
 fun assertNotCordaSerializable(clazz: Class<*>) {

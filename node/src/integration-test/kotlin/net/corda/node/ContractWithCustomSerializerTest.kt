@@ -2,7 +2,7 @@ package net.corda.node
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.contracts.serialization.custom.Currantsy
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.flows.serialization.custom.CustomSerializerFlow
@@ -18,7 +18,7 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertFailsWith
 
 @Suppress("FunctionName")
 class ContractWithCustomSerializerTest {
@@ -28,7 +28,7 @@ class ContractWithCustomSerializerTest {
         @BeforeClass
         @JvmStatic
         fun checkData() {
-            assertNotCordaSerializable(Currantsy::class)
+            assertNotCordaSerializable<Currantsy>()
         }
     }
 
@@ -45,13 +45,14 @@ class ContractWithCustomSerializerTest {
             )
         )) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val ex = assertThrows<TransactionVerificationException> {
+            val ex = assertFailsWith<ContractRejection> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
-                    .proxy
-                    .startFlow(::CustomSerializerFlow, Currantsy(CURRANTS))
-                    .returnValue
-                    .getOrThrow()
+                    .use { client ->
+                        client.proxy.startFlow(::CustomSerializerFlow, Currantsy(CURRANTS))
+                            .returnValue
+                            .getOrThrow()
+                    }
             }
             assertThat(ex).hasMessageContaining("Too many currants! $CURRANTS juicy currants is unraisinable!")
         }

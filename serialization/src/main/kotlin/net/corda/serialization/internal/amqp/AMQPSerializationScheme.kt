@@ -71,11 +71,11 @@ abstract class AbstractAMQPSerializationScheme(
 
         @DeleteForDJVM
         val List<Cordapp>.customSerializers
-            get() = flatMapTo(LinkedHashSet()) { it.serializationCustomSerializers }
+            get() = flatMapTo(LinkedHashSet(), Cordapp::serializationCustomSerializers)
 
         @DeleteForDJVM
         val List<Cordapp>.serializationWhitelists
-            get() = flatMapTo(LinkedHashSet()) { it.serializationWhitelists }
+            get() = flatMapTo(LinkedHashSet(), Cordapp::serializationWhitelists)
     }
 
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {

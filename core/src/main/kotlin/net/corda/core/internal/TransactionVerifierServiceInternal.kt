@@ -14,7 +14,7 @@ import java.util.function.Function
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
-    fun reverifyWithFixups(transaction: LedgerTransaction): CordaFuture<*>
+    fun reverifyWithFixups(transaction: LedgerTransaction, missingClass: String?): CordaFuture<*>
 }
 
 /**

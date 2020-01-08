@@ -4,7 +4,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.contracts.fixup.dependent.DependentData
 import net.corda.contracts.fixup.standalone.StandAloneData
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.ContractRejection
 import net.corda.core.internal.hash
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -23,7 +23,7 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
-import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertFailsWith
 
 @Suppress("FunctionName")
 class ContractWithCordappFixupTest {
@@ -48,8 +48,8 @@ class ContractWithCordappFixupTest {
         @BeforeClass
         @JvmStatic
         fun checkData() {
-            assertNotCordaSerializable(DependentData::class)
-            assertNotCordaSerializable(StandAloneData::class)
+            assertNotCordaSerializable<DependentData>()
+            assertNotCordaSerializable<StandAloneData>()
         }
     }
 
@@ -67,7 +67,7 @@ class ContractWithCordappFixupTest {
 
         driver(driverParameters(listOf(flowCorDapp, dependentContractCorDapp, standaloneContractCorDapp, fixupCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val ex = assertThrows<TransactionVerificationException> {
+            val ex = assertFailsWith<ContractRejection> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
                     .use { client ->
@@ -85,7 +85,7 @@ class ContractWithCordappFixupTest {
     fun `flow with missing cordapp dependency without fixup`() {
         driver(driverParameters(listOf(flowCorDapp, dependentContractCorDapp, standaloneContractCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val ex = assertThrows<CordaRuntimeException> {
+            val ex = assertFailsWith<CordaRuntimeException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
                     .start(user.username, user.password)
                     .use { client ->
