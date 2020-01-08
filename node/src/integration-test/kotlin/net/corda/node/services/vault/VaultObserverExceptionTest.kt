@@ -81,8 +81,6 @@ class VaultObserverExceptionTest {
      */
     @Test
     fun noneExceptionFromVaultObserverCanBeSuppressedInFlow() {
-        // this test used to assert the suppression of exceptions by the triggering flow (other than SQLException and PersistenceException)
-        // changed into asserting the same exception getting hospitalised
         var observation = 0
         val waitUntilHospitalised = Semaphore(0)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
