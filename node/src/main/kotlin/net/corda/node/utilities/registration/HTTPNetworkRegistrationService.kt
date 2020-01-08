@@ -1,6 +1,5 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.errorMessage
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.post
