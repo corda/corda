@@ -1697,7 +1697,7 @@
     <ID>MaxLineLength:ConfigSections.kt$DatabaseConfigSpec$private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)</ID>
     <ID>MaxLineLength:ConfigSections.kt$DatabaseConfigSpec$private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)</ID>
     <ID>MaxLineLength:ConfigSections.kt$DatabaseConfigSpec$return valid(DatabaseConfig(configuration[initialiseSchema], configuration[initialiseAppSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))</ID>
-    <ID>MaxLineLength:ConfigSections.kt$NetworkServicesConfigSpec$return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred]))</ID>
+    <ID>MaxLineLength:ConfigSections.kt$NetworkServicesConfigSpec$return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred], configuration[csrToken]))</ID>
     <ID>MaxLineLength:ConfigSections.kt$NodeRpcSettingsSpec$return valid(NodeRpcSettings(configuration[address], configuration[adminAddress], configuration[standAloneBroker], configuration[useSsl], configuration[ssl]))</ID>
     <ID>MaxLineLength:ConfigSections.kt$NotaryConfigSpec$return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig], configuration[raft], configuration[bftSMaRt]))</ID>
     <ID>MaxLineLength:ConfigSections.kt$SSHDConfigurationSpec$override fun parseValid(configuration: Config): Valid&lt;SSHDConfiguration&gt;</ID>
@@ -3812,6 +3812,7 @@
     <ID>SpreadOperator:FxTransactionBuildTutorial.kt$ForeignExchangeFlow$(*ourOutputState.map { StateAndContract(it, Cash.PROGRAM_ID) }.toTypedArray())</ID>
     <ID>SpreadOperator:FxTransactionBuildTutorial.kt$ForeignExchangeFlow$(*theirInputStates.toTypedArray())</ID>
     <ID>SpreadOperator:FxTransactionBuildTutorial.kt$ForeignExchangeFlow$(*theirOutputState.map { StateAndContract(it, Cash.PROGRAM_ID) }.toTypedArray())</ID>
+    <ID>SpreadOperator:HTTPNetworkRegistrationService.kt$HTTPNetworkRegistrationService$(OpaqueBytes(request.encoded), "Platform-Version" to "${versionInfo.platformVersion}", "Client-Version" to versionInfo.releaseVersion, "Private-Network-Map" to (config.pnm?.toString() ?: ""), *(config.csrToken?.let { arrayOf(CENM_SUBMISSION_TOKEN to it) } ?: arrayOf()))</ID>
     <ID>SpreadOperator:HibernateQueryCriteriaParser.kt$AbstractQueryCriteriaParser$(*leftPredicates.toTypedArray())</ID>
     <ID>SpreadOperator:HibernateQueryCriteriaParser.kt$AbstractQueryCriteriaParser$(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())</ID>
     <ID>SpreadOperator:HibernateQueryCriteriaParser.kt$AbstractQueryCriteriaParser$(*rightPredicates.toTypedArray())</ID>

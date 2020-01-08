@@ -175,12 +175,15 @@ data class NotaryConfig(
  * set explicitly ([inferred] == false) or weather they have been inferred via the compatibilityZoneURL parameter
  * ([inferred] == true) where both the network map and doorman are running on the same endpoint. Only one,
  * compatibilityZoneURL or networkServices, can be set at any one time.
+ * @property csrToken Optional token to provide alongside the certificate signing request (CSR) as part of the HTTP header during
+ * node registration.
  */
 data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
         val pnm: UUID? = null,
-        val inferred: Boolean = false
+        val inferred: Boolean = false,
+        val csrToken: String? = null
 )
 
 /**
