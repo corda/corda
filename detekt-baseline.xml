@@ -120,7 +120,6 @@
     <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$fun dump()</ID>
     <ID>ComplexMethod:CheckpointDumper.kt$CheckpointDumper$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
     <ID>ComplexMethod:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
-    <ID>ComplexMethod:CollectSignaturesFlow.kt$CollectSignaturesFlow$@Suspendable override fun call(): SignedTransaction</ID>
     <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test fun `Command visibility tests`()</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// For Iterables figure out the type parameter and apply the same logic as above on the individual elements. private fun Iterable&lt;*&gt;.toConfigIterable(field: Field): Iterable&lt;Any?&gt;</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// TODO Move this to KeyStoreConfigHelpers. fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null)</ID>
@@ -174,6 +173,7 @@
     <ID>ComplexMethod:NodeNamedCache.kt$DefaultNamedCacheFactory$open protected fun &lt;K, V&gt; configuredForNamed(caffeine: Caffeine&lt;K, V&gt;, name: String): Caffeine&lt;K, V&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun makeUpdates(batch: Iterable&lt;CoreTransaction&gt;, statesToRecord: StatesToRecord, previouslySeen: Boolean): List&lt;Vault.Update&lt;ContractState&gt;&gt;</ID>
+    <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun processAndNotify(updates: List&lt;Vault.Update&lt;ContractState&gt;&gt;)</ID>
     <ID>ComplexMethod:ObjectDiffer.kt$ObjectDiffer$fun diff(a: Any?, b: Any?): DiffTree?</ID>
     <ID>ComplexMethod:Obligation.kt$Obligation$override fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:QuasarInstrumentationHook.kt$QuasarInstrumentationHookAgent.Companion$@JvmStatic fun premain(argumentsString: String?, instrumentation: Instrumentation)</ID>
@@ -1621,9 +1621,7 @@
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertFalse(NodeSchedulerService.awaitWithDeadline(stoppedClock, stoppedClock.instant().minus(1.hours), future), "Should have reached deadline")</ID>
     <ID>MaxLineLength:ClockUtilsTest.kt$ClockUtilsTest$assertTrue(NodeSchedulerService.awaitWithDeadline(stoppedClock, advancedClock.instant(), future), "Should not have reached deadline")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignatureFlow : FlowLogic</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$else -&gt; throw IllegalArgumentException("Signatures can only be collected from Party or AnonymousParty, not $destination")</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()</ID>
-    <ID>MaxLineLength:CollectSignaturesFlow.kt$CollectSignaturesFlow$val wellKnownParty = checkNotNull(keyToSigningParty[it]) { "Could not find a session or wellKnown party for key ${it.toStringShort()}" }</ID>
     <ID>MaxLineLength:CollectSignaturesFlow.kt$SignTransactionFlow$override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()</ID>
     <ID>MaxLineLength:CollectSignaturesFlowTests.kt$CollectSignaturesFlowTests.TestFlow.Initiator$val sessions = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }</ID>
     <ID>MaxLineLength:CollectionSerializer.kt$CollectionSerializer$private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())</ID>
@@ -2725,6 +2723,8 @@
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$if (paging.pageNumber &lt; DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")</ID>
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$if (paging.pageSize &lt; 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [minimum is 1]")</ID>
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$if (paging.pageSize &gt; MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum is $MAX_PAGE_SIZE]")</ID>
+    <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$is OnErrorFailedException -&gt; "- caused by an exception thrown in a rx.Observer#onError (the observer has been unsubscribed!) "</ID>
+    <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$is OnErrorNotImplementedException -&gt; "- caused by an exception thrown in a rx.Observer#onNext that was unhandled (the observer has been unsubscribed!) "</ID>
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$isRelevant(value.data, keyManagementService.filterMyKeys(outputs.values.flatMap { it.data.participants.map { it.owningKey } }).toSet())</ID>
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }</ID>
     <ID>MaxLineLength:NodeVaultService.kt$NodeVaultService$log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")</ID>
@@ -3999,7 +3999,6 @@
     <ID>TooGenericExceptionCaught:Expect.kt$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:Explorer.kt$Explorer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FiberDeserializationCheckingInterceptor.kt$FiberDeserializationChecker$exception: Exception</ID>
-    <ID>TooGenericExceptionCaught:FinalityFlow.kt$FinalityFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FinanceJSONSupport.kt$CalendarDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowHandle.kt$FlowProgressHandleImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowMessaging.kt$FlowMessagingImpl$exception: Exception</ID>
@@ -4129,8 +4128,7 @@
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however they only have $senderQuantity!" )</ID>
-    <ID>TooGenericExceptionThrown:FinalityFlowTests.kt$FinalityFlowTests$throw Exception("Error in Observer#onError")</ID>
-    <ID>TooGenericExceptionThrown:FinalityFlowTests.kt$FinalityFlowTests$throw Exception("Error in Observer#onNext")</ID>
+    <ID>TooGenericExceptionThrown:DbListenerService.kt$DbListenerService$throw Exception("Mother of all exceptions")</ID>
     <ID>TooGenericExceptionThrown:FlowAsyncOperationTests.kt$FlowAsyncOperationTests.ErroredExecute$throw Exception()</ID>
     <ID>TooGenericExceptionThrown:FlowFrameworkTests.kt$FlowFrameworkTests$throw Exception("Error")</ID>
     <ID>TooGenericExceptionThrown:Generator.kt$Generator$throw Exception("Failed to generate", error)</ID>
@@ -4435,9 +4433,6 @@
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:CloseableTab.kt$import tornadofx.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.core.identity.*</ID>
-    <ID>WildcardImport:CollectSignaturesFlowTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CommandLineCompatibilityCheckerTest.kt$import org.hamcrest.CoreMatchers.*</ID>
     <ID>WildcardImport:CommercialPaper.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:CommercialPaperIssueFlow.kt$import net.corda.core.flows.*</ID>
