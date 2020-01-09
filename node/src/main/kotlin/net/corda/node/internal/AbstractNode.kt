@@ -53,6 +53,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TransactionVerifierService
@@ -99,6 +100,7 @@ import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.determineUnsafeUsers
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.config.shouldInitCrashShell
+import net.corda.node.services.diagnostics.NodeDiagnosticsService
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
@@ -269,6 +271,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
+    val diagnosticsService = NodeDiagnosticsService().tokenize()
     val pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory)
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
@@ -1125,6 +1128,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
+        override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
