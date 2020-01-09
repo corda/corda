@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -39,6 +40,7 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.ext.api.flow.Change
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
@@ -295,12 +297,12 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
             override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
                 internals.flowManager.registerInitiatedFlow(initiatedFlowClass)
-                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                return smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
 
             override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
                 internals.flowManager.registerInitiatedFlow(initiatingFlowClass, initiatedFlowClass)
-                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                return smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
         }
 
@@ -423,7 +425,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         fun <T : FlowLogic<*>> registerInitiatedFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, factory: InitiatedFlowFactory<T>, track: Boolean): Observable<T> {
             mockFlowManager.registerTestingFactory(initiatingFlowClass, factory)
             return if (track) {
-                smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+                smm.changes.filter { it is Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             } else {
                 Observable.empty<T>()
             }
@@ -616,6 +618,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
+        doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
     }
 }
 

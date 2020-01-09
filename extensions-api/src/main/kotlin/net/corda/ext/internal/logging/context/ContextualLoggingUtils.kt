@@ -1,4 +1,4 @@
-package net.corda.node.services.logging
+package net.corda.ext.internal.logging.context
 
 import net.corda.core.context.Actor
 import net.corda.core.context.InvocationContext
@@ -6,7 +6,7 @@ import net.corda.core.context.InvocationOrigin
 import net.corda.core.context.Trace
 import org.slf4j.MDC
 
-internal fun InvocationContext.pushToLoggingContext() {
+fun InvocationContext.pushToLoggingContext() {
 
     trace.pushToLoggingContext()
     actor?.pushToLoggingContext()
@@ -15,7 +15,7 @@ internal fun InvocationContext.pushToLoggingContext() {
     impersonatedActor?.pushToLoggingContext("impersonating_")
 }
 
-internal fun Trace.pushToLoggingContext(prefix: String = "") {
+private fun Trace.pushToLoggingContext(prefix: String = "") {
 
     MDC.getMDCAdapter().apply {
         put("${prefix}invocation_id", invocationId.value)
@@ -25,7 +25,7 @@ internal fun Trace.pushToLoggingContext(prefix: String = "") {
     }
 }
 
-internal fun Actor.pushToLoggingContext(prefix: String = "") {
+fun Actor.pushToLoggingContext(prefix: String = "") {
 
     MDC.getMDCAdapter().apply {
         put("${prefix}actor_id", id.value)
@@ -34,7 +34,7 @@ internal fun Actor.pushToLoggingContext(prefix: String = "") {
     }
 }
 
-internal fun InvocationOrigin.pushToLoggingContext(prefix: String = "") {
+private fun InvocationOrigin.pushToLoggingContext(prefix: String = "") {
 
     MDC.getMDCAdapter().apply {
         put("${prefix}origin", principal().name)

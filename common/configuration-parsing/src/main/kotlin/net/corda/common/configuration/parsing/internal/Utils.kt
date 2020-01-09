@@ -65,3 +65,12 @@ internal fun ConfigValue.serialize(options: ConfigRenderOptions = ConfigRenderOp
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
 internal fun <TYPE> valid(target: TYPE) = Validated.valid<TYPE, Configuration.Validation.Error>(target)
+
+data class ConfigurationWithOptions(private val config: Config, private val options: Configuration.Validation.Options) {
+    operator fun <TYPE> get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(config)
+    operator fun <TYPE> get(property: Configuration.Value.Extractor<TYPE>): TYPE = property.valueIn(config)
+}
+
+interface ConfigurationWithOptionsContainer {
+    val configurationWithOptions : ConfigurationWithOptions
+}

@@ -354,7 +354,7 @@ open class Node(configuration: NodeConfiguration,
 
         val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
             if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this,
-                User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
+                    User(INTERNAL_SHELL_USER, internalShellPassword, setOf(Permissions.all()))) else this
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {

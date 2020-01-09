@@ -125,7 +125,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
                     blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys],
-                    networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings]
+                    networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings],
+                    configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Validation.Options.defaults)
             ))
         } catch (e: Exception) {
             return when (e) {

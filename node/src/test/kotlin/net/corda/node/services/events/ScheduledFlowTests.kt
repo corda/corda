@@ -13,7 +13,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.ext.api.flow.Change
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -129,7 +129,7 @@ class ScheduledFlowTests {
     fun `create and run scheduled flow then wait for result`() {
         var countScheduledFlows = 0
         aliceNode.smm.track().updates.subscribe {
-            if (it is StateMachineManager.Change.Add) {
+            if (it is Change.Add) {
                 val context = it.logic.stateMachine.context
                 if (context.origin is InvocationOrigin.Scheduled)
                     countScheduledFlows++

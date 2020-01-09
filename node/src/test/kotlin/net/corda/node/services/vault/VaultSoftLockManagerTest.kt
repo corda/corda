@@ -16,6 +16,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
 import net.corda.core.node.services.vault.QueryCriteria.SoftLockingType.LOCKED_ONLY
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -90,7 +91,7 @@ class VaultSoftLockManagerTest {
                                           cordappLoader: CordappLoader): VaultServiceInternal {
                 val node = this
                 val realVault = super.makeVaultService(keyManagementService, services, database, cordappLoader)
-                return object : VaultServiceInternal by realVault {
+                return object : SingletonSerializeAsToken(), VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
                         // Should be called before flow is removed
                         assertEquals(1, node.started!!.smm.allStateMachines.size)

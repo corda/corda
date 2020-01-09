@@ -5,6 +5,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.ext.api.flow.StateMachineTransactionMappingFeed
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -17,7 +18,7 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * Database storage of a txhash -> state machine id mapping.
  *
- * Mappings are added as transactions are persisted by [ServiceHub.recordTransaction], and never deleted.  Used in the
+ * Mappings are added as transactions are persisted by [net.corda.core.node.ServiceHub.recordTransactions] and never deleted.  Used in the
  * RPC API to correlate transaction creation with flows.
  */
 @ThreadSafe
@@ -39,5 +40,11 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
         cq.where(cb.isNotNull(from.get<String>(DBTransactionStorage.DBTransaction::stateMachineRunId.name)))
         val flowIds = session.createQuery(cq).resultList.map { StateMachineTransactionMapping(StateMachineRunId(UUID.fromString(it[0] as String)), SecureHash.parse(it[1] as String)) }
         DataFeed(flowIds, updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    }
+}
+
+fun StateMachineRecordedTransactionMappingStorage.asFeed(): StateMachineTransactionMappingFeed {
+    return object : StateMachineTransactionMappingFeed {
+        override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = this@asFeed.track()
     }
 }

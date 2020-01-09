@@ -16,9 +16,13 @@ import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.ext.api.NodeServicesContext
+import net.corda.ext.api.admin.NodeAdmin
+import net.corda.ext.api.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
@@ -39,7 +43,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.zip.ZipInputStream
 
-class CheckpointDumperTest {
+class CheckpointDumperImplTest {
 
     @Rule
     @JvmField
@@ -50,11 +54,21 @@ class CheckpointDumperTest {
     private val currentTimestamp = Instant.parse("2019-12-25T10:15:30.00Z")
     private val baseDirectory = Files.createTempDirectory("CheckpointDumperTest")
     private val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME /
-            "checkpoints_dump-${CheckpointDumper.TIME_FORMATTER.format(currentTimestamp)}.zip"
+            "checkpoints_dump-${CheckpointDumperImpl.TIME_FORMATTER.format(currentTimestamp)}.zip"
 
     private lateinit var database: CordaPersistence
     private lateinit var services: ServiceHub
     private lateinit var checkpointStorage: DBCheckpointStorage
+
+    private val mockAfterStartEvent = {
+        val nodeAdminMock = mock<NodeAdmin>()
+        whenever(nodeAdminMock.tokenizableServices).doReturn(emptyList<SerializeAsToken>())
+        val nodeServicesContextMock = mock<NodeServicesContext>()
+        whenever(nodeServicesContextMock.nodeAdmin).doReturn(nodeAdminMock)
+        val eventMock = mock<NodeLifecycleEvent.AfterStart>()
+        whenever(eventMock.nodeServicesContext).doReturn(nodeServicesContextMock)
+        eventMock
+    }()
 
     @Before
     fun setUp() {
@@ -87,8 +101,8 @@ class CheckpointDumperTest {
 
     @Test
     fun testDumpCheckpoints() {
-        val dumper = CheckpointDumper(checkpointStorage, database, services, baseDirectory)
-        dumper.start(emptyList())
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
+        dumper.update(mockAfterStartEvent)
 
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
@@ -96,7 +110,7 @@ class CheckpointDumperTest {
             checkpointStorage.addCheckpoint(id, checkpoint)
         }
 
-        dumper.dump()
+        dumper.dumpCheckpoints()
         checkDumpFile()
     }
 
@@ -113,8 +127,8 @@ class CheckpointDumperTest {
     // -javaagent:tools/checkpoint-agent/build/libs/checkpoint-agent.jar
     @Test
     fun testDumpCheckpointsAndAgentDiagnostics() {
-        val dumper = CheckpointDumper(checkpointStorage, database, services, Paths.get("."))
-        dumper.start(emptyList())
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, Paths.get("."))
+        dumper.update(mockAfterStartEvent)
 
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
@@ -122,7 +136,7 @@ class CheckpointDumperTest {
             checkpointStorage.addCheckpoint(id, checkpoint)
         }
 
-        dumper.dump()
+        dumper.dumpCheckpoints()
         // check existence of output zip file: checkpoints_dump-<date>.zip
         // check existence of output agent log:  checkpoints_agent-<data>.log
     }

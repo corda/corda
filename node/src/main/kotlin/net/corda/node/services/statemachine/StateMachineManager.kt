@@ -5,11 +5,12 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.messaging.DataFeed
-import net.corda.core.utilities.Try
+import net.corda.ext.api.flow.Change
+import net.corda.ext.api.flow.ExistingFlowsOperations
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
+import java.util.concurrent.Future
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -28,32 +29,19 @@ import rx.Observable
  * TODO: Surfacing of exceptions via an API and/or management UI
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
-interface StateMachineManager {
+interface StateMachineManager : ExistingFlowsOperations {
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
+     *
+     * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>)
+    fun start(tokenizableServices: List<Any>) : Future<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
      * next checkpoint.
      */
     fun stop(allowedUnsuspendedFiberCount: Int)
-
-    /**
-     * Represents an addition/removal of a state machine.
-     */
-    sealed class Change {
-        abstract val logic: FlowLogic<*>
-
-        data class Add(override val logic: FlowLogic<*>) : Change()
-        data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
-    }
-
-    /**
-     * Returns the list of live state machines and a stream of subsequent additions/removals of them.
-     */
-    fun track(): DataFeed<List<FlowLogic<*>>, Change>
 
     /**
      * The stream of additions/removals of flows.
@@ -69,13 +57,6 @@ interface StateMachineManager {
      * Returns all currently live flows.
      */
     val allStateMachines: List<FlowLogic<*>>
-
-    /**
-     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
-     *
-     * @return whether the flow existed and was killed.
-     */
-    fun killFlow(id: StateMachineRunId): Boolean
 
     /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.
@@ -127,7 +108,7 @@ interface ExternalEvent {
         val context: InvocationContext
 
         /**
-         * A callback for the state machine to pass back the [Future] associated with the flow start to the submitter.
+         * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.
          */
         fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
 

@@ -88,6 +88,7 @@ processTestResources {
 
 dependencies {
     compile project(':node-api')
+    compile project(':extensions-api')
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')
@@ -173,6 +174,7 @@ dependencies {
     testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
+    testCompile project(':node-driver')
     testCompile project(':finance:contracts')
     testCompile project(':finance:workflows')
 

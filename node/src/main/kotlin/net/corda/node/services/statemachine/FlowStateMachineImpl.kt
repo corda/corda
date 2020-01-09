@@ -23,7 +23,7 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.logging.pushToLoggingContext
+import net.corda.ext.internal.logging.context.pushToLoggingContext
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.errorAndTerminate

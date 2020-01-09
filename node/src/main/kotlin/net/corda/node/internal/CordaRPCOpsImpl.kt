@@ -49,9 +49,10 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
+import net.corda.ext.api.flow.Change
+import net.corda.ext.api.flow.CheckpointDumper
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.rpc.CheckpointDumper
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
@@ -154,7 +155,7 @@ internal class CordaRPCOpsImpl(
         return services.validatedTransactions.track()
     }
 
-    override fun dumpCheckpoints() = checkpointDumper.dump()
+    override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
 
     override val attachmentTrustInfos: List<AttachmentTrustInfo>
         get() {
@@ -431,10 +432,10 @@ internal class CordaRPCOpsImpl(
         )
     }
 
-    private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
+    private fun stateMachineUpdateFromStateMachineChange(change: Change): StateMachineUpdate {
         return when (change) {
-            is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
-            is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
+            is Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
+            is Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
         }
     }
 
