@@ -2,7 +2,6 @@ package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.awaitFuture
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow

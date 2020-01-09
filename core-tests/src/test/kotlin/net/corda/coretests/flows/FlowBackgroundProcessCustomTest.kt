@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowBackgroundProcess
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.await
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow

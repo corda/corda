@@ -4,8 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaException
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.await
-import net.corda.core.flows.awaitFuture
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow

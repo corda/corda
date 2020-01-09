@@ -8,7 +8,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
-import net.corda.core.flows.await
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.doOnComplete
 import net.corda.core.internal.concurrent.fork

@@ -4,13 +4,22 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.WaitForStateConsumption
+import net.corda.core.internal.abbreviate
+import net.corda.core.internal.checkPayloadIs
+import net.corda.core.internal.concurrent.CordaFutureImpl
+import net.corda.core.internal.executeAsync
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -19,12 +28,16 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.SerializableBiFunction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import org.slf4j.Logger
 import java.time.Duration
-import java.util.*
+import java.util.HashMap
+import java.util.LinkedHashMap
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -502,6 +515,50 @@ abstract class FlowLogic<out T> {
 
     private fun <R> castMapValuesToKnownType(map: Map<FlowSession, UntrustworthyData<Any>>): List<UntrustworthyData<R>> {
         return map.values.map { uncheckedCast<Any, UntrustworthyData<R>>(it) }
+    }
+
+    /** Executes the specified [operation] and suspends until operation completion. */
+    @Suspendable
+    fun <R : Any> await(operation: FlowBackgroundProcess<R>): R {
+        val request = FlowIORequest.ExecuteAsyncOperation(operation)
+        return stateMachine.suspend(request, false)
+    }
+
+    @Suspendable
+    fun <R : Any> await(operation: SerializableBiFunction<ServiceHub, String, R>): R {
+        return await(operation as (serviceHub: ServiceHub, deduplicationId: String) -> R)
+    }
+
+    @Suspendable
+    fun <R : Any> await(operation: (serviceHub: ServiceHub, deduplicationId: String) -> R): R {
+        val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
+            override fun execute(deduplicationId: String): CordaFuture<R> {
+                // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
+                // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
+                return CordaFutureImpl(
+                    CompletableFuture.supplyAsync(
+                        Supplier { operation(serviceHub, deduplicationId) },
+                        (serviceHub as ServiceHubCoreInternal).backgroundProcessExecutor
+                    )
+                )
+            }
+        }
+        return await(process)
+    }
+
+    @Suspendable
+    fun <R : Any> awaitFuture(operation: SerializableBiFunction<ServiceHub, String, CordaFuture<R>>): R {
+        return awaitFuture(operation as (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>)
+    }
+
+    @Suspendable
+    fun <R : Any> awaitFuture(operation: (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>): R {
+        val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
+            override fun execute(deduplicationId: String): CordaFuture<R> {
+                return operation(serviceHub, deduplicationId)
+            }
+        }
+        return await(process)
     }
 }
 
