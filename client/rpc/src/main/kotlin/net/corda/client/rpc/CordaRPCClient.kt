@@ -10,6 +10,7 @@ import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -19,10 +20,12 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
@@ -339,16 +342,19 @@ class GracefulReconnect(val onDisconnect: () -> Unit = {}, val onReconnect: () -
  *  The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
  *  HA mode, the client will round-robin from the beginning of the list and try all servers.
  * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s
- *  and [SerializationWhitelist]s
- *  If the created RPC client is intended to use types with custom serializers / whitelists,
- *  a classloader will need to be provided that contains the associated CorDapp jars.
+ *  and [SerializationWhitelist]s. If no classloader is provided, the classloader of the current class will be used by default
+ *  for the aforementioned discovery process.
+ * @param customSerializers a set of [SerializationCustomSerializer]s to be used. If this parameter is specified, then no classpath scanning
+ *  will be performed for custom serializers, the provided ones will be used instead. This parameter serves as a more user-friendly option
+ *  to specify your serializers and disable the classpath scanning (e.g. for performance reasons).
  */
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort?,
         private val haAddressPool: List<NetworkHostAndPort>,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
-        private val classLoader: ClassLoader? = null
+        private val classLoader: ClassLoader? = null,
+        private val customSerializers: Set<SerializationCustomSerializer<*, *>>? = null
 ) {
 
     @JvmOverloads
@@ -411,30 +417,74 @@ class CordaRPCClient private constructor(
             classLoader = classLoader
     )
 
+    @JvmOverloads
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?
+    ) : this(
+            hostAndPort = hostAndPort,
+            haAddressPool = emptyList(),
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers
+    )
+
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null,
+            customSerializers: Set<SerializationCustomSerializer<*, *>>?
+    ) : this(
+            hostAndPort = null,
+            haAddressPool = haAddressPool,
+            configuration = configuration,
+            sslConfiguration = sslConfiguration,
+            classLoader = classLoader,
+            customSerializers = customSerializers
+    )
+
     // Here to keep the keep ABI compatibility happy
     companion object {}
+
+    @CordaInternal
+    @VisibleForTesting
+    fun getRegisteredCustomSerializers(): List<SerializationCustomSerializer<*, *>> {
+        return (effectiveSerializationEnv.serializationFactory as SerializationFactoryImpl).getRegisteredSchemes()
+                .filterIsInstance<AMQPClientSerializationScheme>()
+                .flatMap { it.getRegisteredCustomSerializers() }
+    }
 
     init {
         try {
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                val cache = Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
+                val cache = Caffeine.newBuilder().maximumSize(128)
+                        .build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
 
                 // If the client has explicitly provided a classloader use this one to scan for custom serializers,
                 // otherwise use the current one.
                 val serializationClassLoader = this.classLoader ?: this.javaClass.classLoader
-                val customSerializers = createInstancesOfClassesImplementing(
+                // If the client has explicitly provided a set of custom serializers, avoid performing any scanning and use these instead.
+                val discoveredCustomSerializers = customSerializers ?: createInstancesOfClassesImplementing(
                         serializationClassLoader,
                         SerializationCustomSerializer::class.java
                 )
+
                 val serializationWhitelists = ServiceLoader.load(
                         SerializationWhitelist::class.java,
                         serializationClassLoader
                 ).toSet()
+
                 AMQPClientSerializationScheme.initialiseSerialization(
                         serializationClassLoader,
-                        customSerializers,
+                        discoveredCustomSerializers,
                         serializationWhitelists,
                         cache
                 )
