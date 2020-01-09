@@ -117,7 +117,7 @@
     <ID>ComplexMethod:CheckpointAgent.kt$CheckpointHook$private fun instrumentClass(clazz: CtClass): CtClass?</ID>
     <ID>ComplexMethod:CheckpointAgent.kt$CheckpointHook$private fun prettyStatsTree(indent: Int, statsInfo: StatsInfo, identityInfo: IdentityInfo, builder: StringBuilder)</ID>
     <ID>ComplexMethod:CheckpointAgent.kt$fun readTrees(events: List&lt;StatsEvent&gt;, index: Int, idMap: IdentityHashMap&lt;Any, IdentityInfo&gt;): Pair&lt;Int, List&lt;Pair&lt;StatsInfo, IdentityInfo&gt;&gt;&gt;</ID>
-    <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$override fun dumpCheckpoints()</ID>
+    <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$fun dumpCheckpoints()</ID>
     <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
     <ID>ComplexMethod:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
     <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test fun `Command visibility tests`()</ID>
@@ -164,7 +164,7 @@
     <ID>ComplexMethod:MerkleTransaction.kt$FilteredTransaction.Companion$ private fun filterWithFun(wtx: WireTransaction, filtering: Predicate&lt;Any&gt;): List&lt;FilteredComponentGroup&gt;</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun bootstrap( directory: Path, cordappJars: List&lt;Path&gt;, copyCordapps: CopyCordapps, fromCordform: Boolean, networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides() )</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean</ID>
-    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$override fun updateNetworkMapCache(): Duration</ID>
+    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$fun updateNetworkMapCache(): Duration</ID>
     <ID>ComplexMethod:NetworkParametersReader.kt$NetworkParametersReader$fun read(): NetworkParametersAndSigned</ID>
     <ID>ComplexMethod:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$ private fun pollServerForCertificates(requestId: String): List&lt;X509Certificate&gt;</ID>
     <ID>ComplexMethod:NewTransaction.kt$NewTransaction$fun show(window: Window)</ID>
@@ -214,7 +214,6 @@
     <ID>EmptyCatchBlock:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests${ }</ID>
     <ID>EmptyCatchBlock:TransactionCallbackTest.kt$TransactionCallbackTest${ }</ID>
     <ID>EmptyCatchBlock:WebServer.kt$WebServer${ }</ID>
-    <ID>EmptyClassBlock:AttachmentOperations.kt$AttachmentOperations : AttachmentTrustCalculatorAttachmentImporter</ID>
     <ID>EmptyClassBlock:CordaRPCClient.kt$CordaRPCClient$Companion</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
@@ -1312,7 +1311,7 @@
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$throw IllegalStateException("CryptoService and signingCertificateStore are not aligned, the entry for key-alias: $alias is only found in $keyExistsIn")</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also { attachments.servicesForResolution = it }</ID>
-    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.&lt;no name provided&gt;$(cordappLoader, services.nodeProperties, Consumer { shutdownExecutor.submit(::stop) }, // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will // be reflected in the `NodeAdmin` as well. However, since `NodeAdmin` only has access to immutable collection it can only read (but not modify) // the content. tokenizableServices!!)</ID>
+    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.&lt;no name provided&gt;$// Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will // be reflected in the context as well. However, since contect only has access to immutable collection it can only read (but not modify) // the content. override val tokenizableServices: List&lt;SerializeAsToken&gt; get() = this@AbstractNode.tokenizableServices!!</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$override val database: CordaTransactionSupport</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex is HikariPool.PoolInitializationException -&gt; throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)</ID>
@@ -2675,7 +2674,6 @@
     <ID>MaxLineLength:NodeNamedCache.kt$DefaultNamedCacheFactory$override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory</ID>
     <ID>MaxLineLength:NodeParameters.kt$NodeParameters</ID>
     <ID>MaxLineLength:NodeParameters.kt$NodeParameters$fun withFlowOverrides(flowOverrides: Map&lt;Class&lt;out FlowLogic&lt;*&gt;&gt;, Class&lt;out FlowLogic&lt;*&gt;&gt;&gt;): NodeParameters</ID>
-    <ID>MaxLineLength:NodePropertiesPersistentStore.kt$FlowsDrainingModeOperationsImpl : FlowsDrainingModeOperations</ID>
     <ID>MaxLineLength:NodePropertiesPersistentStore.kt$NodePropertiesPersistentStore : NodePropertiesStore</ID>
     <ID>MaxLineLength:NodeSchedulerService.kt$NodeSchedulerService.FlowStartDeduplicationHandler$private inner</ID>
     <ID>MaxLineLength:NodeSchemaService.kt$NodeSchemaService$fun internalSchemas()</ID>

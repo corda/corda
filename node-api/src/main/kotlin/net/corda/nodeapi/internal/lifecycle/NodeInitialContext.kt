@@ -1,4 +1,4 @@
-package net.corda.ext.api
+package net.corda.nodeapi.internal.lifecycle
 
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptionsContainer
 

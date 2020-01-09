@@ -20,7 +20,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.ext.api.flow.FlowHospital
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
@@ -40,7 +39,7 @@ import kotlin.math.pow
  */
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val clock: Clock,
-                          private val ourSenderUUID: String) : FlowHospital {
+                          private val ourSenderUUID: String) {
     companion object {
         private val log = contextLogger()
         private val staff = listOf(
@@ -150,7 +149,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         event.deduplicationHandler.afterDatabaseTransaction()
     }
 
-    override fun dropSessionInit(id: UUID): Boolean {
+    /**
+     * Drop the errored session-init message with the given ID ([MedicalRecord.SessionInit.id]). This will cause the node
+     * to send back the relevant session error to the initiator party and acknowledge its receipt from the message broker
+     * so that it never gets redelivered.
+     */
+    fun dropSessionInit(id: UUID): Boolean {
         val (sessionMessage, event, publicRecord) = mutex.locked {
             treatableSessionInits.remove(id) ?: return false
         }
@@ -159,7 +163,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         return true
     }
 
-    override fun forceIntoOvernightObservation(id: StateMachineRunId, errors: List<Throwable>) {
+    /**
+     * Forces the flow to be kept in for overnight observation by the hospital. A flow must already exist inside the hospital
+     * and have existing medical records for it to be moved to overnight observation. If it does not meet these criteria then
+     * an [IllegalArgumentException] will be thrown.
+     *
+     * @param id The [StateMachineRunId] of the flow that you are trying to force into observation
+     * @param errors The errors to include in the new medical record
+     */
+    fun forceIntoOvernightObservation(id: StateMachineRunId, errors: List<Throwable>) {
         mutex.locked {
             // If a flow does not meet the criteria below, then it has moved into an invalid state or the function is being
             // called from an incorrect location. The assertions below should error out the flow if they are not true.
@@ -269,11 +281,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)
 
-    override fun removeMedicalHistory(flowId: StateMachineRunId) {
+    /**
+     * Remove the flow's medical history from the hospital.
+     */
+    fun removeMedicalHistory(flowId: StateMachineRunId) {
         mutex.locked { flowPatients.remove(flowId) }
     }
 
-    override fun leave(id: StateMachineRunId) {
+    /**
+     * Remove the flow from the hospital as it is not currently being treated.
+     */
+    fun leave(id: StateMachineRunId) {
         flowsInHospital.remove(id)
     }
 
@@ -286,7 +304,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    override operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
+    operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
 
     class FlowMedicalHistory {
         internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()

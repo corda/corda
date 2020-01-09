@@ -20,9 +20,8 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.ext.api.NodeServicesContext
-import net.corda.ext.api.admin.NodeAdmin
-import net.corda.ext.api.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
@@ -61,10 +60,8 @@ class CheckpointDumperImplTest {
     private lateinit var checkpointStorage: DBCheckpointStorage
 
     private val mockAfterStartEvent = {
-        val nodeAdminMock = mock<NodeAdmin>()
-        whenever(nodeAdminMock.tokenizableServices).doReturn(emptyList<SerializeAsToken>())
         val nodeServicesContextMock = mock<NodeServicesContext>()
-        whenever(nodeServicesContextMock.nodeAdmin).doReturn(nodeAdminMock)
+        whenever(nodeServicesContextMock.tokenizableServices).doReturn(emptyList<SerializeAsToken>())
         val eventMock = mock<NodeLifecycleEvent.AfterStart>()
         whenever(eventMock.nodeServicesContext).doReturn(nodeServicesContextMock)
         eventMock

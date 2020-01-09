@@ -3,8 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.ext.api.admin.NodePropertiesStore
-import net.corda.ext.api.admin.NodePropertiesStore.FlowsDrainingModeOperations
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -41,7 +40,8 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: 
     )
 }
 
-class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger, cacheFactory: NamedCacheFactory) : FlowsDrainingModeOperations {
+class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger,
+                                      cacheFactory: NamedCacheFactory) : NodePropertiesStore.FlowsDrainingModeOperations {
     private val nodeSpecificFlowsExecutionModeKey = "${readPhysicalNodeId()}_flowsExecutionMode"
 
     init {

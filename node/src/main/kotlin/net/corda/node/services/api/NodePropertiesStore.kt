@@ -1,4 +1,4 @@
-package net.corda.ext.api.admin
+package net.corda.node.services.api
 
 import rx.Observable
 

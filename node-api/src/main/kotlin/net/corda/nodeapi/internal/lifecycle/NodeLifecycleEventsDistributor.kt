@@ -1,4 +1,4 @@
-package net.corda.ext.api.lifecycle
+package net.corda.nodeapi.internal.lifecycle
 
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug

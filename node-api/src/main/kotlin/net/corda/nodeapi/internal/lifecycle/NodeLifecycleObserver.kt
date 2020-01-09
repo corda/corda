@@ -1,9 +1,6 @@
-package net.corda.ext.api.lifecycle
+package net.corda.nodeapi.internal.lifecycle
 
-import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.Try
-import net.corda.ext.api.NodeInitialContext
-import net.corda.ext.api.NodeServicesContext
 
 /**
  * Interface to flag interest in the Corda Node lifecycle which involves being notified when the node is starting up or

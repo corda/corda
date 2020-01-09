@@ -5,8 +5,8 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.ext.api.flow.Change
-import net.corda.ext.api.flow.ExistingFlowsOperations
+import net.corda.core.messaging.DataFeed
+import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
@@ -29,7 +29,7 @@ import java.util.concurrent.Future
  * TODO: Surfacing of exceptions via an API and/or management UI
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
-interface StateMachineManager : ExistingFlowsOperations {
+interface StateMachineManager {
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
      *
@@ -42,6 +42,21 @@ interface StateMachineManager : ExistingFlowsOperations {
      * next checkpoint.
      */
     fun stop(allowedUnsuspendedFiberCount: Int)
+
+    /**
+     * Represents an addition/removal of a state machine.
+     */
+    sealed class Change {
+        abstract val logic: FlowLogic<*>
+
+        data class Add(override val logic: FlowLogic<*>) : Change()
+        data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
+    }
+
+    /**
+     * Returns the list of live state machines and a stream of subsequent additions/removals of them.
+     */
+    fun track(): DataFeed<List<FlowLogic<*>>, Change>
 
     /**
      * The stream of additions/removals of flows.
@@ -57,6 +72,13 @@ interface StateMachineManager : ExistingFlowsOperations {
      * Returns all currently live flows.
      */
     val allStateMachines: List<FlowLogic<*>>
+
+    /**
+     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
+     *
+     * @return whether the flow existed and was killed.
+     */
+    fun killFlow(id: StateMachineRunId): Boolean
 
     /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.

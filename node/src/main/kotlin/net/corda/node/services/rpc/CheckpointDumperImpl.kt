@@ -39,10 +39,9 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
-import net.corda.ext.api.flow.CheckpointDumper
-import net.corda.ext.api.lifecycle.NodeLifecycleEvent
-import net.corda.ext.api.lifecycle.NodeLifecycleObserver
-import net.corda.ext.api.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.*
@@ -61,8 +60,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-internal class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence,
-                                    private val serviceHub: ServiceHub, val baseDirectory: Path) : CheckpointDumper, NodeLifecycleObserver {
+class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence,
+                                    private val serviceHub: ServiceHub, val baseDirectory: Path) : NodeLifecycleObserver {
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
@@ -84,7 +83,7 @@ internal class CheckpointDumperImpl(private val checkpointStorage: CheckpointSto
             is NodeLifecycleEvent.AfterStart -> Try.on {
                 checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                         CheckpointSerializeAsTokenContextImpl(
-                                nodeLifecycleEvent.nodeServicesContext.nodeAdmin.tokenizableServices,
+                                nodeLifecycleEvent.nodeServicesContext.tokenizableServices,
                                 CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER,
                                 CheckpointSerializationDefaults.CHECKPOINT_CONTEXT,
                                 serviceHub
@@ -110,7 +109,7 @@ internal class CheckpointDumperImpl(private val checkpointStorage: CheckpointSto
         }
     }
 
-    override fun dumpCheckpoints() {
+    fun dumpCheckpoints() {
         val now = serviceHub.clock.instant()
         val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
         try {

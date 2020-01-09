@@ -9,8 +9,8 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
-import net.corda.ext.api.lifecycle.NodeLifecycleEvent
-import net.corda.ext.api.lifecycle.NodeLifecycleObserver
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver

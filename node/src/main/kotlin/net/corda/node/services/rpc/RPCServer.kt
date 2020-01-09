@@ -21,10 +21,10 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
-import net.corda.ext.internal.logging.context.pushToLoggingContext
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
+import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.externalTrace

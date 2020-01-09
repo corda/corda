@@ -66,14 +66,13 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.ext.api.NodeServicesContext
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
-import net.corda.ext.api.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
-import net.corda.node.internal.attachment.AttachmentOperationsImpl
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -90,13 +89,9 @@ import net.corda.node.services.api.DummyAuditService
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.ext.api.admin.NodePropertiesStore
-import net.corda.ext.api.flow.CheckpointDumper
-import net.corda.ext.api.lifecycle.NodeLifecycleEventsDistributor
-import net.corda.ext.api.lifecycle.NodeLifecycleObserver
-import net.corda.ext.api.message.MessagingOperations
-import net.corda.node.internal.admin.NodeAdminImpl
-import net.corda.node.internal.flow.StateMachineOperationsImpl
+import net.corda.node.services.api.NodePropertiesStore
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
@@ -129,7 +124,6 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
-import net.corda.node.services.persistence.asFeed
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.Event
@@ -366,22 +360,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
 
     private val nodeServicesContext = object : NodeServicesContext {
-        override val serviceHub = services
-        override val networkMapOperations = services.networkMapUpdater
-        override val attachmentOperations = AttachmentOperationsImpl(services.attachments, services.attachmentTrustCalculator)
-        override val stateMachineOperations = StateMachineOperationsImpl(smm, this@AbstractNode.flowStarter, smm.flowHospital,
-                services.stateMachineRecordedTransactionMapping.asFeed(), checkpointDumper)
         override val platformVersion = versionInfo.platformVersion
         override val configurationWithOptions = configuration.configurationWithOptions
-        override val nodeAdmin = NodeAdminImpl(cordappLoader, services.nodeProperties, Consumer {
-            shutdownExecutor.submit(::stop)
-        },
         // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will
-        // be reflected in the `NodeAdmin` as well. However, since `NodeAdmin` only has access to immutable collection it can only read (but not modify)
+        // be reflected in the context as well. However, since contect only has access to immutable collection it can only read (but not modify)
         // the content.
-        tokenizableServices!!)
-        override val database = transactionSupport
-        override val messagingOperations = object : MessagingOperations {}
+        override val tokenizableServices: List<SerializeAsToken>
+            get() = this@AbstractNode.tokenizableServices!!
     }
 
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
@@ -399,7 +384,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): CordaRPCOps {
         val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
                 services,
                 smm,

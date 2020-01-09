@@ -24,7 +24,7 @@ import net.corda.core.utilities.trace
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
 import net.corda.node.services.api.FlowStarter
-import net.corda.ext.api.admin.NodePropertiesStore
+import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.ExternalEvent

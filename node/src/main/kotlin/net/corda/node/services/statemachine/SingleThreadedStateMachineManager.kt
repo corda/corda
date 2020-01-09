@@ -29,7 +29,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.ext.api.flow.Change
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -91,7 +90,7 @@ class SingleThreadedStateMachineManager(
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private class InnerState {
-        val changesPublisher = PublishSubject.create<Change>()!!
+        val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
         /** True if we're shutting down, so don't resume anything. */
         var stopping = false
         val flows = HashMap<StateMachineRunId, Flow>()
@@ -130,7 +129,7 @@ class SingleThreadedStateMachineManager(
      *
      * We use assignment here so that multiple subscribers share the same wrapped Observable.
      */
-    override val changes: Observable<Change> = mutex.content.changesPublisher
+    override val changes: Observable<StateMachineManager.Change> = mutex.content.changesPublisher
 
     override fun start(tokenizableServices: List<Any>) : Future<Unit> {
         checkQuasarJavaAgentPresence()
@@ -203,7 +202,7 @@ class SingleThreadedStateMachineManager(
      * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
      * calls to [allStateMachines]
      */
-    override fun track(): DataFeed<List<FlowLogic<*>>, Change> {
+    override fun track(): DataFeed<List<FlowLogic<*>>, StateMachineManager.Change> {
         return mutex.locked {
             database.transaction {
                 DataFeed(flows.values.map { it.fiber.logic }, changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction(database))
@@ -309,7 +308,7 @@ class SingleThreadedStateMachineManager(
         mutex.locked {
             startedFutures.remove(flowId)?.set(Unit)
             flows[flowId]?.let { flow ->
-                changesPublisher.onNext(Change.Add(flow.fiber.logic))
+                changesPublisher.onNext(StateMachineManager.Change.Add(flow.fiber.logic))
             }
         }
     }
@@ -906,7 +905,7 @@ class SingleThreadedStateMachineManager(
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
-        changesPublisher.onNext(Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
+        changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
     }
 
     private fun InnerState.removeFlowError(
@@ -920,7 +919,7 @@ class SingleThreadedStateMachineManager(
         (exception as? FlowException)?.originalErrorId = flowError.errorId
         flow.resultFuture.setException(exception)
         lastState.flowLogic.progressTracker?.endWithError(exception)
-        changesPublisher.onNext(Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
+        changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }
 
     // The flow's event queue may be non-empty in case it shut down abruptly. We handle outstanding events here.
