@@ -13,9 +13,12 @@ import net.corda.ext.api.rpc.PluggableRPCOps
 interface NodeLifecycleObserver {
 
     companion object {
-        const val PRIORITY_HIGH = 20
-        const val PRIORITY_NORMAL = 100
-        const val PRIORITY_LOW = 200
+        const val SERVICE_PRIORITY_HIGH = 20
+        const val SERVICE_PRIORITY_NORMAL = 100
+        const val SERVICE_PRIORITY_LOW = 200
+        const val RPC_PRIORITY_HIGH = 1020
+        const val RPC_PRIORITY_NORMAL = 1100
+        const val RPC_PRIORITY_LOW = 1200
 
         /**
          * Helper method to create a string to flag successful processing of an event.
@@ -42,20 +45,17 @@ interface NodeLifecycleObserver {
      * For `stop` methods, the order will be opposite to `start`.
      */
     val priority: Int
-        get() {
-            return PRIORITY_NORMAL
-        }
 }
 
 /**
  * A set of events to flag the important milestones in the lifecycle of the node.
- * @param shutdown flags whether this is a shutdown event, i.e. it would make sense to notify observers in the reversed order.
+ * @param reversedPriority flags whether it would make sense to notify observers in the reversed order.
  */
-sealed class NodeLifecycleEvent(val shutdown: Boolean = false) {
+sealed class NodeLifecycleEvent(val reversedPriority: Boolean = false) {
     class BeforeStart(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent()
     class AfterStart(val nodeServicesContext: NodeServicesContext) : NodeLifecycleEvent()
-    class BeforeStop(val nodeServicesContext: NodeServicesContext) : NodeLifecycleEvent(shutdown = true)
-    class AfterStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(shutdown = true)
+    class BeforeStop(val nodeServicesContext: NodeServicesContext) : NodeLifecycleEvent(reversedPriority = true)
+    class AfterStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(reversedPriority = true)
 }
 
 /**

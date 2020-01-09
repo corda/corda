@@ -517,7 +517,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            smm.start(frozenTokenizableServices)
+            val smmStartedFuture = smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
@@ -530,6 +530,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schedulerService.start()
 
             val resultingNodeInfo = createStartedNode(nodeInfo, rpcOpsProxies, notaryService).also { _started = it }
+            // Wait for SMM to fully start
+            smmStartedFuture.get()
             nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterStart(nodeServicesContext))
             resultingNodeInfo
         }

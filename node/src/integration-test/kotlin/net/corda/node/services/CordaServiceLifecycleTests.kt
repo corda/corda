@@ -53,6 +53,9 @@ class CordaServiceLifecycleTests {
     @CordaService
     @Suppress("unused")
     class TextLengthComputingService(private val services: AppServiceHub) : SingletonSerializeAsToken(), NodeLifecycleObserver {
+
+        override val priority = NodeLifecycleObserver.SERVICE_PRIORITY_NORMAL
+
         fun computeLength(text: String): Int {
             require(text.isNotEmpty()) { "Length must be at least 1." }
             return text.length

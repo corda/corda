@@ -60,6 +60,7 @@ import net.corda.ext.api.network.NetworkMapOperations
 import net.corda.ext.api.flow.CheckpointDumper
 import net.corda.ext.internal.rpc.security.rpcContext
 import net.corda.ext.api.flow.Change
+import net.corda.ext.api.lifecycle.NodeLifecycleObserver
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
@@ -108,6 +109,8 @@ internal class CordaRPCOpsImpl : InternalCordaRPCOps, NodeRpcOps<InternalCordaRP
      * to be present.
      */
     override val protocolVersion: Int get() = nodeInfo().platformVersion
+
+    override val priority: Int = NodeLifecycleObserver.RPC_PRIORITY_HIGH
 
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -499,6 +502,10 @@ internal class CordaRPCOpsImpl : InternalCordaRPCOps, NodeRpcOps<InternalCordaRP
                 }, {
                     // Nothing to do in case of errors here.
                 })
+                reportSuccess(nodeLifecycleEvent)
+            }
+            is NodeLifecycleEvent.BeforeStop -> Try.on {
+                cancelDrainingShutdownHook()
                 reportSuccess(nodeLifecycleEvent)
             }
             else -> super.update(nodeLifecycleEvent)

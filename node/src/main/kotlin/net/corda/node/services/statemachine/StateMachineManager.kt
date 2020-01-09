@@ -10,6 +10,7 @@ import net.corda.ext.api.flow.ExistingFlowsOperations
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
+import java.util.concurrent.Future
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -31,8 +32,10 @@ import rx.Observable
 interface StateMachineManager : ExistingFlowsOperations {
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
+     *
+     * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>)
+    fun start(tokenizableServices: List<Any>) : Future<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the

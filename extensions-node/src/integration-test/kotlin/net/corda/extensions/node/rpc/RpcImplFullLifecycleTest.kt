@@ -17,6 +17,7 @@ import net.corda.ext.api.NodeServicesContext
 import net.corda.ext.api.admin.NodeAdmin
 import net.corda.ext.api.attachment.AttachmentOperations
 import net.corda.ext.api.flow.StateMachineOperations
+import net.corda.ext.api.lifecycle.NodeLifecycleObserver
 import net.corda.ext.api.lifecycle.NodeRpcOps
 import net.corda.ext.api.network.NetworkMapOperations
 import net.corda.testing.core.ALICE_NAME
@@ -48,6 +49,8 @@ class RpcImplFullLifecycleTest {
         class TestNodeHealthCheckRpcOpsImpl : NodeHealthCheckRpcOps, NodeRpcOps<NodeHealthCheckRpcOps> {
 
             override val protocolVersion: Int = PLATFORM_VERSION
+
+            override val priority: Int = NodeLifecycleObserver.RPC_PRIORITY_NORMAL
 
             override fun getVersion(nodeServicesContext: NodeInitialContext): Int = 2 // Trumps what `NodeHealthCheckRpcOpsImpl` has
 

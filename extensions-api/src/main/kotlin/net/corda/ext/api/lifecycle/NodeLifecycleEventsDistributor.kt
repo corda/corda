@@ -66,7 +66,7 @@ class NodeLifecycleEventsDistributor {
      */
     fun distributeEvent(event: NodeLifecycleEvent) {
         val snapshot = readWriteLock.readLock().executeLocked { LinkedList(prioritizedObservers) }
-        val orderedSnapshot = if (event.shutdown) snapshot.reversed() else snapshot
+        val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
 
         val updateResult = orderedSnapshot.map { it.update(event) }
 

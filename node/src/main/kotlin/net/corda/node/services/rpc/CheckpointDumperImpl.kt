@@ -68,6 +68,8 @@ internal class CheckpointDumperImpl(private val checkpointStorage: CheckpointSto
         private val log = contextLogger()
     }
 
+    override val priority: Int = NodeLifecycleObserver.SERVICE_PRIORITY_NORMAL
+
     private val lock = AtomicInteger(0)
 
     private lateinit var checkpointSerializationContext: CheckpointSerializationContext
