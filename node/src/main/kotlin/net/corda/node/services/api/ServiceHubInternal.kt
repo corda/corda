@@ -245,7 +245,7 @@ interface WritableTransactionStorage : TransactionStorage {
     /**
      * Add a new *verified* transaction to the store, or convert the existing unverified transaction into a verified one.
      * @param transaction The transaction to be recorded.
-     * @return true if the transaction was recorded as a *new verified* transaction, false if the transaction already exists.
+     * @return true if the transaction was recorded as a *new verified* transcation, false if the transaction already exists.
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean

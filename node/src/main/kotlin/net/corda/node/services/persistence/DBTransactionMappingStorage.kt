@@ -17,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * Database storage of a txhash -> state machine id mapping.
  *
- * Mappings are added as transactions are persisted by [net.corda.core.node.ServiceHub.recordTransactions] and never deleted.  Used in the
+ * Mappings are added as transactions are persisted by [ServiceHub.recordTransaction], and never deleted.  Used in the
  * RPC API to correlate transaction creation with flows.
  */
 @ThreadSafe
