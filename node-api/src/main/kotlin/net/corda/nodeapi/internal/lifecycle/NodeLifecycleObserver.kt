@@ -49,7 +49,7 @@ interface NodeLifecycleObserver {
  */
 sealed class NodeLifecycleEvent(val reversedPriority: Boolean = false) {
     class BeforeStart(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent()
-    class AfterStart(val nodeServicesContext: NodeServicesContext) : NodeLifecycleEvent()
-    class BeforeStop(val nodeServicesContext: NodeServicesContext) : NodeLifecycleEvent(reversedPriority = true)
+    class AfterStart<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
+    class BeforeStop<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
     class AfterStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(reversedPriority = true)
 }

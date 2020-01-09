@@ -62,7 +62,7 @@ class CheckpointDumperImplTest {
     private val mockAfterStartEvent = {
         val nodeServicesContextMock = mock<NodeServicesContext>()
         whenever(nodeServicesContextMock.tokenizableServices).doReturn(emptyList<SerializeAsToken>())
-        val eventMock = mock<NodeLifecycleEvent.AfterStart>()
+        val eventMock = mock<NodeLifecycleEvent.AfterStart<*>>()
         whenever(eventMock.nodeServicesContext).doReturn(nodeServicesContextMock)
         eventMock
     }()

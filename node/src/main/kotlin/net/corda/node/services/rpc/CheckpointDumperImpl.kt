@@ -80,7 +80,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
     override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
         return when(nodeLifecycleEvent) {
-            is NodeLifecycleEvent.AfterStart -> Try.on {
+            is NodeLifecycleEvent.AfterStart<*> -> Try.on {
                 checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                         CheckpointSerializeAsTokenContextImpl(
                                 nodeLifecycleEvent.nodeServicesContext.tokenizableServices,
