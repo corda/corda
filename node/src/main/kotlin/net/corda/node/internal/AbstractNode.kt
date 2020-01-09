@@ -363,10 +363,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val platformVersion = versionInfo.platformVersion
         override val configurationWithOptions = configuration.configurationWithOptions
         // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will
-        // be reflected in the context as well. However, since contect only has access to immutable collection it can only read (but not modify)
+        // be reflected in the context as well. However, since context only has access to immutable collection it can only read (but not modify)
         // the content.
-        override val tokenizableServices: List<SerializeAsToken>
-            get() = this@AbstractNode.tokenizableServices!!
+        override val tokenizableServices: List<SerializeAsToken> = this@AbstractNode.tokenizableServices!!
     }
 
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
