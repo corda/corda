@@ -174,7 +174,6 @@ dependencies {
     testCompile project(':node-driver')
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':node-driver')
     testCompile project(':finance:contracts')
     testCompile project(':finance:workflows')
 

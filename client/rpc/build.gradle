@@ -69,7 +69,7 @@ processSmokeTestResources {
 
 dependencies {
     compile project(':core')
-    compile project(':node-api') // Needed for `ArtemisTcpTransport`
+    compile project(':node-api')
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
