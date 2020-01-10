@@ -72,7 +72,7 @@ abstract class AbstractCashSelection(private val maxRetries: Int = 8, private va
      * @return The result of the withResultSet function
      */
     protected abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                                        onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
+                                        onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, maxVersion: Int, withResultSet: (ResultSet) -> Boolean): Boolean
 
     abstract override fun toString(): String
 
@@ -96,12 +96,13 @@ abstract class AbstractCashSelection(private val maxRetries: Int = 8, private va
                                         onlyFromIssuerParties: Set<AbstractParty> = emptySet(),
                                         notary: Party? = null,
                                         lockId: UUID,
-                                        withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>> {
+                                        withIssuerRefs: Set<OpaqueBytes> = emptySet(),
+                                        maxVersion: Int = 0): List<StateAndRef<Cash.State>> {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
         // DOCSTART CASHSELECT 1
         for (retryCount in 1..maxRetries) {
-            if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
+            if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs, maxVersion)) {
                 log.warn("Coin selection failed on attempt $retryCount")
                 // TODO: revisit the back off strategy for contended spending.
                 if (retryCount != maxRetries) {
@@ -119,12 +120,12 @@ abstract class AbstractCashSelection(private val maxRetries: Int = 8, private va
         return stateAndRefs
     }
 
-    private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
+    private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>, maxVersion: Int = 0): Boolean {
         val connection = services.jdbcSession()
         try {
             // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
             // the softLockReserve update will detect whether we try to lock states locked by others
-            return executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs) { rs ->
+            return executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, maxVersion) { rs ->
                 stateAndRefs.clear()
 
                 var totalPennies = 0L

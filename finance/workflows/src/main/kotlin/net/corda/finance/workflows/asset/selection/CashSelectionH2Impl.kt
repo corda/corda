@@ -30,7 +30,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
     //       2) H2 uses session variables to perform this accumulator function:
     //          http://www.h2database.com/html/functions.html#set
     //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
-    override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
+    override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, maxVersion: Int, withResultSet: (ResultSet) -> Boolean): Boolean {
         connection.createStatement().use { it.execute("CALL SET(@t, CAST(0 AS BIGINT));") }
 
         // state_status = 0 -> UNCONSUMED.
@@ -53,7 +53,12 @@ class CashSelectionH2Impl : AbstractCashSelection() {
                 (if (withIssuerRefs.isNotEmpty()) {
                     val repeats = generateSequence { "?" }.take(withIssuerRefs.size).joinToString(",")
                     " AND ccs.issuer_ref IN ($repeats)"
-                } else "")
+                } else "") +
+                (if (maxVersion > 0) {
+                    """ AND vs.tx_version <= ? """
+                } else {
+                    ""
+                })
 
         // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
         connection.prepareStatement(selectJoin).use { psSelectJoin ->
@@ -68,6 +73,9 @@ class CashSelectionH2Impl : AbstractCashSelection() {
             }
             withIssuerRefs.forEach {
                 psSelectJoin.setBytes(++pIndex, it.bytes)
+            }
+            if (maxVersion > 0) {
+                psSelectJoin.setInt(++pIndex, maxVersion)
             }
             log.debug { psSelectJoin.toString() }
 
