@@ -215,7 +215,7 @@ class ReconnectingCordaRPCOps private constructor(
          * @param retries the number of retries remaining. A negative value implies infinite retries.
          */
         private tailrec fun establishConnectionWithRetry(
-                retryInterval: Duration = 1.seconds,
+                retryInterval: Duration = rpcConfiguration.connectionRetryInterval,
                 roundRobinIndex: Int = 0,
                 retries: Int = -1
         ): CordaRPCConnection? {
