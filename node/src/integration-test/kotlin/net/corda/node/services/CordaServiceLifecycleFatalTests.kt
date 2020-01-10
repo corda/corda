@@ -3,7 +3,7 @@ package net.corda.node.services
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.CordaServiceCriticalFailureException
-import net.corda.core.node.services.NodeLifecycleObserverService
+import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -29,7 +29,7 @@ class CordaServiceLifecycleFatalTests {
 
     @CordaService
     @Suppress("unused")
-    class FatalService(private val services: AppServiceHub) : SingletonSerializeAsToken(), NodeLifecycleObserverService {
+    class FatalService(private val services: AppServiceHub) : SingletonSerializeAsToken(), ServiceLifecycleObserver {
 
         fun computeLength(text: String): Int {
             require(text.isNotEmpty()) { "Length must be at least 1." }

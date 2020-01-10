@@ -6,7 +6,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.NodeLifecycleObserverService
+import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -53,7 +53,7 @@ class CordaServiceLifecycleTests {
 
     @CordaService
     @Suppress("unused")
-    class TextLengthComputingService(private val services: AppServiceHub) : SingletonSerializeAsToken(), NodeLifecycleObserverService {
+    class TextLengthComputingService(private val services: AppServiceHub) : SingletonSerializeAsToken(), ServiceLifecycleObserver {
 
         fun computeLength(text: String): Int {
             require(text.isNotEmpty()) { "Length must be at least 1." }
