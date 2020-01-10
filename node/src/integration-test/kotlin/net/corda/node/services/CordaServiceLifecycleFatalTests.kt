@@ -18,6 +18,14 @@ import kotlin.test.assertFailsWith
 class CordaServiceLifecycleFatalTests {
 
     companion object {
+
+        // It is important to disarm throwing of the exception as unfortunately this service may be packaged to many
+        // test cordaps, e.g. the one used by [net.corda.node.CordappScanningDriverTest]
+        // If service remains "armed" to throw exceptions this will fail node start-up sequence.
+        // The problem is caused by the fact that test from  `net.corda.node` package also hoovers all the sub-packages.
+        // Since this is done as a separate process, the trigger is passed through the system property.
+        const val SECRET_PROPERTY_NAME = "CordaServiceLifecycleFatalTests.armed"
+
         @CordaService
         @Suppress("unused")
         class FatalService(services: AppServiceHub) : SingletonSerializeAsToken() {
@@ -34,7 +42,9 @@ class CordaServiceLifecycleFatalTests {
 
         object FailingObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
-                throw CordaServiceCriticalFailureException("failure")
+                if(java.lang.Boolean.getBoolean(SECRET_PROPERTY_NAME)) {
+                    throw CordaServiceCriticalFailureException("failure")
+                }
             }
         }
     }
@@ -43,7 +53,7 @@ class CordaServiceLifecycleFatalTests {
     fun `JVM terminates on critical failure`() {
         // Scenario terminates JVM - node should be running out of process
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
-                notarySpecs = emptyList())) {
+                notarySpecs = emptyList(), systemProperties = mapOf(Pair(SECRET_PROPERTY_NAME, "true")))) {
             val nodeHandle = startNode(providedName = ALICE_NAME)
             assertFailsWith(ListenProcessDeathException::class) {
                 nodeHandle.getOrThrow()
