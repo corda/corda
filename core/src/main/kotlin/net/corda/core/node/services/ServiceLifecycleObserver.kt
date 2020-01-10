@@ -4,7 +4,7 @@ import java.lang.Exception
 
 /**
  * Specifies that given [CordaService] is interested to know about important milestones of Corda Node lifecycle and potentially react to them.
- * Subscription can be performed via [net.corda.core.node.AppServiceHub].
+ * Subscription can be performed using [net.corda.core.node.AppServiceHub.register] method from a constructor of [CordaService].
  */
 interface ServiceLifecycleObserver {
     /**

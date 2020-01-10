@@ -5,6 +5,8 @@ import net.corda.core.utilities.Try
 /**
  * Interface to flag interest in the Corda Node lifecycle which involves being notified when the node is starting up or
  * shutting down.
+ * Unlike [net.corda.core.node.services.ServiceLifecycleObserver] this is an internal interface that provides much richer
+ * functionality for interacting with Node's services.
  */
 interface NodeLifecycleObserver {
 
