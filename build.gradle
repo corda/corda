@@ -678,3 +678,10 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: 'com.r3.testing.image-building'
+
+task printLocalVersion {
+    logger.lifecycle("Publishing local version $corda_release_version")
+}
+
+publishToMavenLocal.finalizedBy(printLocalVersion)
+
