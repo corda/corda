@@ -7,6 +7,7 @@ import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._rpcClientSerializationEnv
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
@@ -35,7 +36,8 @@ class AMQPClientSerializationScheme(
     companion object {
         /** Call from main only. */
         fun initialiseSerialization(classLoader: ClassLoader? = null, customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet(), serializationWhitelists: Set<SerializationWhitelist> = emptySet(), serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> = AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised()) {
-            nodeSerializationEnv = createSerializationEnv(classLoader, customSerializers, serializationWhitelists, serializerFactoriesForContexts)
+            _rpcClientSerializationEnv.set(createSerializationEnv(classLoader, customSerializers,
+                    serializationWhitelists, serializerFactoriesForContexts))
         }
 
         fun createSerializationEnv(classLoader: ClassLoader? = null, customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet(), serializationWhitelists: Set<SerializationWhitelist> = emptySet(), serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> = AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised()): SerializationEnvironment {

@@ -11,6 +11,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
+import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.LedgerTransaction
@@ -156,6 +157,13 @@ interface ServiceHub : ServicesForResolution {
      * with a specified network map service, which it fetches data from and then subscribes to updates of.
      */
     val networkMapCache: NetworkMapCache
+
+    /**
+     * The [DiagnosticsService] provides diagnostic level information about the node, including the current version of the node, and the
+     * CorDapps currently installed on the node. Note that this information should be used to provide diagnostics only, and no functional
+     * decisions should be made based on this.
+     */
+    val diagnosticsService: DiagnosticsService
 
     /**
      * INTERNAL. DO NOT USE.

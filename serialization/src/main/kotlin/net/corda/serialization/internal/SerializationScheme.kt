@@ -3,6 +3,7 @@ package net.corda.serialization.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -80,6 +81,9 @@ open class SerializationFactoryImpl(
     companion object {
         val magicSize = amqpMagic.size
     }
+
+    @VisibleForTesting
+    fun getRegisteredSchemes() = registeredSchemes
 
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 

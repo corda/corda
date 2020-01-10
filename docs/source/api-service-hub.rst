@@ -19,6 +19,11 @@ various services the node provides. The services offered by the ``ServiceHub`` a
     * Other information about the node
 * ``ServiceHub.clock``
     * Provides access to the node’s internal time and date
+* ``ServiceHub.diagnosticsService``
+    * Provides diagnostic information about the node, including the node version and currently running apps. Note that this data should be
+      used for diagnostic purposes ONLY
+* ``ServiceHub.contractUpgradeService``
+    * Provides functionality for secure contract upgrades
 
 Additional, ``ServiceHub`` exposes the following properties:
 

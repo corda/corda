@@ -6,6 +6,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
@@ -52,6 +53,9 @@ abstract class AbstractAMQPSerializationScheme(
             cordapps.serializationWhitelists,
             AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised()
     )
+
+    @VisibleForTesting
+    fun getRegisteredCustomSerializers() = cordappCustomSerializers
 
     // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
     private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> =
