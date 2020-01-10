@@ -32,6 +32,7 @@ import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQUnBlockedException
+import java.io.NotSerializableException
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -324,6 +325,8 @@ class ReconnectingCordaRPCOps private constructor(
                             checkIfIsStartFlow(method, e)
                         }
                         is RPCException -> {
+                            rethrowIfUnrecoverable(e.targetException as RPCException)
+
                             log.warn("Failed to perform operation ${method.name}. RPCException. Retrying....", e)
                             reconnectingRPCConnection.reconnectOnError(e)
                             Thread.sleep(1000) // TODO - explain why this sleep is necessary
@@ -349,6 +352,12 @@ class ReconnectingCordaRPCOps private constructor(
         private fun checkIfClosed() {
             if (reconnectingRPCConnection.isClosed()) {
                 throw RPCException("Cannot execute RPC command after client has shut down.")
+            }
+        }
+
+        private fun rethrowIfUnrecoverable(e: RPCException) {
+            if (e.cause is NotSerializableException) { // Do not try to reconnect when we can't serialize
+                throw e
             }
         }
 
