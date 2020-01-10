@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import rx.Observable
 
@@ -38,4 +39,13 @@ interface AppServiceHub : ServiceHub {
      * independent transaction from those used in the framework.
      */
     val database: CordaTransactionSupport
+
+    /**
+     * Allows to register [ServiceLifecycleObserver] such that it will start receiving [net.corda.core.node.services.ServiceLifecycleEvent]s
+     *
+     * @param observer an instance of [ServiceLifecycleObserver] to be registered
+     * @param priority if set to `true` the [observer] will be added to a priority queue such that it will be notified ahead of non-prioritised
+     *      observers.
+     */
+    fun register(observer: ServiceLifecycleObserver, priority: Boolean = false)
 }

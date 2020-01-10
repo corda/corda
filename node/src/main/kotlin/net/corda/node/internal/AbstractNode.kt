@@ -56,6 +56,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.schemas.MappedSchema
@@ -766,60 +767,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /**
-     * This customizes the ServiceHub for each CordaService that is initiating flows.
-     */
-    // TODO Move this into its own file
-    private class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter,
-                                                          override val database: CordaTransactionSupport) : AppServiceHub, ServiceHub by serviceHub {
-        lateinit var serviceInstance: T
-        override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
-            val stateMachine = startFlowChecked(flow)
-            return FlowProgressHandleImpl(
-                    id = stateMachine.id,
-                    returnValue = stateMachine.resultFuture,
-                    progress = stateMachine.logic.track()?.updates ?: Observable.empty()
-            )
-        }
-
-        override fun <T> startFlow(flow: FlowLogic<T>): FlowHandle<T> {
-            val parentFlow = FlowLogic.currentTopLevel
-            return if (parentFlow != null) {
-                val result = parentFlow.subFlow(flow)
-                // Accessing the flow id must happen after the flow has started.
-                val flowId = flow.runId
-                FlowHandleImpl(flowId, doneFuture(result))
-            } else {
-                val stateMachine = startFlowChecked(flow)
-                FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
-            }
-        }
-
-        private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {
-            val logicType = flow.javaClass
-            require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
-            // TODO check service permissions
-            // TODO switch from myInfo.legalIdentities[0].name to current node's identity as soon as available
-            val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
-            return flowStarter.startFlow(flow, context).getOrThrow()
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is AppServiceHubImpl<*>) return false
-            return serviceHub == other.serviceHub
-                    && flowStarter == other.flowStarter
-                    && serviceInstance == other.serviceInstance
-        }
-
-        override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
-    }
-
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
-            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, transactionSupport)
+            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, transactionSupport, nodeLifecycleEventsDistributor)
             val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
             val service = extendedServiceConstructor.newInstance(serviceContext)
             serviceContext.serviceInstance = service
@@ -836,10 +788,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         cordappServices.putInstance(serviceClass, service)
 
         service.tokenize()
-        // Service can optionally be NodeLifecycleObserver - if so register it to receive node's lifecycle events.
-        if (service is NodeLifecycleObserver) {
-            nodeLifecycleEventsDistributor.add(service)
-        }
         log.info("Installed ${serviceClass.name} Corda service")
 
         return service

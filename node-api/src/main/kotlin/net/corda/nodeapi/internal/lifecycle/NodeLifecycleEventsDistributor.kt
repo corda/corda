@@ -1,5 +1,7 @@
 package net.corda.nodeapi.internal.lifecycle
 
+import net.corda.core.node.services.CordaServiceCriticalFailureException
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import java.util.Collections.singleton
@@ -7,6 +9,7 @@ import java.util.LinkedList
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.system.exitProcess
 
 /**
  * Responsible for distributing of various `NodeLifecycleEvent` to `NodeLifecycleObserver`.
@@ -20,6 +23,11 @@ class NodeLifecycleEventsDistributor {
 
     companion object {
         private val log = contextLogger()
+
+        private val crtiticalEventsClasses: Set<Class<out NodeLifecycleEvent>> = setOf(
+                NodeLifecycleEvent.BeforeStart::class.java,
+                NodeLifecycleEvent.AfterStart::class.java)
+        private val criticalExceptionsClasses: Set<Class<out Throwable>> = setOf(CordaServiceCriticalFailureException::class.java)
     }
 
     /**
@@ -74,12 +82,20 @@ class NodeLifecycleEventsDistributor {
 
         if(updateFailed.isNotEmpty()) {
             log.error("Failed to distribute event $event, failure outcome: $updateFailed")
+            if(event.javaClass in crtiticalEventsClasses) {
+                handlePossibleFatalTermination(event, updateFailed.map { it as Try.Failure<String> })
+            }
         }
 
         log.debug { "Event $event distribution outcome: $updatedOK" }
+    }
 
-        // TODO: Should we do this asynchronously but maintaining priority order?
-        // TODO: How shall we handle failed distribution events for different types and for different priorities?
+    private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: List<Try.Failure<String>>) {
+        val criticalFailures = updateFailed.filter { it.exception.javaClass in criticalExceptionsClasses }
+        if(criticalFailures.isNotEmpty()) {
+            log.error("During processing of $event critical failures been reported: $criticalFailures. JVM will be terminated.")
+            exitProcess(1)
+        }
     }
 
     private fun <T> Lock.executeLocked(block: () -> T) : T {
