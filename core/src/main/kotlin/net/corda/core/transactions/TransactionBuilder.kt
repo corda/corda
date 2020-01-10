@@ -78,6 +78,8 @@ open class TransactionBuilder(
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val superStates = arrayListOf<TransactionState<ContractState>>()
+    private var versionOfCurrentTx = 4;
 
     /**
      * Creates a copy of the builder.
@@ -155,7 +157,8 @@ open class TransactionBuilder(
                             window,
                             referenceStates,
                             services.networkParametersService.currentHash),
-                    privacySalt
+                    privacySalt,
+                    versionOfCurrentTx
             )
         }
 
@@ -673,10 +676,10 @@ open class TransactionBuilder(
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */
     @JvmOverloads
     fun addOutputState(
-        state: ContractState,
-        contract: ContractClassName = requireNotNullContractClassName(state),
-        notary: Party, encumbrance: Int? = null,
-        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+            state: ContractState,
+            contract: ContractClassName = requireNotNullContractClassName(state),
+            notary: Party, encumbrance: Int? = null,
+            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
     ): TransactionBuilder {
         return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
     }
@@ -684,9 +687,9 @@ open class TransactionBuilder(
     /** Adds an output state. A default notary must be specified during builder construction to use this method */
     @JvmOverloads
     fun addOutputState(
-        state: ContractState,
-        contract: ContractClassName = requireNotNullContractClassName(state),
-        constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
+            state: ContractState,
+            contract: ContractClassName = requireNotNullContractClassName(state),
+            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
     ): TransactionBuilder {
         checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, contract, notary!!, constraint = constraint)

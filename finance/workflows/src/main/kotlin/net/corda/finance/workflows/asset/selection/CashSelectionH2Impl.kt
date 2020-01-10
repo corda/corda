@@ -36,7 +36,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
         // state_status = 0 -> UNCONSUMED.
         // is_relevant = 0 -> RELEVANT.
         val selectJoin = """
-                    SELECT vs.transaction_id, vs.output_index, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+                    SELECT vs.transaction_id, vs.output_index, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id, vs.tx_version
                     FROM vault_states AS vs, contract_cash_states AS ccs
                     WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                     AND vs.state_status = 0

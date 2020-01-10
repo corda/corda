@@ -16,6 +16,7 @@ import net.corda.finance.contracts.asset.Cash
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
@@ -26,8 +27,8 @@ import java.util.concurrent.atomic.AtomicReference
  * `META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection`.
  */
 // TODO: make parameters configurable when we get CorDapp configuration.
-abstract class AbstractCashSelection(private val maxRetries : Int = 8, private val retrySleep : Int = 100,
-                                     private val retryCap : Int = 2000) {
+abstract class AbstractCashSelection(private val maxRetries: Int = 8, private val retrySleep: Int = 100,
+                                     private val retryCap: Int = 2000) {
     companion object {
         val instance = AtomicReference<AbstractCashSelection>()
 
@@ -39,9 +40,10 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
-                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
-                        "\nAvailable implementations: $cashSelectionAlgos")
+                }
+                        ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
+                                "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
+                                "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
         }
 
@@ -70,7 +72,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
      * @return The result of the withResultSet function
      */
     protected abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
+                                        onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
 
     abstract override fun toString(): String
 
@@ -133,7 +135,12 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
                     val pennies = rs.getLong(3)
                     totalPennies = rs.getLong(4)
                     val rowLockId = rs.getString(5)
-                    stateRefs.add(StateRef(txHash, index))
+                    val txVersion = try {
+                        rs.getInt(rs.findColumn("tx_version"))
+                    } catch (e: SQLException) {
+                        0
+                    }
+                    stateRefs.add(StateRef(txHash, index, txVersion))
                     log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
                 }
 
