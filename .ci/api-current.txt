@@ -3368,6 +3368,9 @@ public static final class net.corda.core.messaging.StateMachineUpdate$Removed ex
 @DoNotImplement
 public interface net.corda.core.node.AppServiceHub extends net.corda.core.node.ServiceHub
   @NotNull
+  public abstract net.corda.core.node.services.vault.CordaTransactionSupport getDatabase()
+  public abstract void register(net.corda.core.node.services.ServiceLifecycleObserver, boolean)
+  @NotNull
   public abstract net.corda.core.messaging.FlowHandle<T> startFlow(net.corda.core.flows.FlowLogic<? extends T>)
   @NotNull
   public abstract net.corda.core.messaging.FlowProgressHandle<T> startTrackedFlow(net.corda.core.flows.FlowLogic<? extends T>)
@@ -3753,6 +3756,13 @@ public static final class net.corda.core.node.services.PartyInfo$SingleNode exte
   public int hashCode()
   @NotNull
   public String toString()
+##
+public final class net.corda.core.node.services.ServiceLifecycleEvent extends java.lang.Enum
+  public static net.corda.core.node.services.ServiceLifecycleEvent valueOf(String)
+  public static net.corda.core.node.services.ServiceLifecycleEvent[] values()
+##
+public interface net.corda.core.node.services.ServiceLifecycleObserver
+  public abstract void onServiceLifecycleEvent(net.corda.core.node.services.ServiceLifecycleEvent)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.StatesNotAvailableException extends net.corda.core.flows.FlowException

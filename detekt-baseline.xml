@@ -405,8 +405,6 @@
     <ID>ForbiddenComment:NodeInfoWatcher.kt$NodeInfoWatcher$// TODO: Use NIO watch service instead?</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.FixContainer$// TODO: the calendar data needs to be specified for every fix type in the input string</ID>
     <ID>ForbiddenComment:NodeInterestRates.kt$NodeInterestRates.UnknownFix$// TODO: can we split into two? Fix not available (retryable/transient) and unknown (permanent)</ID>
-    <ID>ForbiddenComment:NodeLifecycleEventsDistributor.kt$NodeLifecycleEventsDistributor$// TODO: How shall we handle failed distribution events for different types and for different priorities?</ID>
-    <ID>ForbiddenComment:NodeLifecycleEventsDistributor.kt$NodeLifecycleEventsDistributor$// TODO: Should we do this asynchronously but maintaining priority order?</ID>
     <ID>ForbiddenComment:NodeTerminalView.kt$NodeTerminalView$// TODO: Remove this special case once Rick's serialisation work means we can deserialise states that weren't on our own classpath.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Optimise this.</ID>
     <ID>ForbiddenComment:NodeVaultService.kt$NodeVaultService$// TODO: Perhaps these can be stored in a batch?</ID>
@@ -1311,8 +1309,6 @@
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode$val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also { attachments.servicesForResolution = it }</ID>
     <ID>MaxLineLength:AbstractNode.kt$AbstractNode.&lt;no name provided&gt;$// Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will // be reflected in the context as well. However, since context only has access to immutable collection it can only read (but not modify) // the content. override val tokenizableServices: List&lt;SerializeAsToken&gt; = this@AbstractNode.tokenizableServices!!</ID>
-    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$override val database: CordaTransactionSupport</ID>
-    <ID>MaxLineLength:AbstractNode.kt$AbstractNode.AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex is HikariPool.PoolInitializationException -&gt; throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)</ID>
     <ID>MaxLineLength:AbstractNode.kt$ex.cause is ClassNotFoundException -&gt; throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")</ID>
     <ID>MaxLineLength:AbstractNode.kt$fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set&lt;MappedSchema&gt;, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name)</ID>
@@ -1345,6 +1341,9 @@
     <ID>MaxLineLength:AnalyticsEngine.kt$OGSIMMAnalyticsEngine$val t = BimmAnalysisUtils.computeMargin(combinedRatesProvider, normalizer, calculatorTotal, it.value.currencyParameterSensitivities, it.value.multiCurrencyAmount)</ID>
     <ID>MaxLineLength:AnonymousParty.kt$AnonymousParty : DestinationAbstractParty</ID>
     <ID>MaxLineLength:AnotherDummyContract.kt$AnotherDummyContract$return TransactionBuilder(notary).withItems(StateAndContract(state, ANOTHER_DUMMY_PROGRAM_ID), Command(Commands.Create(), owner.party.owningKey))</ID>
+    <ID>MaxLineLength:AppServiceHub.kt$AppServiceHub$ fun register(observer: ServiceLifecycleObserver, priority: Boolean = false)</ID>
+    <ID>MaxLineLength:AppServiceHubImpl.kt$AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
+    <ID>MaxLineLength:AppServiceHubImpl.kt$AppServiceHubImpl.Companion.NodeLifecycleServiceObserverAdaptor$private</ID>
     <ID>MaxLineLength:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase$ operator fun set(key: K, value: V)</ID>
     <ID>MaxLineLength:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase$log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")</ID>
     <ID>MaxLineLength:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase$oldValueInCache</ID>
@@ -3203,6 +3202,8 @@
     <ID>MaxLineLength:ServiceHub.kt$ServiceHub$private</ID>
     <ID>MaxLineLength:ServiceHub.kt$ServiceHub$signInitialTransaction(builder, publicKey, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(publicKey).schemeNumberID))</ID>
     <ID>MaxLineLength:ServiceHubInternal.kt$ServiceHubInternal.Companion$vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction }, previouslySeenTxs.map { it.coreTransaction })</ID>
+    <ID>MaxLineLength:ServiceLifecycleObserver.kt$ServiceLifecycleEvent$NODE_SHUTTING_DOWN</ID>
+    <ID>MaxLineLength:ServiceLifecycleObserver.kt$ServiceLifecycleObserver</ID>
     <ID>MaxLineLength:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$else -&gt; throw UnsupportedOperationException("Attempting to resolve attachment for index ${stateRef.index} of a ${ctx.javaClass} transaction. This is not supported.")</ID>
     <ID>MaxLineLength:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$if (attachment is ContractAttachment &amp;&amp; (forContractClassName ?: transactionState.contract) in attachment.allContracts) { return attachment }</ID>
     <ID>MaxLineLength:ServicesForResolutionImpl.kt$ServicesForResolutionImpl$return attachments.openAttachment(ctx.upgradedContractAttachmentId) ?: throw AttachmentResolutionException(stateRef.txhash)</ID>
