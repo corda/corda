@@ -11,6 +11,7 @@ interface ServiceLifecycleObserver {
      * A handler for [ServiceLifecycleEvent]s.
      * Default implementation does nothing.
      */
+    @Throws(CordaServiceCriticalFailureException::class)
     fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {}
 }
 
