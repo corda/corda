@@ -24,7 +24,7 @@ class NodeLifecycleEventsDistributor {
     companion object {
         private val log = contextLogger()
 
-        private val crtiticalEventsClasses: Set<Class<out NodeLifecycleEvent>> = setOf(
+        private val criticalEventsClasses: Set<Class<out NodeLifecycleEvent>> = setOf(
                 NodeLifecycleEvent.BeforeStart::class.java,
                 NodeLifecycleEvent.AfterStart::class.java)
         private val criticalExceptionsClasses: Set<Class<out Throwable>> = setOf(CordaServiceCriticalFailureException::class.java)
@@ -82,7 +82,7 @@ class NodeLifecycleEventsDistributor {
 
         if(updateFailed.isNotEmpty()) {
             log.error("Failed to distribute event $event, failure outcome: $updateFailed")
-            if(event.javaClass in crtiticalEventsClasses) {
+            if(event.javaClass in criticalEventsClasses) {
                 handlePossibleFatalTermination(event, updateFailed.map { it as Try.Failure<String> })
             }
         }
