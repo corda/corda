@@ -539,8 +539,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java)
                             || newError.mentionsThrowable(HospitalizeFlowException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     newError.mentionsThrowable(SQLException::class.java, atDepth = 1)
-                            || newError.mentionsThrowable(PersistenceException::class.java, atDepth = 1)
-                    -> Diagnosis.OVERNIGHT_OBSERVATION
+                            || newError.mentionsThrowable(PersistenceException::class.java, atDepth = 1) -> Diagnosis.OVERNIGHT_OBSERVATION
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
                 }
