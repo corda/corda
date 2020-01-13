@@ -69,7 +69,7 @@ As a conclusion, we can classify the attachments in:
 Given that ``DataAttachment``s are unlikely to be unique per transaction they can be on the base ``AttachmentsClassloader`` and must obey the no-overlap rule.
 They can also be cached together with the ``CodeAttachment``s.
 
-``SmallReferenceDataAttachment``, on the other hand, cannot be on the base ``AttachmentsClassloader`` because they are unique per transaction, and also can't obey to the no-overlap rule. 
+``SmallReferenceDataAttachment``, on the other hand, cannot be on the base ``AttachmentsClassloader`` because they are unique per transaction, and also can't obey the no-overlap rule.
 
 
 ### Given that there is no API, how can we differentiate between ``ConsensusAttachment``s and ``SmallReferenceDataAttachment``s ?
@@ -91,7 +91,7 @@ Note: It is not possible to just scan each archive, and look for ``.class`` file
 We know that they are ``ZIP`` files and that their content does not obey the no-overlap rule.
 Also, there is no reason for contract code to attempt to open them, because they are not consensus critical.
 
-The answer is: ``No - they should *not* be on the transaction classloader``.
+Mainly for compatibility purposes these zip files will remain on the transaction class loader. The difference now is that this transaction class loader is a child of the class loader handling Consensus attachments.
 
 
 ## Proposed solution
@@ -102,3 +102,7 @@ Then, create an ``AttachmentsClassloader`` from the ``ConsensusAttachment``s and
 The above will be cached keyed on the set of ``ConsensusAttachment`` ids.
 
 This solves the problems that clients have if they just attach the small reference files as `ZIP`s.
+
+A new child ``AttachmentsClassloader`` is created that contains ``SmallReferenceDataAttachment``s, its parent is the class loader for the ``ConsensusAttachment``s mentioned above.
+
+The no overlap rule will not be applied to any non class files in ``SmallReferenceDataAttachment``s. If there happen to be any classes in ``SmallReferenceDataAttachment``s then these will be subject to the no overlap rule.

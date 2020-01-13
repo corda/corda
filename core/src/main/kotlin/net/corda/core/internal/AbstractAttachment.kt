@@ -39,15 +39,6 @@ fun Attachment.isUploaderTrusted(): Boolean = when (this) {
     else -> false
 }
 
-private const val CACHE_SIZE = 1000
-private val attachmentsTypeCache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(CACHE_SIZE).toSynchronised()
-// We consider a JAR an archive that has a manifest.
-private fun Attachment.isJar(): Boolean = this.openAsJAR().use { it.manifest != null }
-
-fun isJAR(attachment: Attachment): Boolean = attachmentsTypeCache.computeIfAbsent(attachment.id) {
-    attachment.isJar()
-}
-
 @KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray, val uploader: String?) : Attachment {
     companion object {
