@@ -4,6 +4,8 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
+import com.r3.transactionfailure.workflows.ErrorHandling
+import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
 import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
@@ -20,12 +22,10 @@ import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
-import rx.exceptions.OnErrorNotImplementedException
-import java.time.Duration
-import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class VaultObserverExceptionTest {
     companion object {
@@ -143,8 +143,15 @@ class VaultObserverExceptionTest {
      * trying to catch and suppress that exception inside the flow does protect the flow, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
+    // TODO: We no longer hit DatabaseEndocrinologist, but rather the TransitionErrorGeneralPractitioner
     @Test
     fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
+        val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
+
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
+            testStaffFuture.complete(staff) // get all staff members that will give an overnight observation diagnosis for this flow
+        }
+
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -161,14 +168,18 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(
-                    ::Initiator, "EntityManager",
-                    CreateStateFlow.errorTargetsToNum(
-                            CreateStateFlow.ErrorTarget.TxInvalidState,
-                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-            val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
-            Assert.assertTrue("Flow has not been to hospital", counter > 0)
+            aliceNode.rpc.startFlow(
+                ::Initiator, "EntityManager",
+                CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.TxInvalidState,
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors
+                )
+            ).returnValue.then { testStaffFuture.complete(listOf()) }
+
+            val staff = testStaffFuture.getOrThrow(30.seconds)
+
+            // flow should have been given an overnight observation diagnosis by the SedationNurse
+            Assert.assertTrue(staff.isNotEmpty() && staff.any { it.contains("TransitionErrorGeneralPractitioner") })
         }
     }
 
@@ -220,4 +231,86 @@ class VaultObserverExceptionTest {
             flowResult.getOrThrow(30.seconds)
         }
     }
+
+    @Test
+    fun `flow must not checkpoint after error registering`() {
+        var counterBeforeFirstCheckpoint = 0
+        var counterAfterFirstCheckpoint = 0
+        var counterAfterSecondCheckpoint = 0
+
+        ErrorHandling.hookBeforeFirstCheckpoint = { counterBeforeFirstCheckpoint++ }
+        ErrorHandling.hookAfterFirstCheckpoint = { counterAfterFirstCheckpoint++ }
+        ErrorHandling.hookAfterSecondCheckpoint = { counterAfterSecondCheckpoint++ }
+
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            waitUntilHospitalised.release()
+        }
+
+        driver(DriverParameters(
+                    inMemoryDB = false,
+                    startNodesInProcess = true,
+                    isDebug = true,
+                    cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
+                                                 findCordapp("com.r3.dbfailure.workflows"),
+                                                 findCordapp("com.r3.transactionfailure.workflows"),
+                                                 findCordapp("com.r3.dbfailure.schemas")))) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+
+            node.rpc.startFlow(::CheckpointAfterErrorFlow, CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions, // throw not persistence exception
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors
+                )
+            )
+            waitUntilHospitalised.acquire()
+
+            // restart node, see if flow retries from correct checkpoint
+            node.stop()
+            startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+            waitUntilHospitalised.acquire()
+
+            // check flow retries from correct checkpoint
+            assertTrue(counterBeforeFirstCheckpoint == 1)
+            assertTrue(counterAfterFirstCheckpoint == 2)
+            assertTrue(counterAfterSecondCheckpoint == 0)
+        }
+    }
+
+//    @Test
+//    fun `calling AppServiceHub#jdbcSession in observer code breaks transactional - leaves rubbish in the database - retry from checkpoint should find duplicates `() {
+//        // 1. persistentStateService.persist succeeds -> states get persisted
+//        // 2. observer code triggers flush -> states get flushed in the database
+//        // 2. observer code throws SQL Exception -> dont suppress it
+//        // 3. let flow retry - see how it behaves when it will retry persisting the states
+//
+//        val waitUntilHospitalised = Semaphore(0)
+//        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> waitUntilHospitalised.release() }
+//
+//        driver(DriverParameters(
+//            inMemoryDB = false,
+//            startNodesInProcess = true,
+//            isDebug = true,
+//            cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
+//                findCordapp("com.r3.dbfailure.workflows"),
+//                findCordapp("com.r3.transactionfailure.workflows"),
+//                findCordapp("com.r3.dbfailure.schemas")))) {
+//            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+//            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+//
+//            node.rpc.startFlow(
+//                ::CheckpointAfterErrorFlow, CreateStateFlow.errorTargetsToNum(
+//                    CreateStateFlow.ErrorTarget.ServiceValidUpdate // throw not persistence exception
+//                )
+//            )
+//            waitUntilHospitalised.acquire()
+//
+//            // restart node, see if flow retries from correct checkpoint
+//            node.stop()
+//            startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+//            waitUntilHospitalised.acquire()
+//        }
+//
+//    }
+
 }

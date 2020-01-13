@@ -121,7 +121,6 @@ import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
@@ -1249,14 +1248,17 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-            databaseConfig,
-            schemaService.schemas,
-            jdbcUrl,
-            cacheFactory,
-            attributeConverters, customClassLoader,
-            errorHandler = { t ->
-                FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
-            })
+        databaseConfig,
+        schemaService.schemas,
+        jdbcUrl,
+        cacheFactory,
+        attributeConverters, customClassLoader,
+        errorHandler = { t ->
+            FlowStateMachineImpl.currentStateMachine()?.let {
+                // register the very first exception thrown throughout a chain of logical transactions
+                if (logicalTxCorruptedBy == null) logicalTxCorruptedBy = t
+            }
+        })
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
