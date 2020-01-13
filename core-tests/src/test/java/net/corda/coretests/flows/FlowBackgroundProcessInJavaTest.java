@@ -1,9 +1,11 @@
 package net.corda.coretests.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
+import net.corda.core.concurrent.CordaFuture;
+import net.corda.core.flows.FlowExternalFuture;
+import net.corda.core.flows.FlowExternalResult;
 import net.corda.core.flows.StartableByRPC;
 import net.corda.core.identity.Party;
-import net.corda.core.node.ServiceHub;
 import net.corda.core.utilities.KotlinUtilsKt;
 import net.corda.testing.core.TestConstants;
 import net.corda.testing.core.TestUtils;
@@ -15,13 +17,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.function.BiFunction;
 
 import static net.corda.testing.driver.Driver.driver;
 import static org.junit.Assert.assertEquals;
 
-public class FlowBackgroundProcessInJavaTest {
+public class FlowBackgroundProcessInJavaTest extends AbstractFlowExternalResultTest {
 
     @Test
     public void awaitCalledFromJava() {
@@ -35,7 +39,7 @@ public class FlowBackgroundProcessInJavaTest {
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithBackgroundProcessInJava.class,
+                    FlowWithExternalResultInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
         });
@@ -53,25 +57,7 @@ public class FlowBackgroundProcessInJavaTest {
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithBackgroundProcessFutureInJava.class,
-                    TestUtils.singleIdentity(bob.getNodeInfo())
-            ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
-        });
-    }
-
-    @Test
-    public void awaitCalledFromJavaWithMethodReference() {
-        driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
-            );
-            return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithBackgroundProcessDefinedAsMethodReferenceInJava.class,
+                    FlowWithExternalFutureInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
         });
@@ -89,7 +75,7 @@ public class FlowBackgroundProcessInJavaTest {
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithBackgroundProcessThatGetsRetriedInJava.class,
+                    FlowWithExternalResultThatGetsRetriedInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
 
@@ -104,11 +90,11 @@ public class FlowBackgroundProcessInJavaTest {
     }
 
     @StartableByRPC
-    public static class FlowWithBackgroundProcessInJava extends FlowWithBackgroundProcess {
+    public static class FlowWithExternalResultInJava extends FlowWithExternalProcess {
 
-        private static Logger log = LoggerFactory.getLogger(FlowWithBackgroundProcessInJava.class);
+        private static Logger log = LoggerFactory.getLogger(FlowWithExternalResultInJava.class);
 
-        public FlowWithBackgroundProcessInJava(Party party) {
+        public FlowWithExternalResultInJava(Party party) {
             super(party);
         }
 
@@ -116,17 +102,22 @@ public class FlowBackgroundProcessInJavaTest {
         @Override
         @Suspendable
         public Object testCode() {
-            return await((serviceHub, deduplicationId) -> {
-                log.info("Inside of background process - {}", deduplicationId);
-                return "Background process completed - (" + deduplicationId + ")";
-            });
+            return await(
+                    new ExternalResult<>(
+                            getServiceHub().cordaService(FutureService.class),
+                            (BiFunction<FutureService, String, Object> & Serializable) (futureService, deduplicationId) -> {
+                                log.info("Inside of background process -  " + deduplicationId);
+                                return "Background process completed - (" + deduplicationId + ")";
+                            }
+                    )
+            );
         }
     }
 
     @StartableByRPC
-    public static class FlowWithBackgroundProcessFutureInJava extends FlowWithBackgroundProcess {
+    public static class FlowWithExternalFutureInJava extends FlowWithExternalProcess {
 
-        public FlowWithBackgroundProcessFutureInJava(Party party) {
+        public FlowWithExternalFutureInJava(Party party) {
             super(party);
         }
 
@@ -134,35 +125,20 @@ public class FlowBackgroundProcessInJavaTest {
         @Override
         @Suspendable
         public Object testCode() {
-            return awaitFuture((serviceHub, deduplicationId) -> serviceHub.cordaService(FutureService.class).createFuture());
+            return await(new ExternalFuture<>(
+                    getServiceHub().cordaService(FutureService.class),
+                    (BiFunction<FutureService, String, CordaFuture<Object>> & Serializable) (futureService, deduplicationId) ->
+                            futureService.createFuture()
+            ));
         }
     }
 
     @StartableByRPC
-    public static class FlowWithBackgroundProcessDefinedAsMethodReferenceInJava extends FlowWithBackgroundProcess {
-
-        public FlowWithBackgroundProcessDefinedAsMethodReferenceInJava(Party party) {
-            super(party);
-        }
-
-        private String invoke(ServiceHub serviceHub, String deduplicationId) {
-            return "Background process completed - ($deduplicationId)";
-        }
-
-        @NotNull
-        @Override
-        @Suspendable
-        public Object testCode() {
-            return await(this::invoke);
-        }
-    }
-
-    @StartableByRPC
-    public static class FlowWithBackgroundProcessThatGetsRetriedInJava extends FlowWithBackgroundProcess {
+    public static class FlowWithExternalResultThatGetsRetriedInJava extends FlowWithExternalProcess {
 
         private static boolean flag = false;
 
-        public FlowWithBackgroundProcessThatGetsRetriedInJava(Party party) {
+        public FlowWithExternalResultThatGetsRetriedInJava(Party party) {
             super(party);
         }
 
@@ -170,14 +146,53 @@ public class FlowBackgroundProcessInJavaTest {
         @Override
         @Suspendable
         public Object testCode() {
-            return await((serviceHub, deduplicationId) -> {
-                if (!flag) {
-                    flag = true;
-                    return serviceHub.cordaService(FutureService.class).throwHospitalHandledException();
-                } else {
-                    return "finished";
-                }
-            });
+            return await(
+                    new ExternalResult<>(
+                            getServiceHub().cordaService(FutureService.class),
+                            (BiFunction<FutureService, String, Object> & Serializable) (futureService, deduplicationId) -> {
+                                if (!flag) {
+                                    flag = true;
+                                    return futureService.throwHospitalHandledException();
+                                } else {
+                                    return "finished";
+                                }
+                            }
+                    )
+            );
+        }
+    }
+
+    public static class ExternalFuture<R> implements FlowExternalFuture<R> {
+
+        private FutureService futureService;
+        private BiFunction<FutureService, String, CordaFuture<R>> operation;
+
+        public ExternalFuture(FutureService futureService, BiFunction<FutureService, String, CordaFuture<R>> operation) {
+            this.futureService = futureService;
+            this.operation = operation;
+        }
+
+        @NotNull
+        @Override
+        public CordaFuture<R> execute(@NotNull String deduplicationId) {
+            return operation.apply(futureService, deduplicationId);
+        }
+    }
+
+    public static class ExternalResult<R> implements FlowExternalResult<R> {
+
+        private FutureService futureService;
+        private BiFunction<FutureService, String, R> operation;
+
+        public ExternalResult(FutureService futureService, BiFunction<FutureService, String, R> operation) {
+            this.futureService = futureService;
+            this.operation = operation;
+        }
+
+        @NotNull
+        @Override
+        public R execute(@NotNull String deduplicationId) {
+            return operation.apply(futureService, deduplicationId);
         }
     }
 }

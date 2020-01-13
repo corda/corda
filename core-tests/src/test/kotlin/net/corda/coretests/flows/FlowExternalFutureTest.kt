@@ -1,16 +1,18 @@
 package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowBackgroundProcess
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.coretests.flows.AbstractFlowExternalResultTest.DirectlyAccessedServiceHubException
+import net.corda.coretests.flows.AbstractFlowExternalResultTest.ExternalFuture
+import net.corda.coretests.flows.AbstractFlowExternalResultTest.FlowWithExternalProcess
+import net.corda.coretests.flows.AbstractFlowExternalResultTest.FutureService
+import net.corda.coretests.flows.AbstractFlowExternalResultTest.MyCordaException
 import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -22,15 +24,16 @@ import java.sql.SQLTransientConnectionException
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
-class FlowBackgroundProcessCustomTest {
+class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
 
     @Test
-    fun `custom background process works`() {
+    fun `external future`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowWithCustomBackgroundProcess, bob.nodeInfo.singleIdentity())
+            alice.rpc.startFlow(::FlowWithExternalFuture, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -39,13 +42,30 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process propagates exception to calling flow`() {
+    fun `external future that checks deduplicationId is not rerun when flow is retried`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            assertFailsWith<DuplicatedProcessException> {
+                alice.rpc.startFlow(
+                    ::FlowWithExternalFutureWithDeduplication,
+                    bob.nodeInfo.singleIdentity()
+                ).returnValue.getOrThrow(20.seconds)
+            }
+            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
+            assertEquals(1, discharged)
+            assertEquals(0, observation)
+        }
+    }
+
+    @Test
+    fun `external future propagates exception to calling flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
                 alice.rpc.startFlow(
-                    ::FlowWithCustomBackgroundProcessPropagatesException,
+                    ::FlowWithExternalFuturePropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     MyCordaException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -57,12 +77,13 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process exception can be caught in flow`() {
+    fun `external future exception can be caught in flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowWithCustomBackgroundProcessThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
+            val result = alice.rpc.startFlow(::FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
+            assertTrue(result as Boolean)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
             assertEquals(0, observation)
@@ -70,13 +91,13 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process with exception that hospital keeps for observation does not fail`() {
+    fun `external future with exception that hospital keeps for observation does not fail`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithCustomBackgroundProcessPropagatesException,
+                    ::FlowWithExternalFuturePropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     HospitalizeFlowException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -88,13 +109,13 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process with exception that hospital discharges is retried and runs the background process again`() {
+    fun `external future with exception that hospital discharges is retried and runs the future again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithCustomBackgroundProcessPropagatesException,
+                    ::FlowWithExternalFuturePropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     SQLTransientConnectionException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -106,12 +127,12 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process that throws exception rather than completing future exceptionally fails with internal exception`() {
+    fun `external future that throws exception rather than completing future exceptionally fails with internal exception`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<StateTransitionException> {
-                alice.rpc.startFlow(::FlowWithCustomBackgroundProcessUnhandledException, bob.nodeInfo.singleIdentity())
+                alice.rpc.startFlow(::FlowWithExternalFutureUnhandledException, bob.nodeInfo.singleIdentity())
                     .returnValue.getOrThrow(20.seconds)
             }
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
@@ -121,13 +142,13 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process that passes serviceHub into process can be retried`() {
+    fun `external future that passes serviceHub into process can be retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithCustomBackgroundProcessThatPassesInServiceHubCanRetry,
+                    ::FlowWithExternalFutureThatPassesInServiceHubCanRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -138,13 +159,13 @@ class FlowBackgroundProcessCustomTest {
     }
 
     @Test
-    fun `custom background process that accesses serviceHub from flow directly will fail when retried`() {
+    fun `external future that accesses serviceHub from flow directly will fail when retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            assertFailsWith<StateTransitionException> {
+            assertFailsWith<DirectlyAccessedServiceHubException> {
                 alice.rpc.startFlow(
-                    ::FlowWithCustomBackgroundProcessThatDirectlyAccessesServiceHubFailsRetry,
+                    ::FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -153,37 +174,37 @@ class FlowBackgroundProcessCustomTest {
             assertEquals(0, observation)
         }
     }
-}
 
-class BackgroundProcess(
-    private val serviceHub: ServiceHub,
-    private val function: (serviceHub: ServiceHub) -> CordaFuture<Any>
-) : FlowBackgroundProcess<Any> {
-    override fun execute(deduplicationId: String): CordaFuture<Any> {
-        return function(serviceHub)
-    }
-}
-
-class BadBackgroundProcess(private val function: () -> CordaFuture<Any>) : FlowBackgroundProcess<Any> {
-    override fun execute(deduplicationId: String): CordaFuture<Any> {
-        return function()
+    @Test
+    fun `starting multiple futures and joining on their results`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            alice.rpc.startFlow(::FlowThatStartsMultipleFuturesAndJoins, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow(20.seconds)
+            val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
+            assertEquals(0, discharged)
+            assertEquals(0, observation)
+        }
     }
 }
 
 @StartableByRPC
-class FlowWithCustomBackgroundProcess(party: Party) : FlowWithBackgroundProcess(party) {
-
-    @Suspendable
-    override fun testCode(): Any = await(BackgroundProcess(serviceHub) { it.cordaService(FutureService::class.java).createFuture() })
-}
-
-@StartableByRPC
-class FlowWithCustomBackgroundProcessPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
-    FlowWithBackgroundProcess(party) {
+class FlowWithExternalFuture(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(BackgroundProcess(serviceHub) {
+        await(ExternalFuture(serviceHub) { _, _ ->
+            serviceHub.cordaService(FutureService::class.java).createFuture()
+        })
+}
+
+@StartableByRPC
+class FlowWithExternalFuturePropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
+    FlowWithExternalProcess(party) {
+
+    @Suspendable
+    override fun testCode(): Any =
+        await(ExternalFuture(serviceHub) { _, _ ->
             openFuture<Any>().apply {
                 setException(createException())
             }
@@ -197,41 +218,75 @@ class FlowWithCustomBackgroundProcessPropagatesException<T>(party: Party, privat
 }
 
 @StartableByRPC
-class FlowWithCustomBackgroundProcessThatThrowsExceptionAndCaughtInFlow(party: Party) :
-    FlowWithBackgroundProcess(party) {
+class FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow(party: Party) :
+    FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any = try {
-        await(BackgroundProcess(serviceHub) {
+        await(ExternalFuture(serviceHub) { _, _ ->
             openFuture<Any>().apply {
-                setException(MyCordaException("threw exception in background process"))
+                setException(IllegalStateException("threw exception in external future"))
             }
         })
-    } catch (e: MyCordaException) {
+    } catch (e: IllegalStateException) {
         log.info("Exception was caught")
-        "Exception was caught"
+        true
     }
 }
 
 @StartableByRPC
-class FlowWithCustomBackgroundProcessUnhandledException(party: Party) : FlowWithBackgroundProcess(party) {
-
-    @Suspendable
-    override fun testCode(): Any = await(BackgroundProcess(serviceHub) { throw MyCordaException("threw exception in background process") })
-}
-
-@StartableByRPC
-class FlowWithCustomBackgroundProcessThatPassesInServiceHubCanRetry(party: Party) : FlowWithBackgroundProcess(party) {
+class FlowWithExternalFutureUnhandledException(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(BackgroundProcess(serviceHub) { it.cordaService(FutureService::class.java).throwHospitalHandledException() })
+        await(ExternalFuture(serviceHub) { _, _ -> throw MyCordaException("threw exception in external future") })
 }
 
 @StartableByRPC
-class FlowWithCustomBackgroundProcessThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithBackgroundProcess(party) {
+class FlowWithExternalFutureThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(BadBackgroundProcess { serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException() })
+        await(ExternalFuture(serviceHub) { serviceHub, _ ->
+            serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
+        })
+}
+
+@StartableByRPC
+class FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
+
+    @Suppress("TooGenericExceptionCaught")
+    @Suspendable
+    override fun testCode(): Any {
+        return await(ExternalFuture(serviceHub) { _, _ ->
+            try {
+                serviceHub.cordaService(FutureService::class.java).setHospitalHandledException()
+            } catch (e: NullPointerException) {
+                // Catch the [NullPointerException] thrown from accessing the flow's [ServiceHub]
+                // set the future so that the exception can be asserted from the test
+                openFuture<Any>().apply { setException(DirectlyAccessedServiceHubException()) }
+            }
+        })
+    }
+}
+
+@StartableByRPC
+class FlowWithExternalFutureWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
+
+    @Suspendable
+    override fun testCode(): Any {
+        return await(ExternalFuture(serviceHub) { serviceHub, deduplicationId ->
+            serviceHub.cordaService(FutureService::class.java).createExceptionFutureWithDeduplication(deduplicationId)
+        })
+    }
+}
+
+@StartableByRPC
+class FlowThatStartsMultipleFuturesAndJoins(party: Party) : FlowWithExternalProcess(party) {
+
+    @Suspendable
+    override fun testCode(): Any =
+        await(ExternalFuture(serviceHub) { serviceHub, _ ->
+            serviceHub.cordaService(FutureService::class.java).startMultipleFuturesAndJoin()
+        }.also { log.info("Result - $it") })
 }

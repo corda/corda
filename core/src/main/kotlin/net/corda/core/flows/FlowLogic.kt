@@ -28,7 +28,6 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.SerializableBiFunction
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
@@ -519,48 +518,31 @@ abstract class FlowLogic<out T> {
 
     /** Executes the specified [operation] and suspends until operation completion. */
     @Suspendable
-    fun <R : Any> await(operation: FlowBackgroundProcess<R>): R {
+    fun <R : Any> await(operation: FlowExternalFuture<R>): R {
         val request = FlowIORequest.ExecuteAsyncOperation(operation)
         return stateMachine.suspend(request, false)
     }
 
     @Suspendable
-    fun <R : Any> await(operation: SerializableBiFunction<ServiceHub, String, R>): R {
-        return await(operation as (serviceHub: ServiceHub, deduplicationId: String) -> R)
-    }
-
-    @Suspendable
-    fun <R : Any> await(operation: (serviceHub: ServiceHub, deduplicationId: String) -> R): R {
-        val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
+    fun <R : Any> await(operation: FlowExternalResult<R>): R {
+        val flowBackgroundProcess = object : AbstractFlowExternalFuture<R>(serviceHub) {
             override fun execute(deduplicationId: String): CordaFuture<R> {
                 // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
                 // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
                 return CordaFutureImpl(
                     CompletableFuture.supplyAsync(
-                        Supplier { operation(serviceHub, deduplicationId) },
+                        Supplier { operation.execute(deduplicationId) },
                         (serviceHub as ServiceHubCoreInternal).backgroundProcessExecutor
                     )
                 )
             }
         }
-        return await(process)
-    }
-
-    @Suspendable
-    fun <R : Any> awaitFuture(operation: SerializableBiFunction<ServiceHub, String, CordaFuture<R>>): R {
-        return awaitFuture(operation as (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>)
-    }
-
-    @Suspendable
-    fun <R : Any> awaitFuture(operation: (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>): R {
-        val process = object : FlowBackgroundProcessImpl<R>(serviceHub) {
-            override fun execute(deduplicationId: String): CordaFuture<R> {
-                return operation(serviceHub, deduplicationId)
-            }
-        }
-        return await(process)
+        val request = FlowIORequest.ExecuteAsyncOperation(flowBackgroundProcess)
+        return stateMachine.suspend(request, false)
     }
 }
+
+private abstract class AbstractFlowExternalFuture<R: Any>(val serviceHub: ServiceHub) : FlowExternalFuture<R>
 
 /**
  * Version and name of the CorDapp hosting the other side of the flow.

@@ -14,7 +14,7 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class FlowBackgroundProcessStartFlowTest {
+class FlowExternalResultStartFlowTest : AbstractFlowExternalResultTest() {
 
     @Test
     fun `starting a flow inside of a flow that starts a future will succeed`() {
@@ -41,24 +41,30 @@ class FlowBackgroundProcessStartFlowTest {
             assertEquals(0, observation)
         }
     }
-}
 
-@StartableByRPC
-class FlowThatStartsAnotherFlowInABackgroundProcess(party: Party) : FlowWithBackgroundProcess(party) {
+    @StartableByRPC
+    class FlowThatStartsAnotherFlowInABackgroundProcess(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        awaitFuture { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).startFlow(party)
-        }.also { log.info("Result - $it") }
-}
+        @Suspendable
+        override fun testCode(): Any {
+            return await(
+                ExternalFuture(serviceHub) { serviceHub, _ ->
+                    serviceHub.cordaService(FutureService::class.java).startFlow(party)
+                }.also { log.info("Result - $it") }
+            )
+        }
+    }
 
-@StartableByRPC
-class ForkJoinFlows(party: Party) : FlowWithBackgroundProcess(party) {
+    @StartableByRPC
+    class ForkJoinFlows(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        awaitFuture { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).startFlows(party)
-        }.also { log.info("Result - $it") }
+        @Suspendable
+        override fun testCode(): Any {
+            return await(
+                ExternalFuture(serviceHub) { serviceHub, _ ->
+                    serviceHub.cordaService(FutureService::class.java).startFlows(party)
+                }.also { log.info("Result - $it") }
+            )
+        }
+    }
 }
