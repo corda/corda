@@ -1249,8 +1249,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
         cacheFactory,
         attributeConverters, customClassLoader,
         errorHandler = { t ->
+            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
             FlowStateMachineImpl.currentStateMachine()?.let {
-                // register the very first exception thrown throughout a chain of logical transactions
+                // register only the very first exception thrown throughout a chain of logical transactions
                 if (logicalTxCorruptedBy == null) logicalTxCorruptedBy = t
             }
         })
