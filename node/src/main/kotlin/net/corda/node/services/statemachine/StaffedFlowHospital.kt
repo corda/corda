@@ -384,7 +384,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         private fun mentionsDeadlock(exception: Throwable?): Boolean {
-            return exception.mentionsThrowable(SQLException::class.java, "deadlock")
+            return exception.mentionsThrowableAtDepth(SQLException::class.java, "deadlock")
         }
     }
 
@@ -393,7 +393,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     object DuplicateInsertSpecialist : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (newError.mentionsThrowable(ConstraintViolationException::class.java)
+            return if (newError.mentionsThrowableAtDepth(ConstraintViolationException::class.java)
                 && history.notDischargedForTheSameThingMoreThan(2, this, currentState)) {
                 Diagnosis.DISCHARGE
             } else {
@@ -491,7 +491,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         private fun mentionsTransientConnection(exception: Throwable?): Boolean {
-            return exception.mentionsThrowable(SQLTransientConnectionException::class.java, "connection is not available")
+            return exception.mentionsThrowableAtDepth(SQLTransientConnectionException::class.java, "connection is not available")
         }
     }
 
@@ -533,10 +533,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             newError: Throwable,
             history: FlowMedicalHistory
         ): Diagnosis {
-            return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
+            return if (newError.mentionsThrowableAtDepth(StateTransitionException::class.java)) {
                 when {
-                    newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
-                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
+                    newError.mentionsThrowableAtDepth(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowableAtDepth(AsyncOperationTransitionException::class.java)
+                            || newError.mentionsThrowableAtDepth(HospitalizeFlowException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
+                    newError.mentionsThrowableAtDepth(SQLException::class.java, atDepth = 1) // TODO: change to mentionsThrowableAtlvl1 to be the same as DatabaseEndocrinologist
+                            || newError.mentionsThrowableAtDepth(PersistenceException::class.java, atDepth = 1) -> Diagnosis.OVERNIGHT_OBSERVATION // TODO: change to mentionsThrowableAtlvl1 to be the same as DatabaseEndocrinologist
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
                 }
@@ -570,7 +573,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             newError: Throwable,
             history: FlowMedicalHistory
         ): Diagnosis {
-            return if (newError.mentionsThrowable(HospitalizeFlowException::class.java)) {
+            return if (newError.mentionsThrowableAtDepth(HospitalizeFlowException::class.java)) {
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
@@ -595,15 +598,33 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 }
 
-private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
+private fun <T : Throwable> Throwable?.mentionsThrowableAtDepth(
+    exceptionType: Class<T>,
+    errorMessage: String? = null,
+    atDepth: Int? = null,
+    currDepth: Int = 0
+): Boolean {
     if (this == null) {
         return false
     }
+
     val containsMessage = if (errorMessage != null) {
         message?.toLowerCase()?.contains(errorMessage) ?: false
     } else {
         true
     }
-    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
+
+    val isAtCorrectDepth = if (atDepth == null) { // we don't look for specific depth
+        true
+    } else {
+        atDepth == currDepth
+    }
+
+    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage && isAtCorrectDepth) || cause.mentionsThrowableAtDepth(
+        exceptionType,
+        errorMessage,
+        atDepth,
+        currDepth + 1
+    )
 }
 

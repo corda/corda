@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
-import org.hibernate.BaseSessionEventListener
 import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
@@ -51,7 +50,12 @@ class DatabaseTransaction(
     private var committed = false
     private var closed = false
 
+    // is to be used when a logical transaction/ chain of logical transactions throws specific exceptions within a state machine
+    var logicalTxCorruptedBy: Throwable? = null // TODO: probably not needed to be set in case of SQLException or PersistenceException?
+
     fun commit() {
+        if (logicalTxCorruptedBy != null)
+            throw logicalTxCorruptedBy as Throwable
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
@@ -71,6 +75,7 @@ class DatabaseTransaction(
     fun close() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
+            logicalTxCorruptedBy = null
         }
 
         if (database.closeConnection) {

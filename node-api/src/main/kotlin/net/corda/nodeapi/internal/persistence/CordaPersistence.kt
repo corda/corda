@@ -101,7 +101,7 @@ class CordaPersistence(
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: (t: Throwable) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(t: Throwable) -> Unit = {}
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -192,17 +192,16 @@ class CordaPersistence(
     }
 
     fun createSession(): Connection {
+        // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
+        _contextDatabase.set(this)
+        val transaction = contextTransaction
         try {
-            // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-            _contextDatabase.set(this)
-            currentDBSession().flush()
-            return contextTransaction.connection
+            transaction.session.flush()
         } catch (e: Exception) {
-            if (e is SQLException || e is PersistenceException) {
-                errorHandler(e)
-            }
+            if (e is SQLException || e is PersistenceException) { transaction.errorHandler(e) }
             throw e
         }
+        return transaction.connection
     }
 
     /**
@@ -230,17 +229,15 @@ class CordaPersistence(
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
-        try {
-            return if (outer != null) {
+        return if (outer != null) {
+            try {
                 outer.statement()
-            } else {
-                inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
+            } catch (e: Exception) {
+                if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) { outer.errorHandler(e) }
+                throw e
             }
-        } catch (e: Exception) {
-            if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
-                errorHandler(e)
-            }
-            throw e
+        } else {
+            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
         }
     }
 
