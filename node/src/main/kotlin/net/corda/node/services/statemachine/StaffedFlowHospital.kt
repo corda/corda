@@ -538,8 +538,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     newError.mentionsThrowableAtDepth(InterruptedException::class.java) -> Diagnosis.TERMINAL
                     newError.mentionsThrowableAtDepth(AsyncOperationTransitionException::class.java)
                             || newError.mentionsThrowableAtDepth(HospitalizeFlowException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
-                    newError.mentionsThrowableAtDepth(SQLException::class.java, atDepth = 1) // TODO: change to mentionsThrowableAtlvl1 to be the same as DatabaseEndocrinologist
-                            || newError.mentionsThrowableAtDepth(PersistenceException::class.java, atDepth = 1) -> Diagnosis.OVERNIGHT_OBSERVATION // TODO: change to mentionsThrowableAtlvl1 to be the same as DatabaseEndocrinologist
+                    newError.mentionsThrowableAtDepth(SQLException::class.java, atDepth = 1)
+                            || newError.mentionsThrowableAtDepth(PersistenceException::class.java, atDepth = 1)
+                    -> Diagnosis.OVERNIGHT_OBSERVATION
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
                 }
