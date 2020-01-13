@@ -230,6 +230,11 @@ class CordaPersistence(
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
         return if (outer != null) {
+            // we only need to handle errors coming out of inner transactions because,
+            // a. whenever this code is being executed within the flow state machine, a top level transaction should have previously been created by
+            // the flow state machine in ActionExecutorImpl#executeCreateTransaction
+            // b. exceptions coming out from top level transactions are already being handled in CordaPersistence#inTopLevelTransaction
+            // i.e. roll back and close the transaction
             try {
                 outer.statement()
             } catch (e: Exception) {
