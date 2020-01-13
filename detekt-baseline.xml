@@ -182,7 +182,7 @@
     <ID>ComplexMethod:RPCClientProxyHandler.kt$RPCClientProxyHandler$private fun attemptReconnect()</ID>
     <ID>ComplexMethod:RPCServer.kt$RPCServer$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
     <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$ private fun doInvoke(method: Method, args: Array&lt;out Any&gt;?, maxNumberOfAttempts: Int): Any?</ID>
-    <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ private tailrec fun establishConnectionWithRetry( retryInterval: Duration = rpcConfiguration.connectionRetryInterval, roundRobinIndex: Int = 0, retries: Int = -1 ): CordaRPCConnection?</ID>
+    <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ private tailrec fun establishConnectionWithRetry( retryInterval: Duration, roundRobinIndex: Int = 0, retries: Int = -1 ): CordaRPCConnection?</ID>
     <ID>ComplexMethod:RemoteTypeCarpenter.kt$SchemaBuildingRemoteTypeCarpenter$override fun carpent(typeInformation: RemoteTypeInformation): Type</ID>
     <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
     <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$ private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean</ID>
