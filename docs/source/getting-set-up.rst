@@ -20,9 +20,9 @@ There are four pieces of required software for CorDapp development: the Java 8 J
 
 3. Install `git <https://git-scm.com/>`_.
 
-4. Install `Gradle version 4.10 <https://gradle.org/install/>`_. If you are using a supported Corda sample, the included ``gradlew`` script should install Gradle automatically.
+4. Install `Gradle <https://gradle.org/install/>`_. If you are using a supported Corda sample, the included ``gradlew`` script should install Gradle automatically.
 
-  Please note: Corda requires Gradle version 4.10, and does not support any other version of Gradle.
+  Please note: Corda requires Gradle version 5.4.1 at a minimum.
 
 Next steps
 ----------
