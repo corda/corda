@@ -234,6 +234,7 @@ logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
 logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
+logger.lifecycle("Building Corda version: {}", corda_release_version)
 
 allprojects {
     apply plugin: 'kotlin'
@@ -678,10 +679,3 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: 'com.r3.testing.image-building'
-
-task printLocalVersion {
-    logger.lifecycle("Publishing local version $corda_release_version")
-}
-
-publishToMavenLocal.finalizedBy(printLocalVersion)
-
