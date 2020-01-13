@@ -50,7 +50,7 @@ class DatabaseTransaction(
     private var committed = false
     private var closed = false
 
-    // is to be used when a logical transaction/ chain of logical transactions throws specific exceptions within a state machine
+    // is to be used when a logical transaction/ chain of logical transactions throws certain exceptions within a state machine
     var logicalTxCorruptedBy: Throwable? = null // TODO: probably not needed to be set in case of SQLException or PersistenceException?
 
     fun commit() {

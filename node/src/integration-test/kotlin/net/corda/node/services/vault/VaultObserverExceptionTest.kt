@@ -141,26 +141,14 @@ class VaultObserverExceptionTest {
     /**
      * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
      * trying to catch and suppress that exception inside the flow does protect the flow, but the new
-     * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
+     * interceptor will fail the flow anyway. The flow will be kept in for observation.
      */
-    // TODO: We no longer hit DatabaseEndocrinologist, but rather the TransitionErrorGeneralPractitioner
     @Test
     fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
         val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
 
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
             testStaffFuture.complete(staff) // get all staff members that will give an overnight observation diagnosis for this flow
-        }
-
-        var counter = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
-            when (it) {
-                is PersistenceException -> {
-                    ++counter
-                    log.info("Got a PersistentException in the flow hospital count = $counter")
-                }
-            }
-            false
         }
 
         driver(DriverParameters(
