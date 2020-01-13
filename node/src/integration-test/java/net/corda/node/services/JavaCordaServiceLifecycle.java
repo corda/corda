@@ -6,6 +6,7 @@ import net.corda.core.flows.StartableByRPC;
 import net.corda.core.node.AppServiceHub;
 import net.corda.core.node.services.CordaService;
 import net.corda.core.node.services.ServiceLifecycleEvent;
+import net.corda.core.node.services.ServiceLifecycleObserverPriority;
 import net.corda.core.serialization.SingletonSerializeAsToken;
 
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public class JavaCordaServiceLifecycle {
 
         public JavaTextLengthComputingService(AppServiceHub serviceHub) {
             this.serviceHub = serviceHub;
-            serviceHub.register(this::addEvent, false);
+            serviceHub.register(this::addEvent, ServiceLifecycleObserverPriority.MEDIUM);
         }
 
         private void addEvent(ServiceLifecycleEvent event) {

@@ -6,6 +6,7 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
+import net.corda.core.node.services.ServiceLifecycleObserverPriority
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import rx.Observable
 
@@ -48,14 +49,14 @@ interface AppServiceHub : ServiceHub {
      * @param priority if set to `true` the [observer] will be added to a priority queue such that it will be notified ahead of non-prioritised
      *      observers.
      */
-    fun register(observer: ServiceLifecycleObserver, priority: Boolean = false)
+    fun register(observer: ServiceLifecycleObserver, priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM)
 
     /**
-     * Convenience method to be able to add an arbitrary function as a register callback.
+     * Convenience method to be able to add an arbitrary function as a [register] callback.
      */
-    fun <T> register(priority: Boolean = false, func: (ServiceLifecycleEvent) -> T) = register(object : ServiceLifecycleObserver {
+    fun <T> register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, func: (ServiceLifecycleEvent) -> T) = register(object : ServiceLifecycleObserver {
         override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
             func(event)
         }
-    })
+    }, priority)
 }

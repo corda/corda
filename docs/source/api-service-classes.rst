@@ -59,7 +59,7 @@ Below is an empty implementation of a Service class:
                 // Custom code ran at service creation
 
                 // Optional: Express interest in receiving lifecycle events
-                serviceHub.register(this::processEvent, false);
+                serviceHub.register(this::processEvent, ServiceLifecycleObserverPriority.MEDIUM);
             }
 
             private void processEvent(ServiceLifecycleEvent event) {

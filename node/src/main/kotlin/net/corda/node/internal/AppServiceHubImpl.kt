@@ -13,6 +13,7 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
+import net.corda.core.node.services.ServiceLifecycleObserverPriority
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.Try
@@ -22,6 +23,7 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.SERVICE_PRIORITY_HIGH
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.SERVICE_PRIORITY_LOW
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import rx.Observable
@@ -76,13 +78,17 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
 
     override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
 
-    override fun register(observer: ServiceLifecycleObserver, priority: Boolean) {
+    override fun register(observer: ServiceLifecycleObserver, priority: ServiceLifecycleObserverPriority) {
         nodeLifecycleEventsDistributor.add(NodeLifecycleServiceObserverAdaptor(observer, priority))
     }
 
     companion object {
-        private class NodeLifecycleServiceObserverAdaptor(private val observer: ServiceLifecycleObserver, isPriority: Boolean) : NodeLifecycleObserver {
-            override val priority: Int = if(isPriority) SERVICE_PRIORITY_HIGH else SERVICE_PRIORITY_NORMAL
+        private class NodeLifecycleServiceObserverAdaptor(private val observer: ServiceLifecycleObserver, priorityEnum: ServiceLifecycleObserverPriority) : NodeLifecycleObserver {
+            override val priority: Int = when(priorityEnum) {
+                ServiceLifecycleObserverPriority.LOW -> SERVICE_PRIORITY_LOW
+                ServiceLifecycleObserverPriority.MEDIUM -> SERVICE_PRIORITY_NORMAL
+                ServiceLifecycleObserverPriority.HIGH -> SERVICE_PRIORITY_HIGH
+            }
 
             override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
                 return when(nodeLifecycleEvent) {

@@ -16,6 +16,14 @@ interface ServiceLifecycleObserver {
     fun onServiceLifecycleEvent(event: ServiceLifecycleEvent)
 }
 
+/**
+ * Controls lifecycle event distribution priority.
+ * Observers of any priority will eventually will be notified and this enum helps to control the notification order.
+ */
+enum class ServiceLifecycleObserverPriority {
+    HIGH, MEDIUM, LOW
+}
+
 enum class ServiceLifecycleEvent {
     /**
      * This event is dispatched when CorDapp is fully started such that [net.corda.core.node.AppServiceHub] available
