@@ -7,6 +7,8 @@ release, see :doc:`app-upgrade-notes`.
 Unreleased
 ----------
 
+* Added ability for ``CordaService`` to register for receiving node lifecycle events to perform initialisation and clean-up actions.
+
 * ``AppServiceHub`` been extended to provide access to ``database`` which will enable the Service class to perform DB transactions
   from the threads managed by the custom Service.
 
