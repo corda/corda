@@ -33,6 +33,9 @@ enum class ServiceLifecycleEvent {
     NODE_SHUTTING_DOWN
 }
 
+/**
+ * Please see [ServiceLifecycleEvent.NODE_STARTED] for the purpose of this exception.
+ */
 class CordaServiceCriticalFailureException(message : String, cause: Throwable?) : Exception(message, cause) {
     constructor(message : String) : this(message, null)
 }
