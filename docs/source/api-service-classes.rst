@@ -35,11 +35,13 @@ Below is an empty implementation of a Service class:
                 // Custom code ran at service creation
 
                 // Optional: Express interest in receiving lifecycle events
-                services.register(object : ServiceLifecycleObserver {
-                    override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
-                        // Lifecycle event handling code
-                    }
-                })
+                services.register { processEvent(it) }
+            }
+
+            private fun processEvent(event: ServiceLifecycleEvent) {
+                // Lifecycle event handling code including full use of serviceHub
+                services.vaultService.queryBy(...)
+                services.startFlow(...)
             }
 
             // public api of service
@@ -57,12 +59,13 @@ Below is an empty implementation of a Service class:
                 // Custom code ran at service creation
 
                 // Optional: Express interest in receiving lifecycle events
-                serviceHub.register(new ServiceLifecycleObserver() {
-                    @Override
-                    public void onServiceLifecycleEvent(@NotNull ServiceLifecycleEvent event) {
-                        // Lifecycle event handling code
-                    }
-                }, false);
+                serviceHub.register(this::processEvent, false);
+            }
+
+            private void processEvent(ServiceLifecycleEvent event) {
+                // Lifecycle event handling code including full use of serviceHub
+                serviceHub.getVaultService().queryBy(...)
+                serviceHub.startFlow(...)
             }
 
             // public api of service

@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import rx.Observable
@@ -48,4 +49,13 @@ interface AppServiceHub : ServiceHub {
      *      observers.
      */
     fun register(observer: ServiceLifecycleObserver, priority: Boolean = false)
+
+    /**
+     * Convenience method to be able to add an arbitrary function as a register callback.
+     */
+    fun <T> register(priority: Boolean = false, func: (ServiceLifecycleEvent) -> T) = register(object : ServiceLifecycleObserver {
+        override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
+            func(event)
+        }
+    })
 }

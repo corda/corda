@@ -26,6 +26,6 @@ class JavaCordaServiceLifecycleTests {
         }
         assertEquals(TEST_PHRASE.length, result)
         assertEquals(2, eventsCaptured.size)
-        assertEquals(listOf(ServiceLifecycleEvent.NODE_STARTED, ServiceLifecycleEvent.NODE_SHUTTING_DOWN), eventsCaptured)
+        assertEquals(listOf(ServiceLifecycleEvent.CORDAPP_STARTED, ServiceLifecycleEvent.CORDAPP_STOPPED), eventsCaptured)
     }
 }

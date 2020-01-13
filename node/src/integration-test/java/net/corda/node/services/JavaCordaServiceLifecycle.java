@@ -6,9 +6,7 @@ import net.corda.core.flows.StartableByRPC;
 import net.corda.core.node.AppServiceHub;
 import net.corda.core.node.services.CordaService;
 import net.corda.core.node.services.ServiceLifecycleEvent;
-import net.corda.core.node.services.ServiceLifecycleObserver;
 import net.corda.core.serialization.SingletonSerializeAsToken;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,13 +35,17 @@ public class JavaCordaServiceLifecycle {
     @CordaService
     public static class JavaTextLengthComputingService extends SingletonSerializeAsToken {
 
-        public JavaTextLengthComputingService(AppServiceHub services) {
-            services.register(new ServiceLifecycleObserver() {
-                @Override
-                public void onServiceLifecycleEvent(@NotNull ServiceLifecycleEvent event) {
-                    JavaCordaServiceLifecycle.eventsCaptured.add(event);
-                }
-            }, false);
+        private final AppServiceHub serviceHub;
+
+        public JavaTextLengthComputingService(AppServiceHub serviceHub) {
+            this.serviceHub = serviceHub;
+            serviceHub.register(this::addEvent, false);
+        }
+
+        private void addEvent(ServiceLifecycleEvent event) {
+            eventsCaptured.add(event);
+            // serviceHub.startFlow()
+            // serviceHub.getVaultService().queryBy()
         }
 
         public int computeLength(String text) {
