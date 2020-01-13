@@ -513,6 +513,15 @@ networkServices
 
     *Default:* not defined
 
+  csrToken
+    Optional token to provide alongside the certificate signing request (CSR) as part of the HTTP header during node registration.
+    The token can be used by certificate signing authority (or Identity Manager Service) to verify additional identity requirements.
+    The maximum token length is limited by the maximum HTTP header size, which is normally 8KB, assuming that a few other internal
+    attributes are also present in the header. Also, the token length itself may never exceed 8192, limited by the database structure.
+    Only US-ASCII characters are allowed.
+
+    *Default:* not defined
+
 .. _corda_configuration_file_p2pAddress:
 
 p2pAddress

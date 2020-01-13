@@ -22,12 +22,13 @@ import javax.naming.ServiceUnavailableException
 
 class HTTPNetworkRegistrationService(
         val config : NetworkServicesConfig,
-        val versionInfo: VersionInfo
+        val versionInfo: VersionInfo,
+        private val registrationURL: URL = URL("${config.doormanURL}/certificate")
 ) : NetworkRegistrationService {
-    private val registrationURL = URL("${config.doormanURL}/certificate")
 
     companion object {
         private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
+        private const val CENM_SUBMISSION_TOKEN = "X-CENM-Submission-Token"
     }
 
     @Throws(CertificateRequestException::class)
@@ -59,7 +60,8 @@ class HTTPNetworkRegistrationService(
         return String(registrationURL.post(OpaqueBytes(request.encoded),
                 "Platform-Version" to "${versionInfo.platformVersion}",
                 "Client-Version" to versionInfo.releaseVersion,
-                "Private-Network-Map" to (config.pnm?.toString() ?: "")))
+                "Private-Network-Map" to (config.pnm?.toString() ?: ""),
+                *(config.csrToken?.let { arrayOf(CENM_SUBMISSION_TOKEN to it) } ?: arrayOf())))
     }
 }
 
