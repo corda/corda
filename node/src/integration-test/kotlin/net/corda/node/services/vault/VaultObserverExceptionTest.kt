@@ -80,7 +80,7 @@ class VaultObserverExceptionTest {
      * The exception will bring the rx.Observer down.
      */
     @Test
-    fun noneExceptionFromVaultObserverCanBeSuppressedInFlow() {
+    fun exceptionFromVaultObserverCannotBeSuppressedInFlow() {
         var observation = 0
         val waitUntilHospitalised = Semaphore(0)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
@@ -264,41 +264,5 @@ class VaultObserverExceptionTest {
             assertTrue(counterAfterSecondCheckpoint == 0)
         }
     }
-
-//    @Test
-//    fun `calling AppServiceHub#jdbcSession in observer code breaks transactional - leaves rubbish in the database - retry from checkpoint should find duplicates `() {
-//        // 1. persistentStateService.persist succeeds -> states get persisted
-//        // 2. observer code triggers flush -> states get flushed in the database
-//        // 2. observer code throws SQL Exception -> dont suppress it
-//        // 3. let flow retry - see how it behaves when it will retry persisting the states
-//
-//        val waitUntilHospitalised = Semaphore(0)
-//        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> waitUntilHospitalised.release() }
-//
-//        driver(DriverParameters(
-//            inMemoryDB = false,
-//            startNodesInProcess = true,
-//            isDebug = true,
-//            cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
-//                findCordapp("com.r3.dbfailure.workflows"),
-//                findCordapp("com.r3.transactionfailure.workflows"),
-//                findCordapp("com.r3.dbfailure.schemas")))) {
-//            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-//            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-//
-//            node.rpc.startFlow(
-//                ::CheckpointAfterErrorFlow, CreateStateFlow.errorTargetsToNum(
-//                    CreateStateFlow.ErrorTarget.ServiceValidUpdate // throw not persistence exception
-//                )
-//            )
-//            waitUntilHospitalised.acquire()
-//
-//            // restart node, see if flow retries from correct checkpoint
-//            node.stop()
-//            startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-//            waitUntilHospitalised.acquire()
-//        }
-//
-//    }
 
 }
