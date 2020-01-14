@@ -55,10 +55,10 @@ class DatabaseTransaction(
     // in a chain of nested CordaPersistence#transaction calls. The exception will be rethrown on the next DatabaseTransaction#commit.
     // The purpose of this property is to make sure these exceptions cannot be suspended in user code.
     // This property will get written only inside a flow state machine execution.
-    var logicalTxCorruptedBy: Throwable? = null
+    var databaseTxStatementBrokenBy: Throwable? = null
 
     fun commit() {
-        logicalTxCorruptedBy?.let {
+        databaseTxStatementBrokenBy?.let {
             throw it
         }
         if (sessionDelegate.isInitialized()) {
@@ -80,7 +80,7 @@ class DatabaseTransaction(
     fun close() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
-            logicalTxCorruptedBy = null
+            databaseTxStatementBrokenBy = null
         }
 
         if (database.closeConnection) {
