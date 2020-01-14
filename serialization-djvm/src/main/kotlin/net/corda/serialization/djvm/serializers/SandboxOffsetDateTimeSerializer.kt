@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer.OffsetDateTimeProxy
 import java.time.OffsetDateTime
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxOffsetDateTimeSerializer(
@@ -21,7 +20,7 @@ class SandboxOffsetDateTimeSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, OffsetDateTimeDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(OffsetDateTime::class.java)
+    override val deserializationAliases = aliasFor(OffsetDateTime::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

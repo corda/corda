@@ -17,7 +17,7 @@ dependencies {
     jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
 }
 
-task copyJdk(type: Copy) {
+def copyJdk = tasks.register('copyJdk', Copy) {
     outputs.dir jdk_home
 
     from(configurations.jdk) {
@@ -38,7 +38,9 @@ task copyJdk(type: Copy) {
 }
 
 assemble.dependsOn copyJdk
-jar.enabled = false
+tasks.named('jar', Jar)  {
+    enabled = false
+}
 
 artifacts {
     jdk file: file(rt_jar), type: 'jar', builtBy: copyJdk

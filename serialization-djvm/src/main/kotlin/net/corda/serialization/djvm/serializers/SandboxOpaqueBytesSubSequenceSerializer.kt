@@ -7,7 +7,6 @@ import net.corda.serialization.djvm.deserializers.OpaqueBytesSubSequenceDeserial
 import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxOpaqueBytesSubSequenceSerializer(
@@ -21,7 +20,7 @@ class SandboxOpaqueBytesSubSequenceSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, OpaqueBytesSubSequenceDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(OpaqueBytesSubSequence::class.java)
+    override val deserializationAliases = aliasFor(OpaqueBytesSubSequence::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

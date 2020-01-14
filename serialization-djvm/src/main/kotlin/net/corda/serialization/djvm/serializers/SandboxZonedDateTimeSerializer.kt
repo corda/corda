@@ -38,7 +38,7 @@ class SandboxZonedDateTimeSerializer(
         }
     }
 
-    override val deserializationAliases: Set<Class<*>> = singleton(ZonedDateTime::class.java)
+    override val deserializationAliases = aliasFor(ZonedDateTime::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

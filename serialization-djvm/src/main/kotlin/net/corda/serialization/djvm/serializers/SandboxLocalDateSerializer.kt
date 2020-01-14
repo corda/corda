@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.LocalDateSerializer.LocalDateProxy
 import java.time.LocalDate
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxLocalDateSerializer(
@@ -21,7 +20,7 @@ class SandboxLocalDateSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, LocalDateDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(LocalDate::class.java)
+    override val deserializationAliases = aliasFor(LocalDate::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

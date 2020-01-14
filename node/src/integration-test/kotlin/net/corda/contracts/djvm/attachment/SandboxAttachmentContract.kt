@@ -19,7 +19,7 @@ class SandboxAttachmentContract : Contract {
         val keyCount = attachment.signerKeys.size
         require(keyCount == 1) { "Did not expect to find $keyCount signing keys for attachment ${attachment.id}, TX=${tx.id}" }
 
-        tx.commandsOfType(ExtractFile::class.java).forEach { extract ->
+        tx.commandsOfType<ExtractFile>().forEach { extract ->
             val fileName = extract.value.fileName
             val contents = ByteArrayOutputStream().use {
                 attachment.extractFile(fileName, it)
