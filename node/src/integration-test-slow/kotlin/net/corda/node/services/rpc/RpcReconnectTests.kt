@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
 import net.corda.client.rpc.notUsed
@@ -16,6 +17,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
@@ -132,7 +134,8 @@ class RpcReconnectTests {
                 Unit
             }
             val reconnect = GracefulReconnect(onDisconnect = { numDisconnects++ }, onReconnect = onReconnect)
-            val client = CordaRPCClient(addressesForRpc)
+            val config = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryInterval = 1.seconds)
+            val client = CordaRPCClient(addressesForRpc, configuration = config)
             val bankAReconnectingRPCConnection = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect)
             val bankAReconnectingRpc = bankAReconnectingRPCConnection.proxy as ReconnectingCordaRPCOps
             // DOCEND rpcReconnectingRPC
