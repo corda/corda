@@ -78,7 +78,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
 
     override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
 
-    override fun register(observer: ServiceLifecycleObserver, priority: ServiceLifecycleObserverPriority) {
+    override fun register(priority: ServiceLifecycleObserverPriority, observer: ServiceLifecycleObserver) {
         nodeLifecycleEventsDistributor.add(NodeLifecycleServiceObserverAdaptor(observer, priority))
     }
 

@@ -7,6 +7,8 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
+import net.corda.core.node.services.ServiceLifecycleEvent.CORDAPP_STARTED
+import net.corda.core.node.services.ServiceLifecycleEvent.CORDAPP_STOPPED
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -34,7 +36,7 @@ class CordaServiceLifecycleTests {
         }
         assertEquals(TEST_PHRASE.length, result)
         assertEquals(2, eventsCaptured.size)
-        assertEquals(listOf(ServiceLifecycleEvent.CORDAPP_STARTED, ServiceLifecycleEvent.CORDAPP_STOPPED), eventsCaptured)
+        assertEquals(listOf(CORDAPP_STARTED, CORDAPP_STOPPED), eventsCaptured)
     }
 
     @StartableByRPC
@@ -48,16 +50,26 @@ class CordaServiceLifecycleTests {
 
     @CordaService
     @Suppress("unused")
-    class TextLengthComputingService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
+    class TextLengthComputingService(services: AppServiceHub) : SingletonSerializeAsToken() {
 
         init {
             services.register { addEvent(it) }
         }
 
         private fun addEvent(event: ServiceLifecycleEvent) {
-            eventsCaptured.add(event)
-            // services.vaultService.queryBy()
-            // services.startFlow()
+            when (event) {
+                CORDAPP_STARTED -> {
+                    eventsCaptured.add(event)
+                    // services.vaultService.queryBy()
+                    // services.startFlow()
+                }
+                CORDAPP_STOPPED -> {
+                    eventsCaptured.add(event)
+                }
+                else -> {
+                    eventsCaptured.add(event)
+                }
+            }
         }
 
         fun computeLength(text: String): Int {

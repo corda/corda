@@ -40,8 +40,18 @@ Below is an empty implementation of a Service class:
 
             private fun processEvent(event: ServiceLifecycleEvent) {
                 // Lifecycle event handling code including full use of serviceHub
-                services.vaultService.queryBy(...)
-                services.startFlow(...)
+                when (event) {
+                    CORDAPP_STARTED -> {
+                        services.vaultService.queryBy(...)
+                        services.startFlow(...)
+                    }
+                    CORDAPP_STOPPED -> {
+                        // Clean-up activity
+                    }
+                    else -> {
+                        // Process other types of events
+                    }
+                }
             }
 
             // public api of service
@@ -63,9 +73,18 @@ Below is an empty implementation of a Service class:
             }
 
             private void processEvent(ServiceLifecycleEvent event) {
-                // Lifecycle event handling code including full use of serviceHub
-                serviceHub.getVaultService().queryBy(...)
-                serviceHub.startFlow(...)
+                switch (event) {
+                    case CORDAPP_STARTED:
+                        serviceHub.getVaultService().queryBy(...)
+                        serviceHub.startFlow(...)
+                        break;
+                    case CORDAPP_STOPPED:
+                        // Clean-up activity
+                        break;
+                    default:
+                        // Process other types of events
+                        break;
+                }
             }
 
             // public api of service
@@ -78,7 +97,7 @@ The ``AppServiceHub`` also provides access to ``database`` which will enable the
 managed by the Service.
 
 Also the ``AppServiceHub`` provides ability for ``CordaService`` to subscribe for lifecycle events of the node, such that it will get notified
-about node finished initialisation and when the node is shutting down such that ``CordaService`` will be able to perform clean-up of some
+about node finishing initialisation and when the node is shutting down such that ``CordaService`` will be able to perform clean-up of some
 critical resources. For more details please have refer to KDocs for ``ServiceLifecycleObserver``.
 
 Retrieving a Service

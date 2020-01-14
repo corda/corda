@@ -52,10 +52,10 @@ class NodeLifecycleEventsDistributor {
 
         data class SortingKey(val priority: Int, val clazz: Class<*>) : Comparable<SortingKey> {
             override fun compareTo(other: SortingKey): Int {
-                return if(priority != other.priority) {
-                    priority - other.priority
+                if(priority != other.priority) {
+                    return priority - other.priority
                 } else {
-                    clazz.name.compareTo(other.clazz.name)
+                    return clazz.name.compareTo(other.clazz.name)
                 }
             }
         }
@@ -76,31 +76,30 @@ class NodeLifecycleEventsDistributor {
         val snapshot = readWriteLock.readLock().executeLocked { LinkedList(prioritizedObservers) }
         val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
 
-        val updateResult = orderedSnapshot.map { it.update(event) }
-
-        val (updatedOK, updateFailed) = updateResult.partition { it.isSuccess }
-
-        if(updateFailed.isNotEmpty()) {
-            log.error("Failed to distribute event $event, failure outcome: $updateFailed")
-            if(event.javaClass in criticalEventsClasses) {
-                handlePossibleFatalTermination(event, updateFailed.map { it as Try.Failure<String> })
+        orderedSnapshot.forEach {
+            val updateResult = it.update(event)
+            if(updateResult.isSuccess) {
+                log.debug { "Event $event distribution outcome: $updateResult" }
+            } else {
+                log.error("Failed to distribute event $event, failure outcome: $updateResult")
+                handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
             }
         }
-
-        log.debug { "Event $event distribution outcome: $updatedOK" }
     }
 
-    private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: List<Try.Failure<String>>) {
-        val criticalFailures = updateFailed.filter { it.exception.javaClass in criticalExceptionsClasses }
-        if(criticalFailures.isNotEmpty()) {
-            log.error("During processing of $event critical failures been reported: $criticalFailures. JVM will be terminated.")
+    private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: Try.Failure<String>) {
+        if (event.javaClass in criticalEventsClasses && updateFailed.exception.javaClass in criticalExceptionsClasses) {
+            log.error("During processing of $event critical failures been reported: $updateFailed. JVM will be terminated.")
             exitProcess(1)
         }
     }
 
+    /**
+     * Custom implementation vs. using [kotlin.concurrent.withLock] to allow interruption during lock acquisition.
+     */
     private fun <T> Lock.executeLocked(block: () -> T) : T {
+        lockInterruptibly()
         try {
-            lockInterruptibly()
             return block()
         } finally {
             unlock()

@@ -45,18 +45,20 @@ interface AppServiceHub : ServiceHub {
     /**
      * Allows to register [ServiceLifecycleObserver] such that it will start receiving [net.corda.core.node.services.ServiceLifecycleEvent]s
      *
-     * @param observer an instance of [ServiceLifecycleObserver] to be registered
      * @param priority if set to `true` the [observer] will be added to a priority queue such that it will be notified ahead of non-prioritised
      *      observers.
+     * @param observer an instance of [ServiceLifecycleObserver] to be registered.
      */
-    fun register(observer: ServiceLifecycleObserver, priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM)
+    fun register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, observer: ServiceLifecycleObserver)
 
     /**
      * Convenience method to be able to add an arbitrary function as a [register] callback.
      */
-    fun <T> register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, func: (ServiceLifecycleEvent) -> T) = register(object : ServiceLifecycleObserver {
-        override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
-            func(event)
-        }
-    }, priority)
+    fun <T> register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM,
+                     func: (ServiceLifecycleEvent) -> T) = register(priority,
+            object : ServiceLifecycleObserver {
+                override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
+                    func(event)
+                }
+            })
 }

@@ -40,13 +40,24 @@ public class JavaCordaServiceLifecycle {
 
         public JavaTextLengthComputingService(AppServiceHub serviceHub) {
             this.serviceHub = serviceHub;
-            serviceHub.register(this::addEvent, ServiceLifecycleObserverPriority.MEDIUM);
+            serviceHub.register(ServiceLifecycleObserverPriority.MEDIUM, this::addEvent);
         }
 
         private void addEvent(ServiceLifecycleEvent event) {
-            eventsCaptured.add(event);
-            // serviceHub.startFlow()
-            // serviceHub.getVaultService().queryBy()
+
+            switch (event) {
+                case CORDAPP_STARTED:
+                    eventsCaptured.add(event);
+                    // serviceHub.startFlow()
+                    // serviceHub.getVaultService().queryBy()
+                    break;
+                case CORDAPP_STOPPED:
+                    eventsCaptured.add(event);
+                    break;
+                default:
+                    // Process other typed of events
+                    break;
+            }
         }
 
         public int computeLength(String text) {

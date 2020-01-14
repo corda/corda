@@ -1341,8 +1341,7 @@
     <ID>MaxLineLength:AnalyticsEngine.kt$OGSIMMAnalyticsEngine$val t = BimmAnalysisUtils.computeMargin(combinedRatesProvider, normalizer, calculatorTotal, it.value.currencyParameterSensitivities, it.value.multiCurrencyAmount)</ID>
     <ID>MaxLineLength:AnonymousParty.kt$AnonymousParty : DestinationAbstractParty</ID>
     <ID>MaxLineLength:AnotherDummyContract.kt$AnotherDummyContract$return TransactionBuilder(notary).withItems(StateAndContract(state, ANOTHER_DUMMY_PROGRAM_ID), Command(Commands.Create(), owner.party.owningKey))</ID>
-    <ID>MaxLineLength:AppServiceHub.kt$AppServiceHub$ fun &lt;T&gt; register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, func: (ServiceLifecycleEvent) -&gt; T)</ID>
-    <ID>MaxLineLength:AppServiceHub.kt$AppServiceHub$ fun register(observer: ServiceLifecycleObserver, priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM)</ID>
+    <ID>MaxLineLength:AppServiceHub.kt$AppServiceHub$ fun register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, observer: ServiceLifecycleObserver)</ID>
     <ID>MaxLineLength:AppServiceHubImpl.kt$AppServiceHubImpl$require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }</ID>
     <ID>MaxLineLength:AppServiceHubImpl.kt$AppServiceHubImpl.Companion.NodeLifecycleServiceObserverAdaptor$private</ID>
     <ID>MaxLineLength:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase$ operator fun set(key: K, value: V)</ID>

@@ -36,7 +36,7 @@ interface NodeLifecycleObserver {
     fun update(nodeLifecycleEvent: NodeLifecycleEvent) : Try<String> = Try.on { "${javaClass.simpleName} ignored $nodeLifecycleEvent" }
 
     /**
-     * It is possibly to optionally override observer priority.
+     * It is possible to optionally override observer priority.
      *
      * `start` methods will be invoked in the ascending sequence priority order. For items with the same order alphabetical ordering
      * of full class name will be applied.

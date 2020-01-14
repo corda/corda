@@ -66,11 +66,18 @@ internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Er
 
 internal fun <TYPE> valid(target: TYPE) = Validated.valid<TYPE, Configuration.Validation.Error>(target)
 
+/**
+ * Value extracted from a configuration file is a function of the actual value specified and configuration options.
+ * E.g. password value may be stored in the encrypted form rather than in a clear text.
+ */
 data class ConfigurationWithOptions(private val config: Config, private val options: Configuration.Validation.Options) {
     operator fun <TYPE> get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(config)
     operator fun <TYPE> get(property: Configuration.Value.Extractor<TYPE>): TYPE = property.valueIn(config)
 }
 
+/**
+ * Helper interface to mark objects that will have [ConfigurationWithOptions] in them.
+ */
 interface ConfigurationWithOptionsContainer {
     val configurationWithOptions : ConfigurationWithOptions
 }

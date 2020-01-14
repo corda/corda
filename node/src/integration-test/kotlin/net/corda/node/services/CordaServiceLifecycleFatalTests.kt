@@ -31,7 +31,7 @@ class CordaServiceLifecycleFatalTests {
         class FatalService(services: AppServiceHub) : SingletonSerializeAsToken() {
 
             init {
-                services.register(FailingObserver)
+                services.register(observer = FailingObserver)
             }
 
             fun computeLength(text: String): Int {
