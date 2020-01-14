@@ -25,7 +25,7 @@ import java.util.function.BiFunction;
 import static net.corda.testing.driver.Driver.driver;
 import static org.junit.Assert.assertEquals;
 
-public class FlowBackgroundProcessInJavaTest extends AbstractFlowExternalResultTest {
+public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest {
 
     @Test
     public void awaitCalledFromJava() {
