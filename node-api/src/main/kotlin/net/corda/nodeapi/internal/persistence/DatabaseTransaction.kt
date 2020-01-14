@@ -52,8 +52,9 @@ class DatabaseTransaction(
 
     // Holds the exception that broke the atomicity of a DatabaseTransaction statement or
     // holds the very first exception that broke the atomicity of the innermost DatabaseTransaction statement
-    // in a chain of nested CordaPersistence#transaction calls.
-    // The latter will occur only inside a flow state machine execution.
+    // in a chain of nested CordaPersistence#transaction calls. The exception will be rethrown on the next DatabaseTransaction#commit.
+    // The purpose of this property is to make sure these exceptions cannot be suspended in user code.
+    // This property will get written only inside a flow state machine execution.
     var logicalTxCorruptedBy: Throwable? = null
 
     fun commit() {
