@@ -199,7 +199,9 @@ class CordaPersistence(
             transaction.session.flush()
             return transaction.connection
         } catch (e: Exception) {
-            if (e is SQLException || e is PersistenceException) { transaction.errorHandler(e) }
+            if (e is SQLException || e is PersistenceException) {
+                transaction.errorHandler(e)
+            }
             throw e
         }
     }
@@ -238,7 +240,9 @@ class CordaPersistence(
             try {
                 outer.statement()
             } catch (e: Exception) {
-                if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) { outer.errorHandler(e) }
+                if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
+                    outer.errorHandler(e)
+                }
                 throw e
             }
         } else {
