@@ -1,7 +1,6 @@
 package net.corda.coretests.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.flows.FlowExternalFuture;
 import net.corda.core.flows.FlowExternalResult;
 import net.corda.core.flows.StartableByRPC;
@@ -20,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import static net.corda.testing.driver.Driver.driver;
@@ -127,7 +127,7 @@ public class FlowBackgroundProcessInJavaTest extends AbstractFlowExternalResultT
         public Object testCode() {
             return await(new ExternalFuture<>(
                     getServiceHub().cordaService(FutureService.class),
-                    (BiFunction<FutureService, String, CordaFuture<Object>> & Serializable) (futureService, deduplicationId) ->
+                    (BiFunction<FutureService, String, CompletableFuture<Object>> & Serializable) (futureService, deduplicationId) ->
                             futureService.createFuture()
             ));
         }
@@ -165,16 +165,16 @@ public class FlowBackgroundProcessInJavaTest extends AbstractFlowExternalResultT
     public static class ExternalFuture<R> implements FlowExternalFuture<R> {
 
         private FutureService futureService;
-        private BiFunction<FutureService, String, CordaFuture<R>> operation;
+        private BiFunction<FutureService, String, CompletableFuture<R>> operation;
 
-        public ExternalFuture(FutureService futureService, BiFunction<FutureService, String, CordaFuture<R>> operation) {
+        public ExternalFuture(FutureService futureService, BiFunction<FutureService, String, CompletableFuture<R>> operation) {
             this.futureService = futureService;
             this.operation = operation;
         }
 
         @NotNull
         @Override
-        public CordaFuture<R> execute(@NotNull String deduplicationId) {
+        public CompletableFuture<R> execute(@NotNull String deduplicationId) {
             return operation.apply(futureService, deduplicationId);
         }
     }

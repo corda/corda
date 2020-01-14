@@ -2,7 +2,6 @@ package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaException
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowExternalFuture
 import net.corda.core.flows.FlowExternalResult
 import net.corda.core.flows.FlowLogic
@@ -13,8 +12,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.doOnComplete
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -25,7 +22,9 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import java.sql.SQLTransientConnectionException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.function.Supplier
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -81,15 +80,20 @@ abstract class AbstractFlowExternalResultTest {
 
         private val deduplicationIds = mutableSetOf<String>()
 
-        fun createFuture(): CordaFuture<Any> = executorService.fork {
-            log.info("Starting sleep inside of future")
-            Thread.sleep(2000)
-            log.info("Finished sleep inside of future")
-            "Here is your return value"
+        fun createFuture(): CompletableFuture<Any> {
+            return CompletableFuture.supplyAsync(Supplier<Any> {
+                log.info("Starting sleep inside of future")
+                Thread.sleep(2000)
+                log.info("Finished sleep inside of future")
+                "Here is your return value"
+            }, executorService)
         }
 
-        fun createExceptionFutureWithDeduplication(deduplicationId: String): CordaFuture<Any> = executorService.fork {
-            createExceptionWithDeduplication(deduplicationId)
+        fun createExceptionFutureWithDeduplication(deduplicationId: String): CompletableFuture<Any> {
+            return CompletableFuture.supplyAsync(
+                Supplier<Any> { createExceptionWithDeduplication(deduplicationId) },
+                executorService
+            )
         }
 
         fun createExceptionWithDeduplication(deduplicationId: String): Any {
@@ -101,30 +105,46 @@ abstract class AbstractFlowExternalResultTest {
             throw DuplicatedProcessException(deduplicationId)
         }
 
-        fun setHospitalHandledException(): CordaFuture<Any> = openFuture<Any>().apply {
-            setException(SQLTransientConnectionException("fake exception - connection is not available"))
+        fun setHospitalHandledException(): CompletableFuture<Any> = CompletableFuture<Any>().apply {
+            completeExceptionally(SQLTransientConnectionException("fake exception - connection is not available"))
         }
 
         fun throwHospitalHandledException(): Nothing = throw SQLTransientConnectionException("fake exception - connection is not available")
 
-        fun startMultipleFuturesAndJoin(): CordaFuture<List<Any>> = executorService.fork {
-            log.info("Creating multiple futures")
-            (1..5).map { createFuture().getOrThrow() }
+        fun startMultipleFuturesAndJoin(): CompletableFuture<List<Any>> {
+            return CompletableFuture.supplyAsync(
+                Supplier<List<Any>> {
+                    log.info("Creating multiple futures")
+                    (1..5).map { createFuture().getOrThrow() }
+                },
+                executorService
+            )
         }
 
-        fun startFlow(party: Party): CordaFuture<Any> = executorService.fork {
-            log.info("Starting new flow")
-            services.startFlow(FlowWithExternalProcess(party)).returnValue.doOnComplete { log.info("Finished new flow") }.get()
+        fun startFlow(party: Party): CompletableFuture<Any> {
+            return CompletableFuture.supplyAsync(
+                Supplier<Any> {
+                    log.info("Starting new flow")
+                    services.startFlow(FlowWithExternalProcess(party)).returnValue
+                        .doOnComplete { log.info("Finished new flow") }.get()
+                },
+                executorService
+            )
         }
 
-        fun startFlows(party: Party): CordaFuture<List<Any>> = executorService.fork {
-            log.info("Starting new flows")
-            (1..5).map { i ->
-                services.startFlow(FlowWithExternalProcess(party))
-                    .returnValue
-                    .doOnComplete { log.info("Finished new flow $i") }
-                    .getOrThrow()
-            }
+        fun startFlows(party: Party): CompletableFuture<List<Any>> {
+            return CompletableFuture.supplyAsync(
+                Supplier<List<Any>> {
+                    log.info("Starting new flows")
+                    (1..5).map { i ->
+                        services.startFlow(FlowWithExternalProcess(party))
+                            .returnValue
+                            .doOnComplete { log.info("Finished new flow $i") }
+                            .getOrThrow()
+                    }
+                },
+                executorService
+            )
         }
 
         fun readFromDatabase(name: String): CustomTableEntity? = services.withEntityManager { find(CustomTableEntity::class.java, name) }
@@ -203,9 +223,9 @@ abstract class AbstractFlowExternalResultTest {
 
     class ExternalFuture<R : Any>(
         private val serviceHub: ServiceHub,
-        private val function: (serviceHub: ServiceHub, deduplicationId: String) -> CordaFuture<R>
+        private val function: (serviceHub: ServiceHub, deduplicationId: String) -> CompletableFuture<R>
     ) : FlowExternalFuture<R> {
-        override fun execute(deduplicationId: String): CordaFuture<R> {
+        override fun execute(deduplicationId: String): CompletableFuture<R> {
             return function(serviceHub, deduplicationId)
         }
     }

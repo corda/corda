@@ -1,8 +1,10 @@
 package net.corda.core.flows
 
-import net.corda.core.internal.FlowAsyncOperation
+import java.util.concurrent.CompletableFuture
 
-interface FlowExternalFuture<R : Any> : FlowAsyncOperation<R>
+interface FlowExternalFuture<R : Any> {
+    fun execute(deduplicationId: String): CompletableFuture<R>
+}
 
 interface FlowExternalResult<R : Any> {
     fun execute(deduplicationId: String): R

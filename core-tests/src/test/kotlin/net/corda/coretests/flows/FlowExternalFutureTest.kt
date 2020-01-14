@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -21,6 +20,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -205,8 +205,8 @@ class FlowWithExternalFuturePropagatesException<T>(party: Party, private val exc
     @Suspendable
     override fun testCode(): Any =
         await(ExternalFuture(serviceHub) { _, _ ->
-            openFuture<Any>().apply {
-                setException(createException())
+            CompletableFuture<Any>().apply {
+                completeExceptionally(createException())
             }
         })
 
@@ -224,8 +224,8 @@ class FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow(party: Party) :
     @Suspendable
     override fun testCode(): Any = try {
         await(ExternalFuture(serviceHub) { _, _ ->
-            openFuture<Any>().apply {
-                setException(IllegalStateException("threw exception in external future"))
+            CompletableFuture<Any>().apply {
+                completeExceptionally(IllegalStateException("threw exception in external future"))
             }
         })
     } catch (e: IllegalStateException) {
@@ -264,7 +264,7 @@ class FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry(party: Part
             } catch (e: NullPointerException) {
                 // Catch the [NullPointerException] thrown from accessing the flow's [ServiceHub]
                 // set the future so that the exception can be asserted from the test
-                openFuture<Any>().apply { setException(DirectlyAccessedServiceHubException()) }
+                CompletableFuture<Any>().apply { completeExceptionally(DirectlyAccessedServiceHubException()) }
             }
         })
     }
