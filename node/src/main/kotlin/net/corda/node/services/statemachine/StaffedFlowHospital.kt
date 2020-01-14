@@ -608,19 +608,22 @@ private fun <T : Throwable> Throwable?.mentionsThrowable(
         return false
     }
 
+    if (atDepth != null) {
+        if (currDepth > atDepth) {
+            return false
+        } else if (currDepth < atDepth) {
+            // jump fast into correct depth
+            return cause.mentionsThrowable(exceptionType, errorMessage, atDepth, currDepth + 1)
+        }
+    }
+
     val containsMessage = if (errorMessage != null) {
         message?.toLowerCase()?.contains(errorMessage) ?: false
     } else {
         true
     }
 
-    val isAtCorrectDepth = if (atDepth == null) { // we don't look for specific depth
-        true
-    } else {
-        atDepth == currDepth
-    }
-
-    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage && isAtCorrectDepth) || cause.mentionsThrowable(
+    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(
         exceptionType,
         errorMessage,
         atDepth,
