@@ -484,7 +484,8 @@ class AttachmentsClassLoaderTests {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val zip = importAttachment(fakeZIPAttachment("importantDoc.pdf", "I am a pdf!").inputStream(), "app", "importantDoc")
 
-        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(isolatedId, zip).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.allOnesHash, { true }) { classloader ->
+        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(isolatedId, zip).map { storage.openAttachment(it)!! },
+                                                                 testNetworkParameters(), SecureHash.allOnesHash, { true }) { classloader ->
 
             // The importantDoc is available in the tx classloader.
             val importantDoc = classloader.getResourceAsStream("importantDoc.pdf")

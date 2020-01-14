@@ -157,11 +157,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             path.endsWith("/") -> false                     // Directories (packages) can overlap.
             targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
-            !isJARWithManifest -> false                     // If entry is not a class and its within a .zip file (ie. without manifest) then don't need to be unique.
+            !isJARWithManifest -> false                            // Entry not a class and within a .zip file then no need to be unique.
             !path.startsWith("meta-inf") -> true            // All files outside of META-INF need to be unique.
             (path == "meta-inf/services/net.corda.core.serialization.serializationwhitelist") -> false // Allow overlapping on the SerializationWhitelist.
             path.startsWith("meta-inf/services") -> true    // Services can't overlap to prevent a malicious party from injecting additional implementations of an interface used by a contract.
-            else -> false                                   // This allows overlaps over any non-class files in "META-INF" - except 'services'.
+            else -> false                                          // This allows overlaps over any non-class files in "META-INF" - except 'services'.
         }
     }
 
@@ -307,12 +307,16 @@ object AttachmentsClassLoaderBuilder {
     // may behave differently, so that has to be a part of the cache key.
     private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
 
-    data class CachedTransactionClassloaderAndProperties(val classLoader: ClassLoader, val serializers: Set<SerializationCustomSerializer<*, *>>, val whitelistedClasses: List<Class<*>>)
+    data class CachedTransactionClassloaderAndProperties(val classLoader: ClassLoader,
+                                                         val serializers: Set<SerializationCustomSerializer<*, *>>,
+                                                         val whitelistedClasses: List<Class<*>>)
 
     // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Key, CachedTransactionClassloaderAndProperties> = createSimpleCache<Key, CachedTransactionClassloaderAndProperties>(CACHE_SIZE).toSynchronised()
+    private val cache: MutableMap<Key, CachedTransactionClassloaderAndProperties>
+                                            = createSimpleCache<Key, CachedTransactionClassloaderAndProperties>(CACHE_SIZE).toSynchronised()
 
-    private val attachmentsTypeCache: MutableMap<AttachmentId, Boolean> = createSimpleCache<AttachmentId, Boolean>(CACHE_SIZE).toSynchronised()
+    private val attachmentsTypeCache: MutableMap<AttachmentId, Boolean>
+                                            = createSimpleCache<AttachmentId, Boolean>(CACHE_SIZE).toSynchronised()
     // We consider a JAR an archive that has a manifest.
     private fun Attachment.isJar(): Boolean = this.openAsJAR().use { it.manifest != null }
 
@@ -345,8 +349,8 @@ object AttachmentsClassLoaderBuilder {
         }
 
         // If there are non-JAR attachments, create a classloader
-        val transactionClassLoader = if (jarAttachments != attachments) {
-            val zipAttachments = attachments.filterNot(::isJAR)
+        val zipAttachments = attachments - jarAttachments
+        val transactionClassLoader = if (zipAttachments.isNotEmpty()) {
             AttachmentsClassLoader(zipAttachments, params, txId, isAttachmentTrusted, transactionCodeClassloaderAndProperties.classLoader)
         } else {
             transactionCodeClassloaderAndProperties.classLoader

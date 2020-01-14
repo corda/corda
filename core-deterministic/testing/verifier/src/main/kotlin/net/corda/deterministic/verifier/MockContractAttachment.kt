@@ -8,6 +8,7 @@ import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 
 // A valid JAR file with 1 entry.
+@Suppress("MagicNumber", "MaxLineLength")
 val simpleZip = byteArrayOf(80, 75, 3, 4, 20, 0, 8, 8, 8, 0, -5, 88, 45, 79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 4, 0, 77,
         69, 84, 65, 45, 73, 78, 70, 47, 77, 65, 78, 73, 70, 69, 83, 84, 46, 77, 70, -2, -54, 0, 0, -29, -27, 2, 0, 80, 75, 7, 8, -84, -123,
         -94, 20, 4, 0, 0, 0, 2, 0, 0, 0, 80, 75, 3, 4, 20, 0, 8, 8, 8, 0, -5, 88, 45, 79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 70,
