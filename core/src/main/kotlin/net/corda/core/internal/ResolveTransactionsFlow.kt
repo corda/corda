@@ -42,9 +42,12 @@ class ResolveTransactionsFlow private constructor(
         val counterpartyPlatformVersion = checkNotNull(serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion) {
             "Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache"
         }
+//++++        val opv = counterpartyPlatformVersion//++++
         // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
         // request to node V3 that doesn't know about this protocol.
         fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= 4
+        val multiMode = counterpartyPlatformVersion >= 6
+        println("ResolveTransactionsFlow.call(): Otherside Platform Version++++ = '$counterpartyPlatformVersion': Multi=$multiMode")
 
         if (initialTx != null) {
             fetchMissingAttachments(initialTx)
@@ -52,9 +55,15 @@ class ResolveTransactionsFlow private constructor(
         }
 
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
-        resolver.downloadDependencies()
+        resolver.downloadDependencies(multiMode)
 
+
+        val ost = otherSide.javaClass.name //++++
+        println("\n\n\n --- ResolveTransactionsFlow 1s ++++ --- $ost") //++++
         otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
+        println("--- ResolveTransactionsFlow 1e ++++ ---\n\n\n") //++++
+
+
 
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
         // recorded if this has not already occurred.
