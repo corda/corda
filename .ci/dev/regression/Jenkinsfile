@@ -65,22 +65,13 @@ pipeline {
                      * copied to avoid collisions between files where the same test
                      * classes have run on multiple pods.
                      */
-                    sh label: 'Compact test results',
-                       script:
-                           '''#!/bin/bash
-                              shopt -s globstar
-                              rm -rf allure-input
-                              mkdir allure-input
-
-                              for i in **/test-results-xml/**/test-runs/test-reports/**
-                              do
-                                  [ -f $i ] &&
-                                  cp $i allure-input/$(echo $i | sed -e \\
-                                      \'s/.*test-results-xml\\/.*-\\(.*\\)\\/test-runs\\/.*\\/\\(.*\\)$/\\1\\-\\2/\')
-                              done
-
-                              echo "Finished compacting JUnit results"
-                       '''
+                    fileOperations([fileCopyOperation(
+                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
+                            targetLocation: 'allure-input',
+                            flattenFiles: true,
+                            renameFiles: true,
+                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
+                            targetNameExpression: '$1-$2')])
                     allure includeProperties: false,
                            jdk: '',
                            results: [[path: '**/allure-input']]
