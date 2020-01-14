@@ -54,8 +54,9 @@ class DatabaseTransaction(
     var logicalTxCorruptedBy: Throwable? = null
 
     fun commit() {
-        if (logicalTxCorruptedBy != null)
-            throw logicalTxCorruptedBy as Throwable
+        logicalTxCorruptedBy?.let {
+            throw it
+        }
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
