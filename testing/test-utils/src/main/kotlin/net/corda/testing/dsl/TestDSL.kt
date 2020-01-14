@@ -96,9 +96,9 @@ data class TestTransactionDSLInterpreter private constructor(
                     ledgerInterpreter.getTransaction(id)
             }
 
-        override val backgroundProcessExecutor: ExecutorService = Executors.newFixedThreadPool(
+        override val externalOperationExecutor: ExecutorService = Executors.newFixedThreadPool(
             2,
-            ThreadFactoryBuilder().setNameFormat("flow-background-process-thread").build()
+            ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
 
         override val attachmentTrustCalculator: AttachmentTrustCalculator =

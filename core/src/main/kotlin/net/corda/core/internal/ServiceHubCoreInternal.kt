@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService
 @DeleteForDJVM
 interface ServiceHubCoreInternal : ServiceHub {
 
-    val backgroundProcessExecutor: ExecutorService
+    val externalOperationExecutor: ExecutorService
 
     val attachmentTrustCalculator: AttachmentTrustCalculator
 

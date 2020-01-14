@@ -538,7 +538,7 @@ abstract class FlowLogic<out T> {
                 // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
                 return CompletableFuture.supplyAsync(
                     Supplier { operation.execute(deduplicationId) },
-                    (serviceHub as ServiceHubCoreInternal).backgroundProcessExecutor
+                    (serviceHub as ServiceHubCoreInternal).externalOperationExecutor
                 ).asCordaFuture()
             }
         }

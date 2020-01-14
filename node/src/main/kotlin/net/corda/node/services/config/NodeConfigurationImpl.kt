@@ -82,7 +82,7 @@ data class NodeConfigurationImpl(
                 Defaults.networkParameterAcceptanceSettings,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
-        override val flowBackgroundProcessThreadPoolSize: Int = Defaults.flowBackgroundProcessThreadPoolSize
+        override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -118,7 +118,7 @@ data class NodeConfigurationImpl(
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
-        const val flowBackgroundProcessThreadPoolSize: Int = 1
+        const val flowExternalOperationThreadPoolSize: Int = 1
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

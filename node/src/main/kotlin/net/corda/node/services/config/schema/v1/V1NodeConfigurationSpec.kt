@@ -63,7 +63,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val networkParameterAcceptanceSettings by nested(NetworkParameterAcceptanceSettingsSpec)
             .optional()
             .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
-    private val flowBackgroundProcessThreadPoolSize by int().optional().withDefaultValue(Defaults.flowBackgroundProcessThreadPoolSize)
+    private val flowExternalOperationThreadPoolSize by int().optional().withDefaultValue(Defaults.flowExternalOperationThreadPoolSize)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -127,8 +127,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
                     blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys],
                     networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings],
-                    configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Validation.Options.defaults)
-                    flowBackgroundProcessThreadPoolSize = configuration[flowBackgroundProcessThreadPoolSize]
+                    configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Validation.Options.defaults),
+                    flowExternalOperationThreadPoolSize = configuration[flowExternalOperationThreadPoolSize]
             ))
         } catch (e: Exception) {
             return when (e) {

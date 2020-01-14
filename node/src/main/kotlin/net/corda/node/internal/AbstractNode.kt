@@ -340,7 +340,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      */
     protected abstract val rxIoScheduler: Scheduler
 
-    val backgroundProcessExecutor = createBackgroundProcessExecutor(configuration.flowBackgroundProcessThreadPoolSize)
+    val externalOperationExecutor = createExternalOperationExecutor(configuration.flowExternalOperationThreadPoolSize)
 
     /**
      * Completes once the node has successfully registered with the network map service
@@ -734,14 +734,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         ).tokenize()
     }
 
-    private fun createBackgroundProcessExecutor(numberOfThreads: Int): ExecutorService {
+    private fun createExternalOperationExecutor(numberOfThreads: Int): ExecutorService {
         when (numberOfThreads) {
-            1 -> log.info("Flow background process executor has $numberOfThreads thread")
-            else -> log.info("Flow background process executor has $numberOfThreads threads")
+            1 -> log.info("Flow external operation executor has $numberOfThreads thread")
+            else -> log.info("Flow external operation executor has $numberOfThreads threads")
         }
         return Executors.newFixedThreadPool(
             numberOfThreads,
-            ThreadFactoryBuilder().setNameFormat("flow-background-process-thread").build()
+            ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
         )
     }
 
@@ -1125,7 +1125,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
-        override val backgroundProcessExecutor: ExecutorService get() = this@AbstractNode.backgroundProcessExecutor
+        override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

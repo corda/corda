@@ -88,7 +88,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val blacklistedAttachmentSigningKeys: List<String>
 
-    val flowBackgroundProcessThreadPoolSize: Int
+    val flowExternalOperationThreadPoolSize: Int
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

@@ -47,7 +47,7 @@ object ConfigHelper {
 
         // Detect the number of cores
         val coreCount = Runtime.getRuntime().availableProcessors()
-        val multiThreadingConfig = configOf("flowBackgroundProcessThreadPoolSize" to coreCount.toString())
+        val multiThreadingConfig = configOf("flowExternalOperationThreadPoolSize" to coreCount.toString())
 
         val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
         val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
