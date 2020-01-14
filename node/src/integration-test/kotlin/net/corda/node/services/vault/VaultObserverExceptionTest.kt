@@ -248,8 +248,14 @@ class VaultObserverExceptionTest {
         }
     }
 
+    /**
+     * Exceptions thrown from a vault observer , are now wrapped and rethrown as a HospitalizeFlowException.
+     * The flow should get hospitalised and any potential following checkpoint should not succeed.
+     * In case of a SQLException or PersistenceException, this was already "breaking" the database transaction
+     * and therefore, the next transaction commit was failing.
+     */
     @Test
-    fun `flow must not checkpoint after error registering`() {
+    fun `attempt to checkpoint, following an error thrown in vault observer which gets supressed in flow, will fail`() {
         var counterBeforeFirstCheckpoint = 0
         var counterAfterFirstCheckpoint = 0
         var counterAfterSecondCheckpoint = 0
