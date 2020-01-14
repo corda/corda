@@ -234,6 +234,7 @@ logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
 logger.lifecycle("Quasar classifier: {}", quasar_classifier.toString())
+logger.lifecycle("Building Corda version: {}", corda_release_version)
 
 allprojects {
     apply plugin: 'kotlin'
