@@ -52,7 +52,6 @@ pipeline {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
-<<<<<<< HEAD
             allure includeProperties: false, jdk: '', results: [[path: '**/build/test-results-xml/**']]
 
             script
@@ -86,7 +85,6 @@ pipeline {
                         body: '${SCRIPT, template="groovy-html.template"}'
                 } else {
                     echo('Already sent summary email today, suppressing')
-=======
 
             script {
                 try {
@@ -116,7 +114,6 @@ pipeline {
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         currentBuild.result = 'UNSTABLE'
                     }
->>>>>>> 38fb51b74b068d9e05aff0f524a8e166ed60f387
                 }
             }
         }
