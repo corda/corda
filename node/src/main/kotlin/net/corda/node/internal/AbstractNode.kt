@@ -304,7 +304,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkParametersStorage
     ).closeOnStop()
     @Suppress("LeakingThis")
-    val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
+    val transactionVerifierService = InMemoryTransactionVerifierService(
+        numberOfWorkers = transactionVerifierWorkerCount,
+        cordappProvider = cordappProvider,
+        attachments = attachments
+    ).tokenize()
     val verifierFactoryService: VerifierFactoryService = if (djvmCordaSource != null) {
         DeterministicVerifierFactoryService(djvmBootstrapSource, djvmCordaSource).apply {
             log.info("DJVM sandbox enabled for deterministic contract verification.")

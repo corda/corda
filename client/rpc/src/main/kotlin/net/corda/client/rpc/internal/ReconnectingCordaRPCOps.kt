@@ -195,9 +195,9 @@ class ReconnectingCordaRPCOps private constructor(
             currentState = CONNECTING
             synchronized(this) {
                 currentRPCConnection = if (infiniteRetries) {
-                    establishConnectionWithRetry()
+                    establishConnectionWithRetry(rpcConfiguration.connectionRetryInterval)
                 } else {
-                    establishConnectionWithRetry(retries = nodeHostAndPorts.size)
+                    establishConnectionWithRetry(rpcConfiguration.connectionRetryInterval, retries = nodeHostAndPorts.size)
                 }
                 // It's possible we could get closed while waiting for the connection to establish.
                 if (!isClosed()) {
@@ -215,7 +215,7 @@ class ReconnectingCordaRPCOps private constructor(
          * @param retries the number of retries remaining. A negative value implies infinite retries.
          */
         private tailrec fun establishConnectionWithRetry(
-                retryInterval: Duration = 1.seconds,
+                retryInterval: Duration,
                 roundRobinIndex: Int = 0,
                 retries: Int = -1
         ): CordaRPCConnection? {

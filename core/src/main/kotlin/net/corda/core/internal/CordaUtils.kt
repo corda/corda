@@ -1,13 +1,16 @@
+@file:Suppress("TooManyFunctions")
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -107,6 +110,13 @@ fun NetworkParameters.getPackageOwnerOf(contractClassName: ContractClassName): P
 // Make sure that packages don't overlap so that ownership is clear.
 fun noPackageOverlap(packages: Collection<String>): Boolean {
     return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
+}
+
+/**
+ * @return The set of [AttachmentId]s after the node's fix-up rules have been applied to [attachmentIds].
+ */
+fun CordappProvider.internalFixupAttachmentIds(attachmentIds: Collection<AttachmentId>): Set<AttachmentId> {
+    return (this as CordappFixupInternal).fixupAttachmentIds(attachmentIds)
 }
 
 /**

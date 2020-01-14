@@ -14,17 +14,13 @@ import java.util.function.Function
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
-    /**
-     * Verifies the [transaction] but adds some [extraAttachments] to the classpath.
-     * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
-     */
-    fun verify(transaction: LedgerTransaction, extraAttachments: List<Attachment>): CordaFuture<*>
+    fun reverifyWithFixups(transaction: LedgerTransaction, missingClass: String?): CordaFuture<*>
 }
 
 /**
  * Defined here for visibility reasons.
  */
-fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.internalPrepareVerify(extraAttachments)
+fun LedgerTransaction.prepareVerify(attachments: List<Attachment>) = internalPrepareVerify(attachments)
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the

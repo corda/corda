@@ -149,9 +149,10 @@ internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkS
     private val networkMapURL by string().mapValid(::toURL)
     private val pnm by string().mapValid(::toUUID).optional()
     private val inferred by boolean().optional().withDefaultValue(false)
+    private val csrToken by string(sensitive = true).optional()
 
     override fun parseValid(configuration: Config): Valid<NetworkServicesConfig> {
-        return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred]))
+        return valid(NetworkServicesConfig(configuration[doormanURL], configuration[networkMapURL], configuration[pnm], configuration[inferred], configuration[csrToken]))
     }
 }
 

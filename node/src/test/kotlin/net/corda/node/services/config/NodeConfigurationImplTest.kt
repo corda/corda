@@ -264,6 +264,18 @@ class NodeConfigurationImplTest {
         assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
+    @Test
+    fun `network services`() {
+        val rawConfig = getConfig("test-config-with-networkservices.conf")
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
+        nodeConfig.networkServices!!.apply {
+            assertEquals("https://registration.example.com", doormanURL.toString())
+            assertEquals("https://cz.example.com", networkMapURL.toString())
+            assertEquals("3c23d1a1-aa63-4beb-af9f-c8579dd5f89c", pnm.toString())
+            assertEquals("my-TOKEN", csrToken)
+        }
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
