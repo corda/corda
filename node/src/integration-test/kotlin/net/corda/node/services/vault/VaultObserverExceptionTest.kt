@@ -93,9 +93,37 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
+            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
+        }
+
+        Assert.assertEquals(1, observation)
+    }
+
+    /**
+     * None runtime exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * because the recording of transaction states failed. The flow will be hospitalized.
+     * The exception will bring the rx.Observer down.
+     */
+    @Test
+    fun runtimeExceptionFromVaultObserverCannotBeSuppressedInFlow() {
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
+        driver(DriverParameters(
+            startNodesInProcess = true,
+            cordappsForAllNodes = testCordapps())) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+            aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
+                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
 
