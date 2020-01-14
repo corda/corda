@@ -50,7 +50,10 @@ class DatabaseTransaction(
     private var committed = false
     private var closed = false
 
-    // is to be used when a logical transaction/ chain of logical transactions throws certain exceptions within a state machine
+    // Holds the exception that broke the atomicity of a DatabaseTransaction statement or
+    // holds the very first exception that broke the atomicity of the innermost DatabaseTransaction statement
+    // in a chain of nested CordaPersistence#transaction calls.
+    // The latter will occur only inside a flow state machine execution.
     var logicalTxCorruptedBy: Throwable? = null
 
     fun commit() {
