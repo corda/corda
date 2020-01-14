@@ -52,6 +52,7 @@ pipeline {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
+<<<<<<< HEAD
             allure includeProperties: false, jdk: '', results: [[path: '**/build/test-results-xml/**']]
 
             script
@@ -85,6 +86,37 @@ pipeline {
                         body: '${SCRIPT, template="groovy-html.template"}'
                 } else {
                     echo('Already sent summary email today, suppressing')
+=======
+
+            script {
+                try {
+                    /*
+                     * Copy all JUnit results files into a single top level directory.
+                     * This is necessary to stop the allure plugin from hitting out
+                     * of memory errors due to being passed many directories with
+                     * long paths.
+                     *
+                     * File names are pre-pended with the pod number when
+                     * copied to avoid collisions between files where the same test
+                     * classes have run on multiple pods.
+                     */
+                    fileOperations([fileCopyOperation(
+                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
+                            targetLocation: 'allure-input',
+                            flattenFiles: true,
+                            renameFiles: true,
+                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
+                            targetNameExpression: '$1-$2')])
+                    allure includeProperties: false,
+                           jdk: '',
+                           results: [[path: '**/allure-input']]
+                } catch (err) {
+                    echo("Allure report generation failed: $err")
+
+                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                        currentBuild.result = 'UNSTABLE'
+                    }
+>>>>>>> 38fb51b74b068d9e05aff0f524a8e166ed60f387
                 }
             }
         }
