@@ -5,7 +5,6 @@ import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
-import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
@@ -38,11 +37,6 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                                                 var visited: Set<TypeIdentifier> = emptySet(),
                                                 val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf(),
                                                 var validateProperties: Boolean = true) {
-
-    companion object {
-        private val logger = contextLogger()
-    }
-
     /**
      * If we are examining the type of a read-only property, or a type flagged as [Opaque], then we do not need to warn
      * if the [LocalTypeInformation] for that type (or any of its related types) is [LocalTypeInformation.NonComposable].
@@ -202,32 +196,30 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>): LocalTypeInformation {
         val superclassInformation = buildSuperclassInformation(type)
         val interfaceInformation = buildInterfaceInformation(type)
-        val observedConstructor = constructorForDeserialization(type)
-
-        if (observedConstructor == null) {
-            return LocalTypeInformation.NonComposable(
-                observedType = type,
-                typeIdentifier = typeIdentifier,
-                constructor = null,
-                properties = if (rawType == Class::class.java) {
-                    // Do NOT drill down into the internals of java.lang.Class.
-                    emptyMap()
-                } else {
-                    buildReadOnlyProperties(rawType)
-                },
-                superclass = superclassInformation,
-                interfaces = interfaceInformation,
-                typeParameters = typeParameterInformation,
-                reason = "No unique deserialization constructor can be identified",
-                remedy = "Either annotate a constructor for this type with @ConstructorForDeserialization, or provide a custom serializer for it"
-            )
-        }
+        val observedConstructor = constructorForDeserialization(type) ?: return LocalTypeInformation.NonComposable(
+            observedType = type,
+            typeIdentifier = typeIdentifier,
+            constructor = null,
+            properties = if (rawType == Class::class.java) {
+                // Do NOT drill down into the internals of java.lang.Class.
+                emptyMap()
+            } else {
+                buildReadOnlyProperties(rawType)
+            },
+            superclass = superclassInformation,
+            interfaces = interfaceInformation,
+            typeParameters = typeParameterInformation,
+            nonComposableSubtypes = emptySet(),
+            reason = "No unique deserialization constructor can be identified",
+            remedy = "Either annotate a constructor for this type with @ConstructorForDeserialization, or provide a custom serializer for it"
+        )
 
         val constructorInformation = buildConstructorInformation(type, observedConstructor)
         val properties = buildObjectProperties(rawType, constructorInformation)
 
         if (!propertiesSatisfyConstructor(constructorInformation, properties)) {
-            val missingParameters = missingMandatoryConstructorProperties(constructorInformation, properties).map { it.name }
+            val missingConstructorProperties = missingMandatoryConstructorProperties(constructorInformation, properties)
+            val missingParameters = missingConstructorProperties.map(LocalConstructorParameterInformation::name)
             return LocalTypeInformation.NonComposable(
                 observedType = type,
                 typeIdentifier = typeIdentifier,
@@ -236,6 +228,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 superclass = superclassInformation,
                 interfaces = interfaceInformation,
                 typeParameters = typeParameterInformation,
+                nonComposableSubtypes = missingConstructorProperties
+                    .filterIsInstanceTo(LinkedHashSet(), LocalTypeInformation.NonComposable::class.java),
                 reason = "Mandatory constructor parameters $missingParameters are missing from the readable properties ${properties.keys}",
                 remedy = "Either provide getters or readable fields for $missingParameters, or provide a custom serializer for this type"
             )
@@ -252,6 +246,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 superclass = superclassInformation,
                 interfaces = interfaceInformation,
                 typeParameters = typeParameterInformation,
+                nonComposableSubtypes = nonComposableProperties.values.mapTo(LinkedHashSet()) {
+                    it.type as LocalTypeInformation.NonComposable
+                },
                 reason = nonComposablePropertiesErrorReason(nonComposableProperties),
                 remedy = "Either ensure that the properties ${nonComposableProperties.keys} are serializable, or provide a custom serializer for this type"
             )
@@ -279,7 +276,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
         }.toSet()
 
-        return (0 until constructorInformation.parameters.size).none { index ->
+        return (constructorInformation.parameters.indices).none { index ->
             constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties
         }
     }
@@ -298,7 +295,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
         }.toSet()
 
-        return (0 until constructorInformation.parameters.size).mapNotNull { index ->
+        return (constructorInformation.parameters.indices).mapNotNull { index ->
             val parameter = constructorInformation.parameters[index]
             when {
                 constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties -> parameter
