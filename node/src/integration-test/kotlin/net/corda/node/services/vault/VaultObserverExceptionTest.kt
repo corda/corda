@@ -177,10 +177,15 @@ class VaultObserverExceptionTest {
      */
     @Test
     fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
-        val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
-
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
-            testStaffFuture.complete(staff) // get all staff members that will give an overnight observation diagnosis for this flow
+        var counter = 0
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+            when (it) {
+                is PersistenceException -> {
+                    ++counter
+                    log.info("Got a PersistentException in the flow hospital count = $counter")
+                }
+            }
+            false
         }
 
         driver(DriverParameters(
@@ -188,18 +193,14 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(
-                ::Initiator, "EntityManager",
-                CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.TxInvalidState,
-                    CreateStateFlow.ErrorTarget.FlowSwallowErrors
-                )
-            ).returnValue.then { testStaffFuture.complete(listOf()) }
-
-            val staff = testStaffFuture.getOrThrow(30.seconds)
-
-            // flow should have been given an overnight observation diagnosis by the SedationNurse
-            Assert.assertTrue(staff.isNotEmpty() && staff.any { it.contains("TransitionErrorGeneralPractitioner") })
+            val flowHandle = aliceNode.rpc.startFlow(
+                    ::Initiator, "EntityManager",
+                    CreateStateFlow.errorTargetsToNum(
+                            CreateStateFlow.ErrorTarget.TxInvalidState,
+                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            val flowResult = flowHandle.returnValue
+            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
+            Assert.assertTrue("Flow has not been to hospital", counter > 0)
         }
     }
 

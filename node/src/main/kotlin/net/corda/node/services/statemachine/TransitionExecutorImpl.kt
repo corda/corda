@@ -6,6 +6,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransactionException
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
@@ -62,11 +63,23 @@ class TransitionExecutorImpl(
                     } else {
                         log.info("Error while executing $action, with event $event, erroring state", exception)
                     }
+
+                    // distinguish between a DatabaseTransactionException and an actual StateTransitionException
+                    val stateTransitionOrDatabaseTransactionException =
+                        if (exception is DatabaseTransactionException) {
+                            // if the exception is a DatabaseTransactionException then it is not really a StateTransitionException
+                            // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
+                            // it was rethrown on [DatabaseTransaction.commit], we unwrap the original exception and pass it to flow hospital
+                            exception.cause
+                        } else {
+                            StateTransitionException(action, event, exception)
+                        }
+
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(
                                     errorState = previousState.checkpoint.errorState.addErrors(
                                             // Wrap the exception with [StateTransitionException] for handling by the flow hospital
-                                            listOf(FlowError(secureRandom.nextLong(), StateTransitionException(action, event, exception)))
+                                            listOf(FlowError(secureRandom.nextLong(), stateTransitionOrDatabaseTransactionException))
                                     )
                             ),
                             isFlowResumed = false
