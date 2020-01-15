@@ -50,15 +50,15 @@ class DatabaseTransaction(
     private var committed = false
     private var closed = false
 
-    // Holds the exception that broke the atomicity of a DatabaseTransaction statement or
-    // holds the very first exception that broke the atomicity of the innermost DatabaseTransaction statement
-    // in a chain of nested CordaPersistence#transaction calls. The exception will be rethrown on the next DatabaseTransaction#commit.
-    // The purpose of this property is to make sure these exceptions cannot be suspended in user code.
-    // This property will get written only inside a flow state machine execution.
-    var databaseTxStatementBrokenBy: Throwable? = null
+    /**
+     * Holds the first exception thrown from a series of statements executed in the same [DatabaseTransaction].
+     * The purpose of this property is to make sure this exception cannot be suppressed in user code.
+     * The exception will be thrown on the next [commit]. It is used only inside a flow state machine execution.
+     */
+    var firstExceptionInDatabaseTransaction: Throwable? = null
 
     fun commit() {
-        databaseTxStatementBrokenBy?.let {
+        firstExceptionInDatabaseTransaction?.let {
             throw it
         }
         if (sessionDelegate.isInitialized()) {
@@ -80,7 +80,7 @@ class DatabaseTransaction(
     fun close() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
-            databaseTxStatementBrokenBy = null
+            firstExceptionInDatabaseTransaction = null
         }
 
         if (database.closeConnection) {
