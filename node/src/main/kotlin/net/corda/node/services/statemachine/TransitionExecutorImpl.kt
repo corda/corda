@@ -72,13 +72,13 @@ class TransitionExecutorImpl(
                             // it was rethrown on [DatabaseTransaction.commit], we unwrap the original exception and pass it to flow hospital
                             exception.cause
                         } else {
+                            // Wrap the exception with [StateTransitionException] for handling by the flow hospital
                             StateTransitionException(action, event, exception)
                         }
 
                     val newState = previousState.copy(
                             checkpoint = previousState.checkpoint.copy(
                                     errorState = previousState.checkpoint.errorState.addErrors(
-                                            // Wrap the exception with [StateTransitionException] for handling by the flow hospital
                                             listOf(FlowError(secureRandom.nextLong(), stateTransitionOrDatabaseTransactionException))
                                     )
                             ),
