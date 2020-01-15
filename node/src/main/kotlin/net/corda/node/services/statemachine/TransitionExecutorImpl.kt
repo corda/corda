@@ -69,7 +69,7 @@ class TransitionExecutorImpl(
                         if (exception is DatabaseTransactionException) {
                             // if the exception is a DatabaseTransactionException then it is not really a StateTransitionException
                             // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
-                            // it was rethrown on [DatabaseTransaction.commit], we unwrap the original exception and pass it to flow hospital
+                            // it was rethrown on [DatabaseTransaction.commit]. Unwrap the original exception and pass it to flow hospital
                             exception.cause
                         } else {
                             // Wrap the exception with [StateTransitionException] for handling by the flow hospital
