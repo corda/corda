@@ -536,10 +536,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
                 when {
                     newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
-                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java)
-                            || newError.mentionsThrowable(HospitalizeFlowException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
-                    newError.mentionsThrowable(SQLException::class.java, atDepth = 1)
-                            || newError.mentionsThrowable(PersistenceException::class.java, atDepth = 1) -> Diagnosis.OVERNIGHT_OBSERVATION
+                    newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
                 }
@@ -598,36 +595,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 }
 
-private fun <T : Throwable> Throwable?.mentionsThrowable(
-    exceptionType: Class<T>,
-    errorMessage: String? = null,
-    atDepth: Int? = null,
-    currDepth: Int = 0
-): Boolean {
+private fun <T : Throwable> Throwable?.mentionsThrowable(exceptionType: Class<T>, errorMessage: String? = null): Boolean {
     if (this == null) {
         return false
     }
-
-    if (atDepth != null) {
-        if (currDepth > atDepth) {
-            return false
-        } else if (currDepth < atDepth) {
-            // jump fast into correct depth
-            return cause.mentionsThrowable(exceptionType, errorMessage, atDepth, currDepth + 1)
-        }
-    }
-
     val containsMessage = if (errorMessage != null) {
         message?.toLowerCase()?.contains(errorMessage) ?: false
     } else {
         true
     }
-
-    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(
-        exceptionType,
-        errorMessage,
-        atDepth,
-        currDepth + 1
-    )
+    return (exceptionType.isAssignableFrom(this::class.java) && containsMessage) || cause.mentionsThrowable(exceptionType, errorMessage)
 }
 

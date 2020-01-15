@@ -1,6 +1,8 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaException
+import net.corda.core.CordaRuntimeException
 import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
@@ -56,10 +58,15 @@ class DatabaseTransaction(
      * The exception will be thrown on the next [commit]. It is used only inside a flow state machine execution.
      */
     var firstExceptionInDatabaseTransaction: Throwable? = null
+        set(e) {
+            if (field == null) {
+                field = e
+            }
+        }
 
     fun commit() {
         firstExceptionInDatabaseTransaction?.let {
-            throw it
+            throw DatabaseTransactionException(it)
         }
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
@@ -109,3 +116,7 @@ class DatabaseTransaction(
     }
 }
 
+/**
+ * Wrapper exception, for any exception registered as [DatabaseTransaction.firstExceptionInDatabaseTransaction].
+ */
+class DatabaseTransactionException(override val cause: Throwable): CordaRuntimeException(cause.message, cause)
