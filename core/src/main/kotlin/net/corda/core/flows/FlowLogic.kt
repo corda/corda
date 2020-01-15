@@ -517,7 +517,12 @@ abstract class FlowLogic<out T> {
         return map.values.map { uncheckedCast<Any, UntrustworthyData<R>>(it) }
     }
 
-    /** Executes the specified [operation] and suspends until operation completion. */
+    /**
+     * Executes the specified [operation] and suspends until operation completion.
+     *
+     * An implementation of [FlowExternalFuture] should be provided that creates a new future that the state machine awaits completion of.
+     *
+     */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalFuture<R>): R {
         // Wraps the passed in [FlowExternalFuture] so its [CompletableFuture] can be converted into a [CordaFuture]
@@ -530,6 +535,13 @@ abstract class FlowLogic<out T> {
         return stateMachine.suspend(request, false)
     }
 
+    /**
+     * Executes the specified [operation] and suspends until operation completion.
+     *
+     * An implementation of [FlowExternalResult] should be provided that returns a result which the state machine will run on a separate
+     * thread (using the node's external operation thread pool).
+     *
+     */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalResult<R>): R {
         val flowAsyncOperation = object : AbstractFlowAsyncOperation<R>(serviceHub) {
@@ -547,6 +559,11 @@ abstract class FlowLogic<out T> {
     }
 }
 
+/**
+ * [AbstractFlowAsyncOperation] is a private class that maintains a reference to [ServiceHub] so that [FlowExternalResult] can be
+ * ran from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a flow. A [NullPointerException] is
+ * thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
+ */
 private abstract class AbstractFlowAsyncOperation<R: Any>(val serviceHub: ServiceHub) : FlowAsyncOperation<R>
 
 /**
