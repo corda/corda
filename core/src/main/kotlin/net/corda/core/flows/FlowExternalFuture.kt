@@ -22,7 +22,7 @@ interface FlowExternalFuture<R : Any> {
     /**
      * Executes a future.
      *
-     * The future created and returned from [execute] must handle their own threads. If a new thread is not spawned or taken from a thread
+     * The future created and returned from [execute] must handle its own threads. If a new thread is not spawned or taken from a thread
      * pool, then the flow worker thread will be used. This removes any benefit from using an [FlowExternalFuture].
      *
      * @param deduplicationId  If the flow restarts from a checkpoint (due to node restart, or via a visit to the flow
