@@ -4,11 +4,14 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
+import com.r3.dbfailure.workflows.DbListenerService
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
 import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.AppServiceHub
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -43,6 +46,7 @@ class VaultObserverExceptionTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
         StaffedFlowHospital.onFlowAdmitted.clear()
+        DbListenerService.onError = null
     }
 
     /**
@@ -249,10 +253,10 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * Exceptions thrown from a vault observer , are now wrapped and rethrown as a HospitalizeFlowException.
-     * The flow should get hospitalised and any potential following checkpoint should not succeed.
+     * Exceptions thrown from a vault observer ,are now wrapped and rethrown as a HospitalizeFlowException.
+     * The flow should get hospitalised and any potential following checkpoint should fail.
      * In case of a SQLException or PersistenceException, this was already "breaking" the database transaction
-     * and therefore, the next transaction commit was failing.
+     * and therefore, the next checkpoint was failing.
      */
     @Test
     fun `attempt to checkpoint, following an error thrown in vault observer which gets supressed in flow, will fail`() {
@@ -297,6 +301,33 @@ class VaultObserverExceptionTest {
             assertTrue(counterAfterFirstCheckpoint == 2)
             assertTrue(counterAfterSecondCheckpoint == 0)
         }
+    }
+
+    @Test
+    fun `vault observer failing with OnErrorFailedException gets hospitalised`() {
+        DbListenerService.onError = {
+            log.info("Error in rx.Observer#OnError! - Observer will fail with OnErrorFailedException")
+            throw it
+        }
+
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
+        driver(DriverParameters(
+            startNodesInProcess = true,
+            cordappsForAllNodes = testCordapps())) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
+                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter))
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
+        }
+
+        Assert.assertEquals(1, observation)
     }
 
 }
