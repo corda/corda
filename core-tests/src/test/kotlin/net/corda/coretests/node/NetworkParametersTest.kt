@@ -98,11 +98,11 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
-        val fakeNotaryId = Party(BOB_NAME, NullKeys.NullPublicKey)
         val alice = mockNet.createPartyNode(ALICE_NAME)
-        assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
+        val fakeNotary = mockNet.createPartyNode(BOB_NAME)
+        assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotary.info.singleIdentity())
         assertFails {
-            alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
+            alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotary.info.singleIdentity())).resultFuture.getOrThrow()
         }
     }
 
