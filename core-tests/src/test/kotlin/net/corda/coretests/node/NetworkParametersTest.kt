@@ -2,7 +2,9 @@ package net.corda.coretests.node
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.Party
 import net.corda.core.internal.getPackageOwnerOf
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -96,19 +98,25 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
-        val fakeNotary = mockNet.createNode(
-                InternalMockNodeParameters(
-                        legalName = BOB_NAME,
-                        configOverrides = {
-                            doReturn(NotaryConfig(validating = false)).whenever(it).notary
-                        }
-                )
-        )
-        val fakeNotaryId = fakeNotary.info.singleIdentity()
+        val fakeNotaryId = Party(BOB_NAME, NullKeys.NullPublicKey)
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
         assertFails {
             alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `notary not specified in network parameters won't start`() {
+        assertFails("Provided notary identity is not in whitelist") {
+            mockNet.createNode(
+                    InternalMockNodeParameters(
+                            legalName = BOB_NAME,
+                            configOverrides = {
+                                doReturn(NotaryConfig(validating = false)).whenever(it).notary
+                            }
+                    )
+            )
         }
     }
 
