@@ -1,8 +1,10 @@
 package com.r3.dbfailure.workflows
 
 import com.r3.dbfailure.contracts.DbFailureContract
+import net.corda.core.contracts.ContractState
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.Vault
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import java.security.InvalidParameterException
@@ -12,10 +14,12 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
 
     companion object {
         val log = contextLogger()
+        var onError: ((Throwable) -> Unit)? = null
     }
 
     init {
-        services.vaultService.rawUpdates.subscribe { (_, produced) ->
+        val onNext: (Vault.Update<ContractState>) -> Unit =
+            { (_, produced) ->
             produced.forEach {
                 val contractState = it.state.data as? DbFailureContract.TestState
                 @Suppress("TooGenericExceptionCaught") // this is fully intentional here, to allow twiddling with exceptions
@@ -26,9 +30,9 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             val session = services.jdbcSession()
                             val statement = session.createStatement()
                             statement.execute(
-                                    "UPDATE FAIL_TEST_STATES \n" +
-                                            "BLAAA RANDOM_VALUE = NULL\n" +
-                                            "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
+                                "UPDATE FAIL_TEST_STATES \n" +
+                                        "BLAAA RANDOM_VALUE = NULL\n" +
+                                        "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             log.info("SQL result: ${statement.resultSet}")
                         }
@@ -37,9 +41,9 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             val session = services.jdbcSession()
                             val statement = session.createStatement()
                             statement.execute(
-                                    "UPDATE FAIL_TEST_STATES \n" +
-                                            "SET RANDOM_VALUE = NULL\n" +
-                                            "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
+                                "UPDATE FAIL_TEST_STATES \n" +
+                                        "SET RANDOM_VALUE = NULL\n" +
+                                        "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             log.info("SQL result: ${statement.resultSet}")
                         }
@@ -48,9 +52,9 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             val session = services.jdbcSession()
                             val statement = session.createStatement()
                             statement.execute(
-                                    "UPDATE FAIL_TEST_STATES \n" +
-                                            "SET RANDOM_VALUE = '${contractState!!.randomValue} Updated by service'\n" +
-                                            "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
+                                "UPDATE FAIL_TEST_STATES \n" +
+                                        "SET RANDOM_VALUE = '${contractState!!.randomValue} Updated by service'\n" +
+                                        "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             log.info("SQL result: ${statement.resultSet}")
                         }
@@ -59,8 +63,8 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             val session = services.jdbcSession()
                             val statement = session.createStatement()
                             statement.execute(
-                                    "SELECT * FROM FAIL_TEST_STATES \n" +
-                                            "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
+                                "SELECT * FROM FAIL_TEST_STATES \n" +
+                                        "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             log.info("SQL result: ${statement.resultSet}")
                         }
@@ -69,8 +73,8 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             val session = services.jdbcSession()
                             val statement = session.createStatement()
                             val rs = statement.executeQuery(
-                                    "SELECT COUNT(*) FROM FAIL_TEST_STATES \n" +
-                                            "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
+                                "SELECT COUNT(*) FROM FAIL_TEST_STATES \n" +
+                                        "WHERE transaction_id = '${it.ref.txhash}' AND output_index = ${it.ref.index};"
                             )
                             val numOfRows = if (rs.next()) rs.getInt("COUNT(*)") else 0
                             log.info("Found a state with tx:ind ${it.ref.txhash}:${it.ref.index} in " +
@@ -90,7 +94,7 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                     }
                 } catch (t: Throwable) {
                     if (CreateStateFlow.getServiceExceptionHandlingTarget(contractState?.errorTarget)
-                            == CreateStateFlow.ErrorTarget.ServiceSwallowErrors) {
+                        == CreateStateFlow.ErrorTarget.ServiceSwallowErrors) {
                         log.warn("Service not letting errors escape", t)
                     } else {
                         throw t
@@ -98,5 +102,12 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                 }
             }
         }
+
+        if (onError != null) {
+            services.vaultService.rawUpdates.subscribe(onNext, onError) // onError is defined
+        } else {
+            services.vaultService.rawUpdates.subscribe(onNext)
+        }
+
     }
 }
