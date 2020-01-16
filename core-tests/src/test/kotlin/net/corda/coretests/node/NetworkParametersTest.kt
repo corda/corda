@@ -98,25 +98,19 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
+        val fakeNotary = mockNet.createNode(
+                InternalMockNodeParameters(
+                        legalName = BOB_NAME,
+                        configOverrides = {
+                            doReturn(NotaryConfig(validating = false)).whenever(it).notary
+                        }
+                )
+        )
+        val fakeNotaryId = fakeNotary.info.singleIdentity()
         val alice = mockNet.createPartyNode(ALICE_NAME)
-        val fakeNotary = mockNet.createPartyNode(BOB_NAME)
-        assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotary.info.singleIdentity())
+        assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
         assertFails {
-            alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotary.info.singleIdentity())).resultFuture.getOrThrow()
-        }
-    }
-
-    @Test
-    fun `notary not specified in network parameters won't start`() {
-        assertFails("Provided notary identity is not in whitelist") {
-            mockNet.createNode(
-                    InternalMockNodeParameters(
-                            legalName = BOB_NAME,
-                            configOverrides = {
-                                doReturn(NotaryConfig(validating = false)).whenever(it).notary
-                            }
-                    )
-            )
+            alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
         }
     }
 

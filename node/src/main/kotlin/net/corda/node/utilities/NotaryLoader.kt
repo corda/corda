@@ -20,7 +20,7 @@ class NotaryLoader(
         private val config: NotaryConfig,
         versionInfo: VersionInfo
 ) {
-    class UnknownIdentity : IllegalArgumentException("Could not establish notary identity of this node.")
+    class UnknownIdentityException : IllegalArgumentException("Could not establish notary identity of this node.")
 
     companion object {
         private val log = contextLogger()
@@ -58,14 +58,15 @@ class NotaryLoader(
     }
 
     fun loadService(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal, cordappLoader: CordappLoader): NotaryService {
+
+        val notaryKey = myNotaryIdentity?.owningKey
+                ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
+
         validateNotaryInWhitelist(myNotaryIdentity, services)
         validateNotaryType(myNotaryIdentity, services)
 
         val serviceClass = builtInServiceClass ?: scanCorDapps(cordappLoader)
         log.info("Starting notary service: $serviceClass")
-
-        val notaryKey = myNotaryIdentity?.owningKey
-                ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
 
         /** Some notary implementations only work with Java serialization. */
         maybeInstallSerializationFilter(serviceClass)
@@ -82,19 +83,21 @@ class NotaryLoader(
     }
 
     /** Ensures the notary is in the network map whitelist on startup.*/
-    private fun validateNotaryInWhitelist(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal) {
-        val ourParty = myNotaryIdentity?.party ?: throw UnknownIdentity()
-        require(services.networkMapCache.isNotary(ourParty)) { "Provided notary identity is not in whitelist" }
+    private fun validateNotaryInWhitelist(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
+        val ourParty = myNotaryIdentity.party
+        if (!services.networkMapCache.isNotary(ourParty)) {
+            log.warn("Provided notary identity is not in whitelist")
+        }
     }
 
     /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */
-    private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal) {
+    private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
         var configuredAsValidatingNotary = services.configuration.notary?.validating
-        val notaryParty = myNotaryIdentity?.party ?: throw UnknownIdentity()
+        val notaryParty = myNotaryIdentity.party
         var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
-            throw IllegalStateException("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. " 
+            log.warn("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. "
             + "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")    
         }
     }
