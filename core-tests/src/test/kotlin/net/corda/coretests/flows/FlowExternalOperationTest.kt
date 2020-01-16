@@ -11,12 +11,12 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.CustomTableEntity
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.DirectlyAccessedServiceHubException
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.ExternalResult
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.FlowWithExternalProcess
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.FutureService
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.MyCordaException
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.CustomTableEntity
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.DirectlyAccessedServiceHubException
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.ExternalOperation
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FlowWithExternalProcess
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FutureService
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.MyCordaException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -33,14 +33,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class FlowExternalResultTest : AbstractFlowExternalResultTest() {
+class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test
-    fun `external result`() {
+    fun `external operation`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowWithExternalResult, bob.nodeInfo.singleIdentity())
+            alice.rpc.startFlow(::FlowWithExternalOperation, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -49,13 +49,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external result that checks deduplicationId is not rerun when flow is retried`() {
+    fun `external operation that checks deduplicationId is not rerun when flow is retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultWithDeduplication,
+                    ::FlowWithExternalOperationWithDeduplication,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -66,13 +66,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external result propagates exception to calling flow`() {
+    fun `external operation propagates exception to calling flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultPropagatesException,
+                    ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     MyCordaException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -84,11 +84,11 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external result exception can be caught in flow`() {
+    fun `external operation exception can be caught in flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowWithExternalResultThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
+            alice.rpc.startFlow(::FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -97,13 +97,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external result with exception that hospital keeps for observation does not fail`() {
+    fun `external operation with exception that hospital keeps for observation does not fail`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultPropagatesException,
+                    ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     HospitalizeFlowException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -115,13 +115,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external result with exception that hospital discharges is retried and runs the external operation again`() {
+    fun `external operation with exception that hospital discharges is retried and runs the external operation again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultPropagatesException,
+                    ::FlowWithExternalOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     SQLTransientConnectionException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -133,13 +133,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that passes serviceHub into process can be retried`() {
+    fun `external async operation that passes serviceHub into process can be retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultThatPassesInServiceHubCanRetry,
+                    ::FlowWithExternalOperationThatPassesInServiceHubCanRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -150,13 +150,13 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that accesses serviceHub from flow directly will fail when retried`() {
+    fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalResultThatDirectlyAccessesServiceHubFailsRetry,
+                    ::FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -175,7 +175,7 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
             )
         ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val success = alice.rpc.startFlow(::FlowWithWithExternalResultThatQueriesVault)
+            val success = alice.rpc.startFlow(::FlowWithWithExternalOperationThatQueriesVault)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
         }
@@ -185,7 +185,7 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     fun `data can be persisted to node database via entity manager`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val success = alice.rpc.startFlow(::FlowWithExternalResultThatPersistsViaEntityManager)
+            val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaEntityManager)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
         }
@@ -195,7 +195,7 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     fun `data can be persisted to node database via jdbc session`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val success = alice.rpc.startFlow(::FlowWithExternalResultThatPersistsViaJdbcSession)
+            val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaJdbcSession)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
         }
@@ -205,7 +205,7 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     fun `data can be persisted to node database via servicehub database transaction`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val success = alice.rpc.startFlow(::FlowWithExternalResultThatPersistsViaDatabaseTransaction)
+            val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaDatabaseTransaction)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
         }
@@ -215,19 +215,19 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
     fun `data can be persisted to node database in external operation and read from another process once finished`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val success = alice.rpc.startFlow(::FlowWithExternalResultThatPersistsToDatabaseAndReadsFromExternalResult)
+            val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation)
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(success)
         }
     }
 
     @Test
-    fun `external result can be retried when an error occurs inside of database transaction`() {
+    fun `external operation can be retried when an error occurs inside of database transaction`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val success = alice.rpc.startFlow(
-                ::FlowWithExternalResultThatErrorsInsideOfDatabaseTransaction,
+                ::FlowWithExternalOperationThatErrorsInsideOfDatabaseTransaction,
                 bob.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(20.seconds)
             assertTrue(success as Boolean)
@@ -239,29 +239,29 @@ class FlowExternalResultTest : AbstractFlowExternalResultTest() {
 }
 
 @StartableByRPC
-class FlowWithExternalResult(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalOperation(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
-    override fun testCode(): Any = await(ExternalResult(serviceHub) { _, _ -> "please return my message" })
+    override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> "please return my message" })
 }
 
 @StartableByRPC
-class FlowWithExternalResultWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any {
-        return await(ExternalResult(serviceHub) { serviceHub, deduplicationId ->
+        return await(ExternalOperation(serviceHub) { serviceHub, deduplicationId ->
             serviceHub.cordaService(FutureService::class.java).createExceptionWithDeduplication(deduplicationId)
         })
     }
 }
 
 @StartableByRPC
-class FlowWithExternalResultPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
+class FlowWithExternalOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
     FlowWithExternalProcess(party) {
 
     @Suspendable
-    override fun testCode(): Any = await(ExternalResult(serviceHub) { _, _ -> throw createException() })
+    override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> throw createException() })
 
     private fun createException() = when (exceptionType) {
         HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
@@ -271,12 +271,12 @@ class FlowWithExternalResultPropagatesException<T>(party: Party, private val exc
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatThrowsExceptionAndCaughtInFlow(party: Party) :
+class FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
     FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any = try {
-        await(ExternalResult(serviceHub) { _, _ ->
+        await(ExternalOperation(serviceHub) { _, _ ->
             throw IllegalStateException("threw exception in background process")
         })
     } catch (e: IllegalStateException) {
@@ -286,23 +286,23 @@ class FlowWithExternalResultThatThrowsExceptionAndCaughtInFlow(party: Party) :
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalResult(serviceHub) { serviceHub, _ ->
+        await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
         })
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
     @Suppress("TooGenericExceptionCaught")
     @Suspendable
     override fun testCode(): Any {
         try {
-            await(ExternalResult(serviceHub) { _, _ ->
+            await(ExternalOperation(serviceHub) { _, _ ->
                 serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
             })
         } catch (e: NullPointerException) {
@@ -312,7 +312,7 @@ class FlowWithExternalResultThatDirectlyAccessesServiceHubFailsRetry(party: Part
 }
 
 @StartableByRPC
-class FlowWithWithExternalResultThatQueriesVault : FlowLogic<Boolean>() {
+class FlowWithWithExternalOperationThatQueriesVault : FlowLogic<Boolean>() {
 
     @Suspendable
     override fun call(): Boolean {
@@ -323,13 +323,13 @@ class FlowWithWithExternalResultThatQueriesVault : FlowLogic<Boolean>() {
         }
         val stx = serviceHub.signInitialTransaction(tx)
         serviceHub.recordTransactions(stx)
-        return await(ExternalResult(serviceHub) { serviceHub, _ ->
+        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.vaultService.queryBy<DummyState>().states.single().state.data == state
         })
     }
 }
 
-abstract class FlowWithExternalResultThatPersistsToDatabase : FlowLogic<Boolean>() {
+abstract class FlowWithExternalOperationThatPersistsToDatabase : FlowLogic<Boolean>() {
 
     @Suspendable
     override fun call(): Boolean {
@@ -344,14 +344,14 @@ abstract class FlowWithExternalResultThatPersistsToDatabase : FlowLogic<Boolean>
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatPersistsViaEntityManager : FlowWithExternalResultThatPersistsToDatabase() {
+class FlowWithExternalOperationThatPersistsViaEntityManager : FlowWithExternalOperationThatPersistsToDatabase() {
 
     @Suspendable
     override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
         val entityOne = CustomTableEntity("Darth Vader", "I find your lack of faith disturbing.")
         val entityTwo = CustomTableEntity("Obi-Wan Kenobi", "The Force will be with you. Always.")
         val entityThree = CustomTableEntity("Admiral Ackbar", "It’s a trap!")
-        await(ExternalResult(serviceHub) { serviceHub, _ ->
+        await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityTwo)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityThree)
@@ -361,14 +361,14 @@ class FlowWithExternalResultThatPersistsViaEntityManager : FlowWithExternalResul
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatPersistsViaJdbcSession : FlowWithExternalResultThatPersistsToDatabase() {
+class FlowWithExternalOperationThatPersistsViaJdbcSession : FlowWithExternalOperationThatPersistsToDatabase() {
 
     @Suspendable
     override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
         val entityOne = CustomTableEntity("Tony Stark", "I am Iron Man.")
         val entityTwo = CustomTableEntity("Captain America", "I can do this all day.")
         val entityThree = CustomTableEntity("Hulk", "Puny god.")
-        await(ExternalResult(serviceHub) { serviceHub, _ ->
+        await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityOne)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityThree)
@@ -378,14 +378,14 @@ class FlowWithExternalResultThatPersistsViaJdbcSession : FlowWithExternalResultT
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatPersistsViaDatabaseTransaction : FlowWithExternalResultThatPersistsToDatabase() {
+class FlowWithExternalOperationThatPersistsViaDatabaseTransaction : FlowWithExternalOperationThatPersistsToDatabase() {
 
     @Suspendable
     override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
         val entityOne = CustomTableEntity("Groot", "We are Groot.")
         val entityTwo = CustomTableEntity("Drax", "Nothing goes over my head. My reflexes are too fast. I would catch it.")
         val entityThree = CustomTableEntity("Doctor Strange", "Dormammu, I’ve come to bargain.")
-        await(ExternalResult(serviceHub) { serviceHub, _ ->
+        await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityOne)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityTwo)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
@@ -395,20 +395,20 @@ class FlowWithExternalResultThatPersistsViaDatabaseTransaction : FlowWithExterna
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatPersistsToDatabaseAndReadsFromExternalResult : FlowLogic<Boolean>() {
+class FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation : FlowLogic<Boolean>() {
 
     @Suspendable
     override fun call(): Boolean {
         val entityOne = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
         val entityTwo = CustomTableEntity("Yoda", "My ally is the Force, and a powerful ally it is.")
         val entityThree = CustomTableEntity("Han Solo", "Never tell me the odds!")
-        await(ExternalResult(serviceHub) { serviceHub, _ ->
+        await(ExternalOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
             serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
         })
-        return await(ExternalResult(serviceHub) { serviceHub, _ ->
-            return@ExternalResult serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
+        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
+            return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
                     serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityTwo.name) == entityTwo &&
                     serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityThree.name) == entityThree
         })
@@ -416,7 +416,7 @@ class FlowWithExternalResultThatPersistsToDatabaseAndReadsFromExternalResult : F
 }
 
 @StartableByRPC
-class FlowWithExternalResultThatErrorsInsideOfDatabaseTransaction(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalOperationThatErrorsInsideOfDatabaseTransaction(party: Party) : FlowWithExternalProcess(party) {
 
     private companion object {
         var flag = false
@@ -424,14 +424,14 @@ class FlowWithExternalResultThatErrorsInsideOfDatabaseTransaction(party: Party) 
 
     @Suspendable
     override fun testCode(): Boolean {
-        return await(ExternalResult(serviceHub) { serviceHub, _ ->
+        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
             if (!flag) {
                 flag = true
                 serviceHub.cordaService(FutureService::class.java).throwExceptionInsideOfDatabaseTransaction()
             } else {
                 val entity = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
                 serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entity)
-                return@ExternalResult serviceHub.cordaService(FutureService::class.java).readFromDatabase(entity.name) != null
+                return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entity.name) != null
             }
         })
     }

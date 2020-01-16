@@ -1,8 +1,8 @@
 package net.corda.coretests.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.flows.FlowExternalFuture;
-import net.corda.core.flows.FlowExternalResult;
+import net.corda.core.flows.FlowExternalAsyncOperation;
+import net.corda.core.flows.FlowExternalOperation;
 import net.corda.core.flows.StartableByRPC;
 import net.corda.core.identity.Party;
 import net.corda.core.utilities.KotlinUtilsKt;
@@ -25,10 +25,10 @@ import java.util.function.BiFunction;
 import static net.corda.testing.driver.Driver.driver;
 import static org.junit.Assert.assertEquals;
 
-public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest {
+public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperationTest {
 
     @Test
-    public void awaitCalledFromJava() {
+    public void awaitFlowExternalOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
@@ -39,14 +39,14 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithExternalResultInJava.class,
+                    FlowWithExternalOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
         });
     }
 
     @Test
-    public void awaitFutureCalledFromJava() {
+    public void awaitFlowExternalAsyncOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
@@ -57,14 +57,14 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithExternalFutureInJava.class,
+                    FlowWithExternalAsyncOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
         });
     }
 
     @Test
-    public void awaitCalledFromJavaCanBeRetried() {
+    public void awaitFlowExternalOperationInJavaCanBeRetried() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
@@ -75,7 +75,7 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
                     Duration.of(20, ChronoUnit.SECONDS)
             );
             KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    FlowWithExternalResultThatGetsRetriedInJava.class,
+                    FlowWithExternalOperationThatGetsRetriedInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
             ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
 
@@ -90,11 +90,11 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
     }
 
     @StartableByRPC
-    public static class FlowWithExternalResultInJava extends FlowWithExternalProcess {
+    public static class FlowWithExternalOperationInJava extends FlowWithExternalProcess {
 
-        private static Logger log = LoggerFactory.getLogger(FlowWithExternalResultInJava.class);
+        private static Logger log = LoggerFactory.getLogger(FlowWithExternalOperationInJava.class);
 
-        public FlowWithExternalResultInJava(Party party) {
+        public FlowWithExternalOperationInJava(Party party) {
             super(party);
         }
 
@@ -103,7 +103,7 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
         @Suspendable
         public Object testCode() {
             return await(
-                    new ExternalResult<>(
+                    new ExternalOperation<>(
                             getServiceHub().cordaService(FutureService.class),
                             (BiFunction<FutureService, String, Object> & Serializable) (futureService, deduplicationId) -> {
                                 log.info("Inside of background process -  " + deduplicationId);
@@ -115,9 +115,9 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
     }
 
     @StartableByRPC
-    public static class FlowWithExternalFutureInJava extends FlowWithExternalProcess {
+    public static class FlowWithExternalAsyncOperationInJava extends FlowWithExternalProcess {
 
-        public FlowWithExternalFutureInJava(Party party) {
+        public FlowWithExternalAsyncOperationInJava(Party party) {
             super(party);
         }
 
@@ -125,7 +125,7 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
         @Override
         @Suspendable
         public Object testCode() {
-            return await(new ExternalFuture<>(
+            return await(new ExternalAsyncOperation<>(
                     getServiceHub().cordaService(FutureService.class),
                     (BiFunction<FutureService, String, CompletableFuture<Object>> & Serializable) (futureService, deduplicationId) ->
                             futureService.createFuture()
@@ -134,11 +134,11 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
     }
 
     @StartableByRPC
-    public static class FlowWithExternalResultThatGetsRetriedInJava extends FlowWithExternalProcess {
+    public static class FlowWithExternalOperationThatGetsRetriedInJava extends FlowWithExternalProcess {
 
         private static boolean flag = false;
 
-        public FlowWithExternalResultThatGetsRetriedInJava(Party party) {
+        public FlowWithExternalOperationThatGetsRetriedInJava(Party party) {
             super(party);
         }
 
@@ -147,7 +147,7 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
         @Suspendable
         public Object testCode() {
             return await(
-                    new ExternalResult<>(
+                    new ExternalOperation<>(
                             getServiceHub().cordaService(FutureService.class),
                             (BiFunction<FutureService, String, Object> & Serializable) (futureService, deduplicationId) -> {
                                 if (!flag) {
@@ -162,12 +162,12 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
         }
     }
 
-    public static class ExternalFuture<R> implements FlowExternalFuture<R> {
+    public static class ExternalAsyncOperation<R> implements FlowExternalAsyncOperation<R> {
 
         private FutureService futureService;
         private BiFunction<FutureService, String, CompletableFuture<R>> operation;
 
-        public ExternalFuture(FutureService futureService, BiFunction<FutureService, String, CompletableFuture<R>> operation) {
+        public ExternalAsyncOperation(FutureService futureService, BiFunction<FutureService, String, CompletableFuture<R>> operation) {
             this.futureService = futureService;
             this.operation = operation;
         }
@@ -179,12 +179,12 @@ public class FlowExternalResultInJavaTest extends AbstractFlowExternalResultTest
         }
     }
 
-    public static class ExternalResult<R> implements FlowExternalResult<R> {
+    public static class ExternalOperation<R> implements FlowExternalOperation<R> {
 
         private FutureService futureService;
         private BiFunction<FutureService, String, R> operation;
 
-        public ExternalResult(FutureService futureService, BiFunction<FutureService, String, R> operation) {
+        public ExternalOperation(FutureService futureService, BiFunction<FutureService, String, R> operation) {
             this.futureService = futureService;
             this.operation = operation;
         }

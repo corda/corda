@@ -7,11 +7,11 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.DirectlyAccessedServiceHubException
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.ExternalFuture
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.FlowWithExternalProcess
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.FutureService
-import net.corda.coretests.flows.AbstractFlowExternalResultTest.MyCordaException
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.DirectlyAccessedServiceHubException
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.ExternalAsyncOperation
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FlowWithExternalProcess
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.FutureService
+import net.corda.coretests.flows.AbstractFlowExternalOperationTest.MyCordaException
 import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -26,14 +26,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
+class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test
-    fun `external future`() {
+    fun `external async operation`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowWithExternalFuture, bob.nodeInfo.singleIdentity())
+            alice.rpc.startFlow(::FlowWithExternalAsyncOperation, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -42,13 +42,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that checks deduplicationId is not rerun when flow is retried`() {
+    fun `external async operation that checks deduplicationId is not rerun when flow is retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFutureWithDeduplication,
+                    ::FlowWithExternalAsyncOperationWithDeduplication,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -59,13 +59,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future propagates exception to calling flow`() {
+    fun `external async operation propagates exception to calling flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFuturePropagatesException,
+                    ::FlowWithExternalAsyncOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     MyCordaException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -77,11 +77,11 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future exception can be caught in flow`() {
+    fun `external async operation exception can be caught in flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val result = alice.rpc.startFlow(::FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
+            val result = alice.rpc.startFlow(::FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(20.seconds)
             assertTrue(result as Boolean)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
@@ -91,13 +91,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future with exception that hospital keeps for observation does not fail`() {
+    fun `external async operation with exception that hospital keeps for observation does not fail`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFuturePropagatesException,
+                    ::FlowWithExternalAsyncOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     HospitalizeFlowException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -109,13 +109,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future with exception that hospital discharges is retried and runs the future again`() {
+    fun `external async operation with exception that hospital discharges is retried and runs the future again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFuturePropagatesException,
+                    ::FlowWithExternalAsyncOperationPropagatesException,
                     bob.nodeInfo.singleIdentity(),
                     SQLTransientConnectionException::class.java
                 ).returnValue.getOrThrow(20.seconds)
@@ -127,12 +127,12 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that throws exception rather than completing future exceptionally fails with internal exception`() {
+    fun `external async operation that throws exception rather than completing future exceptionally fails with internal exception`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<StateTransitionException> {
-                alice.rpc.startFlow(::FlowWithExternalFutureUnhandledException, bob.nodeInfo.singleIdentity())
+                alice.rpc.startFlow(::FlowWithExternalAsyncOperationUnhandledException, bob.nodeInfo.singleIdentity())
                     .returnValue.getOrThrow(20.seconds)
             }
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
@@ -142,13 +142,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that passes serviceHub into process can be retried`() {
+    fun `external async operation that passes serviceHub into process can be retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFutureThatPassesInServiceHubCanRetry,
+                    ::FlowWithExternalAsyncOperationThatPassesInServiceHubCanRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -159,13 +159,13 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
     }
 
     @Test
-    fun `external future that accesses serviceHub from flow directly will fail when retried`() {
+    fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {
                 alice.rpc.startFlow(
-                    ::FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry,
+                    ::FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry,
                     bob.nodeInfo.singleIdentity()
                 ).returnValue.getOrThrow(20.seconds)
             }
@@ -189,22 +189,22 @@ class FlowExternalFutureTest : AbstractFlowExternalResultTest() {
 }
 
 @StartableByRPC
-class FlowWithExternalFuture(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalAsyncOperation(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalFuture(serviceHub) { _, _ ->
+        await(ExternalAsyncOperation(serviceHub) { _, _ ->
             serviceHub.cordaService(FutureService::class.java).createFuture()
         })
 }
 
 @StartableByRPC
-class FlowWithExternalFuturePropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
+class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
     FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalFuture(serviceHub) { _, _ ->
+        await(ExternalAsyncOperation(serviceHub) { _, _ ->
             CompletableFuture<Any>().apply {
                 completeExceptionally(createException())
             }
@@ -218,14 +218,14 @@ class FlowWithExternalFuturePropagatesException<T>(party: Party, private val exc
 }
 
 @StartableByRPC
-class FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow(party: Party) :
+class FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
     FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any = try {
-        await(ExternalFuture(serviceHub) { _, _ ->
+        await(ExternalAsyncOperation(serviceHub) { _, _ ->
             CompletableFuture<Any>().apply {
-                completeExceptionally(IllegalStateException("threw exception in external future"))
+                completeExceptionally(IllegalStateException("threw exception in external async operation"))
             }
         })
     } catch (e: IllegalStateException) {
@@ -235,30 +235,30 @@ class FlowWithExternalFutureThatThrowsExceptionAndCaughtInFlow(party: Party) :
 }
 
 @StartableByRPC
-class FlowWithExternalFutureUnhandledException(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalAsyncOperationUnhandledException(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalFuture(serviceHub) { _, _ -> throw MyCordaException("threw exception in external future") })
+        await(ExternalAsyncOperation(serviceHub) { _, _ -> throw MyCordaException("threw exception in external async operation") })
 }
 
 @StartableByRPC
-class FlowWithExternalFutureThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalAsyncOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalFuture(serviceHub) { serviceHub, _ ->
+        await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
         })
 }
 
 @StartableByRPC
-class FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
 
     @Suppress("TooGenericExceptionCaught")
     @Suspendable
     override fun testCode(): Any {
-        return await(ExternalFuture(serviceHub) { _, _ ->
+        return await(ExternalAsyncOperation(serviceHub) { _, _ ->
             try {
                 serviceHub.cordaService(FutureService::class.java).setHospitalHandledException()
             } catch (e: NullPointerException) {
@@ -271,11 +271,11 @@ class FlowWithExternalFutureThatDirectlyAccessesServiceHubFailsRetry(party: Part
 }
 
 @StartableByRPC
-class FlowWithExternalFutureWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
+class FlowWithExternalAsyncOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
 
     @Suspendable
     override fun testCode(): Any {
-        return await(ExternalFuture(serviceHub) { serviceHub, deduplicationId ->
+        return await(ExternalAsyncOperation(serviceHub) { serviceHub, deduplicationId ->
             serviceHub.cordaService(FutureService::class.java).createExceptionFutureWithDeduplication(deduplicationId)
         })
     }
@@ -286,7 +286,7 @@ class FlowThatStartsMultipleFuturesAndJoins(party: Party) : FlowWithExternalProc
 
     @Suspendable
     override fun testCode(): Any =
-        await(ExternalFuture(serviceHub) { serviceHub, _ ->
+        await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
             serviceHub.cordaService(FutureService::class.java).startMultipleFuturesAndJoin()
         }.also { log.info("Result - $it") })
 }

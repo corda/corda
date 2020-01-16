@@ -14,14 +14,14 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class FlowExternalResultStartFlowTest : AbstractFlowExternalResultTest() {
+class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
     @Test
     fun `starting a flow inside of a flow that starts a future will succeed`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            alice.rpc.startFlow(::FlowThatStartsAnotherFlowInABackgroundProcess, bob.nodeInfo.singleIdentity())
+            alice.rpc.startFlow(::FlowThatStartsAnotherFlowInAnExternalOperation, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(40.seconds)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -43,12 +43,12 @@ class FlowExternalResultStartFlowTest : AbstractFlowExternalResultTest() {
     }
 
     @StartableByRPC
-    class FlowThatStartsAnotherFlowInABackgroundProcess(party: Party) : FlowWithExternalProcess(party) {
+    class FlowThatStartsAnotherFlowInAnExternalOperation(party: Party) : FlowWithExternalProcess(party) {
 
         @Suspendable
         override fun testCode(): Any {
             return await(
-                ExternalFuture(serviceHub) { serviceHub, _ ->
+                ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
                     serviceHub.cordaService(FutureService::class.java).startFlow(party)
                 }.also { log.info("Result - $it") }
             )
@@ -61,7 +61,7 @@ class FlowExternalResultStartFlowTest : AbstractFlowExternalResultTest() {
         @Suspendable
         override fun testCode(): Any {
             return await(
-                ExternalFuture(serviceHub) { serviceHub, _ ->
+                ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
                     serviceHub.cordaService(FutureService::class.java).startFlows(party)
                 }.also { log.info("Result - $it") }
             )

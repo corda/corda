@@ -2,8 +2,8 @@ package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaException
-import net.corda.core.flows.FlowExternalFuture
-import net.corda.core.flows.FlowExternalResult
+import net.corda.core.flows.FlowExternalAsyncOperation
+import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -30,7 +30,7 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
 
-abstract class AbstractFlowExternalResultTest {
+abstract class AbstractFlowExternalOperationTest {
 
     @StartableByRPC
     @InitiatingFlow
@@ -54,14 +54,14 @@ abstract class AbstractFlowExternalResultTest {
         }
 
         @Suspendable
-        open fun testCode(): Any = await(ExternalResult(serviceHub) { _, deduplicationId ->
+        open fun testCode(): Any = await(ExternalOperation(serviceHub) { _, deduplicationId ->
             log.info("Inside of background process - $deduplicationId")
             "Background process completed - ($deduplicationId)"
         })
     }
 
     @InitiatedBy(FlowWithExternalProcess::class)
-    class FlowWithBackgroundProcessResponder(val session: FlowSession) : FlowLogic<Unit>() {
+    class FlowWithExternalOperationResponder(val session: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             session.receive<String>()
@@ -212,19 +212,19 @@ abstract class AbstractFlowExternalResultTest {
 
     class DuplicatedProcessException(private val deduplicationId: String) : CordaException("Duplicated process: $deduplicationId")
 
-    class ExternalResult<R : Any>(
+    class ExternalOperation<R : Any>(
         private val serviceHub: ServiceHub,
         private val operation: (serviceHub: ServiceHub, deduplicationId: String) -> R
-    ) : FlowExternalResult<R> {
+    ) : FlowExternalOperation<R> {
         override fun execute(deduplicationId: String): R {
             return operation(serviceHub, deduplicationId)
         }
     }
 
-    class ExternalFuture<R : Any>(
+    class ExternalAsyncOperation<R : Any>(
         private val serviceHub: ServiceHub,
         private val function: (serviceHub: ServiceHub, deduplicationId: String) -> CompletableFuture<R>
-    ) : FlowExternalFuture<R> {
+    ) : FlowExternalAsyncOperation<R> {
         override fun execute(deduplicationId: String): CompletableFuture<R> {
             return function(serviceHub, deduplicationId)
         }
