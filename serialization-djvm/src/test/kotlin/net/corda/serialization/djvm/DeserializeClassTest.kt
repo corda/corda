@@ -27,7 +27,7 @@ class DeserializeClassTest : TestBase(KOTLIN) {
             val sandboxInstant = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showClass = classLoader.createTaskFor(taskFactory, ShowClass::class.java)
+            val showClass = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowClass::class.java)
             val result = showClass.apply(sandboxInstant) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.${myClass.name}", result.toString())

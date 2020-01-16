@@ -46,7 +46,7 @@ class DeserializeCustomGenericDataTest: TestBase(KOTLIN) {
             val sandboxComplex = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showComplex = classLoader.createTaskFor(taskFactory, ShowComplexData::class.java)
+            val showComplex = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowComplexData::class.java)
             val result = showComplex.apply(sandboxComplex) ?: fail("Result cannot be null")
             assertEquals(SANDBOX_STRING, result::class.java.name)
             assertEquals(ShowComplexData().apply(complex), result.toString())

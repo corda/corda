@@ -11,7 +11,7 @@ import java.util.function.Function
 
 class ComponentFactory(
     private val classLoader: SandboxClassLoader,
-    private val taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    private val taskFactory: Function<Class<out Function<*,*>>, out Function<in Any?, out Any?>>,
     private val sandboxBasicInput: Function<in Any?, out Any?>,
     private val serializer: Serializer,
     private val componentGroups: List<ComponentGroup>
@@ -22,7 +22,7 @@ class ComponentFactory(
     ): Any? {
         val components = (componentGroups.firstOrNull(groupType::isSameType) ?: return null).components
         val componentBytes = Array(components.size) { idx -> components[idx].bytes }
-        return classLoader.createTaskFor(taskFactory, ComponentBuilder::class.java).apply(arrayOf(
+        return taskFactory.apply(ComponentBuilder::class.java).apply(arrayOf(
             classLoader.createForImport(serializer.deserializerFor(clazz)),
             sandboxBasicInput.apply(groupType),
             componentBytes

@@ -16,11 +16,11 @@ import java.util.function.Function
 
 class SandboxUnsignedShortSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>
 ) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(UnsignedShort::class.java)) {
     @Suppress("unchecked_cast")
     private val transformer: Function<ShortArray, out Any?>
-        = classLoader.createTaskFor(taskFactory, UnsignedShortDeserializer::class.java) as Function<ShortArray, out Any?>
+        = taskFactory.apply(UnsignedShortDeserializer::class.java) as Function<ShortArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

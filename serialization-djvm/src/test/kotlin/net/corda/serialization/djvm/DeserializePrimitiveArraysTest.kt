@@ -24,7 +24,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showCharArray = classLoader.createTaskFor(taskFactory, ShowCharArray::class.java)
+            val showCharArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowCharArray::class.java)
             val result = showCharArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals(SANDBOX_STRING, result::class.java.name)
@@ -49,7 +49,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showIntegerArray = classLoader.createTaskFor(taskFactory, ShowIntegerArray::class.java)
+            val showIntegerArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowIntegerArray::class.java)
             val result = showIntegerArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Integer", result::class.java.name)
@@ -74,7 +74,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showLongArray = classLoader.createTaskFor(taskFactory, ShowLongArray::class.java)
+            val showLongArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowLongArray::class.java)
             val result = showLongArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Long", result::class.java.name)
@@ -99,7 +99,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showShortArray = classLoader.createTaskFor(taskFactory, ShowShortArray::class.java)
+            val showShortArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowShortArray::class.java)
             val result = showShortArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Integer", result::class.java.name)
@@ -124,7 +124,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showByteArray = classLoader.createTaskFor(taskFactory, ShowByteArray::class.java)
+            val showByteArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowByteArray::class.java)
             val result = showByteArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Integer", result::class.java.name)
@@ -149,7 +149,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showBooleanArray = classLoader.createTaskFor(taskFactory, ShowBooleanArray::class.java)
+            val showBooleanArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowBooleanArray::class.java)
             val result = showBooleanArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Boolean", result::class.java.name)
@@ -174,7 +174,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showDoubleArray = classLoader.createTaskFor(taskFactory, ShowDoubleArray::class.java)
+            val showDoubleArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowDoubleArray::class.java)
             val result = showDoubleArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Double", result::class.java.name)
@@ -199,7 +199,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
             val sandboxArray = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showFloatArray = classLoader.createTaskFor(taskFactory, ShowFloatArray::class.java)
+            val showFloatArray = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowFloatArray::class.java)
             val result = showFloatArray.apply(sandboxArray) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Float", result::class.java.name)

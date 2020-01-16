@@ -16,11 +16,11 @@ import java.util.function.Function
 
 class SandboxDecimal64Serializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>
 ) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(Decimal64::class.java)) {
     @Suppress("unchecked_cast")
     private val transformer: Function<LongArray, out Any?>
-            = classLoader.createTaskFor(taskFactory, Decimal64Deserializer::class.java) as Function<LongArray, out Any?>
+            = taskFactory.apply(Decimal64Deserializer::class.java) as Function<LongArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

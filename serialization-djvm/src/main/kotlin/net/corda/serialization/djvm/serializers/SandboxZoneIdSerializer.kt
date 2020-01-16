@@ -7,19 +7,18 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.ZoneIdSerializer.ZoneIdProxy
 import java.time.ZoneId
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxZoneIdSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(ZoneId::class.java),
     proxyClass = classLoader.toSandboxAnyClass(ZoneIdProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, ZoneIdDeserializer::class.java)
+    private val task = taskFactory.apply(ZoneIdDeserializer::class.java)
 
     override val revealSubclassesInSchema: Boolean = true
 

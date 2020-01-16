@@ -10,19 +10,18 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxZonedDateTimeSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(ZonedDateTime::class.java),
     proxyClass = classLoader.toSandboxAnyClass(ZonedDateTimeProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, ZonedDateTimeDeserializer::class.java)
+    private val task = taskFactory.apply(ZonedDateTimeDeserializer::class.java)
     private val creator: Function<in Any?, out Any?>
 
     init {

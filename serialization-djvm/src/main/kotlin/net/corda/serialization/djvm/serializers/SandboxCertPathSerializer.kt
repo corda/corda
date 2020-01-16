@@ -11,14 +11,14 @@ import java.util.function.Function
 
 class SandboxCertPathSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(CertPath::class.java),
     proxyClass = classLoader.toSandboxAnyClass(CertPathProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, CertPathDeserializer::class.java)
+    private val task = taskFactory.apply(CertPathDeserializer::class.java)
 
     override val deserializationAliases = aliasFor(CertPath::class.java)
 

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 
 class LocalSerialization(
-    private val customSerializers: Set<SerializationCustomSerializer<*,*>>,
+    private val customSerializers: Set<SerializationCustomSerializer<*, *>>,
     private val serializationWhitelists: Set<SerializationWhitelist>
 ) : BeforeEachCallback, AfterEachCallback {
     private companion object {

@@ -53,7 +53,7 @@ class SafeDeserialisationTest : TestBase(KOTLIN) {
             val sandboxData = evilData.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showInnocentData = classLoader.createTaskFor(taskFactory, ShowInnocentData::class.java)
+            val showInnocentData = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowInnocentData::class.java)
             val result = showInnocentData.apply(sandboxData) ?: fail("Result cannot be null")
 
             // Check that we have deserialised the data without instantiating the Evil class.

@@ -7,19 +7,18 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.YearMonthSerializer.YearMonthProxy
 import java.time.YearMonth
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxYearMonthSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(YearMonth::class.java),
     proxyClass = classLoader.toSandboxAnyClass(YearMonthProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, YearMonthDeserializer::class.java)
+    private val task = taskFactory.apply(YearMonthDeserializer::class.java)
 
     override val deserializationAliases = aliasFor(YearMonth::class.java)
 

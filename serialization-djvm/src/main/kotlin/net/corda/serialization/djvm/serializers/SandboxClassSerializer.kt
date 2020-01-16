@@ -12,14 +12,14 @@ import java.util.function.Function
 @Suppress("unchecked_cast")
 class SandboxClassSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = Class::class.java as Class<Any>,
     proxyClass = classLoader.toSandboxAnyClass(ClassProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, ClassDeserializer::class.java)
+    private val task = taskFactory.apply(ClassDeserializer::class.java)
     private val nameOf: Function<Any, String>
 
     init {

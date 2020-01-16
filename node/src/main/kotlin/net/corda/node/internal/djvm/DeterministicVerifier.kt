@@ -63,7 +63,7 @@ class DeterministicVerifier(
                 externalCaching = false
             }
 
-            val taskFactory = classLoader.createRawTaskFactory()
+            val taskFactory = classLoader.createRawTaskFactory().compose(classLoader.createSandboxFunction())
             val sandboxBasicInput = classLoader.createBasicInput()
 
             /**
@@ -92,11 +92,11 @@ class DeterministicVerifier(
                 val privacySaltData = ltx.privacySalt.serialize()
                 val networkingParametersData = ltx.networkParameters?.serialize()
 
-                val createSandboxTx = classLoader.createTaskFor(taskFactory, LtxFactory::class.java)
+                val createSandboxTx = taskFactory.apply(LtxFactory::class.java)
                 createSandboxTx.apply(arrayOf(
                     serializer.deserialize(serializedInputs),
                     componentFactory.toSandbox(OUTPUTS_GROUP, TransactionState::class.java),
-                    CommandFactory(classLoader, taskFactory).toSandbox(
+                    CommandFactory(taskFactory).toSandbox(
                         componentFactory.toSandbox(SIGNERS_GROUP, List::class.java),
                         componentFactory.toSandbox(COMMANDS_GROUP, CommandData::class.java),
                         componentFactory.calculateLeafIndicesFor(COMMANDS_GROUP)
@@ -111,7 +111,7 @@ class DeterministicVerifier(
                 ))
             }
 
-            val verifier = classLoader.createTaskFor(taskFactory, ContractVerifier::class.java)
+            val verifier = taskFactory.apply(ContractVerifier::class.java)
 
             // Now execute the contract verifier task within the sandbox...
             verifier.apply(sandboxTx)
