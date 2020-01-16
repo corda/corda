@@ -54,9 +54,8 @@ class NodeLifecycleEventsDistributor {
             override fun compareTo(other: SortingKey): Int {
                 if(priority != other.priority) {
                     return priority - other.priority
-                } else {
-                    return clazz.name.compareTo(other.clazz.name)
                 }
+                return clazz.name.compareTo(other.clazz.name)
             }
         }
 

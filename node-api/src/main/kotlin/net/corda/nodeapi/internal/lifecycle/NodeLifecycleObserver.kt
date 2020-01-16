@@ -11,9 +11,6 @@ import net.corda.core.utilities.Try
 interface NodeLifecycleObserver {
 
     companion object {
-        const val SERVICE_PRIORITY_HIGH = 20
-        const val SERVICE_PRIORITY_NORMAL = 100
-        const val SERVICE_PRIORITY_LOW = 200
         const val RPC_PRIORITY_HIGH = 1020
         const val RPC_PRIORITY_NORMAL = 1100
         const val RPC_PRIORITY_LOW = 1200

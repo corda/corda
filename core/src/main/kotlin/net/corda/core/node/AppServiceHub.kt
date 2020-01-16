@@ -6,7 +6,6 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
-import net.corda.core.node.services.ServiceLifecycleObserverPriority
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import rx.Observable
 
@@ -19,6 +18,12 @@ import rx.Observable
  */
 @DeleteForDJVM
 interface AppServiceHub : ServiceHub {
+
+    companion object {
+        const val SERVICE_PRIORITY_HIGH = 20
+        const val SERVICE_PRIORITY_NORMAL = 100
+        const val SERVICE_PRIORITY_LOW = 200
+    }
 
     /**
      * Start the given flow with the given arguments. [flow] must be annotated
@@ -45,16 +50,16 @@ interface AppServiceHub : ServiceHub {
     /**
      * Allows to register [ServiceLifecycleObserver] such that it will start receiving [net.corda.core.node.services.ServiceLifecycleEvent]s
      *
-     * @param priority if set to `true` the [observer] will be added to a priority queue such that it will be notified ahead of non-prioritised
-     *      observers.
+     * @param priority controls to which queue [observer] will be added. Lower values correspond to higher priorities.
+     *
      * @param observer an instance of [ServiceLifecycleObserver] to be registered.
      */
-    fun register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM, observer: ServiceLifecycleObserver)
+    fun register(priority: Int = SERVICE_PRIORITY_NORMAL, observer: ServiceLifecycleObserver)
 
     /**
      * Convenience method to be able to add an arbitrary function as a [register] callback.
      */
-    fun <T> register(priority: ServiceLifecycleObserverPriority = ServiceLifecycleObserverPriority.MEDIUM,
+    fun <T> register(priority: Int = SERVICE_PRIORITY_NORMAL,
                      func: (ServiceLifecycleEvent) -> T) = register(priority,
             object : ServiceLifecycleObserver {
                 override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
