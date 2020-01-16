@@ -82,11 +82,11 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
         private class NodeLifecycleServiceObserverAdaptor(private val observer: ServiceLifecycleObserver, override val priority: Int) : NodeLifecycleObserver {
             override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
                 return when(nodeLifecycleEvent) {
-                    is NodeLifecycleEvent.AfterStart<*> -> Try.on {
+                    is NodeLifecycleEvent.CorDappStarted<*> -> Try.on {
                         observer.onServiceLifecycleEvent(ServiceLifecycleEvent.CORDAPP_STARTED)
                         reportSuccess(nodeLifecycleEvent)
                     }
-                    is NodeLifecycleEvent.BeforeStop<*> -> Try.on {
+                    is NodeLifecycleEvent.CorDappStopped<*> -> Try.on {
                         observer.onServiceLifecycleEvent(ServiceLifecycleEvent.CORDAPP_STOPPED)
                         reportSuccess(nodeLifecycleEvent)
                     }

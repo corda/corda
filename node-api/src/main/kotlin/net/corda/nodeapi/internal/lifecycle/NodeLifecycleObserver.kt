@@ -47,8 +47,10 @@ interface NodeLifecycleObserver {
  * @param reversedPriority flags whether it would make sense to notify observers in the reversed order.
  */
 sealed class NodeLifecycleEvent(val reversedPriority: Boolean = false) {
-    class BeforeStart(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent()
-    class AfterStart<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
-    class BeforeStop<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
-    class AfterStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(reversedPriority = true)
+    class BeforeNodeStart(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent()
+    class AfterNodeStart<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
+    class CorDappStarted<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
+    class CorDappStopped<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
+    class BeforeNodeStop<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
+    class AfterNodeStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(reversedPriority = true)
 }

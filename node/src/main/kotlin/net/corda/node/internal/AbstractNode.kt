@@ -19,7 +19,6 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.StartableByService
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -31,7 +30,6 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
@@ -41,10 +39,6 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
@@ -56,9 +50,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -66,7 +58,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.djvm.source.ApiSource
@@ -93,7 +84,6 @@ import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
@@ -175,7 +165,6 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
-import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
@@ -187,7 +176,6 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Objects
 import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -450,7 +438,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (configuration.devMode && System.getProperty("co.paralleluniverse.fibers.verifyInstrumentation") == null) {
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStart(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStores()
@@ -541,7 +529,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
             // Wait for SMM to fully start
             smmStartedFuture.get()
-            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterStart(nodeServicesContext))
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStarted(nodeServicesContext))
             resultingNodeInfo
         }
     }
@@ -926,7 +915,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun stop() {
 
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeStop(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStopped(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStop(nodeServicesContext))
 
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
         // network, including unsubscribing from updates from remote services. Possibly some sort of parameter to stop()
@@ -941,7 +931,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         runOnStop.clear()
         shutdownExecutor.shutdown()
         _started = null
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterStop(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStop(nodeServicesContext))
     }
 
     protected abstract fun makeMessagingService(): MessagingService

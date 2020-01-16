@@ -28,6 +28,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -67,7 +68,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         private val log = contextLogger()
     }
 
-    override val priority: Int = NodeLifecycleObserver.SERVICE_PRIORITY_NORMAL
+    override val priority: Int = SERVICE_PRIORITY_NORMAL
 
     private val lock = AtomicInteger(0)
 
@@ -80,7 +81,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
     override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
         return when(nodeLifecycleEvent) {
-            is NodeLifecycleEvent.AfterStart<*> -> Try.on {
+            is NodeLifecycleEvent.AfterNodeStart<*> -> Try.on {
                 checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                         CheckpointSerializeAsTokenContextImpl(
                                 nodeLifecycleEvent.nodeServicesContext.tokenizableServices,
@@ -406,7 +407,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private object MapSerializer : JsonSerializer<Map<Any, Any>>() {
         override fun serialize(map: Map<Any, Any>, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.writeStartArray(map.size)
-            map.forEach { key, value ->
+            map.forEach { (key, value) ->
                 gen.jsonObject {
                     writeObjectField("key", key)
                     writeObjectField("value", value)
