@@ -25,7 +25,7 @@ class SandboxX509CRLSerializer(
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 
-    override val deserializationAliases: Set<Class<*>> = singleton(X509CRL::class.java)
+    override val deserializationAliases = aliasFor(X509CRL::class.java)
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray

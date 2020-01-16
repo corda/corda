@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.DurationSerializer.DurationProxy
 import java.time.Duration
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxDurationSerializer(
@@ -21,7 +20,7 @@ class SandboxDurationSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, DurationDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(Duration::class.java)
+    override val deserializationAliases = aliasFor(Duration::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

@@ -23,7 +23,7 @@ class SandboxZoneIdSerializer(
 
     override val revealSubclassesInSchema: Boolean = true
 
-    override val deserializationAliases: Set<Class<*>> = singleton(ZoneId::class.java)
+    override val deserializationAliases = aliasFor(ZoneId::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

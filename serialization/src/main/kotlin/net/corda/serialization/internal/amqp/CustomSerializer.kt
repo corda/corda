@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.FingerprintWriter
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -33,7 +34,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      * This custom serializer is also allowed to deserialize these classes. This allows us
      * to deserialize objects into completely different types, e.g. `A` -> `sandbox.A`.
      */
-    open val deserializationAliases: Set<Class<*>> = emptySet()
+    open val deserializationAliases: Set<TypeIdentifier> = emptySet()
 
     protected abstract val descriptor: Descriptor
     /**

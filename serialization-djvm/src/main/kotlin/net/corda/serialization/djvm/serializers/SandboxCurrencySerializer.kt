@@ -11,7 +11,6 @@ import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
-import java.util.Collections.singleton
 import java.util.Currency
 import java.util.function.Function
 
@@ -27,7 +26,7 @@ class SandboxCurrencySerializer(
         creator = basicInput.andThen(createTask)
     }
 
-    override val deserializationAliases: Set<Class<*>> = singleton(Currency::class.java)
+    override val deserializationAliases = aliasFor(Currency::class.java)
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

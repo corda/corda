@@ -23,6 +23,14 @@ inline fun SandboxClassLoader.toSandboxAnyClass(clazz: Class<*>): Class<Any> {
 }
 
 fun createSandboxSerializationEnv(classLoader: SandboxClassLoader): SerializationEnvironment {
+    return createSandboxSerializationEnv(classLoader, emptySet(), emptySet())
+}
+
+fun createSandboxSerializationEnv(
+    classLoader: SandboxClassLoader,
+    customSerializerClassNames: Set<String>,
+    serializationWhitelistNames: Set<String>
+): SerializationEnvironment {
     val p2pContext: SerializationContext = SerializationContextImpl(
         preferredSerializationVersion = amqpMagic,
         deserializationClassLoader = DelegatingClassLoader(classLoader),
@@ -46,6 +54,8 @@ fun createSandboxSerializationEnv(classLoader: SandboxClassLoader): Serializatio
             classLoader = classLoader,
             sandboxBasicInput = sandboxBasicInput,
             taskFactory = taskFactory,
+            customSerializerClassNames = customSerializerClassNames,
+            serializationWhitelistNames = serializationWhitelistNames,
             serializerFactoryFactory = SandboxSerializerFactoryFactory(primitiveSerializerFactory)
         ))
     }

@@ -7,7 +7,6 @@ import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
-import net.corda.djvm.execution.ExecutionProfile.Companion.UNLIMITED
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.messages.Severity.WARNING
 import net.corda.djvm.source.BootstrapClassLoader
@@ -56,8 +55,7 @@ abstract class TestBase(type: SandboxType) {
             )
             parentConfiguration = SandboxConfiguration.createFor(
                 analysisConfiguration = rootConfiguration,
-                profile = UNLIMITED,
-                enableTracing = false
+                profile = null
             )
         }
 

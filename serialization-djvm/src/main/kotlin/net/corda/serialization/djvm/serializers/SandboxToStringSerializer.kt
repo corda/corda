@@ -12,7 +12,6 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Constructor
 import java.lang.reflect.Type
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxToStringSerializer(
@@ -31,7 +30,7 @@ class SandboxToStringSerializer(
         creator = basicInput.andThen(taskFactory.apply(createTask))
     }
 
-    override val deserializationAliases: Set<Class<*>> = singleton(unsafeClass)
+    override val deserializationAliases = aliasFor(unsafeClass)
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

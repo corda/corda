@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.BitSetSerializer.BitSetProxy
 import java.util.BitSet
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxBitSetSerializer(
@@ -21,7 +20,7 @@ class SandboxBitSetSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, BitSetDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(BitSet::class.java)
+    override val deserializationAliases = aliasFor(BitSet::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

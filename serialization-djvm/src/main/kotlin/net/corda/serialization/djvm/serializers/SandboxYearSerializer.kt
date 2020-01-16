@@ -21,7 +21,7 @@ class SandboxYearSerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, YearDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(Year::class.java)
+    override val deserializationAliases = aliasFor(Year::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

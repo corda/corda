@@ -7,7 +7,6 @@ import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.MonthDaySerializer.MonthDayProxy
 import java.time.MonthDay
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxMonthDaySerializer(
@@ -21,7 +20,7 @@ class SandboxMonthDaySerializer(
 ) {
     private val task = classLoader.createTaskFor(taskFactory, MonthDayDeserializer::class.java)
 
-    override val deserializationAliases: Set<Class<*>> = singleton(MonthDay::class.java)
+    override val deserializationAliases = aliasFor(MonthDay::class.java)
 
     override fun toProxy(obj: Any): Any = abortReadOnly()
 

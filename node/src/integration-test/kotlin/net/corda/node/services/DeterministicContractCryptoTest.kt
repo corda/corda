@@ -26,7 +26,7 @@ import java.security.KeyPairGenerator
 class DeterministicContractCryptoTest {
     companion object {
         const val MESSAGE = "Very Important Data! Do Not Change!"
-        val logger = loggerFor<NonDeterministicContractVerifyTest>()
+        val logger = loggerFor<DeterministicContractCryptoTest>()
 
         @ClassRule
         @JvmField

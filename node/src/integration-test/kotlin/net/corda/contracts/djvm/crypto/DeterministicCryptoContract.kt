@@ -11,8 +11,8 @@ import java.security.PublicKey
 
 class DeterministicCryptoContract : Contract {
     override fun verify(tx: LedgerTransaction) {
-        val cryptoData = tx.outputsOfType(CryptoState::class.java)
-        val validators = tx.commandsOfType(Validate::class.java)
+        val cryptoData = tx.outputsOfType<CryptoState>()
+        val validators = tx.commandsOfType<Validate>()
 
         val isValid = validators.all { validate ->
             with (validate.value) {
