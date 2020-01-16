@@ -24,15 +24,16 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
-import rx.exceptions.OnErrorFailedException
 import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
+import javax.persistence.PersistenceException
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.CriteriaUpdate
@@ -399,19 +400,21 @@ class NodeVaultService(
                     // exception thrown here will cause the recording of transaction states to the vault being rolled back
                     // it could cause the ledger go into an inconsistent state, therefore we should hospitalise this flow
                     // observer code should either be fixed or ignored and have the flow retry from previous checkpoint
-                    val causedBy = when (e) {
-                        is OnErrorNotImplementedException -> "- caused by an exception thrown in a rx.Observer#onNext that was unhandled (the observer has been unsubscribed!) "
-                        is OnErrorFailedException -> "- caused by an exception thrown in a rx.Observer#onError (the observer has been unsubscribed!) "
-                        else -> "" // other exception types here are quite unexpected
-                    }
                     log.error(
-                        "Caught an ${e::class.java.canonicalName} while trying to record transaction states locally $causedBy" +
-                                "- the node could be now in an inconsistent state with other peers and/or the notary" +
-                                "- hospitalising the flow", e)
+                        "Failed to record transaction states locally " +
+                                "- the node could be now in an inconsistent state with other peers and/or the notary " +
+                                "- hospitalising the flow ", e
+                    )
 
-                    throw HospitalizeFlowException(
-                        "Failed to record transaction states locally $causedBy" +
-                                "- the node could be now in an inconsistent state with other peers and/or the notary", e)
+                    throw (e as? OnErrorNotImplementedException)?.let {
+                        it.cause?.let { wrapped ->
+                            if (wrapped is SQLException || wrapped is PersistenceException) {
+                                wrapped
+                            } else {
+                                HospitalizeFlowException(wrapped)
+                            }
+                        }
+                    } ?: HospitalizeFlowException(e)
                 }
             }
         }

@@ -7,11 +7,8 @@ import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
 import com.r3.dbfailure.workflows.DbListenerService
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
-import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.AppServiceHub
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -25,6 +22,7 @@ import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
+import java.sql.SQLException
 import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
 import kotlin.test.assertFailsWith
@@ -50,15 +48,20 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * Causing an SqlException via a syntax error in a vault observer will be wrapped within a HospitalizeFlowException
-     * causes the flow to hit SedationNurse in the FlowHospital and being kept for overnight observation
+     * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
+     * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation
      */
     @Test
     fun unhandledSqlExceptionFromVaultObserverGetsHospitalised() {
-        val testStaffFuture = openFuture<List<String>>().toCompletableFuture()
+        val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.add {_, staff ->
-            testStaffFuture.complete(staff) // get all staff members that will give an overnight observation diagnosis for this flow
+        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
+            when (it) {
+                is SQLException -> {
+                    testControlFuture.complete(true)
+                }
+            }
+            false
         }
 
         driver(DriverParameters(
@@ -70,11 +73,10 @@ class VaultObserverExceptionTest {
                     ::Initiator,
                     "Syntax Error in Custom SQL",
                     CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
-            ).returnValue.then { testStaffFuture.complete(listOf()) }
-            val staff = testStaffFuture.getOrThrow(30.seconds)
+            ).returnValue.then { testControlFuture.complete(false) }
+            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
 
-            // flow should have been given an overnight observation diagnosis by the SedationNurse
-            Assert.assertTrue(staff.isNotEmpty() && staff.any { it.contains("SedationNurse") })
+            Assert.assertTrue(foundExpectedException)
         }
     }
 
