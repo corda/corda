@@ -30,6 +30,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
                                private val cordappConfigProvider: CordappConfigProvider,
                                private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     companion object {
+        const val COMMENT_MARKER = '#'
         private val log = contextLogger()
     }
 
@@ -123,8 +124,8 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
                 isValidFixup(fixupConnection.jarFile)
             }.flatMapTo(ArrayList()) { fixupConnection ->
                 fixupConnection.inputStream.bufferedReader().useLines { lines ->
-                    lines.filter(String::isNotBlank).map { line ->
-                        val tokens = line.split("=>", limit = 2)
+                    lines.map { it.substringBefore(COMMENT_MARKER) }.map(String::trim).filterNot(String::isEmpty).map { line ->
+                        val tokens = line.split("=>")
                         require(tokens.size == 2) {
                             "Invalid fix-up line '$line' in '${fixupConnection.jarFile.name}'"
                         }
@@ -148,9 +149,9 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     }
 
     private fun parseIds(ids: String): Set<AttachmentId> {
-        return ids.split(",").mapTo(LinkedHashSet()) {
-            AttachmentId.parse(it.trim())
-        }
+        return ids.split(",").map(String::trim)
+            .filterNot(String::isEmpty)
+            .mapTo(LinkedHashSet(), SecureHash.Companion::parse)
     }
 
     /**
