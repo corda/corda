@@ -28,7 +28,7 @@ class DeserializeBigDecimalTest : TestBase(KOTLIN) {
             val sandboxBigInteger = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showBigDecimal = classLoader.createTaskFor(taskFactory, ShowBigDecimal::class.java)
+            val showBigDecimal = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowBigDecimal::class.java)
             val result = showBigDecimal.apply(sandboxBigInteger) ?: fail("Result cannot be null")
 
             assertEquals(ShowBigDecimal().apply(bigDecimal), result.toString())

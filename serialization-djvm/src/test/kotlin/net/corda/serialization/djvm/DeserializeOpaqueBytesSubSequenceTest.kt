@@ -32,7 +32,8 @@ class DeserializeOpaqueBytesSubSequenceTest : TestBase(KOTLIN) {
             val sandboxBytes = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showOpaqueBytesSubSequence = classLoader.createTaskFor(taskFactory, ShowOpaqueBytesSubSequence::class.java)
+            val sandboxFunction = classLoader.createSandboxFunction()
+            val showOpaqueBytesSubSequence = taskFactory.compose(sandboxFunction).apply(ShowOpaqueBytesSubSequence::class.java)
             val result = showOpaqueBytesSubSequence.apply(sandboxBytes) ?: fail("Result cannot be null")
 
             assertEquals(MESSAGE.substring(OFFSET), String(result as ByteArray))

@@ -51,7 +51,7 @@ class DeserializeComposedCustomDataTest: TestBase(KOTLIN) {
             val sandboxComplex = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showComplex = classLoader.createTaskFor(taskFactory, ShowComposedData::class.java)
+            val showComplex = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowComposedData::class.java)
             val result = showComplex.apply(sandboxComplex) ?: fail("Result cannot be null")
             assertEquals(SANDBOX_STRING, result::class.java.name)
             assertEquals(ShowComposedData().apply(composed), result.toString())

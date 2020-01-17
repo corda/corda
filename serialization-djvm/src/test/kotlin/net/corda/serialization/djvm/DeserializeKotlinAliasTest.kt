@@ -25,7 +25,7 @@ class DeserializeKotlinAliasTest : TestBase(KOTLIN) {
             val sandboxAttachmentId = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showAlias = classLoader.createTaskFor(taskFactory, ShowAlias::class.java)
+            val showAlias = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowAlias::class.java)
             val result = showAlias.apply(sandboxAttachmentId) ?: fail("Result cannot be null")
 
             assertEquals(ShowAlias().apply(attachmentId), result.toString())
@@ -50,7 +50,7 @@ class DeserializeKotlinAliasTest : TestBase(KOTLIN) {
             val sandboxAttachment = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showAliasData = classLoader.createTaskFor(taskFactory, ShowAliasData::class.java)
+            val showAliasData = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowAliasData::class.java)
             val result = showAliasData.apply(sandboxAttachment) ?: fail("Result cannot be null")
 
             assertEquals(ShowAliasData().apply(attachment), result.toString())

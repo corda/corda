@@ -30,7 +30,7 @@ import java.util.function.Function
 class SandboxCorDappCustomSerializer(
     private val serializerName: String,
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    rawTaskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer<Any>() {
     private val unproxy: Function<in Any?, out Any?>
@@ -53,7 +53,7 @@ class SandboxCorDappCustomSerializer(
         val unproxyTask = classLoader.toSandboxClass(CorDappCustomDeserializer::class.java)
             .getConstructor(serializationCustomSerializer)
             .newInstance(customSerializerClass.kotlin.objectOrNewInstance())
-        unproxy = taskFactory.apply(unproxyTask)
+        unproxy = rawTaskFactory.apply(unproxyTask)
     }
 
     override val schemaForDocumentation: Schema = Schema(emptyList())

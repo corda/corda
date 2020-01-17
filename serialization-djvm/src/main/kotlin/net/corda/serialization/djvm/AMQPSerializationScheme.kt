@@ -63,13 +63,14 @@ import java.util.function.Function
 class AMQPSerializationScheme(
     private val classLoader: SandboxClassLoader,
     private val sandboxBasicInput: Function<in Any?, out Any?>,
-    private val taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    private val rawTaskFactory: Function<in Any, out Function<in Any?, out Any?>>,
     private val customSerializerClassNames: Set<String>,
     private val serializationWhitelistNames: Set<String>,
     private val serializerFactoryFactory: SerializerFactoryFactory
 ) : SerializationScheme {
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
+        val taskFactory = rawTaskFactory.compose(classLoader.createSandboxFunction())
         return serializerFactoryFactory.make(context).apply {
             register(SandboxBitSetSerializer(classLoader, taskFactory, this))
             register(SandboxCertPathSerializer(classLoader, taskFactory, this))
@@ -105,9 +106,9 @@ class AMQPSerializationScheme(
             register(SandboxMapSerializer(classLoader, taskFactory, this))
             register(SandboxEnumSerializer(classLoader, taskFactory, this))
             register(SandboxPublicKeySerializer(classLoader, taskFactory))
-            register(SandboxToStringSerializer(BigDecimal::class.java, classLoader, taskFactory, sandboxBasicInput))
-            register(SandboxToStringSerializer(BigInteger::class.java, classLoader, taskFactory, sandboxBasicInput))
-            register(SandboxToStringSerializer(StringBuffer::class.java, classLoader, taskFactory, sandboxBasicInput))
+            register(SandboxToStringSerializer(BigDecimal::class.java, classLoader, rawTaskFactory, sandboxBasicInput))
+            register(SandboxToStringSerializer(BigInteger::class.java, classLoader, rawTaskFactory, sandboxBasicInput))
+            register(SandboxToStringSerializer(StringBuffer::class.java, classLoader, rawTaskFactory, sandboxBasicInput))
             register(SandboxCurrencySerializer(classLoader, taskFactory, sandboxBasicInput))
             register(SandboxX509CertificateSerializer(classLoader, taskFactory))
             register(SandboxX509CRLSerializer(classLoader, taskFactory))
@@ -121,13 +122,16 @@ class AMQPSerializationScheme(
             register(SandboxSymbolSerializer(classLoader, taskFactory, sandboxBasicInput))
 
             for (customSerializerName in customSerializerClassNames) {
-                register(SandboxCorDappCustomSerializer(customSerializerName, classLoader, taskFactory, this))
+                register(SandboxCorDappCustomSerializer(customSerializerName, classLoader, rawTaskFactory, this))
             }
-            registerWhitelists(this)
+            registerWhitelists(taskFactory, this)
         }
     }
 
-    private fun registerWhitelists(factory: SerializerFactory) {
+    private fun registerWhitelists(
+        taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
+        factory: SerializerFactory
+    ) {
         if (serializationWhitelistNames.isEmpty()) {
             return
         }
@@ -136,7 +140,7 @@ class AMQPSerializationScheme(
             classLoader.toSandboxClass(whitelistClass).kotlin.objectOrNewInstance()
         }.toArrayOf(classLoader.toSandboxClass(SerializationWhitelist::class.java))
         @Suppress("unchecked_cast")
-        val mergeTask = classLoader.createTaskFor(taskFactory, MergeWhitelists::class.java) as Function<in Array<*>, out Array<Class<*>>>
+        val mergeTask = taskFactory.apply(MergeWhitelists::class.java) as Function<in Array<*>, out Array<Class<*>>>
         factory.addToWhitelist(mergeTask.apply(serializationWhitelists).toSet())
     }
 

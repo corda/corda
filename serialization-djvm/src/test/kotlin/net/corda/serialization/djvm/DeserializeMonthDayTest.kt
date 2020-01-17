@@ -23,7 +23,7 @@ class DeserializeMonthDayTest : TestBase(KOTLIN) {
             val sandboxMonthDay = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showMonthDay = classLoader.createTaskFor(taskFactory, ShowMonthDay::class.java)
+            val showMonthDay = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowMonthDay::class.java)
             val result = showMonthDay.apply(sandboxMonthDay) ?: fail("Result cannot be null")
 
             assertEquals(monthDay.toString(), result.toString())

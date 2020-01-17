@@ -45,7 +45,7 @@ class DeserializeWithSerializationWhitelistTest: TestBase(KOTLIN) {
             val sandboxCustom = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showCustom = classLoader.createTaskFor(taskFactory, ShowCustomData::class.java)
+            val showCustom = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowCustomData::class.java)
             val result = showCustom.apply(sandboxCustom) ?: fail("Result cannot be null")
 
             assertEquals(custom.value, result.toString())

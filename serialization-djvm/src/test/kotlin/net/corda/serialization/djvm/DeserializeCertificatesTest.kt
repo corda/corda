@@ -60,7 +60,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val sandboxCertPath = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showCertPath = classLoader.createTaskFor(taskFactory, ShowCertPath::class.java)
+            val showCertPath = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowCertPath::class.java)
             val result = showCertPath.apply(sandboxCertPath) ?: fail("Result cannot be null")
 
             assertEquals(ShowCertPath().apply(certPath).toUNIX().toJava8Format(), result.toString())
@@ -84,7 +84,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val sandboxCertificate = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showCertificate = classLoader.createTaskFor(taskFactory, ShowCertificate::class.java)
+            val showCertificate = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowCertificate::class.java)
             val result = showCertificate.apply(sandboxCertificate) ?: fail("Result cannot be null")
 
             assertEquals(ShowCertificate().apply(certificate).toUNIX().toJava8Format(), result.toString())
@@ -118,7 +118,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
             val sandboxCRL = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showCRL = classLoader.createTaskFor(taskFactory, ShowCRL::class.java)
+            val showCRL = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowCRL::class.java)
             val result = showCRL.apply(sandboxCRL) ?: fail("Result cannot be null")
 
             assertEquals(ShowCRL().apply(crl).toUNIX(), result.toString())

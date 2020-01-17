@@ -22,12 +22,12 @@ import java.util.function.Function
 
 class SandboxEnumSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Enum::class.java)) {
     @Suppress("unchecked_cast")
     private val describer: Function<Class<*>, Array<Any>>
-        = classLoader.createTaskFor(taskFactory, DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
+        = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

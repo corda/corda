@@ -12,16 +12,15 @@ import net.corda.serialization.internal.amqp.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.cert.X509CRL
-import java.util.Collections.singleton
 import java.util.function.Function
 
 class SandboxX509CRLSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>
 ) : CustomSerializer.Implements<Any>(classLoader.toSandboxAnyClass(X509CRL::class.java)) {
     @Suppress("unchecked_cast")
     private val generator: Function<ByteArray, out Any?>
-        = classLoader.createTaskFor(taskFactory, X509CRLDeserializer::class.java) as Function<ByteArray, out Any?>
+        = taskFactory.apply(X509CRLDeserializer::class.java) as Function<ByteArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 

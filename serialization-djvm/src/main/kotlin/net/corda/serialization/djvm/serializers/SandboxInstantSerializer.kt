@@ -11,14 +11,14 @@ import java.util.function.Function
 
 class SandboxInstantSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(Instant::class.java),
     proxyClass = classLoader.toSandboxAnyClass(InstantProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, InstantDeserializer::class.java)
+    private val task = taskFactory.apply(InstantDeserializer::class.java)
 
     override val deserializationAliases = aliasFor(Instant::class.java)
 

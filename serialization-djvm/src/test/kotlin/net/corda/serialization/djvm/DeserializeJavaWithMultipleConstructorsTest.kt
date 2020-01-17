@@ -23,7 +23,7 @@ class DeserializeJavaWithMultipleConstructorsTest : TestBase(KOTLIN) {
             val sandboxData = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showMultiData = classLoader.createTaskFor(taskFactory, ShowMultiData::class.java)
+            val showMultiData = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowMultiData::class.java)
             val result = showMultiData.apply(sandboxData) ?: fail("Result cannot be null")
 
             assertThat(result.toString())

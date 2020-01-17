@@ -23,7 +23,7 @@ class DeserializeOffsetDateTimeTest : TestBase(KOTLIN) {
             val sandboxDateTime = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showOffsetDateTime = classLoader.createTaskFor(taskFactory, ShowOffsetDateTime::class.java)
+            val showOffsetDateTime = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowOffsetDateTime::class.java)
             val result = showOffsetDateTime.apply(sandboxDateTime) ?: fail("Result cannot be null")
 
             assertEquals(dateTime.toString(), result.toString())

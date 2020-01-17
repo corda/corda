@@ -27,7 +27,7 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showStringMap = classLoader.createTaskFor(taskFactory, ShowStringMap::class.java)
+            val showStringMap = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowStringMap::class.java)
             val result = showStringMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(stringMap.values.entries.joinToString(), result.toString())
@@ -56,7 +56,7 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showStringSortedMap = classLoader.createTaskFor(taskFactory, ShowStringSortedMap::class.java)
+            val showStringSortedMap = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowStringSortedMap::class.java)
             val result = showStringSortedMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(sortedMap.values.entries.joinToString(), result.toString())
@@ -85,7 +85,7 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showStringNavigableMap = classLoader.createTaskFor(taskFactory, ShowStringNavigableMap::class.java)
+            val showStringNavigableMap = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowStringNavigableMap::class.java)
             val result = showStringNavigableMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(navigableMap.values.entries.joinToString(), result.toString())
@@ -114,7 +114,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showStringLinkedHashMap = classLoader.createTaskFor(taskFactory, ShowStringLinkedHashMap::class.java)
+            val sandboxFunction = classLoader.createSandboxFunction()
+            val showStringLinkedHashMap = taskFactory.compose(sandboxFunction).apply(ShowStringLinkedHashMap::class.java)
             val result = showStringLinkedHashMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(linkedHashMap.values.entries.joinToString(), result.toString())
@@ -143,7 +144,7 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showStringTreeMap = classLoader.createTaskFor(taskFactory, ShowStringTreeMap::class.java)
+            val showStringTreeMap = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowStringTreeMap::class.java)
             val result = showStringTreeMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(treeMap.values.entries.joinToString(), result.toString())
@@ -171,7 +172,7 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
             val sandboxMap = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showEnumMap = classLoader.createTaskFor(taskFactory, ShowEnumMap::class.java)
+            val showEnumMap = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowEnumMap::class.java)
             val result = showEnumMap.apply(sandboxMap) ?: fail("Result cannot be null")
 
             assertEquals(enumMap.toString(), result.toString())

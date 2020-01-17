@@ -11,14 +11,14 @@ import java.util.function.Function
 
 class SandboxOpaqueBytesSubSequenceSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(OpaqueBytesSubSequence::class.java),
     proxyClass = classLoader.toSandboxAnyClass(OpaqueBytes::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, OpaqueBytesSubSequenceDeserializer::class.java)
+    private val task = taskFactory.apply(OpaqueBytesSubSequenceDeserializer::class.java)
 
     override val deserializationAliases = aliasFor(OpaqueBytesSubSequence::class.java)
 

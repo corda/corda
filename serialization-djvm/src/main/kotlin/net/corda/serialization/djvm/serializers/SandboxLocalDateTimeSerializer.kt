@@ -11,14 +11,14 @@ import java.util.function.Function
 
 class SandboxLocalDateTimeSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
     factory: SerializerFactory
 ) : CustomSerializer.Proxy<Any, Any>(
     clazz = classLoader.toSandboxAnyClass(LocalDateTime::class.java),
     proxyClass = classLoader.toSandboxAnyClass(LocalDateTimeProxy::class.java),
     factory = factory
 ) {
-    private val task = classLoader.createTaskFor(taskFactory, LocalDateTimeDeserializer::class.java)
+    private val task = taskFactory.apply(LocalDateTimeDeserializer::class.java)
 
     override val deserializationAliases = aliasFor(LocalDateTime::class.java)
 

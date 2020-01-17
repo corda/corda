@@ -24,7 +24,7 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapper = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val getGenericData = classLoader.createTaskFor(taskFactory, GetGenericData::class.java)
+            val getGenericData = taskFactory.compose(classLoader.createSandboxFunction()).apply(GetGenericData::class.java)
             val result = getGenericData.apply(sandboxWrapper) ?: fail("Result cannot be null")
 
             assertEquals("Hello World!", result.toString())
@@ -43,7 +43,7 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapper = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val getGenericData = classLoader.createTaskFor(taskFactory, GetGenericData::class.java)
+            val getGenericData = taskFactory.compose(classLoader.createSandboxFunction()).apply(GetGenericData::class.java)
             val result = getGenericData.apply(sandboxWrapper) ?: fail("Result cannot be null")
 
             assertEquals("sandbox.java.lang.Integer", result::class.java.name)
@@ -62,7 +62,7 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapper = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val getGenericData = classLoader.createTaskFor(taskFactory, GetGenericData::class.java)
+            val getGenericData = taskFactory.compose(classLoader.createSandboxFunction()).apply(GetGenericData::class.java)
             val result = getGenericData.apply(sandboxWrapper) ?: fail("Result cannot be null")
 
             assertEquals("[Lsandbox.java.lang.Integer;", result::class.java.name)
@@ -82,7 +82,7 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapper = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val getGenericData = classLoader.createTaskFor(taskFactory, GetGenericData::class.java)
+            val getGenericData = taskFactory.compose(classLoader.createSandboxFunction()).apply(GetGenericData::class.java)
             val result = getGenericData.apply(sandboxWrapper) ?: fail("Result cannot be null")
 
             assertEquals("[I", result::class.java.name)
@@ -102,13 +102,14 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapper = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val getGenericData = classLoader.createTaskFor(taskFactory, GetGenericData::class.java)
+            val sandboxFunction = classLoader.createSandboxFunction()
+            val getGenericData = taskFactory.compose(sandboxFunction).apply(GetGenericData::class.java)
             val dataResult = getGenericData.apply(sandboxWrapper) ?: fail("Result cannot be null")
 
             assertEquals("[Hello World!]", dataResult.toString())
             assertEquals("sandbox.java.util.Collections\$UnmodifiableRandomAccessList", dataResult::class.java.name)
 
-            val getGenericIterableData = classLoader.createTaskFor(taskFactory, GetGenericIterableData::class.java)
+            val getGenericIterableData = taskFactory.compose(sandboxFunction).apply(GetGenericIterableData::class.java)
             val dataItemResult = getGenericIterableData.apply(sandboxWrapper) ?: fail("Result cannot be null")
             assertEquals(SANDBOX_STRING, dataItemResult::class.java.name)
         }
@@ -146,7 +147,7 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
             val sandboxWrapped = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showConcreteWrapper = classLoader.createTaskFor(taskFactory, ShowConcreteWrapper::class.java)
+            val showConcreteWrapper = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowConcreteWrapper::class.java)
             val result = showConcreteWrapper.apply(sandboxWrapped) ?: fail("Result cannot be null")
 
             assertEquals("Concrete: first='Hello World', second='!'", result.toString())

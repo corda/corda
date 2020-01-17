@@ -16,11 +16,11 @@ import java.util.function.Function
 
 class SandboxUnsignedByteSerializer(
     classLoader: SandboxClassLoader,
-    taskFactory: Function<in Any, out Function<in Any?, out Any?>>
+    taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>
 ) : CustomSerializer.Is<Any>(classLoader.toSandboxAnyClass(UnsignedByte::class.java)) {
     @Suppress("unchecked_cast")
     private val transformer: Function<ByteArray, out Any?>
-        = classLoader.createTaskFor(taskFactory, UnsignedByteDeserializer::class.java) as Function<ByteArray, out Any?>
+        = taskFactory.apply(UnsignedByteDeserializer::class.java) as Function<ByteArray, out Any?>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
 
