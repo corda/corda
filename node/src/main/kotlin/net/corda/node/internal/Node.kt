@@ -633,6 +633,7 @@ open class Node(configuration: NodeConfiguration,
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         internalRpcMessagingClient?.start(rpcBroker!!.serverControl)
+        printBasicNodeInfo("Running P2PMessaging loop")
         (network as P2PMessagingClient).run()
     }
 

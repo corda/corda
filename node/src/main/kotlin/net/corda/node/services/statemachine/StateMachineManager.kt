@@ -35,7 +35,7 @@ interface StateMachineManager {
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>) : Future<Unit>
+    fun start(tokenizableServices: List<Any>) : CordaFuture<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the

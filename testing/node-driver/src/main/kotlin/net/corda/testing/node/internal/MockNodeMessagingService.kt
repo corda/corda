@@ -5,6 +5,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -35,6 +37,8 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
 
     @Volatile
     private var running = true
+
+    override val ready: OpenFuture<Void?> = openFuture()
 
     private inner class InnerState {
         val handlers: MutableList<Handler> = ArrayList()
@@ -85,6 +89,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
 
         network.addNotaryIdentity(this, notaryService)
+        ready.set(null)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.lifecycle
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.node.services.CordaServiceCriticalFailureException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -37,7 +38,8 @@ class NodeLifecycleEventsDistributor {
 
     private val readWriteLock: ReadWriteLock = ReentrantReadWriteLock()
 
-    private val executor = Executors.newSingleThreadExecutor()
+    private val executor = Executors.newSingleThreadExecutor(
+            ThreadFactoryBuilder().setNameFormat("NodeLifecycleEventsDistributor-%d").build())
 
     /**
      * Adds observer to the distribution list.
@@ -76,7 +78,7 @@ class NodeLifecycleEventsDistributor {
     fun distributeEvent(event: NodeLifecycleEvent) {
         val snapshot = readWriteLock.readLock().executeLocked { LinkedList(prioritizedObservers) }
 
-        executor.execute  {
+        //executor.execute  {
             val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
             orderedSnapshot.forEach {
                 log.info("Distributing event $event to: $it")
@@ -88,7 +90,7 @@ class NodeLifecycleEventsDistributor {
                     handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
                 }
             }
-        }
+        //}
     }
 
     private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: Try.Failure<String>) {

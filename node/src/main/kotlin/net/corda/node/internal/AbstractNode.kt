@@ -30,6 +30,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
@@ -494,7 +495,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val resultingNodeInfo = database.transaction(recoverableFailureTolerance = 0) {
+        val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
@@ -527,14 +528,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schedulerService.start()
 
             val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
-            // Wait for SMM to fully start
-            smmStartedFuture.get()
-            resultingNodeInfo
+            val readyFuture = smmStartedFuture.flatMap {
+                log.debug("SMM ready")
+                network.ready
+            }
+            resultingNodeInfo to readyFuture
         }
 
-        // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStarted(nodeServicesContext))
+        readyFuture.map {
+            // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
+            log.debug("Distributing events")
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStarted(nodeServicesContext))
+        }
         return resultingNodeInfo
     }
 

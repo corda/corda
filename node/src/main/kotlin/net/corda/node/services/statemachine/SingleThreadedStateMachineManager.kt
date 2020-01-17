@@ -131,7 +131,7 @@ class SingleThreadedStateMachineManager(
      */
     override val changes: Observable<StateMachineManager.Change> = mutex.content.changesPublisher
 
-    override fun start(tokenizableServices: List<Any>) : Future<Unit> {
+    override fun start(tokenizableServices: List<Any>) : CordaFuture<Unit> {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                 CheckpointSerializeAsTokenContextImpl(
