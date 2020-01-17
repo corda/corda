@@ -7,6 +7,7 @@ import co.paralleluniverse.io.serialization.ByteArraySerializer
 import co.paralleluniverse.strands.SuspendableCallable
 import io.netty.util.concurrent.FastThreadLocal
 import io.netty.util.concurrent.FastThreadLocalThread
+import io.qameta.allure.Epic
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.rootCause
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+@Epic("Flows")
 class FastThreadLocalTest {
     private inner class ExpensiveObj {
         init {

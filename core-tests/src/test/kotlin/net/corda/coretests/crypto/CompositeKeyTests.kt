@@ -1,5 +1,6 @@
 package net.corda.coretests.crypto
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.internal.declaredField
@@ -24,6 +25,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Epic("Crypto")
 class CompositeKeyTests {
     @Rule
     @JvmField

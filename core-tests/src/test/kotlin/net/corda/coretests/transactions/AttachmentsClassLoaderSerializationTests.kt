@@ -1,5 +1,6 @@
 package net.corda.coretests.transactions
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -27,6 +28,7 @@ import java.io.NotSerializableException
 import java.net.URL
 import kotlin.test.assertFailsWith
 
+@Epic("Transactions")
 class AttachmentsClassLoaderSerializationTests {
 
     companion object {

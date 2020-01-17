@@ -1,5 +1,6 @@
 package net.corda.coretests.crypto
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -21,6 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@Epic("Crypto")
 class X509NameConstraintsTest {
 
     companion object {

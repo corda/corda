@@ -2,6 +2,7 @@ package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assertThat
+import io.qameta.allure.Epic
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
@@ -19,6 +20,7 @@ import org.junit.Test
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 
+@Epic("Flows")
 class ReceiveMultipleFlowTests : WithMockNet {
     companion object {
         private val classMockNet = InternalMockNetwork()

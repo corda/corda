@@ -3,6 +3,7 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Requirements.using
 import net.corda.core.crypto.SecureHash
@@ -28,6 +29,7 @@ import org.junit.Test
 
 const val CONTRACT_ID = "net.corda.coretests.transactions.ReferenceStateTests\$ExampleContract"
 
+@Epic("Transactions")
 class ReferenceStateTests {
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party

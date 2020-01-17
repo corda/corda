@@ -1,5 +1,6 @@
 package net.corda.coretests.internal
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
@@ -33,6 +34,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
+@Epic("Internal")
 class NetworkParametersResolutionTest {
     private lateinit var defaultParams: NetworkParameters
     private lateinit var params2: NetworkParameters

@@ -3,6 +3,7 @@ package net.corda.coretests.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assertThat
+import io.qameta.allure.Epic
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -29,6 +30,7 @@ import net.corda.testing.node.internal.TestStartedNode
 import org.junit.AfterClass
 import org.junit.Test
 
+@Epic("Flows")
 class AttachmentTests : WithMockNet {
     companion object {
         val classMockNet = InternalMockNetwork()

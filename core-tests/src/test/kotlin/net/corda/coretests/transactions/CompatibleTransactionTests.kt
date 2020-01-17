@@ -1,5 +1,6 @@
 package net.corda.coretests.transactions
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -19,6 +20,7 @@ import java.time.Instant
 import java.util.function.Predicate
 import kotlin.test.*
 
+@Epic("Transactions")
 class CompatibleTransactionTests {
     private companion object {
         val DUMMY_KEY_1 = generateKeyPair()

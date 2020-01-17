@@ -1,5 +1,6 @@
 package net.corda.coretests.flows;
 
+import io.qameta.allure.Epic;
 import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.testing.core.SerializationEnvironmentRule;
@@ -13,6 +14,7 @@ import static org.junit.Assert.assertNull;
 /**
  * Enforce parts of the serialization API that aren't obvious from looking at the {@link net.corda.core.serialization.SerializationAPIKt} code.
  */
+@Epic("Serialization")
 public class SerializationApiInJavaTest {
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();

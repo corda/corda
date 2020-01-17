@@ -1,5 +1,6 @@
 package net.corda.coretests.node
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -11,6 +12,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
+@Epic("Node")
 class VaultUpdateTests {
     private companion object {
         const val DUMMY_PROGRAM_ID = "net.corda.coretests.node.VaultUpdateTests\$DummyContract"

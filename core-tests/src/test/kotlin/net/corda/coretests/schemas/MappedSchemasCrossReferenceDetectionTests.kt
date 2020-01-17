@@ -1,5 +1,6 @@
 package net.corda.coretests.schemas
 
+import io.qameta.allure.Epic
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.MappedSchemaValidator.fieldsFromOtherMappedSchema
 import net.corda.core.schemas.MappedSchemaValidator.methodsFromOtherMappedSchema
@@ -9,6 +10,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import javax.persistence.*
 
+@Epic("Schemas")
 class MappedSchemasCrossReferenceDetectionTests {
 
     object GoodSchema : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(GoodSchema.State::class.java)) {

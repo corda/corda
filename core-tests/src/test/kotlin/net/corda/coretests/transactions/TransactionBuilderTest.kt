@@ -3,6 +3,7 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.CompositeKey
@@ -30,6 +31,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
 
+@Epic("Transactions")
 class TransactionBuilderTest {
     @Rule
     @JvmField

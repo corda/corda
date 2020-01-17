@@ -1,5 +1,6 @@
 package net.corda.coretests.crypto
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.sign
@@ -12,6 +13,7 @@ import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertEquals
 
+@Epic("Crypto")
 class SignedDataTest {
     @Rule
     @JvmField

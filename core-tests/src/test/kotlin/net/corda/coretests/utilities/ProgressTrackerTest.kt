@@ -1,5 +1,6 @@
 package net.corda.coretests.utilities
 
+import io.qameta.allure.Epic
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTracker
@@ -15,6 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertNotEquals
 
+@Epic("Utilities")
 class ProgressTrackerTest {
 
     @Rule

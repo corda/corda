@@ -1,5 +1,6 @@
 package net.corda.coretests.crypto
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
@@ -14,6 +15,7 @@ import kotlin.test.assertTrue
 /**
  * Transaction signature tests.
  */
+@Epic("Crypto")
 class TransactionSignatureTest {
     @Rule
     @JvmField

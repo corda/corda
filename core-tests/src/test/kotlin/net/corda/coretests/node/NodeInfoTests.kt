@@ -1,5 +1,6 @@
 package net.corda.coretests.node
 
+import io.qameta.allure.Epic
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.core.TestIdentity
@@ -9,6 +10,7 @@ import org.junit.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Epic("Node")
 class NodeInfoTests {
 
     private val party1 = TestIdentity.fresh("party1").party

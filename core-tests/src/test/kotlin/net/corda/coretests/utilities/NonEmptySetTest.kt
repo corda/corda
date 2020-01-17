@@ -4,6 +4,7 @@ import com.google.common.collect.testing.SetTestSuiteBuilder
 import com.google.common.collect.testing.TestIntegerSetGenerator
 import com.google.common.collect.testing.features.CollectionFeature
 import com.google.common.collect.testing.features.CollectionSize
+import io.qameta.allure.Epic
 import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -21,6 +22,7 @@ import org.junit.runners.Suite
         NonEmptySetTest.Guava::class,
         NonEmptySetTest.General::class
 )
+@Epic("Utilities")
 class NonEmptySetTest {
     object Guava {
         @JvmStatic

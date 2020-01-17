@@ -1,5 +1,6 @@
 package net.corda.coretests.indentity
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -10,6 +11,7 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
+@Epic("Indentity")
 class PartyTest {
     @Test
     fun equality() {

@@ -2,6 +2,7 @@ package net.corda.coretests.indentity
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import io.qameta.allure.Epic
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -19,6 +20,7 @@ import org.junit.Test
 import java.math.BigInteger
 import kotlin.test.assertFailsWith
 
+@Epic("Indentity")
 class PartyAndCertificateTest {
     @Rule
     @JvmField

@@ -1,5 +1,6 @@
 package net.corda.coretests.serialization
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -14,6 +15,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Epic("Serialization")
 class NotaryExceptionSerializationTest {
     @Rule
     @JvmField

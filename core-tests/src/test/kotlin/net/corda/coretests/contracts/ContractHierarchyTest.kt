@@ -1,6 +1,9 @@
 package net.corda.coretests.contracts
 
 import co.paralleluniverse.fibers.Suspendable
+import io.qameta.allure.Epic
+import io.qameta.allure.Feature
+import io.qameta.allure.Story
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -20,6 +23,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
+@Epic("Contracts")
+@Feature("Feature: Contract Hierarchy")
 class ContractHierarchyTest {
     private lateinit var mockNet: InternalMockNetwork
 
@@ -35,6 +40,7 @@ class ContractHierarchyTest {
     }
 
     @Test
+    @Story("Story: Contract Hierarchy tests")
     fun `hierarchical contracts work with mock network`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)

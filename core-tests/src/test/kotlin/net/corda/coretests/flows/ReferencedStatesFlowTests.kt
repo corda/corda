@@ -1,6 +1,7 @@
 package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -21,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
+@Epic("Flows")
 class ReferencedStatesFlowTests {
 
     var mockNet: InternalMockNetwork = InternalMockNetwork(

@@ -2,6 +2,7 @@ package net.corda.coretests.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.primitives.Primitives;
+import io.qameta.allure.Epic;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.testing.core.TestConstants;
@@ -21,6 +22,7 @@ import static net.corda.testing.node.internal.InternalTestUtilsKt.enclosedCordap
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
+@Epic("Flows")
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork(
             new MockNetworkParameters().withCordappsForAllNodes(singletonList(enclosedCordapp(this)))

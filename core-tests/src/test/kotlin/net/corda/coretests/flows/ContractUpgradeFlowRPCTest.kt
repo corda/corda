@@ -5,6 +5,7 @@ import com.natpryce.hamkrest.anything
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.has
 import com.natpryce.hamkrest.isA
+import io.qameta.allure.Epic
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
@@ -25,6 +26,7 @@ import net.corda.testing.node.internal.*
 import org.junit.AfterClass
 import org.junit.Test
 
+@Epic("Flows")
 class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     companion object {
         private val classMockNet = InternalMockNetwork(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()))

@@ -182,6 +182,7 @@ buildscript {
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-SNAPSHOT", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
+        classpath "io.qameta.allure:allure-gradle:2.8.1"
     }
 }
 

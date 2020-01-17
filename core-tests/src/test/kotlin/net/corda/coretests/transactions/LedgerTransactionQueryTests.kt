@@ -3,6 +3,7 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -24,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@Epic("Transactions")
 class LedgerTransactionQueryTests {
     companion object {
         private val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party

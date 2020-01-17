@@ -3,6 +3,7 @@ package net.corda.coretests.transactions
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -28,6 +29,7 @@ import kotlin.test.assertFailsWith
 
 const val TEST_TIMELOCK_ID = "net.corda.coretests.transactions.TransactionEncumbranceTests\$DummyTimeLock"
 
+@Epic("Transactions")
 class TransactionEncumbranceTests {
     @Rule
     @JvmField

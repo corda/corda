@@ -1,6 +1,7 @@
 package net.corda.coretests.serialization
 
 import co.paralleluniverse.fibers.Suspendable
+import io.qameta.allure.Epic
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -64,6 +65,7 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
     }
 }
 
+@Epic("Serialization")
 class AttachmentSerializationTest {
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var server: TestStartedNode

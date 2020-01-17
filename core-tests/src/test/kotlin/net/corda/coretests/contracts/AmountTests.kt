@@ -1,5 +1,8 @@
 package net.corda.coretests.contracts
 
+import io.qameta.allure.Epic
+import io.qameta.allure.Feature
+import io.qameta.allure.Story
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Amount.Companion.sumOrZero
 import net.corda.core.contracts.AmountTransfer
@@ -18,14 +21,18 @@ import kotlin.test.assertTrue
 /**
  * Tests of the [Amount] class.
  */
+@Epic("Contracts")
+@Feature("Feature: Amount")
 class AmountTests {
     @Test
+    @Story("Story: Amount tests")
     fun `make sure Amount has decimal places`() {
         val x = Amount(1, Currency.getInstance("USD"))
         assertTrue("0.01" in x.toString())
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun `decimal conversion`() {
         val quantity = 1234L
         val amountGBP = Amount(quantity, GBP)
@@ -49,6 +56,7 @@ class AmountTests {
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun split() {
         for (baseQuantity in 0..1000) {
             val baseAmount = Amount(baseQuantity.toLong(), GBP)
@@ -64,6 +72,7 @@ class AmountTests {
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun `amount transfers equality`() {
         val partyA = "A"
         val partyB = "B"
@@ -89,6 +98,7 @@ class AmountTests {
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun `amount transfer aggregation`() {
         val partyA = "A"
         val partyB = "B"
@@ -120,6 +130,7 @@ class AmountTests {
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun `amount transfer apply`() {
         val partyA = "A"
         val partyB = "B"
@@ -168,6 +179,7 @@ class AmountTests {
     }
 
     @Test
+    @Story("Story: Amount tests")
     fun testGbpParse() {
         assertEquals(POUNDS(10), Amount.parseCurrency("10 GBP"))
         assertEquals(POUNDS(11), Amount.parseCurrency("£11"))

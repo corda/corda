@@ -1,5 +1,6 @@
 package net.corda.coretests.transactions
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
@@ -30,6 +31,7 @@ import java.io.InputStream
 import java.net.URL
 import kotlin.test.assertFailsWith
 
+@Epic("Transactions")
 class AttachmentsClassLoaderTests {
     companion object {
         // TODO Update this test to use the new isolated.jar

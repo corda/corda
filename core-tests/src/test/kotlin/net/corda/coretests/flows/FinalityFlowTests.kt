@@ -2,6 +2,7 @@ package net.corda.coretests.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
+import io.qameta.allure.Epic
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.CordappResolver
@@ -20,6 +21,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 
+@Epic("Flows")
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party

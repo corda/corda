@@ -1,6 +1,7 @@
 package net.corda.coretests.utilities
 
 import com.esotericsoftware.kryo.KryoException
+import io.qameta.allure.Epic
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
@@ -19,6 +20,7 @@ object EmptyWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = false
 }
 
+@Epic("Utilities")
 class KotlinUtilsTest {
     @Rule
     @JvmField

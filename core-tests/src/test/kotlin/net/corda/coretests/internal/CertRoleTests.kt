@@ -1,5 +1,6 @@
 package net.corda.coretests.internal
 
+import io.qameta.allure.Epic
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -9,6 +10,7 @@ import org.junit.Test
 import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
+@Epic("Internal")
 class CertRoleTests {
     @Test
     fun `should deserialize valid value`() {

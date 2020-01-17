@@ -1,5 +1,6 @@
 package net.corda.coretests.serialization
 
+import io.qameta.allure.Epic
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.finance.contracts.CommercialPaper
@@ -9,6 +10,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 
+@Epic("Serialization")
 class CommandsSerializationTests {
     @Rule
     @JvmField

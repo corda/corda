@@ -1,5 +1,6 @@
 package net.corda.coretests.flows
 
+import io.qameta.allure.Epic
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.StateMachineRunId
@@ -25,6 +26,7 @@ import org.junit.After
 import org.junit.Test
 import rx.Observable
 
+@Epic("Flows")
 class ReceiveFinalityFlowTest {
     private val mockNet = InternalMockNetwork(notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false)))
 

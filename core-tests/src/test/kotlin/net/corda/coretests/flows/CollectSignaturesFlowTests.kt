@@ -2,6 +2,7 @@ package net.corda.coretests.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assertThat
+import io.qameta.allure.Epic
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
@@ -26,6 +27,7 @@ import org.junit.Assert
 import org.junit.Test
 import java.security.PublicKey
 
+@Epic("Flows")
 class CollectSignaturesFlowTests : WithContracts {
     companion object {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))

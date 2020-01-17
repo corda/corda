@@ -2,6 +2,7 @@ package net.corda.coretests.flows
 
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assertThat
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AbstractParty
@@ -27,6 +28,7 @@ import org.junit.AfterClass
 import org.junit.Test
 import java.util.*
 
+@Epic("Flows")
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
     companion object {

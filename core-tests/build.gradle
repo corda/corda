@@ -2,6 +2,7 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'io.qameta.allure'
 
 description 'Corda core tests'
 
@@ -97,6 +98,12 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntimeClasspath
+}
+
+allure{
+    autoconfigure = true
+    version='2.8.1'
+    boolean clean=true
 }
 
 tasks.withType(Test) {

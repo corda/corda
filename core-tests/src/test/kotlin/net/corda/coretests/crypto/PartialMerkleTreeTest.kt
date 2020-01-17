@@ -3,6 +3,7 @@ package net.corda.coretests.crypto
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
@@ -37,6 +38,7 @@ import java.util.stream.IntStream
 import kotlin.streams.toList
 import kotlin.test.*
 
+@Epic("Crypto")
 class PartialMerkleTreeTest {
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party

@@ -2,6 +2,7 @@ package net.corda.coretests.node
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import io.qameta.allure.Epic
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.getPackageOwnerOf
 import net.corda.core.node.NetworkParameters
@@ -31,6 +32,7 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
+@Epic("Node")
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
             defaultParameters = MockNetworkParameters(networkSendManuallyPumped = true),

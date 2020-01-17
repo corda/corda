@@ -1,6 +1,7 @@
 package net.corda.coretests.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import io.qameta.allure.Epic
 import junit.framework.TestCase.assertTrue
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
@@ -45,6 +46,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 // DOCSTART 3
+@Epic("Internal")
 class ResolveTransactionsFlowTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var notaryNode: StartedMockNode

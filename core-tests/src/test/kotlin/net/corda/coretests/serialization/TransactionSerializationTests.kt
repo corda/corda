@@ -1,6 +1,7 @@
 package net.corda.coretests.serialization
 
 import com.nhaarman.mockito_kotlin.mock
+import io.qameta.allure.Epic
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureMetadata
@@ -31,6 +32,7 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
+@Epic("Serialization")
 class TransactionSerializationTests {
     private companion object {
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
