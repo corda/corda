@@ -60,8 +60,6 @@ class CordaServiceLifecycleTests {
             when (event) {
                 CORDAPP_STARTED -> {
                     eventsCaptured.add(event)
-                    // services.vaultService.queryBy()
-                    // services.startFlow()
                 }
                 CORDAPP_STOPPED -> {
                     eventsCaptured.add(event)

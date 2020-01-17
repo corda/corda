@@ -49,8 +49,6 @@ public class JavaCordaServiceLifecycle {
             switch (event) {
                 case CORDAPP_STARTED:
                     eventsCaptured.add(event);
-                    // serviceHub.startFlow()
-                    // serviceHub.getVaultService().queryBy()
                     break;
                 case CORDAPP_STOPPED:
                     eventsCaptured.add(event);
