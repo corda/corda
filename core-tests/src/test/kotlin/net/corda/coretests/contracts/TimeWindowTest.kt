@@ -16,12 +16,10 @@ import java.time.LocalDate
 import java.time.ZoneOffset.UTC
 
 @Epic("Contracts")
-@Feature("Feature: TimeWindow")
 class TimeWindowTest {
     private val now = Instant.now()
 
     @Test
-    @Story("Story: TimeWindow tests")
     fun fromOnly() {
         val timeWindow = TimeWindow.fromOnly(now)
         assertThat(timeWindow.fromTime).isEqualTo(now)
@@ -34,7 +32,6 @@ class TimeWindowTest {
     }
 
     @Test
-    @Story("Story: TimeWindow tests")
     fun untilOnly() {
         val timeWindow = TimeWindow.untilOnly(now)
         assertThat(timeWindow.fromTime).isNull()
@@ -47,7 +44,6 @@ class TimeWindowTest {
     }
 
     @Test
-    @Story("Story: TimeWindow tests")
     fun between() {
         val today = LocalDate.now()
         val fromTime = today.atTime(12, 0).toInstant(UTC)
@@ -65,7 +61,6 @@ class TimeWindowTest {
     }
 
     @Test
-    @Story("Story: TimeWindow tests")
     fun fromStartAndDuration() {
         val duration = 10.minutes
         val timeWindow = TimeWindow.fromStartAndDuration(now, duration)
@@ -76,7 +71,6 @@ class TimeWindowTest {
     }
 
     @Test
-    @Story("Story: TimeWindow tests")
     fun withTolerance() {
         val tolerance = 10.minutes
         val timeWindow = TimeWindow.withTolerance(now, tolerance)

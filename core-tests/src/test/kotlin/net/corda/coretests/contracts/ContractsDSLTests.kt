@@ -33,7 +33,6 @@ val invalidCommand = CommandWithParties(emptyList(), emptyList(), UnwantedComman
 
 @RunWith(Parameterized::class)
 @Epic("Contracts")
-@Feature("Feature: Contracts DSL")
 class RequireSingleCommandTests(private val testFunction: (Collection<CommandWithParties<CommandData>>) -> CommandWithParties<CommandData>,
                                 @Suppress("UNUSED_PARAMETER") description: String) {
     companion object {
@@ -46,7 +45,6 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check function returns one value`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val returnedCommand = testFunction(commands)
@@ -54,14 +52,12 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
     }
 
     @Test(expected = IllegalArgumentException::class)
-    @Story("Story: Contracts DSL tests")
     fun `check error is thrown if more than one valid command`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands)
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check error is thrown when command is of wrong type`() {
         val commands = listOf(invalidCommand)
         Assertions.assertThatThrownBy { testFunction(commands) }
@@ -72,7 +68,6 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
 
 @RunWith(Parameterized::class)
 @Epic("Contracts")
-@Feature("Feature: Contracts DSL")
 class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, PublicKey?, AbstractParty?) -> Iterable<CommandWithParties<CommandData>>,
                                   @Suppress("UNUSED_PARAMETER") description: String) {
     companion object {
@@ -85,7 +80,6 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns all values`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands, null, null)
@@ -95,7 +89,6 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function does not return invalid command types`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val filteredCommands = testFunction(commands, null, null).toList()
@@ -105,7 +98,6 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, miniCorp.publicKey, null).toList()
@@ -115,7 +107,6 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, miniCorp.party).toList()
@@ -127,7 +118,6 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
 
 @RunWith(Parameterized::class)
 @Epic("Contracts")
-@Feature("Feature: Contracts DSL")
 class SelectWithMultipleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, Collection<PublicKey>?, Collection<Party>?) -> Iterable<CommandWithParties<CommandData>>,
                                     @Suppress("UNUSED_PARAMETER") description: String) {
     companion object {
@@ -140,7 +130,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns all values`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands, null, null)
@@ -150,7 +139,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function does not return invalid command types`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val filteredCommands = testFunction(commands, null, null).toList()
@@ -160,7 +148,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, listOf(megaCorp.publicKey), null).toList()
@@ -170,7 +157,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from all valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, listOf(miniCorp.publicKey, megaCorp.publicKey), null).toList()
@@ -180,7 +166,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, listOf(megaCorp.party)).toList()
@@ -190,7 +175,6 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
     }
 
     @Test
-    @Story("Story: Contracts DSL tests")
     fun `check that function returns commands from all valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, listOf(miniCorp.party, megaCorp.party)).toList()

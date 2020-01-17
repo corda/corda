@@ -24,7 +24,6 @@ import org.junit.Rule
 import org.junit.Test
 
 @Epic("Contracts")
-@Feature("Feature: Package Ownership Verification")
 class PackageOwnershipVerificationTests {
 
     private companion object {
@@ -60,7 +59,6 @@ class PackageOwnershipVerificationTests {
     )
 
     @Test
-    @Story("Story: Package Ownership Verification tests")
     fun `Happy path - Transaction validates when package signed by owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -73,7 +71,6 @@ class PackageOwnershipVerificationTests {
     }
 
     @Test
-    @Story("Story: Package Ownership Verification tests")
     fun `Transaction validation fails when the selected attachment is not signed by the owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -86,7 +83,6 @@ class PackageOwnershipVerificationTests {
     }
 
     @Test
-    @Story("Story: Package Ownership Verification tests")
     fun `packages that do not have contracts in are still ownable`() {
         // The first version of this feature was incorrectly concerned with contract classes and only contract
         // classes, but for the feature to work it must apply to any package. This tests that by using a package

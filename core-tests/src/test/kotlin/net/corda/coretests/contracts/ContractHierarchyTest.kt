@@ -24,7 +24,6 @@ import org.junit.Before
 import org.junit.Test
 
 @Epic("Contracts")
-@Feature("Feature: Contract Hierarchy")
 class ContractHierarchyTest {
     private lateinit var mockNet: InternalMockNetwork
 
@@ -40,7 +39,6 @@ class ContractHierarchyTest {
     }
 
     @Test
-    @Story("Story: Contract Hierarchy tests")
     fun `hierarchical contracts work with mock network`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
