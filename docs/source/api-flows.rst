@@ -957,23 +957,19 @@ Below is an example of how ``FlowExternalOperation`` can be called from a flow t
 
             private val client: OkHttpClient = OkHttpClient()
 
-            // Responses are stored by [deduplicationId]
-            private val responses: ConcurrentHashMap<String, Response> = ConcurrentHashMap()
-
             fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): Response {
-                // Return the existing response if this operation has completed before
-                return if (responses.containsKey(deduplicationId)) {
-                    responses[deduplicationId]!!
-                } else {
-                    try {
-                        val response = client.newCall(Request.Builder().url("https://externalsystem.com/endpoint/$data").build()).execute()
-                        // Store the response by [deduplicationId]
-                        responses[deduplicationId] = response
-                        response
-                    } catch (e: IOException) {
-                        // Handle checked exception
-                        throw HospitalizeFlowException("External API call failed", e)
-                    }
+                return try {
+                    // [DeduplicationId] passed into the request so the external system can handle deduplication
+                    client.newCall(
+                        Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                            RequestBody.create(
+                                MediaType.parse("text/plain"), data.toString()
+                            )
+                        ).build()
+                    ).execute()
+                } catch (e: IOException) {
+                    // Handle checked exception
+                    throw HospitalizeFlowException("External API call failed", e)
                 }
             }
         }
@@ -1026,24 +1022,20 @@ Below is an example of how ``FlowExternalOperation`` can be called from a flow t
 
             private OkHttpClient client = new OkHttpClient();
 
-            // Responses are stored by [deduplicationId]
-            private Map<String, Response> responses = new HashMap<>();
-
             public ExternalService(AppServiceHub serviceHub) { }
 
             public Response retrieveDataFromExternalSystem(String deduplicationId, Data data) {
-                // Return the existing response if this operation has completed before
-                if (responses.containsKey(deduplicationId)) {
-                    return responses.get(deduplicationId);
-                }
                 try {
-                    Response response =
-                            client.newCall(new Request.Builder().url("https://externalsystem.com/endpoint" + data).build()).execute();
-                    // Store the response by [deduplicationId]
-                    responses.put(deduplicationId, response);
-                    return response;
+                    // [DeduplicationId] passed into the request so the external system can handle deduplication
+                    return client.newCall(
+                            new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                    RequestBody.create(
+                                            MediaType.parse("text/plain"), data.toString()
+                                    )
+                            ).build()
+                    ).execute();
                 } catch (IOException e) {
-                    // Handle checked exception
+                    // Must handle checked exception
                     throw new HospitalizeFlowException("External API call failed", e);
                 }
             }
@@ -1071,9 +1063,9 @@ Below is an example of how ``FlowExternalOperation`` can be called from a flow t
 In summary, the following steps are taken in the code above:
 
     * ``ExternalService`` is a Corda service that provides a way to contact an external system (by HTTP in this example).
-    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` to keep track of requests that were already made.
-      If the ``deduplicationId`` was already seen (existence in the ``responses`` map) the previous result will be returned rather than
-      contacting the external system again.
+    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` which is included as part of the request to the
+      external system. The external system, in this example, will handle deduplication and return the previous result if it was already
+      computed.
     * An implementation of ``FlowExternalOperation`` (``RetrieveDataFromExternalSystem``) is created that calls ``ExternalService.retrieveDataFromExternalSystem``.
     * ``RetrieveDataFromExternalSystem`` is then passed into ``await`` to execute the code contained in ``RetrieveDataFromExternalSystem.execute``.
     * The result of ``RetrieveDataFromExternalSystem.execute`` is then returned to the flow once its execution finishes.
@@ -1147,32 +1139,27 @@ Below is an example of how ``FlowExternalAsyncOperation`` can be called from a f
                 ThreadFactoryBuilder().setNameFormat("external-service-thread").build()
             )
 
-            // Responses are stored by [deduplicationId]
-            private val responses: MutableMap<String, Response> = mutableMapOf()
-
             fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): CompletableFuture<Response> {
-                // Return the existing response if this operation has completed before
-                return if (responses.containsKey(deduplicationId)) {
-                    // Completed future returned as the external system does not need to be contacted
-                    CompletableFuture.completedFuture(responses[deduplicationId]!!)
-                } else {
-                    // Create a [CompletableFuture] to be executed by the [FlowExternalAsyncOperation]
-                    CompletableFuture.supplyAsync(
-                        Supplier {
-                            try {
-                                val response = client.newCall(Request.Builder().url("https://externalsystem.com/endpoint/$data").build()).execute()
-                                // Store the response by [deduplicationId]
-                                responses[deduplicationId] = response
-                                response
-                            } catch (e: IOException) {
-                                // Handle checked exception
-                                throw HospitalizeFlowException("External API call failed", e)
-                            }
-                        },
-                        // The future must run on a new thread
-                        executor
-                    )
-                }
+                // Create a [CompletableFuture] to be executed by the [FlowExternalAsyncOperation]
+                return CompletableFuture.supplyAsync(
+                    Supplier {
+                        try {
+                            // [DeduplicationId] passed into the request so the external system can handle deduplication
+                            client.newCall(
+                                Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                                    RequestBody.create(
+                                        MediaType.parse("text/plain"), data.toString()
+                                    )
+                                ).build()
+                            ).execute()
+                        } catch (e: IOException) {
+                            // Handle checked exception
+                            throw HospitalizeFlowException("External API call failed", e)
+                        }
+                    },
+                    // The future must run on a new thread
+                    executor
+                )
             }
         }
 
@@ -1230,29 +1217,23 @@ Below is an example of how ``FlowExternalAsyncOperation`` can be called from a f
                     new ThreadFactoryBuilder().setNameFormat("external-service-thread").build()
             );
 
-            // Responses are stored by [deduplicationId]
-            private Map<String, Response> responses = new HashMap<>();
-
             public ExternalService(AppServiceHub serviceHub) { }
 
             public CompletableFuture<Response> retrieveDataFromExternalSystem(String deduplicationId, Data data) {
-                // Return the existing response if this operation has completed before
-                if (responses.containsKey(deduplicationId)) {
-                    // Completed future returned as the external system does not need to be contacted
-                    return CompletableFuture.completedFuture(responses.get(deduplicationId));
-                }
                 // Create a [CompletableFuture] to be executed by the [FlowExternalAsyncOperation]
                 return CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                Response response =
-                                        client.newCall(new Request.Builder().url("https://externalsystem.com/endpoint/" + data).build())
-                                                .execute();
-                                // Store the response by [deduplicationId]
-                                responses.put(deduplicationId, response);
-                                return response;
+                                // [DeduplicationId] passed into the request so the external system can handle deduplication
+                                return client.newCall(
+                                        new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                                RequestBody.create(
+                                                        MediaType.parse("text/plain"), data.toString()
+                                                )
+                                        ).build()
+                                ).execute();
                             } catch (IOException e) {
-                                // Handle checked exception
+                                // Must handle checked exception
                                 throw new HospitalizeFlowException("External API call failed", e);
                             }
                         },
@@ -1284,9 +1265,9 @@ Below is an example of how ``FlowExternalAsyncOperation`` can be called from a f
 In summary, the following steps are taken in the code above:
 
     * ``ExternalService`` is a Corda service that provides a way to contact an external system (by HTTP in this example).
-    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` to keep track of requests that were already made.
-      If the ``deduplicationId`` was already seen (existence in the ``responses`` map) the previous result will be returned rather than
-      contacting the external system again.
+    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` which is included as part of the request to the
+      external system. The external system, in this example, will handle deduplication and return the previous result if it was already
+      computed.
     * A ``CompletableFuture`` is created that contacts the external system. ``CompletableFuture.supplyAsync`` takes in a reference to the
       ``ExecutorService`` which will provide a thread for the external operation to run on.
     * An implementation of ``FlowExternalAsyncOperation`` (``RetrieveDataFromExternalSystem``) is created that calls the ``ExternalService.retrieveDataFromExternalSystem``.
@@ -1315,78 +1296,25 @@ The ``deduplicationId`` passed to an external operation is constructed from its 
 made. Therefore, the ``deduplicationId`` is guaranteed to be the same on a retry and will never be used again once the flow has successfully
 reached its next suspension point.
 
-Below is an example of handling deduplication within a service (the same example from the ``FlowExternalOperation`` and
-``FlowExternalAsyncOperation`` sections):
+.. note::
 
-.. container:: codeset
+    Any external operations that did not finish processing (or were kept in the flow hospital due to an error) will be retried upon node
+    restart.
 
-   .. sourcecode:: kotlin
+Below are examples of how deduplication could be handled:
 
-        @CordaService
-        class ExternalService(serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
+    * The external system records successful computations and returns previous results if requested again.
+    * The external system is idempotent, meaning the computation can be made multiple times without altering any state (similar to the point above).
+    * An extra external service maintains a record of deduplication IDs.
+    * Recorded inside of the node's database.
 
-            private val client: OkHttpClient = OkHttpClient()
+.. note::
 
-            // Responses are stored by [deduplicationId]
-            private val responses: ConcurrentHashMap<String, Response> = ConcurrentHashMap()
-
-            fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): Response {
-                // Return the existing response if this operation has completed before
-                return if (responses.containsKey(deduplicationId)) {
-                    responses[deduplicationId]!!
-                } else {
-                    try {
-                        val response = client.newCall(Request.Builder().url("https://externalsystem.com/endpoint/$data").build()).execute()
-                        // Store the response by [deduplicationId]
-                        responses[deduplicationId] = response
-                        response
-                    } catch (e: IOException) {
-                        // Handle checked exception
-                        throw HospitalizeFlowException("External API call failed", e)
-                    }
-                }
-            }
-        }
-
-   .. sourcecode:: java
-
-        @CordaService
-        public class ExternalService extends SingletonSerializeAsToken {
-
-            private OkHttpClient client = new OkHttpClient();
-
-            // Responses are stored by [deduplicationId]
-            private Map<String, Response> responses = new HashMap<>();
-
-            public ExternalService(AppServiceHub serviceHub) { }
-
-            public Response retrieveDataFromExternalSystem(String deduplicationId, Data data) {
-                // Return the existing response if this operation has completed before
-                if (responses.containsKey(deduplicationId)) {
-                    return responses.get(deduplicationId);
-                }
-                try {
-                    Response response =
-                            client.newCall(new Request.Builder().url("https://externalsystem.com/endpoint" + data).build()).execute();
-                    // Store the response by [deduplicationId]
-                    responses.put(deduplicationId, response);
-                    return response;
-                } catch (IOException e) {
-                    // Handle checked exception
-                    throw new HospitalizeFlowException("External API call failed", e);
-                }
-            }
-        }
-
-The assumption that this example is making, is that the external API being called is not idempotent and cannot be executed multiple times.
-The example stores the response from a request in a map, paired to the ``deduplicationId`` passed into the function. If the external
-operation calling this service ever retries, the ``deduplicationId`` already contained within the map will passed in and the result from
-the map is returned.
+    Handling deduplication on the external system's side is preferred compared to handling it inside of the node.
 
 .. warning::
 
-    This is a simplistic example to clarify how to handle deduplication. Ideally, any existing results should be persisted to a
-    more permanent location (for example, a database). In memory solutions will not survive node restarts.
+    In-memory data structures should not be used for handling deduplication as their state will not survive node restarts.
 
 .. _api_flows_guava_future_conversion:
 
@@ -1405,9 +1333,6 @@ The code below demonstrates how to convert a ``ListenableFuture`` into a ``Compl
 
             private val client: OkHttpClient = OkHttpClient()
 
-            // Responses are stored by [deduplicationId]
-            private val responses: ConcurrentHashMap<String, Response> = ConcurrentHashMap()
-
             // Guava's [ListeningExecutorService] created to supply a fixed number of threads
             private val guavaExecutor: ListeningExecutorService = MoreExecutors.listeningDecorator(
                 Executors.newFixedThreadPool(
@@ -1417,42 +1342,42 @@ The code below demonstrates how to convert a ``ListenableFuture`` into a ``Compl
             )
 
             fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): CompletableFuture<Response> {
-                return if (responses.containsKey(deduplicationId)) {
-                    CompletableFuture.completedFuture(responses[deduplicationId]!!)
-                } else {
-                    // Create a Guava [ListenableFuture]
-                    val guavaFuture: ListenableFuture<Response> = guavaExecutor.submit(Callable<Response> {
-                        try {
-                            val response = client.newCall(Request.Builder().url("https://externalsystem.com/endpoint/$data").build()).execute()
-                            responses[deduplicationId] = response
-                            response
-                        } catch (e: IOException) {
-                            // Handle checked exception
-                            throw HospitalizeFlowException("External API call failed", e)
-                        }
-                    })
-                    // Create a [CompletableFuture]
-                    object : CompletableFuture<Response>() {
-                        // If the returned [CompletableFuture] is cancelled then the underlying [ListenableFuture] must be cancelled as well
-                        override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
-                            return guavaFuture.cancel(mayInterruptIfRunning).also {
-                                super.cancel(mayInterruptIfRunning)
-                            }
-                        }
-                    }.also { completableFuture ->
-                        // Create a callback that completes the returned [CompletableFuture] when the underlying [ListenableFuture] finishes
-                        val callback = object : FutureCallback<Response> {
-                            override fun onSuccess(result: Response?) {
-                                completableFuture.complete(result)
-                            }
-
-                            override fun onFailure(t: Throwable) {
-                                completableFuture.completeExceptionally(t)
-                            }
-                        }
-                        // Register the callback
-                        Futures.addCallback(guavaFuture, callback, guavaExecutor)
+                // Create a Guava [ListenableFuture]
+                val guavaFuture: ListenableFuture<Response> = guavaExecutor.submit(Callable<Response> {
+                    try {
+                        // [DeduplicationId] passed into the request so the external system can handle deduplication
+                        client.newCall(
+                            Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                                RequestBody.create(
+                                    MediaType.parse("text/plain"), data.toString()
+                                )
+                            ).build()
+                        ).execute()
+                    } catch (e: IOException) {
+                        // Handle checked exception
+                        throw HospitalizeFlowException("External API call failed", e)
                     }
+                })
+                // Create a [CompletableFuture]
+                return object : CompletableFuture<Response>() {
+                    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+                        return guavaFuture.cancel(mayInterruptIfRunning).also {
+                            super.cancel(mayInterruptIfRunning)
+                        }
+                    }
+                }.also { completableFuture ->
+                    // Create a callback that completes the returned [CompletableFuture] when the underlying [ListenableFuture] finishes
+                    val callback = object : FutureCallback<Response> {
+                        override fun onSuccess(result: Response?) {
+                            completableFuture.complete(result)
+                        }
+
+                        override fun onFailure(t: Throwable) {
+                            completableFuture.completeExceptionally(t)
+                        }
+                    }
+                    // Register the callback
+                    Futures.addCallback(guavaFuture, callback, guavaExecutor)
                 }
             }
         }
@@ -1464,9 +1389,6 @@ The code below demonstrates how to convert a ``ListenableFuture`` into a ``Compl
 
             private OkHttpClient client = new OkHttpClient();
 
-            // Responses are stored by [deduplicationId]
-            private Map<String, Response> responses = new HashMap<>();
-
             public ExternalService(AppServiceHub serviceHub) { }
 
             private ListeningExecutorService guavaExecutor = MoreExecutors.listeningDecorator(
@@ -1477,17 +1399,17 @@ The code below demonstrates how to convert a ``ListenableFuture`` into a ``Compl
             );
 
             public CompletableFuture<Response> retrieveDataFromExternalSystem(String deduplicationId, Data data) {
-                if (responses.containsKey(deduplicationId)) {
-                    return CompletableFuture.completedFuture(responses.get(deduplicationId));
-                }
                 // Create a Guava [ListenableFuture]
                 ListenableFuture<Response> guavaFuture = guavaExecutor.submit(() -> {
                     try {
-                        Response response =
-                                client.newCall(new Request.Builder().url("https://externalsystem.com/endpoint/" + data).build())
-                                        .execute();
-                        responses.put(deduplicationId, response);
-                        return response;
+                        // [DeduplicationId] passed into the request so the external system can handle deduplication
+                        return client.newCall(
+                                new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                        RequestBody.create(
+                                                MediaType.parse("text/plain"), data.toString()
+                                        )
+                                ).build()
+                        ).execute();
                     } catch (IOException e) {
                         // Must handle checked exception
                         throw new HospitalizeFlowException("External API call failed", e);
