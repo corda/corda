@@ -81,8 +81,10 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val result = alice.rpc.startFlow(::FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
-                .returnValue.getOrThrow(20.seconds)
+            val result = alice.rpc.startFlow(
+                ::FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow,
+                bob.nodeInfo.singleIdentity()
+            ).returnValue.getOrThrow(20.seconds)
             assertTrue(result as Boolean)
             val (discharged, observation) = alice.rpc.startFlow(::GetHospitalCountersFlow).returnValue.getOrThrow()
             assertEquals(0, discharged)
@@ -186,107 +188,107 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
             assertEquals(0, observation)
         }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalAsyncOperation(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalAsyncOperation(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalAsyncOperation(serviceHub) { _, _ ->
-            serviceHub.cordaService(FutureService::class.java).createFuture()
-        })
-}
-
-@StartableByRPC
-class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
-    FlowWithExternalProcess(party) {
-
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalAsyncOperation(serviceHub) { _, _ ->
-            CompletableFuture<Any>().apply {
-                completeExceptionally(createException())
-            }
-        })
-
-    private fun createException() = when (exceptionType) {
-        HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
-        SQLTransientConnectionException::class.java -> SQLTransientConnectionException("fake exception - connection is not available")
-        else -> MyCordaException("boom")
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalAsyncOperation(serviceHub) { _, _ ->
+                serviceHub.cordaService(FutureService::class.java).createFuture()
+            })
     }
-}
 
-@StartableByRPC
-class FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
-    FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
+        FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any = try {
-        await(ExternalAsyncOperation(serviceHub) { _, _ ->
-            CompletableFuture<Any>().apply {
-                completeExceptionally(IllegalStateException("threw exception in external async operation"))
-            }
-        })
-    } catch (e: IllegalStateException) {
-        log.info("Exception was caught")
-        true
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalAsyncOperation(serviceHub) { _, _ ->
+                CompletableFuture<Any>().apply {
+                    completeExceptionally(createException())
+                }
+            })
+
+        private fun createException() = when (exceptionType) {
+            HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
+            SQLTransientConnectionException::class.java -> SQLTransientConnectionException("fake exception - connection is not available")
+            else -> MyCordaException("boom")
+        }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalAsyncOperationUnhandledException(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
+        FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalAsyncOperation(serviceHub) { _, _ -> throw MyCordaException("threw exception in external async operation") })
-}
-
-@StartableByRPC
-class FlowWithExternalAsyncOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
-
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
-        })
-}
-
-@StartableByRPC
-class FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
-
-    @Suppress("TooGenericExceptionCaught")
-    @Suspendable
-    override fun testCode(): Any {
-        return await(ExternalAsyncOperation(serviceHub) { _, _ ->
-            try {
-                serviceHub.cordaService(FutureService::class.java).setHospitalHandledException()
-            } catch (e: NullPointerException) {
-                // Catch the [NullPointerException] thrown from accessing the flow's [ServiceHub]
-                // set the future so that the exception can be asserted from the test
-                CompletableFuture<Any>().apply { completeExceptionally(DirectlyAccessedServiceHubException()) }
-            }
-        })
+        @Suspendable
+        override fun testCode(): Any = try {
+            await(ExternalAsyncOperation(serviceHub) { _, _ ->
+                CompletableFuture<Any>().apply {
+                    completeExceptionally(IllegalStateException("threw exception in external async operation"))
+                }
+            })
+        } catch (e: IllegalStateException) {
+            log.info("Exception was caught")
+            true
+        }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalAsyncOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationUnhandledException(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any {
-        return await(ExternalAsyncOperation(serviceHub) { serviceHub, deduplicationId ->
-            serviceHub.cordaService(FutureService::class.java).createExceptionFutureWithDeduplication(deduplicationId)
-        })
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalAsyncOperation(serviceHub) { _, _ -> throw MyCordaException("threw exception in external async operation") })
     }
-}
 
-@StartableByRPC
-class FlowThatStartsMultipleFuturesAndJoins(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).startMultipleFuturesAndJoin()
-        }.also { log.info("Result - $it") })
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
+            })
+    }
+
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
+
+        @Suppress("TooGenericExceptionCaught")
+        @Suspendable
+        override fun testCode(): Any {
+            return await(ExternalAsyncOperation(serviceHub) { _, _ ->
+                try {
+                    serviceHub.cordaService(FutureService::class.java).setHospitalHandledException()
+                } catch (e: NullPointerException) {
+                    // Catch the [NullPointerException] thrown from accessing the flow's [ServiceHub]
+                    // set the future so that the exception can be asserted from the test
+                    CompletableFuture<Any>().apply { completeExceptionally(DirectlyAccessedServiceHubException()) }
+                }
+            })
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalAsyncOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
+
+        @Suspendable
+        override fun testCode(): Any {
+            return await(ExternalAsyncOperation(serviceHub) { serviceHub, deduplicationId ->
+                serviceHub.cordaService(FutureService::class.java).createExceptionFutureWithDeduplication(deduplicationId)
+            })
+        }
+    }
+
+    @StartableByRPC
+    class FlowThatStartsMultipleFuturesAndJoins(party: Party) : FlowWithExternalProcess(party) {
+
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).startMultipleFuturesAndJoin()
+            }.also { log.info("Result - $it") })
+    }
 }

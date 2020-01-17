@@ -236,203 +236,203 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
             assertEquals(0, observation)
         }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalOperation(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalOperation(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> "please return my message" })
-}
-
-@StartableByRPC
-class FlowWithExternalOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
-
-    @Suspendable
-    override fun testCode(): Any {
-        return await(ExternalOperation(serviceHub) { serviceHub, deduplicationId ->
-            serviceHub.cordaService(FutureService::class.java).createExceptionWithDeduplication(deduplicationId)
-        })
+        @Suspendable
+        override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> "please return my message" })
     }
-}
 
-@StartableByRPC
-class FlowWithExternalOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
-    FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalOperationWithDeduplication(party: Party) : FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> throw createException() })
-
-    private fun createException() = when (exceptionType) {
-        HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
-        SQLTransientConnectionException::class.java -> SQLTransientConnectionException("fake exception - connection is not available")
-        else -> MyCordaException("boom")
+        @Suspendable
+        override fun testCode(): Any {
+            return await(ExternalOperation(serviceHub) { serviceHub, deduplicationId ->
+                serviceHub.cordaService(FutureService::class.java).createExceptionWithDeduplication(deduplicationId)
+            })
+        }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
-    FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalOperationPropagatesException<T>(party: Party, private val exceptionType: Class<T>) :
+        FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any = try {
-        await(ExternalOperation(serviceHub) { _, _ ->
-            throw IllegalStateException("threw exception in background process")
-        })
-    } catch (e: IllegalStateException) {
-        log.info("Exception was caught")
-        "Exception was caught"
+        @Suspendable
+        override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> throw createException() })
+
+        private fun createException() = when (exceptionType) {
+            HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
+            SQLTransientConnectionException::class.java -> SQLTransientConnectionException("fake exception - connection is not available")
+            else -> MyCordaException("boom")
+        }
     }
-}
 
-@StartableByRPC
-class FlowWithExternalOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
+    @StartableByRPC
+    class FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow(party: Party) :
+        FlowWithExternalProcess(party) {
 
-    @Suspendable
-    override fun testCode(): Any =
-        await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
-        })
-}
-
-@StartableByRPC
-class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
-
-    @Suppress("TooGenericExceptionCaught")
-    @Suspendable
-    override fun testCode(): Any {
-        try {
+        @Suspendable
+        override fun testCode(): Any = try {
             await(ExternalOperation(serviceHub) { _, _ ->
+                throw IllegalStateException("threw exception in background process")
+            })
+        } catch (e: IllegalStateException) {
+            log.info("Exception was caught")
+            "Exception was caught"
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatPassesInServiceHubCanRetry(party: Party) : FlowWithExternalProcess(party) {
+
+        @Suspendable
+        override fun testCode(): Any =
+            await(ExternalOperation(serviceHub) { serviceHub, _ ->
                 serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
             })
-        } catch (e: NullPointerException) {
-            throw DirectlyAccessedServiceHubException()
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatDirectlyAccessesServiceHubFailsRetry(party: Party) : FlowWithExternalProcess(party) {
+
+        @Suppress("TooGenericExceptionCaught")
+        @Suspendable
+        override fun testCode(): Any {
+            try {
+                await(ExternalOperation(serviceHub) { _, _ ->
+                    serviceHub.cordaService(FutureService::class.java).throwHospitalHandledException()
+                })
+            } catch (e: NullPointerException) {
+                throw DirectlyAccessedServiceHubException()
+            }
         }
     }
-}
 
-@StartableByRPC
-class FlowWithWithExternalOperationThatQueriesVault : FlowLogic<Boolean>() {
+    @StartableByRPC
+    class FlowWithWithExternalOperationThatQueriesVault : FlowLogic<Boolean>() {
 
-    @Suspendable
-    override fun call(): Boolean {
-        val state = DummyState(1, listOf(ourIdentity))
-        val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
-            addOutputState(state)
-            addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
+        @Suspendable
+        override fun call(): Boolean {
+            val state = DummyState(1, listOf(ourIdentity))
+            val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+                addOutputState(state)
+                addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
+            }
+            val stx = serviceHub.signInitialTransaction(tx)
+            serviceHub.recordTransactions(stx)
+            return await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.vaultService.queryBy<DummyState>().states.single().state.data == state
+            })
         }
-        val stx = serviceHub.signInitialTransaction(tx)
-        serviceHub.recordTransactions(stx)
-        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.vaultService.queryBy<DummyState>().states.single().state.data == state
-        })
-    }
-}
-
-abstract class FlowWithExternalOperationThatPersistsToDatabase : FlowLogic<Boolean>() {
-
-    @Suspendable
-    override fun call(): Boolean {
-        val (entityOne, entityTwo, entityThree) = saveToDatabase()
-        return serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
-                serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityTwo.name) == entityTwo &&
-                serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityThree.name) == entityThree
     }
 
-    @Suspendable
-    abstract fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity>
-}
+    abstract class FlowWithExternalOperationThatPersistsToDatabase : FlowLogic<Boolean>() {
 
-@StartableByRPC
-class FlowWithExternalOperationThatPersistsViaEntityManager : FlowWithExternalOperationThatPersistsToDatabase() {
-
-    @Suspendable
-    override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
-        val entityOne = CustomTableEntity("Darth Vader", "I find your lack of faith disturbing.")
-        val entityTwo = CustomTableEntity("Obi-Wan Kenobi", "The Force will be with you. Always.")
-        val entityThree = CustomTableEntity("Admiral Ackbar", "It’s a trap!")
-        await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityTwo)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityThree)
-        })
-        return Triple(entityOne, entityTwo, entityThree)
-    }
-}
-
-@StartableByRPC
-class FlowWithExternalOperationThatPersistsViaJdbcSession : FlowWithExternalOperationThatPersistsToDatabase() {
-
-    @Suspendable
-    override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
-        val entityOne = CustomTableEntity("Tony Stark", "I am Iron Man.")
-        val entityTwo = CustomTableEntity("Captain America", "I can do this all day.")
-        val entityThree = CustomTableEntity("Hulk", "Puny god.")
-        await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityOne)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityThree)
-        })
-        return Triple(entityOne, entityTwo, entityThree)
-    }
-}
-
-@StartableByRPC
-class FlowWithExternalOperationThatPersistsViaDatabaseTransaction : FlowWithExternalOperationThatPersistsToDatabase() {
-
-    @Suspendable
-    override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
-        val entityOne = CustomTableEntity("Groot", "We are Groot.")
-        val entityTwo = CustomTableEntity("Drax", "Nothing goes over my head. My reflexes are too fast. I would catch it.")
-        val entityThree = CustomTableEntity("Doctor Strange", "Dormammu, I’ve come to bargain.")
-        await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityOne)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityTwo)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
-        })
-        return Triple(entityOne, entityTwo, entityThree)
-    }
-}
-
-@StartableByRPC
-class FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation : FlowLogic<Boolean>() {
-
-    @Suspendable
-    override fun call(): Boolean {
-        val entityOne = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
-        val entityTwo = CustomTableEntity("Yoda", "My ally is the Force, and a powerful ally it is.")
-        val entityThree = CustomTableEntity("Han Solo", "Never tell me the odds!")
-        await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
-            serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
-        })
-        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
+        @Suspendable
+        override fun call(): Boolean {
+            val (entityOne, entityTwo, entityThree) = saveToDatabase()
+            return serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
                     serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityTwo.name) == entityTwo &&
                     serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityThree.name) == entityThree
-        })
-    }
-}
+        }
 
-@StartableByRPC
-class FlowWithExternalOperationThatErrorsInsideOfDatabaseTransaction(party: Party) : FlowWithExternalProcess(party) {
-
-    private companion object {
-        var flag = false
+        @Suspendable
+        abstract fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity>
     }
 
-    @Suspendable
-    override fun testCode(): Boolean {
-        return await(ExternalOperation(serviceHub) { serviceHub, _ ->
-            if (!flag) {
-                flag = true
-                serviceHub.cordaService(FutureService::class.java).throwExceptionInsideOfDatabaseTransaction()
-            } else {
-                val entity = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
-                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entity)
-                return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entity.name) != null
-            }
-        })
+    @StartableByRPC
+    class FlowWithExternalOperationThatPersistsViaEntityManager : FlowWithExternalOperationThatPersistsToDatabase() {
+
+        @Suspendable
+        override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
+            val entityOne = CustomTableEntity("Darth Vader", "I find your lack of faith disturbing.")
+            val entityTwo = CustomTableEntity("Obi-Wan Kenobi", "The Force will be with you. Always.")
+            val entityThree = CustomTableEntity("Admiral Ackbar", "It’s a trap!")
+            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityTwo)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityThree)
+            })
+            return Triple(entityOne, entityTwo, entityThree)
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatPersistsViaJdbcSession : FlowWithExternalOperationThatPersistsToDatabase() {
+
+        @Suspendable
+        override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
+            val entityOne = CustomTableEntity("Tony Stark", "I am Iron Man.")
+            val entityTwo = CustomTableEntity("Captain America", "I can do this all day.")
+            val entityThree = CustomTableEntity("Hulk", "Puny god.")
+            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityOne)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityThree)
+            })
+            return Triple(entityOne, entityTwo, entityThree)
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatPersistsViaDatabaseTransaction : FlowWithExternalOperationThatPersistsToDatabase() {
+
+        @Suspendable
+        override fun saveToDatabase(): Triple<CustomTableEntity, CustomTableEntity, CustomTableEntity> {
+            val entityOne = CustomTableEntity("Groot", "We are Groot.")
+            val entityTwo = CustomTableEntity("Drax", "Nothing goes over my head. My reflexes are too fast. I would catch it.")
+            val entityThree = CustomTableEntity("Doctor Strange", "Dormammu, I’ve come to bargain.")
+            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityOne)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityTwo)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
+            })
+            return Triple(entityOne, entityTwo, entityThree)
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation : FlowLogic<Boolean>() {
+
+        @Suspendable
+        override fun call(): Boolean {
+            val entityOne = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
+            val entityTwo = CustomTableEntity("Yoda", "My ally is the Force, and a powerful ally it is.")
+            val entityThree = CustomTableEntity("Han Solo", "Never tell me the odds!")
+            await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithEntityManager(entityOne)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithJdbcSession(entityTwo)
+                serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entityThree)
+            })
+            return await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityOne.name) == entityOne &&
+                        serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityTwo.name) == entityTwo &&
+                        serviceHub.cordaService(FutureService::class.java).readFromDatabase(entityThree.name) == entityThree
+            })
+        }
+    }
+
+    @StartableByRPC
+    class FlowWithExternalOperationThatErrorsInsideOfDatabaseTransaction(party: Party) : FlowWithExternalProcess(party) {
+
+        private companion object {
+            var flag = false
+        }
+
+        @Suspendable
+        override fun testCode(): Boolean {
+            return await(ExternalOperation(serviceHub) { serviceHub, _ ->
+                if (!flag) {
+                    flag = true
+                    serviceHub.cordaService(FutureService::class.java).throwExceptionInsideOfDatabaseTransaction()
+                } else {
+                    val entity = CustomTableEntity("Emperor Palpatine", "Now, young Skywalker, you will die.")
+                    serviceHub.cordaService(FutureService::class.java).saveToDatabaseWithDatabaseTransaction(entity)
+                    return@ExternalOperation serviceHub.cordaService(FutureService::class.java).readFromDatabase(entity.name) != null
+                }
+            })
+        }
     }
 }
