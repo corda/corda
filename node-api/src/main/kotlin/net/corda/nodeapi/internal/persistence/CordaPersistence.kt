@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
@@ -93,6 +94,11 @@ fun <T> withoutDatabaseAccess(block: () -> T): T {
 
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
+interface TransactionErrorHandler {
+    @Suspendable
+    fun handleError(t: Throwable): Unit
+}
+
 class CordaPersistence(
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
@@ -101,7 +107,9 @@ class CordaPersistence(
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: DatabaseTransaction.(t: Throwable) -> Unit = {}
+        val errorHandler: TransactionErrorHandler = object : TransactionErrorHandler {
+            override fun handleError(t: Throwable) {}
+        }
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -200,7 +208,7 @@ class CordaPersistence(
             return transaction.connection
         } catch (e: Exception) {
             if (e is SQLException || e is PersistenceException) {
-                transaction.errorHandler(e)
+                errorHandler.handleError(e)
             }
             throw e
         }
@@ -211,6 +219,7 @@ class CordaPersistence(
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
+    @Suspendable
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
             transaction(isolationLevel, 2, false, statement)
 
@@ -218,6 +227,7 @@ class CordaPersistence(
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
      * @param statement to be executed in the scope of this transaction.
      */
+    @Suspendable
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
     /**
@@ -227,6 +237,7 @@ class CordaPersistence(
      * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a cause of [Throwable].
      * @param statement to be executed in the scope of this transaction.
      */
+    @Suspendable
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
@@ -241,7 +252,7 @@ class CordaPersistence(
                 outer.statement()
             } catch (e: Exception) {
                 if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
-                    outer.errorHandler(e)
+                    errorHandler.handleError(e)
                 }
                 throw e
             }

@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -162,6 +163,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.TransactionErrorHandler
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -1248,13 +1250,12 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
         jdbcUrl,
         cacheFactory,
         attributeConverters, customClassLoader,
-        errorHandler = { t ->
-            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
-            FlowStateMachineImpl.currentStateMachine()?.let {
-                // register only the very first exception thrown throughout a chain of logical transactions
-                firstExceptionInDatabaseTransaction = t
-            }
-        })
+            errorHandler = object : TransactionErrorHandler {
+                @Suspendable
+                override fun handleError(t: Throwable) {
+                    FlowStateMachineImpl.currentStateMachine()?.handleError(t)
+                }
+            })
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {

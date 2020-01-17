@@ -1,5 +1,6 @@
 package net.corda.node.services.api
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
@@ -62,6 +63,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
             return sort.complete()
         }
 
+        @Suspendable
         fun recordTransactions(statesToRecord: StatesToRecord,
                                txs: Collection<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
@@ -154,6 +156,7 @@ interface ServiceHubInternal : ServiceHubCoreInternal {
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
     val cacheFactory: NamedCacheFactory
 
+    @Suspendable
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         recordTransactions(
                 statesToRecord,

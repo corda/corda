@@ -488,6 +488,25 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
     }
+
+    @Suspendable
+    fun handleError(t: Throwable) {
+        // Immediately process the last event. This is to make sure the transition can assume that it has an open
+        // database transaction.
+        val continuation = processEventImmediately(
+                Event.Error(t),
+                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnExit = false
+        )
+        if (continuation == FlowContinuation.ProcessEvents) {
+            // This can happen in case there was an error and there are further things to do e.g. to propagate it.
+            processEventsUntilFlowIsResumed(
+                    isDbTransactionOpenOnEntry = false,
+                    isDbTransactionOpenOnExit = false
+            )
+        }
+    }
+
 }
 
 val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>>

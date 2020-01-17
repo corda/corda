@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
@@ -206,12 +207,14 @@ interface ServiceHub : ServicesForResolution {
      * @param txs The transactions to record.
      * @param statesToRecord how the vault should treat the output states of the transaction.
      */
+    @Suspendable
     fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>)
 
     /**
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */
+    @Suspendable
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
         recordTransactions(listOf(first, *remaining))
     }
@@ -220,6 +223,7 @@ interface ServiceHub : ServicesForResolution {
      * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
      * further processing. This is expected to be run within a database transaction.
      */
+    @Suspendable
     fun recordTransactions(txs: Iterable<SignedTransaction>) {
         recordTransactions(StatesToRecord.ONLY_RELEVANT, txs)
     }
