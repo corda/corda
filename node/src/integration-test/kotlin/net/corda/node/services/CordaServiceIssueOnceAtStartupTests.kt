@@ -8,6 +8,7 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.node.services.ServiceLifecycleObserver
+import net.corda.core.node.services.Vault
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
@@ -43,9 +44,10 @@ class CordaServiceIssueOnceAtStartupTests {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = FINANCE_CORDAPPS + enclosedCordapp(), inMemoryDB = false,
                 systemProperties = mapOf(armedPropName to "true"))) {
             val node = startNode(providedName = ALICE_NAME).getOrThrow()
+            var page: Vault.Page<Cash.State>?
             eventually(duration = 10.seconds) {
-                val page = node.rpc.vaultQuery(Cash.State::class.java)
-                assertTrue(page.states.isNotEmpty())
+                page = node.rpc.vaultQuery(Cash.State::class.java)
+                assertTrue(page!!.states.isNotEmpty())
             }
             node.stop()
         }

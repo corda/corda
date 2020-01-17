@@ -3,9 +3,9 @@ package net.corda.nodeapi.internal.lifecycle
 import net.corda.core.node.services.CordaServiceCriticalFailureException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import java.util.Collections.singleton
 import java.util.LinkedList
+import java.util.concurrent.Executors
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -36,6 +36,8 @@ class NodeLifecycleEventsDistributor {
     private val prioritizedObservers: MutableList<NodeLifecycleObserver> = mutableListOf()
 
     private val readWriteLock: ReadWriteLock = ReentrantReadWriteLock()
+
+    private val executor = Executors.newSingleThreadExecutor()
 
     /**
      * Adds observer to the distribution list.
@@ -73,16 +75,18 @@ class NodeLifecycleEventsDistributor {
      */
     fun distributeEvent(event: NodeLifecycleEvent) {
         val snapshot = readWriteLock.readLock().executeLocked { LinkedList(prioritizedObservers) }
-        val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
 
-        orderedSnapshot.forEach {
-            log.info("Distributing event to: $it")
-            val updateResult = it.update(event)
-            if(updateResult.isSuccess) {
-                log.info("Event $event distribution outcome: $updateResult")
-            } else {
-                log.error("Failed to distribute event $event, failure outcome: $updateResult")
-                handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
+        executor.execute  {
+            val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
+            orderedSnapshot.forEach {
+                log.info("Distributing event $event to: $it")
+                val updateResult = it.update(event)
+                if (updateResult.isSuccess) {
+                    log.info("Event $event distribution outcome: $updateResult")
+                } else {
+                    log.error("Failed to distribute event $event, failure outcome: $updateResult")
+                    handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
+                }
             }
         }
     }
