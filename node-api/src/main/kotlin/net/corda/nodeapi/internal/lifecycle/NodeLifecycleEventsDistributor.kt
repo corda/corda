@@ -1,6 +1,9 @@
 package net.corda.nodeapi.internal.lifecycle
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.CordaServiceCriticalFailureException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -74,23 +77,29 @@ class NodeLifecycleEventsDistributor {
 
     /**
      * Distributes event to all the observers previously added
+     *
+     * @return [CordaFuture] to signal when distribution is finished and delivered to all the observers
      */
-    fun distributeEvent(event: NodeLifecycleEvent) {
+    fun distributeEvent(event: NodeLifecycleEvent): CordaFuture<Unit> {
         val snapshot = readWriteLock.readLock().executeLocked { LinkedList(prioritizedObservers) }
 
-        //executor.execute  {
+        val result = openFuture<Any?>()
+
+        executor.execute {
             val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
             orderedSnapshot.forEach {
-                log.info("Distributing event $event to: $it")
+                log.debug("Distributing event $event to: $it")
                 val updateResult = it.update(event)
                 if (updateResult.isSuccess) {
-                    log.info("Event $event distribution outcome: $updateResult")
+                    log.debug("Event $event distribution outcome: $updateResult")
                 } else {
                     log.error("Failed to distribute event $event, failure outcome: $updateResult")
                     handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
                 }
             }
-        //}
+            result.set(null)
+        }
+        return result.map { }
     }
 
     private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: Try.Failure<String>) {

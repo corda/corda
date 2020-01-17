@@ -29,16 +29,18 @@ internal class NodeLifecycleEventsDistributorMultiThreadedTest {
 
         val operationsCount = 100_000
         val event = NodeLifecycleEvent.BeforeNodeStart(mock())
-        val additionFreq = 100
-        (1..operationsCount).stream(true).forEach {
+        val additionFreq = 1000
+        val distributionFutures = (1..operationsCount).stream(true).mapToObj {
             if(it % additionFreq == 0) {
                 logger.debug("Adding observer")
                 instance.add(MyObserver(it))
                 addedCounter.incrementAndGet()
+                logger.info("Progress so far: $it")
             }
             logger.debug("Distributing event")
             instance.distributeEvent(event)
         }
+        distributionFutures.forEach { it.get() }
 
         with(eventsDeliveredCounter.get()) {
             // Greater than original observers times events
