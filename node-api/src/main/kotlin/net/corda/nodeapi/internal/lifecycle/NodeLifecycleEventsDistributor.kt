@@ -76,9 +76,10 @@ class NodeLifecycleEventsDistributor {
         val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
 
         orderedSnapshot.forEach {
+            log.info("Distributing event to: $it")
             val updateResult = it.update(event)
             if(updateResult.isSuccess) {
-                log.debug { "Event $event distribution outcome: $updateResult" }
+                log.info("Event $event distribution outcome: $updateResult")
             } else {
                 log.error("Failed to distribute event $event, failure outcome: $updateResult")
                 handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
