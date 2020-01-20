@@ -20,9 +20,9 @@ import rx.Observable
 interface AppServiceHub : ServiceHub {
 
     companion object {
-        const val SERVICE_PRIORITY_HIGH = 20
+        const val SERVICE_PRIORITY_HIGH = 200
         const val SERVICE_PRIORITY_NORMAL = 100
-        const val SERVICE_PRIORITY_LOW = 200
+        const val SERVICE_PRIORITY_LOW = 20
     }
 
     /**
@@ -50,7 +50,7 @@ interface AppServiceHub : ServiceHub {
     /**
      * Allows to register [ServiceLifecycleObserver] such that it will start receiving [net.corda.core.node.services.ServiceLifecycleEvent]s
      *
-     * @param priority controls to which queue [observer] will be added. Lower values correspond to higher priorities.
+     * @param priority controls to which queue [observer] will be added. Higher values correspond to higher priorities.
      *
      * @param observer an instance of [ServiceLifecycleObserver] to be registered.
      */

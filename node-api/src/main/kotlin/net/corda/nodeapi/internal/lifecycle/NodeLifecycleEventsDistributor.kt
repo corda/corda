@@ -61,8 +61,10 @@ class NodeLifecycleEventsDistributor {
         data class SortingKey(val priority: Int, val clazz: Class<*>) : Comparable<SortingKey> {
             override fun compareTo(other: SortingKey): Int {
                 if(priority != other.priority) {
-                    return priority - other.priority
+                    // Reversing sorting order such that higher priorities come first
+                    return other.priority - priority
                 }
+                // Within the same priority order alphabetically by class name to deterministic order
                 return clazz.name.compareTo(other.clazz.name)
             }
         }
