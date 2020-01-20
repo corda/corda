@@ -30,7 +30,8 @@ class NodeLifecycleEventsDistributor {
 
         private val criticalEventsClasses: Set<Class<out NodeLifecycleEvent>> = setOf(
                 NodeLifecycleEvent.BeforeNodeStart::class.java,
-                NodeLifecycleEvent.AfterNodeStart::class.java)
+                NodeLifecycleEvent.AfterNodeStart::class.java,
+                NodeLifecycleEvent.CorDappStarted::class.java)
         private val criticalExceptionsClasses: Set<Class<out Throwable>> = setOf(CordaServiceCriticalFailureException::class.java)
     }
 
@@ -104,8 +105,10 @@ class NodeLifecycleEventsDistributor {
 
     private fun handlePossibleFatalTermination(event: NodeLifecycleEvent, updateFailed: Try.Failure<String>) {
         if (event.javaClass in criticalEventsClasses && updateFailed.exception.javaClass in criticalExceptionsClasses) {
-            log.error("During processing of $event critical failures been reported: $updateFailed. JVM will be terminated.")
+            log.error("During processing of $event critical failure been reported: $updateFailed. JVM will be terminated.")
             exitProcess(1)
+        } else {
+            log.warn("During processing of $event non-critical failure been reported: $updateFailed.")
         }
     }
 

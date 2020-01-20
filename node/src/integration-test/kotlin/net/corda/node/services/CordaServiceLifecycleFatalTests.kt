@@ -55,6 +55,8 @@ class CordaServiceLifecycleFatalTests {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
                 notarySpecs = emptyList(), systemProperties = mapOf(Pair(SECRET_PROPERTY_NAME, "true")))) {
             val nodeHandle = startNode(providedName = ALICE_NAME)
+            // Ensure ample time for all the stat-up lifecycle events to be processed
+            Thread.sleep(2000)
             assertFailsWith(ListenProcessDeathException::class) {
                 nodeHandle.getOrThrow()
             }
