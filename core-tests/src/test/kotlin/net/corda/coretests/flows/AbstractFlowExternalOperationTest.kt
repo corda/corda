@@ -182,6 +182,7 @@ abstract class AbstractFlowExternalOperationTest {
 
     object CustomMappedSchema : MappedSchema(CustomSchema::class.java, 1, listOf(CustomTableEntity::class.java))
 
+    // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
         override fun call(): HospitalCounts =
