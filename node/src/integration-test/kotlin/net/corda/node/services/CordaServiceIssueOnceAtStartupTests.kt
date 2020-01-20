@@ -40,7 +40,8 @@ class CordaServiceIssueOnceAtStartupTests {
         private val armedPropName = this::class.java.enclosingClass.name + "-armed"
         private val logger = contextLogger()
         private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
-        private val tmpFile = createTempFile()
+        private val tmpFile = createTempFile(prefix = tempFilePropertyName)
+        private const val vaultQueryExecutedMarker = "VaultQueryExecuted"
         private const val sentFlowMarker = "SentFlow"
     }
 
@@ -48,21 +49,26 @@ class CordaServiceIssueOnceAtStartupTests {
     fun test() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = FINANCE_CORDAPPS + enclosedCordapp(), inMemoryDB = false,
                 systemProperties = mapOf(armedPropName to "true", tempFilePropertyName to tmpFile.absolutePath))) {
-            val node = startNode(providedName = ALICE_NAME).getOrThrow()
+            var node = startNode(providedName = ALICE_NAME).getOrThrow()
             var page: Vault.Page<Cash.State>?
             eventually(duration = 10.seconds) {
                 page = node.rpc.vaultQuery(Cash.State::class.java)
                 assertTrue(page!!.states.isNotEmpty())
-                val tmpFileLines = tmpFile.readLines()
-                assertEquals(sentFlowMarker, tmpFileLines.firstOrNull())
+                assertEquals(listOf(vaultQueryExecutedMarker, sentFlowMarker), tmpFile.readLines(), "First start tracker")
             }
             node.stop()
+            node = startNode(providedName = ALICE_NAME).getOrThrow()
+            eventually(duration = 10.seconds) {
+                assertEquals(listOf(vaultQueryExecutedMarker, sentFlowMarker, vaultQueryExecutedMarker),
+                        tmpFile.readLines(), "Re-start tracker")
+            }
         }
     }
 
     @After
     fun testDown() {
         System.clearProperty(armedPropName)
+        tmpFile.delete()
     }
 
     @CordaService
@@ -85,14 +91,22 @@ class CordaServiceIssueOnceAtStartupTests {
         inner class MyServiceLifecycleObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
                 val tmpFile = File(System.getProperty(tempFilePropertyName))
-
                 if (event == ServiceLifecycleEvent.CORDAPP_STARTED) {
-                    val issueAndPayResult = services.startFlow(
-                            IssueAndPayByServiceFlow(
-                                    services.myInfo.legalIdentities.single(), services.networkMapCache.notaryIdentities.single()))
-                            .returnValue.getOrThrow()
-                    logger.info("Cash issued and paid: $issueAndPayResult")
-                    tmpFile.writeText(sentFlowMarker)
+                    val queryResult = services.vaultService.queryBy(Cash.State::class.java)
+                    if (tmpFile.length() == 0L) {
+                        tmpFile.appendText(vaultQueryExecutedMarker)
+                    } else {
+                        tmpFile.appendText("\n" + vaultQueryExecutedMarker)
+                    }
+
+                    if(queryResult.states.isEmpty()) {
+                        val issueAndPayResult = services.startFlow(
+                                IssueAndPayByServiceFlow(
+                                        services.myInfo.legalIdentities.single(), services.networkMapCache.notaryIdentities.single()))
+                                .returnValue.getOrThrow()
+                        logger.info("Cash issued and paid: $issueAndPayResult")
+                        tmpFile.appendText("\n" + sentFlowMarker)
+                    }
                 }
             }
         }
