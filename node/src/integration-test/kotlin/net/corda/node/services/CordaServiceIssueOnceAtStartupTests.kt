@@ -26,6 +26,8 @@ import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.After
 import org.junit.Test
+import java.io.File
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -37,17 +39,22 @@ class CordaServiceIssueOnceAtStartupTests {
     companion object {
         private val armedPropName = this::class.java.enclosingClass.name + "-armed"
         private val logger = contextLogger()
+        private val tempFilePropertyName = this::class.java.enclosingClass.name + "-tmpFile"
+        private val tmpFile = createTempFile()
+        private const val sentFlowMarker = "SentFlow"
     }
 
     @Test
     fun test() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = FINANCE_CORDAPPS + enclosedCordapp(), inMemoryDB = false,
-                systemProperties = mapOf(armedPropName to "true"))) {
+                systemProperties = mapOf(armedPropName to "true", tempFilePropertyName to tmpFile.absolutePath))) {
             val node = startNode(providedName = ALICE_NAME).getOrThrow()
             var page: Vault.Page<Cash.State>?
             eventually(duration = 10.seconds) {
                 page = node.rpc.vaultQuery(Cash.State::class.java)
                 assertTrue(page!!.states.isNotEmpty())
+                val tmpFileLines = tmpFile.readLines()
+                assertEquals(sentFlowMarker, tmpFileLines.firstOrNull())
             }
             node.stop()
         }
@@ -59,6 +66,7 @@ class CordaServiceIssueOnceAtStartupTests {
     }
 
     @CordaService
+    @Suppress("unused")
     class IssueAndPayOnceService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
 
         init {
@@ -76,12 +84,15 @@ class CordaServiceIssueOnceAtStartupTests {
 
         inner class MyServiceLifecycleObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
+                val tmpFile = File(System.getProperty(tempFilePropertyName))
+
                 if (event == ServiceLifecycleEvent.CORDAPP_STARTED) {
                     val issueAndPayResult = services.startFlow(
                             IssueAndPayByServiceFlow(
                                     services.myInfo.legalIdentities.single(), services.networkMapCache.notaryIdentities.single()))
                             .returnValue.getOrThrow()
                     logger.info("Cash issued and paid: $issueAndPayResult")
+                    tmpFile.writeText(sentFlowMarker)
                 }
             }
         }
