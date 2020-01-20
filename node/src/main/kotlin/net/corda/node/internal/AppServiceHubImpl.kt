@@ -86,10 +86,6 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
                         observer.onServiceLifecycleEvent(ServiceLifecycleEvent.CORDAPP_STARTED)
                         reportSuccess(nodeLifecycleEvent)
                     }
-                    is NodeLifecycleEvent.CorDappStopped<*> -> Try.on {
-                        observer.onServiceLifecycleEvent(ServiceLifecycleEvent.CORDAPP_STOPPED)
-                        reportSuccess(nodeLifecycleEvent)
-                    }
                     else -> super.update(nodeLifecycleEvent)
                 }
             }

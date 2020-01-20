@@ -50,9 +50,6 @@ public class JavaCordaServiceLifecycle {
                 case CORDAPP_STARTED:
                     eventsCaptured.add(event);
                     break;
-                case CORDAPP_STOPPED:
-                    eventsCaptured.add(event);
-                    break;
                 default:
                     // Process other typed of events
                     break;

@@ -25,7 +25,7 @@ class JavaCordaServiceLifecycleTests {
             node.rpc.startFlow(::JavaComputeTextLengthThroughCordaService, TEST_PHRASE).returnValue.getOrThrow()
         }
         assertEquals(TEST_PHRASE.length, result)
-        assertEquals(2, eventsCaptured.size)
-        assertEquals(listOf(ServiceLifecycleEvent.CORDAPP_STARTED, ServiceLifecycleEvent.CORDAPP_STOPPED), eventsCaptured)
+        assertEquals(1, eventsCaptured.size)
+        assertEquals(listOf(ServiceLifecycleEvent.CORDAPP_STARTED), eventsCaptured)
     }
 }

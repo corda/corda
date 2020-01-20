@@ -26,14 +26,6 @@ enum class ServiceLifecycleEvent {
      * as practically possible.
      */
     CORDAPP_STARTED,
-
-    /**
-     * Notification to inform that CorDapp is shutting down. In response to this event [CordaService] may perform clean-up of some critical
-     * resources.
-     * This type of event is dispatched on best effort basis, i.e. if there was a failure during [CORDAPP_STARTED] processing this event may
-     * not be dispatched.
-     */
-    CORDAPP_STOPPED
 }
 
 /**
