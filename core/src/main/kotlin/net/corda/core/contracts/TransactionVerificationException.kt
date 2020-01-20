@@ -36,7 +36,16 @@ open class TransactionResolutionException @JvmOverloads constructor(val hash: Se
  * @property hash Hash of the bytes of the attachment, see [Attachment.id]
  */
 @KeepForDJVM
-class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attachment resolution failure for $hash")
+class AttachmentResolutionException(val hash: AttachmentId) : FlowException("Attachment resolution failure for $hash")
+
+/**
+ * A non-specific exception for the attachment identified by [attachmentId]. The context
+ * for this error is provided via the [message] and [cause].
+ * @property attachmentId
+ */
+@KeepForDJVM
+class BrokenAttachmentException(val attachmentId: AttachmentId, message: String?, cause: Throwable?)
+    : FlowException("Attachment $attachmentId has error (${message ?: "no message"})", cause)
 
 /**
  * Indicates that some aspect of the transaction named by [txId] violates the platform rules. The exact type of failure

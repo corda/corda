@@ -2,6 +2,7 @@
 package net.corda.node.djvm
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.BrokenAttachmentException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import java.io.InputStream
@@ -56,7 +57,12 @@ class SandboxAttachment(
     @Suppress("OverridingDeprecatedMember")
     override val signers: List<Party> = emptyList()
 
+    @Suppress("TooGenericExceptionCaught")
     override fun open(): InputStream {
-        return streamer.apply(attachment)
+        return try {
+            streamer.apply(attachment)
+        } catch (e: Exception) {
+            throw BrokenAttachmentException(id, e.message, e)
+        }
     }
 }
