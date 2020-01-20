@@ -94,7 +94,7 @@ const val STANDALONE_SHELL_PERMISSION = "ALL"
 @Suppress("MaxLineLength")
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
-    private lateinit var rpcOps: (username: String, password: String) -> InternalCordaRPCOps
+    private lateinit var makeRPCConnection: (username: String, password: String) -> CordaRPCConnection
     private lateinit var ops: InternalCordaRPCOps
     private lateinit var rpcConn: CordaRPCConnection
     private var shell: Shell? = null
@@ -112,7 +112,7 @@ object InteractiveShell {
     }
 
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
-        rpcOps = { username: String, password: String ->
+        makeRPCConnection = { username: String, password: String ->
             val connection = if (standalone) {
                 CordaRPCClient(
                         configuration.hostAndPort,
@@ -130,7 +130,7 @@ object InteractiveShell {
                 ).start(username, password)
             }
             rpcConn = connection
-            connection.proxy as InternalCordaRPCOps
+            connection
         }
         launchShell(configuration, standalone, classLoader)
     }
@@ -252,7 +252,8 @@ object InteractiveShell {
                     // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
                     // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
                     // is only the 'jmx' command.
-                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
+                    return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(makeRPCConnection) +
+                            CordaDisconnectPlugin()
                 }
             }
             val attributes = emptyMap<String, Any>()
@@ -260,6 +261,7 @@ object InteractiveShell {
             context.refresh()
             this.config = config
             start(context)
+            val rpcOps = { username: String, password: String -> makeRPCConnection(username, password).proxy as InternalCordaRPCOps }
             ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
             return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops,
                     StdoutANSIProgressRenderer), shellSafety)
