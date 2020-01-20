@@ -19,7 +19,6 @@ import net.corda.core.internal.WaitForStateConsumption
 import net.corda.core.internal.abbreviate
 import net.corda.core.internal.checkPayloadIs
 import net.corda.core.internal.concurrent.asCordaFuture
-import net.corda.core.internal.executeAsync
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -445,7 +444,12 @@ abstract class FlowLogic<out T> {
      * @param stateRefs the StateRefs which will be consumed in the future.
      */
     @Suspendable
-    fun waitForStateConsumption(stateRefs: Set<StateRef>) = executeAsync(WaitForStateConsumption(stateRefs, serviceHub))
+    fun waitForStateConsumption(stateRefs: Set<StateRef>) {
+        // Manually call the equivalent of [await] to remove extra wrapping of objects
+        // Makes serializing of object easier for [CheckpointDumper] as well
+        val request = FlowIORequest.ExecuteAsyncOperation(WaitForStateConsumption(stateRefs, serviceHub))
+        return stateMachine.suspend(request, false)
+    }
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect
@@ -527,9 +531,10 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun <R : Any> await(operation: FlowExternalAsyncOperation<R>): R {
         // Wraps the passed in [FlowExternalAsyncOperation] so its [CompletableFuture] can be converted into a [CordaFuture]
-        val flowAsyncOperation = object : FlowAsyncOperation<R> {
+        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalAsyncOperation<R> {
+            override val operation = operation
             override fun execute(deduplicationId: String): CordaFuture<R> {
-                return operation.execute(deduplicationId).asCordaFuture()
+                return this.operation.execute(deduplicationId).asCordaFuture()
             }
         }
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
@@ -545,13 +550,15 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalOperation<R>): R {
-        val flowAsyncOperation = object : AbstractFlowAsyncOperation<R>(serviceHub) {
+        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalOperation<R> {
+            override val serviceHub = this@FlowLogic.serviceHub as ServiceHubCoreInternal
+            override val operation = operation
             override fun execute(deduplicationId: String): CordaFuture<R> {
                 // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
                 // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
                 return CompletableFuture.supplyAsync(
-                    Supplier { operation.execute(deduplicationId) },
-                    (serviceHub as ServiceHubCoreInternal).externalOperationExecutor
+                    Supplier { this.operation.execute(deduplicationId) },
+                    serviceHub.externalOperationExecutor
                 ).asCordaFuture()
             }
         }
@@ -559,13 +566,6 @@ abstract class FlowLogic<out T> {
         return stateMachine.suspend(request, false)
     }
 }
-
-/**
- * [AbstractFlowAsyncOperation] is a private class that maintains a reference to [ServiceHub] so that [FlowExternalOperation] can be
- * ran from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a flow. A [NullPointerException] is
- * thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
- */
-private abstract class AbstractFlowAsyncOperation<R: Any>(val serviceHub: ServiceHub) : FlowAsyncOperation<R>
 
 /**
  * Version and name of the CorDapp hosting the other side of the flow.

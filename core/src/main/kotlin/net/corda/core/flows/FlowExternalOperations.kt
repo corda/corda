@@ -1,5 +1,7 @@
 package net.corda.core.flows
 
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.node.ServiceHub
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -62,4 +64,25 @@ interface FlowExternalOperation<R : Any> {
      * de-duplicated if necessary inside the execute method.
      */
     fun execute(deduplicationId: String): R
+}
+
+/**
+ * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
+ * [FlowExternalAsyncOperation].
+ */
+internal interface WrappedFlowExternalAsyncOperation<R : Any> {
+    val operation: FlowExternalAsyncOperation<R>
+}
+
+/**
+ * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
+ * [FlowExternalOperation].
+ *
+ * The reference to [ServiceHub] is is also needed by Kryo to properly keep a reference to [ServiceHub] so that
+ * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
+ * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
+ */
+internal interface WrappedFlowExternalOperation<R : Any> {
+    val serviceHub: ServiceHub
+    val operation: FlowExternalOperation<R>
 }

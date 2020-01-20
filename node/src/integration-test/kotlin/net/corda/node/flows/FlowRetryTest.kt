@@ -35,6 +35,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -335,13 +336,13 @@ class AsyncRetryFlow() : FlowLogic<String>(), IdempotentFlow {
         val deduplicationIds = mutableSetOf<String>()
     }
 
-    class RecordDeduplicationId: FlowAsyncOperation<String> {
-        override fun execute(deduplicationId: String): CordaFuture<String> {
+    class RecordDeduplicationId: FlowExternalAsyncOperation<String> {
+        override fun execute(deduplicationId: String): CompletableFuture<String> {
             val dedupeIdIsNew = deduplicationIds.add(deduplicationId)
             if (dedupeIdIsNew) {
                 throw ExceptionToCauseFiniteRetry()
             }
-            return doneFuture(deduplicationId)
+            return CompletableFuture.completedFuture(deduplicationId)
         }
     }
 
@@ -350,7 +351,7 @@ class AsyncRetryFlow() : FlowLogic<String>(), IdempotentFlow {
     @Suspendable
     override fun call(): String {
         progressTracker.currentStep = FIRST_STEP
-        executeAsync(RecordDeduplicationId())
+        await(RecordDeduplicationId())
         return "Result"
     }
 }

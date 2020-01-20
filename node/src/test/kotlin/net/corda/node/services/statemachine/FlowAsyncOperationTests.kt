@@ -1,13 +1,9 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowAsyncOperation
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.executeAsync
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -20,6 +16,7 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertFailsWith
@@ -46,15 +43,15 @@ class FlowAsyncOperationTests {
         val flow = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                executeAsync(ErroredExecute())
+                await(ErroredExecute())
             }
         }
 
         assertFailsWith<ExecutionException> { aliceNode.services.startFlow(flow).resultFuture.get() }
     }
 
-    private class ErroredExecute : FlowAsyncOperation<Unit> {
-        override fun execute(deduplicationId: String): CordaFuture<Unit> {
+    private class ErroredExecute : FlowExternalAsyncOperation<Unit> {
+        override fun execute(deduplicationId: String): CompletableFuture<Unit> {
             throw Exception()
         }
     }
@@ -64,7 +61,7 @@ class FlowAsyncOperationTests {
         val flow = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                executeAsync(ErroredResult())
+                await(ErroredResult())
             }
         }
 
@@ -77,7 +74,7 @@ class FlowAsyncOperationTests {
             @Suspendable
             override fun call() {
                 try {
-                    executeAsync(ErroredResult())
+                    await(ErroredResult())
                 } catch (e: SpecialException) {
                     // Suppress
                 }
@@ -87,10 +84,10 @@ class FlowAsyncOperationTests {
         aliceNode.services.startFlow(flow).resultFuture.get()
     }
 
-    private class ErroredResult : FlowAsyncOperation<Unit> {
-        override fun execute(deduplicationId: String): CordaFuture<Unit> {
-            val future = openFuture<Unit>()
-            future.setException(SpecialException())
+    private class ErroredResult : FlowExternalAsyncOperation<Unit> {
+        override fun execute(deduplicationId: String): CompletableFuture<Unit> {
+            val future = CompletableFuture<Unit>()
+            future.completeExceptionally(SpecialException())
             return future
         }
     }
@@ -118,12 +115,12 @@ class FlowAsyncOperationTests {
         @Suspendable
         override fun call() {
             val scv = serviceHub.cordaService(WorkerService::class.java)
-            executeAsync(WorkerServiceTask(completeAllTasks, scv))
+            await(WorkerServiceTask(completeAllTasks, scv))
         }
     }
 
-    private class WorkerServiceTask(val completeAllTasks: Boolean, val service: WorkerService) : FlowAsyncOperation<Unit> {
-        override fun execute(deduplicationId: String): CordaFuture<Unit> {
+    private class WorkerServiceTask(val completeAllTasks: Boolean, val service: WorkerService) : FlowExternalAsyncOperation<Unit> {
+        override fun execute(deduplicationId: String): CompletableFuture<Unit> {
             return service.performTask(completeAllTasks)
         }
     }
@@ -131,17 +128,17 @@ class FlowAsyncOperationTests {
     /** A dummy worker service that queues up tasks and allows clearing the entire task backlog. */
     @CordaService
     class WorkerService(val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
-        private val pendingTasks = ConcurrentLinkedQueue<OpenFuture<Unit>>()
+        private val pendingTasks = ConcurrentLinkedQueue<CompletableFuture<Unit>>()
         val pendingCount: Int get() = pendingTasks.count()
 
-        fun performTask(completeAllTasks: Boolean): CordaFuture<Unit> {
-            val taskFuture = openFuture<Unit>()
+        fun performTask(completeAllTasks: Boolean): CompletableFuture<Unit> {
+            val taskFuture = CompletableFuture<Unit>()
             pendingTasks.add(taskFuture)
             if (completeAllTasks) {
                 synchronized(this) {
                     while (!pendingTasks.isEmpty()) {
                         val fut = pendingTasks.poll()!!
-                        fut.set(Unit)
+                        fut.complete(Unit)
                     }
                 }
             }
