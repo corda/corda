@@ -16,6 +16,7 @@ import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.FlowStarter
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
@@ -26,13 +27,52 @@ import rx.Observable
 import java.util.*
 
 /**
- * This customizes the ServiceHub for each CordaService that is initiating flows.
+ * This customizes the ServiceHub for each [net.corda.core.node.services.CordaService] that is initiating flows.
  */
 internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter,
                                                        override val database: CordaTransactionSupport,
                                                        private val nodeLifecycleEventsDistributor: NodeLifecycleEventsDistributor)
         : AppServiceHub, ServiceHub by serviceHub {
+
+    companion object {
+
+        private val logger = contextLogger()
+
+        private class NodeLifecycleServiceObserverAdaptor(private val observer: ServiceLifecycleObserver, override val priority: Int) : NodeLifecycleObserver {
+            override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
+                return when(nodeLifecycleEvent) {
+                    is NodeLifecycleEvent.StateMachineStarted<*> -> Try.on {
+                        observer.onServiceLifecycleEvent(ServiceLifecycleEvent.STATE_MACHINE_STARTED)
+                        reportSuccess(nodeLifecycleEvent)
+                    }
+                    else -> super.update(nodeLifecycleEvent)
+                }
+            }
+        }
+    }
+
     lateinit var serviceInstance: T
+
+    @Volatile
+    private var flowsAllowed = false
+
+    init {
+        nodeLifecycleEventsDistributor.add(object : NodeLifecycleObserver {
+
+            override val priority: Int = AppServiceHub.SERVICE_PRIORITY_HIGH
+
+            override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
+                return when(nodeLifecycleEvent) {
+                    is NodeLifecycleEvent.StateMachineStarted<*> -> Try.on {
+                        flowsAllowed = true
+                        reportSuccess(nodeLifecycleEvent)
+                    }
+                    else -> super.update(nodeLifecycleEvent)
+                }
+            }
+        })
+    }
+
     override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
         val stateMachine = startFlowChecked(flow)
         return FlowProgressHandleImpl(
@@ -60,6 +100,10 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
         require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
         // TODO check service permissions
         // TODO switch from myInfo.legalIdentities[0].name to current node's identity as soon as available
+        if(!flowsAllowed) {
+            logger.warn("Flow $flow started too early in the node's lifecycle, SMM may not be ready yet. " +
+                    "Please consider registering your service to node's lifecycle event: `STATE_MACHINE_STARTED`")
+        }
         val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
         return flowStarter.startFlow(flow, context).getOrThrow()
     }
@@ -76,19 +120,5 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
 
     override fun register(priority: Int, observer: ServiceLifecycleObserver) {
         nodeLifecycleEventsDistributor.add(NodeLifecycleServiceObserverAdaptor(observer, priority))
-    }
-
-    companion object {
-        private class NodeLifecycleServiceObserverAdaptor(private val observer: ServiceLifecycleObserver, override val priority: Int) : NodeLifecycleObserver {
-            override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
-                return when(nodeLifecycleEvent) {
-                    is NodeLifecycleEvent.CorDappStarted<*> -> Try.on {
-                        observer.onServiceLifecycleEvent(ServiceLifecycleEvent.STATE_MACHINE_STARTED)
-                        reportSuccess(nodeLifecycleEvent)
-                    }
-                    else -> super.update(nodeLifecycleEvent)
-                }
-            }
-        }
     }
 }

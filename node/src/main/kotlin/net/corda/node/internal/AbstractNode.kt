@@ -539,7 +539,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
             log.debug("Distributing events")
             nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
-            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStarted(nodeServicesContext))
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStarted(nodeServicesContext))
         }
         return resultingNodeInfo
     }
@@ -924,7 +924,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     open fun stop() {
 
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.CorDappStopped(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStopped(nodeServicesContext))
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStop(nodeServicesContext))
 
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the

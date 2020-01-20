@@ -11,9 +11,9 @@ import net.corda.core.utilities.Try
 interface NodeLifecycleObserver {
 
     companion object {
-        const val RPC_PRIORITY_HIGH = 1020
+        const val RPC_PRIORITY_HIGH = 1200
         const val RPC_PRIORITY_NORMAL = 1100
-        const val RPC_PRIORITY_LOW = 1200
+        const val RPC_PRIORITY_LOW = 1020
 
         /**
          * Helper method to create a string to flag successful processing of an event.
@@ -49,8 +49,8 @@ interface NodeLifecycleObserver {
 sealed class NodeLifecycleEvent(val reversedPriority: Boolean = false) {
     class BeforeNodeStart(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent()
     class AfterNodeStart<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
-    class CorDappStarted<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
-    class CorDappStopped<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
+    class StateMachineStarted<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent()
+    class StateMachineStopped<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
     class BeforeNodeStop<out T : NodeServicesContext>(val nodeServicesContext: T) : NodeLifecycleEvent(reversedPriority = true)
     class AfterNodeStop(val nodeInitialContext: NodeInitialContext) : NodeLifecycleEvent(reversedPriority = true)
 }

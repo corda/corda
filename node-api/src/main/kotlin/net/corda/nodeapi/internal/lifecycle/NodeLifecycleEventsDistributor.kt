@@ -31,7 +31,7 @@ class NodeLifecycleEventsDistributor {
         private val criticalEventsClasses: Set<Class<out NodeLifecycleEvent>> = setOf(
                 NodeLifecycleEvent.BeforeNodeStart::class.java,
                 NodeLifecycleEvent.AfterNodeStart::class.java,
-                NodeLifecycleEvent.CorDappStarted::class.java)
+                NodeLifecycleEvent.StateMachineStarted::class.java)
         private val criticalExceptionsClasses: Set<Class<out Throwable>> = setOf(CordaServiceCriticalFailureException::class.java)
     }
 
