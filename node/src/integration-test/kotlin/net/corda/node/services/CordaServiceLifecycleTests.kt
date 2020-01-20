@@ -7,7 +7,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
-import net.corda.core.node.services.ServiceLifecycleEvent.CORDAPP_STARTED
+import net.corda.core.node.services.ServiceLifecycleEvent.STATE_MACHINE_STARTED
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -35,7 +35,7 @@ class CordaServiceLifecycleTests {
         }
         assertEquals(TEST_PHRASE.length, result)
         assertEquals(1, eventsCaptured.size)
-        assertEquals(listOf(CORDAPP_STARTED), eventsCaptured)
+        assertEquals(listOf(STATE_MACHINE_STARTED), eventsCaptured)
     }
 
     @StartableByRPC
@@ -57,7 +57,7 @@ class CordaServiceLifecycleTests {
 
         private fun addEvent(event: ServiceLifecycleEvent) {
             when (event) {
-                CORDAPP_STARTED -> {
+                STATE_MACHINE_STARTED -> {
                     eventsCaptured.add(event)
                 }
                 else -> {

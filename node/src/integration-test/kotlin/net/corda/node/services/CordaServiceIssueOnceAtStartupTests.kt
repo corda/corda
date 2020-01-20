@@ -91,7 +91,7 @@ class CordaServiceIssueOnceAtStartupTests {
         inner class MyServiceLifecycleObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
                 val tmpFile = File(System.getProperty(tempFilePropertyName))
-                if (event == ServiceLifecycleEvent.CORDAPP_STARTED) {
+                if (event == ServiceLifecycleEvent.STATE_MACHINE_STARTED) {
                     val queryResult = services.vaultService.queryBy(Cash.State::class.java)
                     if (tmpFile.length() == 0L) {
                         tmpFile.appendText(vaultQueryExecutedMarker)

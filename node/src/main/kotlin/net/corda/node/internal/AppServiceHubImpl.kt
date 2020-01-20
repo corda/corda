@@ -83,7 +83,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
             override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
                 return when(nodeLifecycleEvent) {
                     is NodeLifecycleEvent.CorDappStarted<*> -> Try.on {
-                        observer.onServiceLifecycleEvent(ServiceLifecycleEvent.CORDAPP_STARTED)
+                        observer.onServiceLifecycleEvent(ServiceLifecycleEvent.STATE_MACHINE_STARTED)
                         reportSuccess(nodeLifecycleEvent)
                     }
                     else -> super.update(nodeLifecycleEvent)

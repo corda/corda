@@ -18,18 +18,18 @@ interface ServiceLifecycleObserver {
 
 enum class ServiceLifecycleEvent {
     /**
-     * This event is dispatched when CorDapp is fully started such that [net.corda.core.node.AppServiceHub] available
+     * This event is dispatched when State Machine is fully started such that [net.corda.core.node.AppServiceHub] available
      * for [CordaService] to be use.
      *
      * If a handler for this event throws [CordaServiceCriticalFailureException] - this is the way to flag that it will not make
      * sense for Corda node to continue its operation. The lifecycle events dispatcher will endeavor to terminate node's JVM as soon
      * as practically possible.
      */
-    CORDAPP_STARTED,
+    STATE_MACHINE_STARTED,
 }
 
 /**
- * Please see [ServiceLifecycleEvent.CORDAPP_STARTED] for the purpose of this exception.
+ * Please see [ServiceLifecycleEvent.STATE_MACHINE_STARTED] for the purpose of this exception.
  */
 class CordaServiceCriticalFailureException(message : String, cause: Throwable?) : Exception(message, cause) {
     constructor(message : String) : this(message, null)

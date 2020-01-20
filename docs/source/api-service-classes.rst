@@ -41,12 +41,9 @@ Below is an empty implementation of a Service class:
             private fun processEvent(event: ServiceLifecycleEvent) {
                 // Lifecycle event handling code including full use of serviceHub
                 when (event) {
-                    CORDAPP_STARTED -> {
+                    STATE_MACHINE_STARTED -> {
                         services.vaultService.queryBy(...)
                         services.startFlow(...)
-                    }
-                    CORDAPP_STOPPED -> {
-                        // Clean-up activity
                     }
                     else -> {
                         // Process other types of events
@@ -74,12 +71,9 @@ Below is an empty implementation of a Service class:
 
             private void processEvent(ServiceLifecycleEvent event) {
                 switch (event) {
-                    case CORDAPP_STARTED:
+                    case STATE_MACHINE_STARTED:
                         serviceHub.getVaultService().queryBy(...)
                         serviceHub.startFlow(...)
-                        break;
-                    case CORDAPP_STOPPED:
-                        // Clean-up activity
                         break;
                     default:
                         // Process other types of events

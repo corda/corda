@@ -47,7 +47,7 @@ public class JavaCordaServiceLifecycle {
         private void addEvent(ServiceLifecycleEvent event) {
 
             switch (event) {
-                case CORDAPP_STARTED:
+                case STATE_MACHINE_STARTED:
                     eventsCaptured.add(event);
                     break;
                 default:
