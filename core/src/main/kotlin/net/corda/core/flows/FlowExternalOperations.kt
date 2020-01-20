@@ -65,24 +65,3 @@ interface FlowExternalOperation<R : Any> {
      */
     fun execute(deduplicationId: String): R
 }
-
-/**
- * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
- * [FlowExternalAsyncOperation].
- */
-internal interface WrappedFlowExternalAsyncOperation<R : Any> {
-    val operation: FlowExternalAsyncOperation<R>
-}
-
-/**
- * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
- * [FlowExternalOperation].
- *
- * The reference to [ServiceHub] is is also needed by Kryo to properly keep a reference to [ServiceHub] so that
- * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
- * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
- */
-internal interface WrappedFlowExternalOperation<R : Any> {
-    val serviceHub: ServiceHub
-    val operation: FlowExternalOperation<R>
-}
