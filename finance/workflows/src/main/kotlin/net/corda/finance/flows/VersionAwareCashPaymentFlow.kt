@@ -33,7 +33,7 @@ open class VersionAwareCashPaymentFlow(
         val builder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first())
         val minimumCommonVersion = getMinimumCommonVersion(recipients)
         when (minimumCommonVersion) {
-            in 1..4 -> {
+            in 3..4 -> {
                 CashUtils.generateSpend(
                         serviceHub,
                         builder,
