@@ -499,6 +499,10 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
 
         override val database: CordaTransactionSupport
             get() = throw UnsupportedOperationException()
+
+        override fun register(priority: Int, observer: ServiceLifecycleObserver) {
+            throw UnsupportedOperationException()
+        }
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
 }

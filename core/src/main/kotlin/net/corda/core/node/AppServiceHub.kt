@@ -4,6 +4,8 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.node.services.ServiceLifecycleEvent
+import net.corda.core.node.services.ServiceLifecycleObserver
 import net.corda.core.node.services.vault.CordaTransactionSupport
 import rx.Observable
 
@@ -16,6 +18,12 @@ import rx.Observable
  */
 @DeleteForDJVM
 interface AppServiceHub : ServiceHub {
+
+    companion object {
+        const val SERVICE_PRIORITY_HIGH = 200
+        const val SERVICE_PRIORITY_NORMAL = 100
+        const val SERVICE_PRIORITY_LOW = 20
+    }
 
     /**
      * Start the given flow with the given arguments. [flow] must be annotated
@@ -38,4 +46,24 @@ interface AppServiceHub : ServiceHub {
      * independent transaction from those used in the framework.
      */
     val database: CordaTransactionSupport
+
+    /**
+     * Allows to register [ServiceLifecycleObserver] such that it will start receiving [net.corda.core.node.services.ServiceLifecycleEvent]s
+     *
+     * @param priority controls to which queue [observer] will be added. Higher values correspond to higher priorities.
+     *
+     * @param observer an instance of [ServiceLifecycleObserver] to be registered.
+     */
+    fun register(priority: Int = SERVICE_PRIORITY_NORMAL, observer: ServiceLifecycleObserver)
+
+    /**
+     * Convenience method to be able to add an arbitrary function as a [register] callback.
+     */
+    fun <T> register(priority: Int = SERVICE_PRIORITY_NORMAL,
+                     func: (ServiceLifecycleEvent) -> T) = register(priority,
+            object : ServiceLifecycleObserver {
+                override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
+                    func(event)
+                }
+            })
 }

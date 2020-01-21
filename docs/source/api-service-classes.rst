@@ -32,7 +32,23 @@ Below is an empty implementation of a Service class:
         class MyCordaService(private val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
 
             init {
-                // code ran at service creation / node startup
+                // Custom code ran at service creation
+
+                // Optional: Express interest in receiving lifecycle events
+                services.register { processEvent(it) }
+            }
+
+            private fun processEvent(event: ServiceLifecycleEvent) {
+                // Lifecycle event handling code including full use of serviceHub
+                when (event) {
+                    STATE_MACHINE_STARTED -> {
+                        services.vaultService.queryBy(...)
+                        services.startFlow(...)
+                    }
+                    else -> {
+                        // Process other types of events
+                    }
+                }
             }
 
             // public api of service
@@ -43,11 +59,26 @@ Below is an empty implementation of a Service class:
         @CordaService
         public class MyCordaService extends SingletonSerializeAsToken {
 
-            private AppServiceHub serviceHub;
+            private final AppServiceHub serviceHub;
 
             public MyCordaService(AppServiceHub serviceHub) {
                 this.serviceHub = serviceHub;
-                // code ran at service creation / node startup
+                // Custom code ran at service creation
+
+                // Optional: Express interest in receiving lifecycle events
+                serviceHub.register(SERVICE_PRIORITY_NORMAL, this::processEvent);
+            }
+
+            private void processEvent(ServiceLifecycleEvent event) {
+                switch (event) {
+                    case STATE_MACHINE_STARTED:
+                        serviceHub.getVaultService().queryBy(...)
+                        serviceHub.startFlow(...)
+                        break;
+                    default:
+                        // Process other types of events
+                        break;
+                }
             }
 
             // public api of service
@@ -59,9 +90,9 @@ from ``AppServiceHub`` is explained further in :ref:`Starting Flows from a Servi
 The ``AppServiceHub`` also provides access to ``database`` which will enable the Service class to perform DB transactions from the threads
 managed by the Service.
 
-Code can be run during node startup when the class is being initialised. To do so, place the code into the ``init`` block or constructor.
-This is useful when a service needs to establish a connection to an external database or setup observables via ``ServiceHub.trackBy`` during
-its startup. These can then persist during the service's lifetime.
+Also the ``AppServiceHub`` provides ability for ``CordaService`` to subscribe for lifecycle events of the node, such that it will get notified
+about node finishing initialisation and when the node is shutting down such that ``CordaService`` will be able to perform clean-up of some
+critical resources. For more details please have refer to KDocs for ``ServiceLifecycleObserver``.
 
 Retrieving a Service
 --------------------
@@ -97,7 +128,3 @@ starting. To avoid this, the rules bellow should be followed:
 .. note:: It is possible to avoid deadlock without following these rules depending on the number of flows running within the node. But, if the
           number of flows violating these rules reaches the flow worker queue size, then the node will deadlock. It is best practice to
           abide by these rules to remove this possibility.
-
-
-
-

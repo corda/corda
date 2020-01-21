@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -616,6 +617,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
+        doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
     }
 }
 

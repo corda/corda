@@ -28,6 +28,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -37,7 +38,11 @@ import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.*
@@ -56,11 +61,14 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence, private val serviceHub: ServiceHub, val baseDirectory: Path) {
+class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, private val database: CordaPersistence,
+                                    private val serviceHub: ServiceHub, val baseDirectory: Path) : NodeLifecycleObserver {
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
     }
+
+    override val priority: Int = SERVICE_PRIORITY_NORMAL
 
     private val lock = AtomicInteger(0)
 
@@ -71,32 +79,38 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
         checkpointAgentRunning()
     }
 
-    fun start(tokenizableServices: List<Any>) {
-        checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(
-                        tokenizableServices,
-                        CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER,
-                        CheckpointSerializationDefaults.CHECKPOINT_CONTEXT,
-                        serviceHub
+    override fun update(nodeLifecycleEvent: NodeLifecycleEvent): Try<String> {
+        return when(nodeLifecycleEvent) {
+            is NodeLifecycleEvent.AfterNodeStart<*> -> Try.on {
+                checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
+                        CheckpointSerializeAsTokenContextImpl(
+                                nodeLifecycleEvent.nodeServicesContext.tokenizableServices,
+                                CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER,
+                                CheckpointSerializationDefaults.CHECKPOINT_CONTEXT,
+                                serviceHub
+                        )
                 )
-        )
 
-        val mapper = JacksonSupport.createNonRpcMapper()
-        mapper.registerModule(SimpleModule().apply {
-            setSerializerModifier(CheckpointDumperBeanModifier)
-            addSerializer(FlowSessionImplSerializer)
-            addSerializer(MapSerializer)
-            addSerializer(AttachmentSerializer)
-            setMixInAnnotation(FlowLogic::class.java, FlowLogicMixin::class.java)
-            setMixInAnnotation(SessionId::class.java, SessionIdMixin::class.java)
-        })
-        val prettyPrinter = DefaultPrettyPrinter().apply {
-            indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE)
+                val mapper = JacksonSupport.createNonRpcMapper()
+                mapper.registerModule(SimpleModule().apply {
+                    setSerializerModifier(CheckpointDumperBeanModifier)
+                    addSerializer(FlowSessionImplSerializer)
+                    addSerializer(MapSerializer)
+                    addSerializer(AttachmentSerializer)
+                    setMixInAnnotation(FlowLogic::class.java, FlowLogicMixin::class.java)
+                    setMixInAnnotation(SessionId::class.java, SessionIdMixin::class.java)
+                })
+                val prettyPrinter = DefaultPrettyPrinter().apply {
+                    indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE)
+                }
+                writer = mapper.writer(prettyPrinter)
+                reportSuccess(nodeLifecycleEvent)
+            }
+            else -> super.update(nodeLifecycleEvent)
         }
-        writer = mapper.writer(prettyPrinter)
     }
 
-    fun dump() {
+    fun dumpCheckpoints() {
         val now = serviceHub.clock.instant()
         val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "checkpoints_dump-${TIME_FORMATTER.format(now)}.zip"
         try {
@@ -393,7 +407,7 @@ class CheckpointDumper(private val checkpointStorage: CheckpointStorage, private
     private object MapSerializer : JsonSerializer<Map<Any, Any>>() {
         override fun serialize(map: Map<Any, Any>, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.writeStartArray(map.size)
-            map.forEach { key, value ->
+            map.forEach { (key, value) ->
                 gen.jsonObject {
                     writeObjectField("key", key)
                     writeObjectField("value", value)

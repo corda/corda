@@ -10,6 +10,7 @@ import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
+import java.util.concurrent.Future
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -31,8 +32,10 @@ import rx.Observable
 interface StateMachineManager {
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
+     *
+     * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>)
+    fun start(tokenizableServices: List<Any>) : CordaFuture<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
@@ -127,7 +130,7 @@ interface ExternalEvent {
         val context: InvocationContext
 
         /**
-         * A callback for the state machine to pass back the [Future] associated with the flow start to the submitter.
+         * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.
          */
         fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
 

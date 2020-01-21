@@ -3754,6 +3754,9 @@ public static final class net.corda.core.node.services.PartyInfo$SingleNode exte
   @NotNull
   public String toString()
 ##
+public interface net.corda.core.node.services.ServiceLifecycleObserver
+  public abstract void onServiceLifecycleEvent(net.corda.core.node.services.ServiceLifecycleEvent)
+##
 @CordaSerializable
 public final class net.corda.core.node.services.StatesNotAvailableException extends net.corda.core.flows.FlowException
   public <init>(String, Throwable)

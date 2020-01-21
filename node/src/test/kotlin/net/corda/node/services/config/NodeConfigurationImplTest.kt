@@ -1,5 +1,6 @@
 package net.corda.node.services.config
 
+import com.nhaarman.mockito_kotlin.mock
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
@@ -313,7 +314,8 @@ class NodeConfigurationImplTest {
                 rpcSettings = rpcSettings,
                 crlCheckSoftFail = true,
                 tlsCertCrlDistPoint = null,
-                flowOverrides = FlowOverrideConfig(listOf())
+                flowOverrides = FlowOverrideConfig(listOf()),
+                configurationWithOptions = mock()
         )
     }
 }

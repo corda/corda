@@ -51,7 +51,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.rpc.CheckpointDumper
+import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
@@ -72,7 +72,7 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
-        private val checkpointDumper: CheckpointDumper,
+        private val checkpointDumper: CheckpointDumperImpl,
         private val shutdownNode: () -> Unit
 ) : InternalCordaRPCOps, AutoCloseable {
 
@@ -154,7 +154,7 @@ internal class CordaRPCOpsImpl(
         return services.validatedTransactions.track()
     }
 
-    override fun dumpCheckpoints() = checkpointDumper.dump()
+    override fun dumpCheckpoints() = checkpointDumper.dumpCheckpoints()
 
     override val attachmentTrustInfos: List<AttachmentTrustInfo>
         get() {

@@ -19,7 +19,6 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.StartableByService
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -31,7 +30,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
@@ -41,10 +40,6 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
@@ -57,7 +52,6 @@ import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.node.services.vault.CordaTransactionSupport
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -65,11 +59,12 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -89,6 +84,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.NodePropertiesStore
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
@@ -122,7 +118,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
-import net.corda.node.services.rpc.CheckpointDumper
+import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExternalEvent
@@ -170,7 +166,6 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
-import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
@@ -182,7 +177,6 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Objects
 import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -212,7 +206,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
-    private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
+    private var tokenizableServices: MutableList<SerializeAsToken>? = mutableListOf(platformClock, this)
 
     val metricRegistry = MetricRegistry()
     protected val cacheFactory = cacheFactoryPrototype.bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
@@ -244,7 +238,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory,
-            this.cordappLoader.appClassLoader)
+            cordappLoader.appClassLoader)
+
+    private val transactionSupport = CordaTransactionSupportImpl(database)
 
     init {
         // TODO Break cyclic dependency
@@ -358,8 +354,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Volatile
     private var _started: S? = null
 
+    private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
+
+    private val nodeServicesContext = object : NodeServicesContext {
+        override val platformVersion = versionInfo.platformVersion
+        override val configurationWithOptions = configuration.configurationWithOptions
+        // Note: tokenizableServices passed by reference meaning that any subsequent modification to the content in the `AbstractNode` will
+        // be reflected in the context as well. However, since context only has access to immutable collection it can only read (but not modify)
+        // the content.
+        override val tokenizableServices: List<SerializeAsToken> = this@AbstractNode.tokenizableServices!!
+    }
+
+    private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
+
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this)
+        tokenizableServices?.add(this as? SerializeAsToken ?:
+            throw IllegalStateException("${this::class.java} is expected to be extending from SerializeAsToken"))
                 ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
@@ -370,7 +380,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumper): CordaRPCOps {
+    open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): CordaRPCOps {
         val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
                 services,
                 smm,
@@ -429,6 +439,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (configuration.devMode && System.getProperty("co.paralleluniverse.fibers.verifyInstrumentation") == null) {
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStores()
@@ -443,7 +454,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installCoreFlows()
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
-        val checkpointDumper = CheckpointDumper(checkpointStorage, database, services, services.configuration.baseDirectory)
         val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
         startShell()
         networkMapClient?.start(trustRoot)
@@ -485,7 +495,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        return database.transaction(recoverableFailureTolerance = 0) {
+        val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
@@ -505,21 +515,33 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
-            checkpointDumper.start(frozenTokenizableServices)
-            smm.start(frozenTokenizableServices)
+            val smmStartedFuture = smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
-                smm,
-                configuration.flowMonitorPeriodMillis,
-                configuration.flowMonitorSuspensionLoggingThresholdMillis
+                    smm,
+                    configuration.flowMonitorPeriodMillis,
+                    configuration.flowMonitorSuspensionLoggingThresholdMillis
             )
             runOnStop += flowMonitor::stop
             flowMonitor.start()
             schedulerService.start()
 
-            createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
+            val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
+            val readyFuture = smmStartedFuture.flatMap {
+                log.debug("SMM ready")
+                network.ready
+            }
+            resultingNodeInfo to readyFuture
         }
+
+        readyFuture.map {
+            // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
+            log.debug("Distributing events")
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
+            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStarted(nodeServicesContext))
+        }
+        return resultingNodeInfo
     }
 
     /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
@@ -747,60 +769,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /**
-     * This customizes the ServiceHub for each CordaService that is initiating flows.
-     */
-    // TODO Move this into its own file
-    private class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter,
-                                                          override val database: CordaTransactionSupport) : AppServiceHub, ServiceHub by serviceHub {
-        lateinit var serviceInstance: T
-        override fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T> {
-            val stateMachine = startFlowChecked(flow)
-            return FlowProgressHandleImpl(
-                    id = stateMachine.id,
-                    returnValue = stateMachine.resultFuture,
-                    progress = stateMachine.logic.track()?.updates ?: Observable.empty()
-            )
-        }
-
-        override fun <T> startFlow(flow: FlowLogic<T>): FlowHandle<T> {
-            val parentFlow = FlowLogic.currentTopLevel
-            return if (parentFlow != null) {
-                val result = parentFlow.subFlow(flow)
-                // Accessing the flow id must happen after the flow has started.
-                val flowId = flow.runId
-                FlowHandleImpl(flowId, doneFuture(result))
-            } else {
-                val stateMachine = startFlowChecked(flow)
-                FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
-            }
-        }
-
-        private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {
-            val logicType = flow.javaClass
-            require(logicType.isAnnotationPresent(StartableByService::class.java)) { "${logicType.name} was not designed for starting by a CordaService" }
-            // TODO check service permissions
-            // TODO switch from myInfo.legalIdentities[0].name to current node's identity as soon as available
-            val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
-            return flowStarter.startFlow(flow, context).getOrThrow()
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is AppServiceHubImpl<*>) return false
-            return serviceHub == other.serviceHub
-                    && flowStarter == other.flowStarter
-                    && serviceInstance == other.serviceInstance
-        }
-
-        override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
-    }
-
     fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
-            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, CordaTransactionSupportImpl(database))
+            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, transactionSupport, nodeLifecycleEventsDistributor)
             val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
             val service = extendedServiceConstructor.newInstance(serviceContext)
             serviceContext.serviceInstance = service
@@ -950,6 +923,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     open fun stop() {
+
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStopped(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStop(nodeServicesContext))
+
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
         // network, including unsubscribing from updates from remote services. Possibly some sort of parameter to stop()
         // to indicate "Please shut down gracefully" vs "Shut down now".
@@ -963,6 +940,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         runOnStop.clear()
         shutdownExecutor.shutdown()
         _started = null
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStop(nodeServicesContext))
     }
 
     protected abstract fun makeMessagingService(): MessagingService

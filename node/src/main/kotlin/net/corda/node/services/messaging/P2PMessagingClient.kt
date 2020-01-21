@@ -7,6 +7,8 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -142,6 +144,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
     internal var messagingExecutor: MessagingExecutor? = null
+
+    override val ready: OpenFuture<Void?> = openFuture()
 
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
@@ -351,6 +355,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 p2pConsumer!!
             }
             consumer.start()
+            log.debug("Signalling ready")
+            ready.set(null)
+            log.debug("Awaiting on latch")
             latch.await()
         } finally {
             shutdownLatch.countDown()

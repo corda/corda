@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.delete
@@ -189,8 +190,8 @@ class NodeTest {
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
                 notary = null,
-                flowOverrides = FlowOverrideConfig(listOf())
-
+                flowOverrides = FlowOverrideConfig(listOf()),
+                configurationWithOptions = mock()
         )
     }
 }

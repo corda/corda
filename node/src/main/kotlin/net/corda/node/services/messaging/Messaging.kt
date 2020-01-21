@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
@@ -106,6 +107,11 @@ interface MessagingService : AutoCloseable {
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
+
+    /**
+     * Signals when ready and fully operational
+     */
+    val ready: CordaFuture<Void?>
 }
 
 fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
