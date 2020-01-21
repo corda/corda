@@ -52,6 +52,9 @@ pipeline {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
             junit '**/build/test-results-xml/**/*.xml'
+            allure includeProperties: false,
+                                       jdk: '',
+                                       results: [[path: '**/allure-input']]
         }
         cleanup {
             deleteDir() /* clean up our workspace */
