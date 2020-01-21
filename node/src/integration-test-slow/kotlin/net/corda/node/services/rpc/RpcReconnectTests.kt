@@ -134,7 +134,10 @@ class RpcReconnectTests {
                 Unit
             }
             val reconnect = GracefulReconnect(onDisconnect = { numDisconnects++ }, onReconnect = onReconnect)
-            val config = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryInterval = 1.seconds)
+            val config = CordaRPCClientConfiguration.DEFAULT.copy(
+                    connectionRetryInterval = 1.seconds,
+                    connectionRetryIntervalMultiplier = 1.0
+            )
             val client = CordaRPCClient(addressesForRpc, configuration = config)
             val bankAReconnectingRPCConnection = client.start(demoUser.username, demoUser.password, gracefulReconnect = reconnect)
             val bankAReconnectingRpc = bankAReconnectingRPCConnection.proxy as ReconnectingCordaRPCOps
