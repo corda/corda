@@ -16,13 +16,16 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.sql.SQLException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
 import kotlin.test.assertFailsWith
@@ -326,11 +329,36 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
-                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter))
+                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
 
         Assert.assertEquals(1, observation)
+    }
+
+    @Test
+    fun `out of memory error halts JVM, on node restart flow retries, and succeeds`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = testCordapps())) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            var aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = false).getOrThrow()
+            aliceNode.rpc.startFlow(DbListenerService.Companion::MakeServiceThrowErrorFlow).returnValue.getOrThrow()
+            aliceNode.rpc.startFlow(::Initiator, "UnrecoverableError", CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowUnrecoverableError))
+
+            val terminated = (aliceNode as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
+            if (terminated) {
+                aliceNode.stop()
+                val testControlFuture = openFuture<Boolean>().toCompletableFuture()
+                CreateStateFlow.Initiator.onExitingCall = {
+                    testControlFuture.complete(true)
+                }
+                startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = true).getOrThrow()
+                assert(testControlFuture.getOrThrow(30.seconds))
+            } else {
+                throw IllegalStateException("Out of process node is still up and running!")
+            }
+        }
     }
 
 }

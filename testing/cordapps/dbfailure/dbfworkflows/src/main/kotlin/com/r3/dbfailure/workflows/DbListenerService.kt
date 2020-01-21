@@ -2,6 +2,8 @@ package com.r3.dbfailure.workflows
 
 import com.r3.dbfailure.contracts.DbFailureContract
 import net.corda.core.contracts.ContractState
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.Vault
@@ -15,6 +17,15 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
         val log = contextLogger()
         var onError: ((Throwable) -> Unit)? = null
+
+        // make flow executed on a outOfProcess node throw an unrecoverable error the first time only
+        var throwUnrecoverableError = false
+        @StartableByRPC
+        class MakeServiceThrowErrorFlow: FlowLogic<Unit>() {
+            override fun call() {
+                throwUnrecoverableError = true
+            }
+        }
     }
 
     init {
@@ -87,6 +98,14 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                         CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions -> {
                             log.info("Throw Exception")
                             throw Exception("Mother of all exceptions")
+                        }
+                        CreateStateFlow.ErrorTarget.ServiceThrowUnrecoverableError -> {
+                            // this bit of code should only work in a OutOfProcess node,
+                            // otherwise it will kill the testing jvm (including the testing thread)
+                            if (throwUnrecoverableError) {
+                                log.info("Throw Unrecoverable error")
+                                throw OutOfMemoryError("Unrecoverable error")
+                            }
                         }
                         else -> {
                             // do nothing, everything else must be handled elsewhere

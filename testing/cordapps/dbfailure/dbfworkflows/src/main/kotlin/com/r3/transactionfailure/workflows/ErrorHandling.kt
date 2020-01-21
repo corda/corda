@@ -37,7 +37,7 @@ object ErrorHandling {
             val txBuilder = TransactionBuilder(notary).addOutputState(state).addCommand(txCommand)
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
             try {
-                serviceHub.recordTransactions(signedTx) // registers Event.Error
+                serviceHub.recordTransactions(signedTx)
             } catch(t: Throwable) {
                 if (CreateStateFlow.getFlowTarget(errorTarget) == CreateStateFlow.ErrorTarget.FlowSwallowErrors) {
                     logger.info("Test flow: Swallowing all exception! Muahahaha!", t)
