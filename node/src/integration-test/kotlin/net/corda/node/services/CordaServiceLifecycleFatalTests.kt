@@ -12,9 +12,11 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.ListenProcessDeathException
 import net.corda.testing.node.internal.enclosedCordapp
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
+@Ignore("Test is proven to be flaky and disabled for now. Future investigation will be done under: CORDA-3549")
 class CordaServiceLifecycleFatalTests {
 
     companion object {
