@@ -15,7 +15,7 @@ The Corda continuous integration pipeline does not run unit tests or integration
 
 PostgreSQL
 ----------
-Nodes can also be configured to use PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4. Here is an example node
+Nodes can also be configured to use PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.2.8. Here is an example node
 configuration for PostgreSQL:
 
 .. sourcecode:: groovy
@@ -45,6 +45,7 @@ Note that:
   .. sourcecode:: groovy
 
     CREATE SEQUENCE my_schema.hibernate_sequence INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 8 CACHE 1 NO CYCLE;
+* The PostgreSQL JDBC database driver must be placed in the ``drivers`` directory in the node.
 
 SQLServer
 ---------
