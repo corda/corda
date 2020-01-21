@@ -208,9 +208,6 @@ publish {
     name jarBaseName
 }
 
-// Must be after publish {} so that the previous install task exists for overwriting.
-task install(overwrite: true, dependsOn: 'publishToMavenLocal')
-
 idea {
     module {
         if (project.hasProperty("deterministic_idea_sdk")) {
