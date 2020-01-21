@@ -31,12 +31,12 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-//                 sh "./gradlew " +
-//                         "-DbuildId=\"\${BUILD_ID}\" " +
-//                         "-Dkubenetize=true " +
-//                         "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-//                         " allParallelUnitTest"
-                sh "./gradlew :core-tests:cleanTest :core-tests:test"
+                sh "./gradlew " +
+                        "-DbuildId=\"\${BUILD_ID}\" " +
+                        "-Dkubenetize=true " +
+                        "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                        " allParallelUnitTest"
+//                 sh "./gradlew :core-tests:cleanTest :core-tests:test"
                 if (env.CHANGE_ID) {
                     pullRequest.createStatus(status: 'success',
                             context: 'continuous-integration/jenkins/pr-merge/unitTest',
@@ -50,7 +50,7 @@ pipeline {
     post {
         always {
             junit '**/build/test-results-xml/**/*.xml'
-            allure includeProperties: false, jdk: '', results: [[path: '**/allure-results']]
+//             allure includeProperties: false, jdk: '', results: [[path: '**/allure-results']]
         }
         cleanup {
             deleteDir() /* clean up our workspace */
