@@ -49,6 +49,7 @@ pipeline {
     post {
         always {
             junit '**/build/test-results-xml/**/*.xml'
+            allure includeProperties: false, jdk: '', results: [[path: '**/allure-results']]
         }
         cleanup {
             deleteDir() /* clean up our workspace */
