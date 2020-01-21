@@ -349,6 +349,7 @@ class VaultObserverExceptionTest {
             val terminated = (aliceNode as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
             if (terminated) {
                 aliceNode.stop()
+                // starting node within the same process this time to take advantage of threads sharing same heap space
                 val testControlFuture = openFuture<Boolean>().toCompletableFuture()
                 CreateStateFlow.Initiator.onExitingCall = {
                     testControlFuture.complete(true)
