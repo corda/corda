@@ -37,11 +37,14 @@ pipeline {
                         "-Ddocker.tag=\"\${DOCKER_TAG_TO_USE}\"" +
                         " allParallelUnitTest"
 //                 sh "./gradlew :core-tests:cleanTest :core-tests:test"
-                if (env.CHANGE_ID) {
-                    pullRequest.createStatus(status: 'success',
-                            context: 'continuous-integration/jenkins/pr-merge/unitTest',
-                            description: 'Unit Tests Passed',
-                            targetUrl: "${env.JOB_URL}/testResults")
+
+                script {
+                    if (env.CHANGE_ID) {
+                                        pullRequest.createStatus(status: 'success',
+                                                context: 'continuous-integration/jenkins/pr-merge/unitTest',
+                                                description: 'Unit Tests Passed',
+                                                targetUrl: "${env.JOB_URL}/testResults")
+                                    }
                 }
             }
         }
