@@ -17,7 +17,7 @@ class DeserializeOpaqueBytesSubSequenceTest : TestBase(KOTLIN) {
         const val OFFSET = MESSAGE.length / 2
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing opaquebytes subsequence`() {
         val subSequence = OpaqueBytesSubSequence(
             bytes = MESSAGE.toByteArray(),

@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeZonedDateTimeTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing zoned date-time`() {
         val dateTime = ZonedDateTime.now()
         val data = dateTime.serialize()

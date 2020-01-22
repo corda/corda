@@ -31,7 +31,7 @@ class DeserializeCustomGenericDataTest: TestBase(KOTLIN) {
     @JvmField
     val serialization = LocalSerialization(setOf(CustomSerializer()), emptySet())
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing custom generic object`() {
         val complex = ComplexGenericData(MESSAGE, BIG_NUMBER)
         val data = complex.serialize()
@@ -53,7 +53,7 @@ class DeserializeCustomGenericDataTest: TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserialization needs custom serializer`() {
         val complex = ComplexGenericData(MESSAGE, BIG_NUMBER)
         val data = complex.serialize()

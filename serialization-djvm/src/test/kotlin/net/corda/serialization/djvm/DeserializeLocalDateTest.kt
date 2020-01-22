@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeLocalDateTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing local date`() {
         val date = LocalDate.now()
         val data = date.serialize()

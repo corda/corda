@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeOffsetDateTimeTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing offset date-time`() {
         val dateTime = OffsetDateTime.now()
         val data = dateTime.serialize()

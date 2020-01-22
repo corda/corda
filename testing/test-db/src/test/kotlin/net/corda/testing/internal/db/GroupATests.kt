@@ -6,18 +6,18 @@ import org.junit.jupiter.api.Test
 @GroupASql
 class GroupATests {
 
-    @Test(timeout=300_000)
+    @Test
 	fun setExpectations() {
         AssertingTestDatabaseContext.addExpectations("groupA",
                 "forClassGroupATests-setup", "specialSql1-setup", "specialSql1-teardown", "forClassGroupATests-teardown")
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun noSpecialSqlRequired() {
     }
 
-    @Test(timeout=300_000)
-@SpecialSql1
+    @Test
+    @SpecialSql1
     fun someSpecialSqlRequired() {
     }
 }

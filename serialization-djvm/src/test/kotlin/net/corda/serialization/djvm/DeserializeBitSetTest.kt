@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeBitSetTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing bitset`() {
         val bitSet = BitSet.valueOf(byteArrayOf(0x00, 0x70, 0x55, 0x3A, 0x48, 0x12))
         val data = bitSet.serialize()

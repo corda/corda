@@ -11,7 +11,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeStringBufferTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing string buffer`() {
         val buffer = StringBuffer("Hello World!")
         val data = buffer.serialize()

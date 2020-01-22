@@ -17,7 +17,7 @@ class DeserializeInputStreamTest : TestBase(KOTLIN) {
         const val MESSAGE = "Round and round the rugged rocks..."
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing input stream`() {
         val data = MESSAGE.byteInputStream().serialize()
 

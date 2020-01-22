@@ -71,7 +71,7 @@ class GenerateData {
         testSerialization.reset()
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun verifyTransactions() {
         URLClassLoader(arrayOf(TEST_DATA.toUri().toURL())).use { cl ->
             cl.loadResource("txverify/tx-success.bin")

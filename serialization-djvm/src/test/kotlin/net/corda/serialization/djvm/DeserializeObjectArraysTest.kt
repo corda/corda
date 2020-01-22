@@ -13,7 +13,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeObjectArraysTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing string array`() {
         val stringArray = HasStringArray(arrayOf("Hello", "World", "!"))
         val data = stringArray.serialize()
@@ -39,7 +39,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing character array`() {
         val charArray = HasCharacterArray(arrayOf('H', 'e', 'l', 'l', 'o', '!'))
         val data = charArray.serialize()
@@ -65,7 +65,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing long array`() {
         val longArray = HasLongArray(arrayOf(1000, 2000, 3000, 4000, 5000))
         val data = longArray.serialize()
@@ -90,7 +90,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing integer array`() {
         val integerArray = HasIntegerArray(arrayOf(100, 200, 300, 400, 500))
         val data = integerArray.serialize()
@@ -115,7 +115,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing short array`() {
         val shortArray = HasShortArray(arrayOf(100, 200, 300, 400, 500))
         val data = shortArray.serialize()
@@ -140,7 +140,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing byte array`() {
         val byteArray = HasByteArray(arrayOf(10, 20, 30, 40, 50))
         val data = byteArray.serialize()
@@ -165,7 +165,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing double array`() {
         val doubleArray = HasDoubleArray(arrayOf(1000.0, 2000.0, 3000.0, 4000.0, 5000.0))
         val data = doubleArray.serialize()
@@ -190,7 +190,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing float array`() {
         val floatArray = HasFloatArray(arrayOf(10.0f, 20.0f, 30.0f, 40.0f, 50.0f))
         val data = floatArray.serialize()
@@ -215,7 +215,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing boolean array`() {
         val booleanArray = HasBooleanArray(arrayOf(true, true, true))
         val data = booleanArray.serialize()
@@ -240,7 +240,7 @@ class DeserializeObjectArraysTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing uuid array`() {
         val uuid = UUID.randomUUID()
         val uuidArray = HasUUIDArray(arrayOf(uuid))

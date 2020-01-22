@@ -52,7 +52,7 @@ class DeserializePublicKeyTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test composite public key`() {
         val key1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256).public
         val key2 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256).public

@@ -17,7 +17,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeCollectionsTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing string list`() {
         val stringList = StringList(listOf("Hello", "World", "!"))
         val data = stringList.serialize()
@@ -42,7 +42,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing integer set`() {
         val integerSet = IntegerSet(linkedSetOf(10, 3, 15, 2, 10))
         val data = integerSet.serialize()
@@ -67,7 +67,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing integer sorted set`() {
         val integerSortedSet = IntegerSortedSet(sortedSetOf(10, 15, 1000, 3, 2, 10))
         val data = integerSortedSet.serialize()
@@ -92,7 +92,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing long navigable set`() {
         val longNavigableSet = LongNavigableSet(sortedSetOf(99955L, 10, 15, 1000, 3, 2, 10))
         val data = longNavigableSet.serialize()
@@ -117,7 +117,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing short collection`() {
         val shortCollection = ShortCollection(listOf(10, 200, 3000))
         val data = shortCollection.serialize()
@@ -142,7 +142,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing non-empty string set`() {
         val nonEmptyStrings = NonEmptyStringSet(NonEmptySet.of("Hello", "World", "!"))
         val data = nonEmptyStrings.serialize()
@@ -167,7 +167,7 @@ class DeserializeCollectionsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing enum set`() {
         val enumSet = HasEnumSet(EnumSet.of(ExternalEnum.DOH))
         val data = enumSet.serialize()

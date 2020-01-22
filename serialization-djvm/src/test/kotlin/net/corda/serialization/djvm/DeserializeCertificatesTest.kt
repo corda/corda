@@ -49,7 +49,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserialize certificate path`() {
         val certPath = factory.generateCertPath(listOf(certificate))
         val data = certPath.serialize()
@@ -74,7 +74,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserialize X509 certificate`() {
         val data = certificate.serialize()
 
@@ -98,7 +98,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test X509 CRL`() {
         val caKeyPair = KeyPairGenerator.getInstance("RSA")
             .generateKeyPair()

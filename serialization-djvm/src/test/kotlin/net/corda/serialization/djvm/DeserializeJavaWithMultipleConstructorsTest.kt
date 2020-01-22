@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeJavaWithMultipleConstructorsTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing existing class`() {
         val multiData = MultiConstructorData("Hello World", Long.MAX_VALUE, '!')
         val data = multiData.serialize()

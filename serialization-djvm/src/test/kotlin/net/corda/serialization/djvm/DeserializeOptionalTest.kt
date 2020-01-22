@@ -12,7 +12,7 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeOptionalTest : TestBase(KOTLIN) {
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing optional with object`() {
         val optional = Optional.of("Hello World!")
         val data = optional.serialize()
@@ -31,7 +31,7 @@ class DeserializeOptionalTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
 	fun `test deserializing optional without object`() {
         val optional = Optional.empty<String>()
         val data = optional.serialize()
