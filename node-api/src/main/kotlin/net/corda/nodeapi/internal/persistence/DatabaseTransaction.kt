@@ -56,12 +56,17 @@ class DatabaseTransaction(
      * The purpose of this property is to make sure this exception cannot be suppressed in user code.
      * The exception will be thrown on the next [commit]. It is used only inside a flow state machine execution.
      */
-    var firstExceptionInDatabaseTransaction: Exception? = null
-        set(e) {
-            if (field == null) {
-                field = e
-            }
+    private var firstExceptionInDatabaseTransaction: Exception? = null
+
+    fun setException(e: Exception) {
+        if (firstExceptionInDatabaseTransaction == null) {
+            firstExceptionInDatabaseTransaction = e
         }
+    }
+
+    private fun clearException() {
+        firstExceptionInDatabaseTransaction = null
+    }
 
     fun commit() {
         firstExceptionInDatabaseTransaction?.let {
@@ -81,7 +86,7 @@ class DatabaseTransaction(
         if (!connection.isClosed) {
             connection.rollback()
         }
-        firstExceptionInDatabaseTransaction = null
+        clearException()
     }
 
     fun close() {
@@ -91,7 +96,7 @@ class DatabaseTransaction(
         if (database.closeConnection) {
             connection.close()
         }
-        firstExceptionInDatabaseTransaction = null
+        clearException()
 
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
