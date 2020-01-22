@@ -231,6 +231,7 @@
     <ID>ForEachOnRange:BFTSmartConfigTests.kt$BFTSmartConfigTests$forEach { n -&gt; assertEquals(1, maxFaultyReplicas(n)) }</ID>
     <ID>ForEachOnRange:BFTSmartConfigTests.kt$BFTSmartConfigTests$forEach { n -&gt; assertEquals(2, maxFaultyReplicas(n)) }</ID>
     <ID>ForEachOnRange:BFTSmartConfigTests.kt$BFTSmartConfigTests$forEach { n -&gt; assertEquals(n, maxFaultyReplicas(n) + minCorrectReplicas(n)) }</ID>
+    <ID>ForEachOnRange:CordaServiceLifecycleFatalTests.kt$CordaServiceLifecycleFatalTests$forEach { logger.info("Rep #$it") // Scenario terminates JVM - node should be running out of process driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList(), systemProperties = mapOf(SECRET_PROPERTY_NAME to "true", tempFilePropertyName to tmpFile.absolutePath))) { val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow() val rpcInterface = nodeHandle.rpc eventually(duration = 60.seconds) { assertEquals(readyToThrowMarker, tmpFile.readLines().last()) } rpcInterface.protocolVersion tmpFile.appendText("\n" + goodToThrowMarker) // We signalled that it is good to throw which will eventually trigger node shutdown and RPC interface no longer working. eventually(duration = 30.seconds) { assertFailsWith(Exception::class) { try { rpcInterface.protocolVersion } catch (ex: Exception) { logger.info("Thrown as expected", ex) throw ex } } } } }</ID>
     <ID>ForEachOnRange:HibernateConfigurationTest.kt$HibernateConfigurationTest$forEach { consumeCash(it.DOLLARS) }</ID>
     <ID>ForEachOnRange:VaultQueryTests.kt$VaultQueryTestsBase$forEach { val newAllStates = vaultService.queryBy&lt;DummyLinearContract.State&gt;(sorting = sorting, criteria = criteria).states assertThat(newAllStates.groupBy(StateAndRef&lt;*&gt;::ref)).hasSameSizeAs(allStates) assertThat(newAllStates).containsExactlyElementsOf(allStates) }</ID>
     <ID>ForEachOnRange:VaultQueryTests.kt$VaultQueryTestsBase$forEach { vaultFiller.fillWithSomeTestLinearStates(1, linearNumber = it.toLong(), linearString = it.toString()) }</ID>
@@ -3961,6 +3962,7 @@
     <ID>TooGenericExceptionCaught:CordaPersistence.kt$CordaPersistence$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaRPCClientTest.kt$CordaRPCClientTest$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CordaServiceLifecycleFatalTests.kt$CordaServiceLifecycleFatalTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:CryptoUtilsTest.kt$CryptoUtilsTest$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DBNetworkParametersStorage.kt$DBNetworkParametersStorage$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DataUploadServlet.kt$DataUploadServlet$e: RuntimeException</ID>
