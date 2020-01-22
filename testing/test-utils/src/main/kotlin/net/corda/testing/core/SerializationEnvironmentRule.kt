@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._driverSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.internal.*
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
