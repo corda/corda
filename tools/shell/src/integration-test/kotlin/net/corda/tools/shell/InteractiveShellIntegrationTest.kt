@@ -9,8 +9,10 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
+import net.corda.client.jackson.internal.valueAs
 import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -29,6 +31,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
@@ -59,8 +62,12 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.rules.TemporaryFolder
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeoutException
 import java.util.zip.ZipInputStream
 import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
@@ -285,6 +292,75 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
+    fun `dumpCheckpoints correctly serializes FlowExternalOperations`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
+            alice.rpc.startFlow(::ExternalOperationFlow)
+            ExternalOperation.lock.acquire()
+            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            ExternalOperation.lock2.release()
+
+            val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
+            val json = ZipInputStream(zipFile.inputStream()).use { zip ->
+                zip.nextEntry
+                ObjectMapper().readTree(zip)
+            }
+
+            assertEquals("hello there", json["suspendedOn"]["customOperation"]["operation"]["a"].asText())
+            assertEquals(123, json["suspendedOn"]["customOperation"]["operation"]["b"].asInt())
+            assertEquals("please work", json["suspendedOn"]["customOperation"]["operation"]["c"]["d"].asText())
+            assertEquals("I beg you", json["suspendedOn"]["customOperation"]["operation"]["c"]["e"].asText())
+        }
+    }
+
+    @Test
+    fun `dumpCheckpoints correctly serializes FlowExternalAsyncOperations`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
+            alice.rpc.startFlow(::ExternalAsyncOperationFlow)
+            ExternalAsyncOperation.lock.acquire()
+            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            ExternalAsyncOperation.future.complete(null)
+            val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
+            val json = ZipInputStream(zipFile.inputStream()).use { zip ->
+                zip.nextEntry
+                ObjectMapper().readTree(zip)
+            }
+
+            assertEquals("hello there", json["suspendedOn"]["customOperation"]["operation"]["a"].asText())
+            assertEquals(123, json["suspendedOn"]["customOperation"]["operation"]["b"].asInt())
+            assertEquals("please work", json["suspendedOn"]["customOperation"]["operation"]["c"]["d"].asText())
+            assertEquals("I beg you", json["suspendedOn"]["customOperation"]["operation"]["c"]["e"].asText())
+        }
+    }
+
+    @Test
+    fun `dumpCheckpoints correctly serializes WaitForStateConsumption`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).createDirectories()
+            val stateRefs = setOf(
+                StateRef(SecureHash.randomSHA256(), 0),
+                StateRef(SecureHash.randomSHA256(), 1),
+                StateRef(SecureHash.randomSHA256(), 2)
+            )
+            assertThrows<TimeoutException> {
+                alice.rpc.startFlow(::WaitForStateConsumptionFlow, stateRefs).returnValue.getOrThrow(10.seconds)
+            }
+            InteractiveShell.runDumpCheckpoints(alice.rpc as InternalCordaRPCOps)
+            val zipFile = (alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list().first { "checkpoints_dump-" in it.toString() }
+            val json = ZipInputStream(zipFile.inputStream()).use { zip ->
+                zip.nextEntry
+                ObjectMapper().readTree(zip)
+            }
+
+            assertEquals(stateRefs, json["suspendedOn"]["waitForStateConsumption"].valueAs<List<StateRef>>(inputObjectMapper).toSet())
+        }
+    }
+
+    @Test
     fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
@@ -445,5 +521,54 @@ class InteractiveShellIntegrationTest {
             override val participants: List<AbstractParty>
     ) : LinearState
 
+    @StartableByRPC
+    class ExternalAsyncOperationFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            await(ExternalAsyncOperation("hello there", 123, Data("please work", "I beg you")))
+        }
+    }
 
+    class ExternalAsyncOperation(val a: String, val b: Int, val c: Data): FlowExternalAsyncOperation<Unit> {
+
+        companion object {
+            val future = CompletableFuture<Unit>()
+            val lock = Semaphore(0)
+        }
+
+        override fun execute(deduplicationId: String): CompletableFuture<Unit> {
+            return future.also { lock.release() }
+        }
+    }
+
+    class Data(val d: String, val e: String)
+
+    @StartableByRPC
+    class ExternalOperationFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            await(ExternalOperation("hello there", 123, Data("please work", "I beg you")))
+        }
+    }
+
+    class ExternalOperation(val a: String, val b: Int, val c: Data): FlowExternalOperation<Unit> {
+
+        companion object {
+            val lock = Semaphore(0)
+            val lock2 = Semaphore(0)
+        }
+
+        override fun execute(deduplicationId: String) {
+            lock.release()
+            lock2.acquire()
+        }
+    }
+
+    @StartableByRPC
+    class WaitForStateConsumptionFlow(private val stateRefs: Set<StateRef>) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            waitForStateConsumption(stateRefs)
+        }
+    }
 }

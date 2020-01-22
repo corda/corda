@@ -14,68 +14,10 @@ How to add suspending operations
 --------------------------------
 
 To add a suspending operation for a simple request-response type function that perhaps involves some external IO we can
-use the internal ``FlowAsyncOperation`` interface.
+use ``FlowExternalOperation`` or ``FlowExternalAsyncOperation``. These interfaces represent the public versions of the internal
+``FlowAsyncOperation``.
 
-.. container:: codeset
-
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/internal/FlowAsyncOperation.kt
-        :language: kotlin
-        :start-after: DOCSTART FlowAsyncOperation
-        :end-before: DOCEND FlowAsyncOperation
-
-Let's imagine we want to add a suspending operation that takes two integers and returns their sum. To do this we
-implement ``FlowAsyncOperation``:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
-        :language: kotlin
-        :start-after: DOCSTART SummingOperation
-        :end-before: DOCEND SummingOperation
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/SummingOperation.java
-        :language: java
-        :start-after: DOCSTART SummingOperation
-        :end-before: DOCEND SummingOperation
-
-As we can see the constructor of ``SummingOperation`` takes the two numbers, and the ``execute`` function simply returns
-a future that is immediately completed by the result of summing the numbers. Note how we don't use ``@Suspendable`` on
-``execute``, this is because we'll never suspend inside this function, the suspension will happen before we're calling
-it.
-
-Note also how the input numbers are stored in the class as fields. This is important, because in the flow's checkpoint
-we'll store an instance of this class whenever we're suspending on such an operation. If the node fails or restarts
-while the operation is underway this class will be deserialized from the checkpoint and ``execute`` will be called
-again.
-
-Now we can use the internal function ``executeAsync`` to execute this operation from a flow.
-
-.. container:: codeset
-
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/internal/FlowAsyncOperation.kt
-        :language: kotlin
-        :start-after: DOCSTART executeAsync
-        :end-before: DOCEND executeAsync
-
-It simply takes a ``FlowAsyncOperation`` and an optional flag we don't care about for now. We can use this function in a
-flow:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
-        :language: kotlin
-        :start-after: DOCSTART ExampleSummingFlow
-        :end-before: DOCEND ExampleSummingFlow
-
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/ExampleSummingFlow.java
-        :language: java
-        :start-after: DOCSTART ExampleSummingFlow
-        :end-before: DOCEND ExampleSummingFlow
-
-That's it! Obviously this is a mostly useless example, but this is the basic code structure one could extend for heavier
-computations/other IO. For example the function could call into a ``CordaService`` or something similar. One thing to
-note is that the operation executed in ``execute`` must be redoable(= "idempotent") in case the node fails before the
-next checkpoint is committed.
+See :ref:`calling external systems inside of flows <api_flows_external_operations>` for more information on these public interfaces.
 
 How to test
 -----------

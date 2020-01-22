@@ -880,15 +880,577 @@ We then update the progress tracker's current step as we progress through the fl
         :end-before: DOCEND 18
         :dedent: 12
 
-HTTP and database calls
------------------------
-HTTP, database and other calls to external resources are allowed in flows. However, their support is currently limited:
+.. _api_flows_external_operations:
 
-* The call must be executed in a BLOCKING way. Flows don't currently support suspending to await the response to a call to an external resource
+Calling external systems inside of flows
+------------------------------------------
+Flows provide the ability to await the result of an external operation running outside of the context of a flow. A flow will suspend while
+awaiting a result. This frees up a flow worker thread to continuing processing other flows.
 
-  * For this reason, the call should be provided with a timeout to prevent the flow from suspending forever. If the timeout elapses, this should be treated as a soft failure and handled by the flow's business logic
-  
-* The call must be idempotent. If the flow fails and has to restart from a checkpoint, the call will also be replayed
+.. note::
+
+    Flow worker threads belong to the thread pool that executes flows.
+
+Examples of where this functionality is useful include:
+
+    * Triggering a long running process on an external system
+    * Retrieving information from a external service that might go down
+
+``FlowLogic`` provides two ``await`` functions that allow custom operations to be defined and executed outside of the context of a flow.
+Below are the interfaces that must be implemented and passed into ``await``, along with brief descriptions of what they do:
+
+    * ``FlowExternalOperation`` - An operation that returns a result which should be run using a thread from one of the node's
+      thread pools.
+
+    * ``FlowExternalAsyncOperation`` - An operation that returns a future which should be run on a thread provided to its implementation.
+      Threading needs to be explicitly handled when using ``FlowExternalAsyncOperation``.
+
+FlowExternalOperation
+^^^^^^^^^^^^^^^^^^^^^
+
+``FlowExternalOperation`` allows developers to write an operation that will run on a thread provided by the node's flow external operation
+thread pool.
+
+.. note::
+
+    The size of the external operation thread pool can be configured, see :ref:`the node configuration documentation <corda_configuration_flow_external_operation_thread_pool_size>`.
+
+Below is an example of how ``FlowExternalOperation`` can be called from a flow to run an operation on a new thread, allowing the flow to suspend:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @StartableByRPC
+        class FlowUsingFlowExternalOperation : FlowLogic<Unit>() {
+
+            @Suspendable
+            override fun call() {
+                // Other flow operations
+
+                // Call [FlowLogic.await] to execute an external operation
+                // The result of the operation is returned to the flow
+                val response: Response = await(
+                    // Pass in an implementation of [FlowExternalOperation]
+                    RetrieveDataFromExternalSystem(
+                        serviceHub.cordaService(ExternalService::class.java),
+                        Data("amount", 1)
+                    )
+                )
+                // Other flow operations
+            }
+
+            class RetrieveDataFromExternalSystem(
+                private val externalService: ExternalService,
+                private val data: Data
+            ) : FlowExternalOperation<Response> {
+
+                // Implement [execute] which will be run on a thread outside of the flow's context
+                override fun execute(deduplicationId: String): Response {
+                    return externalService.retrieveDataFromExternalSystem(deduplicationId, data)
+                }
+            }
+        }
+
+        @CordaService
+        class ExternalService(serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
+
+            private val client: OkHttpClient = OkHttpClient()
+
+            fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): Response {
+                return try {
+                    // [DeduplicationId] passed into the request so the external system can handle deduplication
+                    client.newCall(
+                        Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                            RequestBody.create(
+                                MediaType.parse("text/plain"), data.toString()
+                            )
+                        ).build()
+                    ).execute()
+                } catch (e: IOException) {
+                    // Handle checked exception
+                    throw HospitalizeFlowException("External API call failed", e)
+                }
+            }
+        }
+
+        data class Data(val name: String, val value: Any)
+
+   .. sourcecode:: java
+
+        @StartableByRPC
+        public class FlowUsingFlowExternalOperation extends FlowLogic<Void> {
+
+            @Override
+            @Suspendable
+            public Void call() {
+                // Other flow operations
+
+                // Call [FlowLogic.await] to execute an external operation
+                // The result of the operation is returned to the flow
+                Response response = await(
+                        // Pass in an implementation of [FlowExternalOperation]
+                        new RetrieveDataFromExternalSystem(
+                                getServiceHub().cordaService(ExternalService.class),
+                                new Data("amount", 1)
+                        )
+                );
+                // Other flow operations
+                return null;
+            }
+
+            public class RetrieveDataFromExternalSystem implements FlowExternalOperation<Response> {
+
+                private ExternalService externalService;
+                private Data data;
+
+                public RetrieveDataFromExternalSystem(ExternalService externalService, Data data) {
+                    this.externalService = externalService;
+                    this.data = data;
+                }
+
+                // Implement [execute] which will be run on a thread outside of the flow's context
+                @Override
+                public Response execute(String deduplicationId) {
+                    return externalService.retrieveDataFromExternalSystem(deduplicationId, data);
+                }
+            }
+        }
+
+        @CordaService
+        public class ExternalService extends SingletonSerializeAsToken {
+
+            private OkHttpClient client = new OkHttpClient();
+
+            public ExternalService(AppServiceHub serviceHub) { }
+
+            public Response retrieveDataFromExternalSystem(String deduplicationId, Data data) {
+                try {
+                    // [DeduplicationId] passed into the request so the external system can handle deduplication
+                    return client.newCall(
+                            new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                    RequestBody.create(
+                                            MediaType.parse("text/plain"), data.toString()
+                                    )
+                            ).build()
+                    ).execute();
+                } catch (IOException e) {
+                    // Must handle checked exception
+                    throw new HospitalizeFlowException("External API call failed", e);
+                }
+            }
+        }
+
+        public class Data {
+
+            private String name;
+            private Object value;
+
+            public Data(String name, Object value) {
+                this.name = name;
+                this.value = value;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public Object getValue() {
+                return value;
+            }
+        }
+
+In summary, the following steps are taken in the code above:
+
+    * ``ExternalService`` is a Corda service that provides a way to contact an external system (by HTTP in this example).
+    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` which is included as part of the request to the
+      external system. The external system, in this example, will handle deduplication and return the previous result if it was already
+      computed.
+    * An implementation of ``FlowExternalOperation`` (``RetrieveDataFromExternalSystem``) is created that calls ``ExternalService.retrieveDataFromExternalSystem``.
+    * ``RetrieveDataFromExternalSystem`` is then passed into ``await`` to execute the code contained in ``RetrieveDataFromExternalSystem.execute``.
+    * The result of ``RetrieveDataFromExternalSystem.execute`` is then returned to the flow once its execution finishes.
+
+FlowExternalAsyncOperation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``FlowExternalAsyncOperation`` allows developers to write an operation that returns a future whose threading is handled within the CorDapp.
+
+.. warning::
+
+    Threading must be explicitly controlled when using ``FlowExternalAsyncOperation``. A future will be run on its current flow worker
+    thread if a new thread is not spawned or provided by a thread pool. This prevents the flow worker thread from freeing up and allowing
+    another flow to take control and run.
+
+Implementations of ``FlowExternalAsyncOperation`` must return a ``CompletableFuture``. How this future is created is up to the developer.
+It is recommended to use ``CompletableFuture.supplyAsync`` and supply an executor to run the future on. Other libraries can be used to
+generate futures, as long as a ``CompletableFuture`` is returned out of ``FlowExternalAsyncOperation``. An example of creating a future
+using :ref:`Guava's ListenableFuture <api_flows_guava_future_conversion>` is given in a following section.
+
+.. note::
+
+    The future can be chained to execute further operations that continue using the same thread the future started on. For example,
+    ``CompletableFuture``'s ``whenComplete``, ``exceptionally`` or ``thenApply`` could be used (their async versions are also valid).
+
+Below is an example of how ``FlowExternalAsyncOperation`` can be called from a flow:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @StartableByRPC
+        class FlowUsingFlowExternalAsyncOperation : FlowLogic<Unit>() {
+
+            @Suspendable
+            override fun call() {
+                // Other flow operations
+
+                // Call [FlowLogic.await] to execute an external operation
+                // The result of the operation is returned to the flow
+                val response: Response = await(
+                    // Pass in an implementation of [FlowExternalAsyncOperation]
+                    RetrieveDataFromExternalSystem(
+                        serviceHub.cordaService(ExternalService::class.java),
+                        Data("amount", 1)
+                    )
+                )
+                // Other flow operations
+            }
+
+            class RetrieveDataFromExternalSystem(
+                private val externalService: ExternalService,
+                private val data: Data
+            ) : FlowExternalAsyncOperation<Response> {
+
+                // Implement [execute] which needs to be provided with a new thread to benefit from suspending the flow
+                override fun execute(deduplicationId: String): CompletableFuture<Response> {
+                    return externalService.retrieveDataFromExternalSystem(deduplicationId, data)
+                }
+            }
+        }
+
+        @CordaService
+        class ExternalService(serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
+
+            private val client: OkHttpClient = OkHttpClient()
+
+            // [ExecutorService] created to provide a fixed number of threads to the futures created in this service
+            private val executor: ExecutorService = Executors.newFixedThreadPool(
+                4,
+                ThreadFactoryBuilder().setNameFormat("external-service-thread").build()
+            )
+
+            fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): CompletableFuture<Response> {
+                // Create a [CompletableFuture] to be executed by the [FlowExternalAsyncOperation]
+                return CompletableFuture.supplyAsync(
+                    Supplier {
+                        try {
+                            // [DeduplicationId] passed into the request so the external system can handle deduplication
+                            client.newCall(
+                                Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                                    RequestBody.create(
+                                        MediaType.parse("text/plain"), data.toString()
+                                    )
+                                ).build()
+                            ).execute()
+                        } catch (e: IOException) {
+                            // Handle checked exception
+                            throw HospitalizeFlowException("External API call failed", e)
+                        }
+                    },
+                    // The future must run on a new thread
+                    executor
+                )
+            }
+        }
+
+        data class Data(val name: String, val value: Any)
+
+   .. sourcecode:: java
+
+        @StartableByRPC
+        public class FlowUsingFlowExternalAsyncOperation extends FlowLogic<Void> {
+
+            @Override
+            @Suspendable
+            public Void call() {
+                // Other flow operations
+
+                // Call [FlowLogic.await] to execute an external operation
+                // The result of the operation is returned to the flow
+                Response response = await(
+                        // Pass in an implementation of [FlowExternalAsyncOperation]
+                        new RetrieveDataFromExternalSystem(
+                                getServiceHub().cordaService(ExternalService.class),
+                                new Data("amount", 1)
+                        )
+                );
+                // Other flow operations
+                return null;
+            }
+
+            public class RetrieveDataFromExternalSystem implements FlowExternalAsyncOperation<Response> {
+
+                private ExternalService externalService;
+                private Data data;
+
+                public RetrieveDataFromExternalSystem(ExternalService externalService, Data data) {
+                    this.externalService = externalService;
+                    this.data = data;
+                }
+
+                // Implement [execute] which needs to be provided with a new thread to benefit from suspending the flow
+                @Override
+                public CompletableFuture<Response> execute(String deduplicationId) {
+                    return externalService.retrieveDataFromExternalSystem(deduplicationId, data);
+                }
+            }
+        }
+
+        @CordaService
+        public class ExternalService extends SingletonSerializeAsToken {
+
+            private OkHttpClient client = new OkHttpClient();
+
+            // [ExecutorService] created to provide a fixed number of threads to the futures created in this service
+            private ExecutorService executor = Executors.newFixedThreadPool(
+                    4,
+                    new ThreadFactoryBuilder().setNameFormat("external-service-thread").build()
+            );
+
+            public ExternalService(AppServiceHub serviceHub) { }
+
+            public CompletableFuture<Response> retrieveDataFromExternalSystem(String deduplicationId, Data data) {
+                // Create a [CompletableFuture] to be executed by the [FlowExternalAsyncOperation]
+                return CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                // [DeduplicationId] passed into the request so the external system can handle deduplication
+                                return client.newCall(
+                                        new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                                RequestBody.create(
+                                                        MediaType.parse("text/plain"), data.toString()
+                                                )
+                                        ).build()
+                                ).execute();
+                            } catch (IOException e) {
+                                // Must handle checked exception
+                                throw new HospitalizeFlowException("External API call failed", e);
+                            }
+                        },
+                        // The future must run on a new thread
+                        executor
+                );
+            }
+        }
+
+        public class Data {
+
+            private String name;
+            private Object value;
+
+            public Data(String name, Object value) {
+                this.name = name;
+                this.value = value;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public Object getValue() {
+                return value;
+            }
+        }
+
+In summary, the following steps are taken in the code above:
+
+    * ``ExternalService`` is a Corda service that provides a way to contact an external system (by HTTP in this example).
+    * ``ExternalService.retrieveDataFromExternalSystem`` is passed a ``deduplicationId`` which is included as part of the request to the
+      external system. The external system, in this example, will handle deduplication and return the previous result if it was already
+      computed.
+    * A ``CompletableFuture`` is created that contacts the external system. ``CompletableFuture.supplyAsync`` takes in a reference to the
+      ``ExecutorService`` which will provide a thread for the external operation to run on.
+    * An implementation of ``FlowExternalAsyncOperation`` (``RetrieveDataFromExternalSystem``) is created that calls the ``ExternalService.retrieveDataFromExternalSystem``.
+    * ``RetrieveDataFromExternalSystem`` is then passed into ``await`` to execute the code contained in ``RetrieveDataFromExternalSystem.execute``.
+    * The result of ``RetrieveDataFromExternalSystem.execute`` is then returned to the flow once its execution finishes.
+
+Handling deduplication in external operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A Flow has the ability to rerun from any point where it suspends. Due to this, a flow can execute code multiple times depending on where it
+retries. For context contained inside a flow, values will be reset to their state recorded at the last suspension point. This makes most
+properties existing inside a flow safe when retrying. External operations do not have the same guarantees as they are executed outside of
+the context of flows.
+
+External operations are provided with a ``deduplicationId`` to allow CorDapps to decide whether to run the operation again or return a
+result retrieved from a previous attempt. How deduplication is handled depends on the CorDapp and how the external system works. For
+example, an external system might already handle this scenario and return the result from a previous calculation or it could be idempotent
+and can be safely executed multiple times.
+
+.. warning::
+
+    There is no inbuilt deduplication for external operations. Any deduplication must be explicitly handled in whatever way is
+    appropriate for the CorDapp and external system.
+
+The ``deduplicationId`` passed to an external operation is constructed from its calling flow's ID and the number of suspends the flow has
+made. Therefore, the ``deduplicationId`` is guaranteed to be the same on a retry and will never be used again once the flow has successfully
+reached its next suspension point.
+
+.. note::
+
+    Any external operations that did not finish processing (or were kept in the flow hospital due to an error) will be retried upon node
+    restart.
+
+Below are examples of how deduplication could be handled:
+
+    * The external system records successful computations and returns previous results if requested again.
+    * The external system is idempotent, meaning the computation can be made multiple times without altering any state (similar to the point above).
+    * An extra external service maintains a record of deduplication IDs.
+    * Recorded inside of the node's database.
+
+.. note::
+
+    Handling deduplication on the external system's side is preferred compared to handling it inside of the node.
+
+.. warning::
+
+    In-memory data structures should not be used for handling deduplication as their state will not survive node restarts.
+
+.. _api_flows_guava_future_conversion:
+
+Creating CompletableFutures from Guava's ListenableFutures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The code below demonstrates how to convert a ``ListenableFuture`` into a ``CompletableFuture``, allowing the result to be executed using a
+``FlowExternalAsyncOperation``.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @CordaService
+        class ExternalService(serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
+
+            private val client: OkHttpClient = OkHttpClient()
+
+            // Guava's [ListeningExecutorService] created to supply a fixed number of threads
+            private val guavaExecutor: ListeningExecutorService = MoreExecutors.listeningDecorator(
+                Executors.newFixedThreadPool(
+                    4,
+                    ThreadFactoryBuilder().setNameFormat("guava-thread").build()
+                )
+            )
+
+            fun retrieveDataFromExternalSystem(deduplicationId: String, data: Data): CompletableFuture<Response> {
+                // Create a Guava [ListenableFuture]
+                val guavaFuture: ListenableFuture<Response> = guavaExecutor.submit(Callable<Response> {
+                    try {
+                        // [DeduplicationId] passed into the request so the external system can handle deduplication
+                        client.newCall(
+                            Request.Builder().url("https://externalsystem.com/endpoint/$deduplicationId").post(
+                                RequestBody.create(
+                                    MediaType.parse("text/plain"), data.toString()
+                                )
+                            ).build()
+                        ).execute()
+                    } catch (e: IOException) {
+                        // Handle checked exception
+                        throw HospitalizeFlowException("External API call failed", e)
+                    }
+                })
+                // Create a [CompletableFuture]
+                return object : CompletableFuture<Response>() {
+                    override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+                        return guavaFuture.cancel(mayInterruptIfRunning).also {
+                            super.cancel(mayInterruptIfRunning)
+                        }
+                    }
+                }.also { completableFuture ->
+                    // Create a callback that completes the returned [CompletableFuture] when the underlying [ListenableFuture] finishes
+                    val callback = object : FutureCallback<Response> {
+                        override fun onSuccess(result: Response?) {
+                            completableFuture.complete(result)
+                        }
+
+                        override fun onFailure(t: Throwable) {
+                            completableFuture.completeExceptionally(t)
+                        }
+                    }
+                    // Register the callback
+                    Futures.addCallback(guavaFuture, callback, guavaExecutor)
+                }
+            }
+        }
+
+   .. sourcecode:: java
+
+        @CordaService
+        public class ExternalService extends SingletonSerializeAsToken {
+
+            private OkHttpClient client = new OkHttpClient();
+
+            public ExternalService(AppServiceHub serviceHub) { }
+
+            private ListeningExecutorService guavaExecutor = MoreExecutors.listeningDecorator(
+                    Executors.newFixedThreadPool(
+                            4,
+                            new ThreadFactoryBuilder().setNameFormat("guava-thread").build()
+                    )
+            );
+
+            public CompletableFuture<Response> retrieveDataFromExternalSystem(String deduplicationId, Data data) {
+                // Create a Guava [ListenableFuture]
+                ListenableFuture<Response> guavaFuture = guavaExecutor.submit(() -> {
+                    try {
+                        // [DeduplicationId] passed into the request so the external system can handle deduplication
+                        return client.newCall(
+                                new Request.Builder().url("https://externalsystem.com/endpoint/" + deduplicationId).post(
+                                        RequestBody.create(
+                                                MediaType.parse("text/plain"), data.toString()
+                                        )
+                                ).build()
+                        ).execute();
+                    } catch (IOException e) {
+                        // Must handle checked exception
+                        throw new HospitalizeFlowException("External API call failed", e);
+                    }
+                });
+                // Create a [CompletableFuture]
+                CompletableFuture<Response> completableFuture = new CompletableFuture<Response>() {
+                    // If the returned [CompletableFuture] is cancelled then the underlying [ListenableFuture] must be cancelled as well
+                    @Override
+                    public boolean cancel(boolean mayInterruptIfRunning) {
+                        boolean result = guavaFuture.cancel(mayInterruptIfRunning);
+                        super.cancel(mayInterruptIfRunning);
+                        return result;
+                    }
+                };
+                // Create a callback that completes the returned [CompletableFuture] when the underlying [ListenableFuture] finishes
+                FutureCallback<Response> callback = new FutureCallback<Response>() {
+                    @Override
+                    public void onSuccess(Response result) {
+                        completableFuture.complete(result);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        completableFuture.completeExceptionally(t);
+                    }
+                };
+                // Register the callback
+                Futures.addCallback(guavaFuture, callback, guavaExecutor);
+
+                return completableFuture;
+            }
+        }
+
+In the code above:
+
+    * A ``ListenableFuture`` is created and receives a thread from the ``ListeningExecutorService``. This future does all the processing.
+    * A ``CompletableFuture`` is created, so that it can be returned to and executed by a ``FlowExternalAsyncOperation``.
+    * A ``FutureCallback`` is registered to the ``ListenableFuture``, which will complete the ``CompletableFuture`` (either successfully or
+      exceptionally) depending on the outcome of the ``ListenableFuture``.
+    * ``CompletableFuture.cancel`` is overridden to propagate its cancellation down to the underlying ``ListenableFuture``.
 
 Concurrency, Locking and Waiting
 --------------------------------

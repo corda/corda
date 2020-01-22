@@ -1,7 +1,6 @@
 package net.corda.core.internal.notary
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
@@ -9,16 +8,16 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowAsyncOperation
-import net.corda.core.internal.executeAsync
 import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 
 /** Base implementation for a notary service operated by a singe party. */
 abstract class SinglePartyNotaryService : NotaryService() {
@@ -48,7 +47,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
-        val result = callingFlow.executeAsync(
+        val result = callingFlow.await(
                 CommitOperation(
                         this,
                         inputs,
@@ -87,10 +86,10 @@ abstract class SinglePartyNotaryService : NotaryService() {
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>
-    ) : FlowAsyncOperation<Result> {
+    ) : FlowExternalAsyncOperation<Result> {
 
-        override fun execute(deduplicationId: String): CordaFuture<Result> {
-            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references)
+        override fun execute(deduplicationId: String): CompletableFuture<Result> {
+            return service.uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references).toCompletableFuture()
         }
     }
 

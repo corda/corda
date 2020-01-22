@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
 
-// DOCSTART FlowAsyncOperation
 /**
  * Interface for arbitrary operations that can be invoked in a flow asynchronously - the flow will suspend until the
  * operation completes. Operation parameters are expected to be injected via constructor.
@@ -21,13 +20,14 @@ interface FlowAsyncOperation<R : Any> {
      */
     fun execute(deduplicationId: String): CordaFuture<R>
 }
-// DOCEND FlowAsyncOperation
 
-// DOCSTART executeAsync
 /** Executes the specified [operation] and suspends until operation completion. */
+@Deprecated(
+    "This has been replaced by [FlowLogic.await] that provides an improved and public API",
+    ReplaceWith("net.corda.core.flows.FlowLogic.await")
+)
 @Suspendable
 fun <T, R : Any> FlowLogic<T>.executeAsync(operation: FlowAsyncOperation<R>, maySkipCheckpoint: Boolean = false): R {
     val request = FlowIORequest.ExecuteAsyncOperation(operation)
     return stateMachine.suspend(request, maySkipCheckpoint)
 }
-// DOCEND executeAsync

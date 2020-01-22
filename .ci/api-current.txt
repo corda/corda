@@ -2205,6 +2205,14 @@ public class net.corda.core.flows.FlowException extends net.corda.core.CordaExce
   public final Long getOriginalErrorId()
   public final void setOriginalErrorId(Long)
 ##
+public interface net.corda.core.flows.FlowExternalAsyncOperation
+  @NotNull
+  public abstract java.util.concurrent.CompletableFuture<R> execute(String)
+##
+public interface net.corda.core.flows.FlowExternalOperation
+  @NotNull
+  public abstract R execute(String)
+##
 @CordaSerializable
 public final class net.corda.core.flows.FlowInfo extends java.lang.Object
   public <init>(int, String)
@@ -2299,6 +2307,12 @@ public static final class net.corda.core.flows.FlowInitiator$Shell extends net.c
 ##
 public abstract class net.corda.core.flows.FlowLogic extends java.lang.Object
   public <init>()
+  @Suspendable
+  @NotNull
+  public final R await(net.corda.core.flows.FlowExternalAsyncOperation<R>)
+  @Suspendable
+  @NotNull
+  public final R await(net.corda.core.flows.FlowExternalOperation<R>)
   @Suspendable
   public abstract T call()
   public final void checkFlowPermission(String, java.util.Map<String, String>)

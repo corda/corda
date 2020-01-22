@@ -27,6 +27,17 @@ fun <V, W, X> CordaFuture<out V>.thenMatch(success: (V) -> W, failure: (Throwabl
 /** When this future is done and the outcome is failure, log the throwable. */
 fun CordaFuture<*>.andForget(log: Logger) = thenMatch({}, { log.error("Background task failed:", it) })
 
+fun <RESULT> CordaFuture<out RESULT>.doOnComplete(accept: (RESULT) -> Unit): CordaFuture<RESULT> {
+    return CordaFutureImpl<RESULT>().also { result ->
+        thenMatch({
+            accept(it)
+            result.capture { it }
+        }, {
+            result.setException(it)
+        })
+    }
+}
+
 /**
  * Returns a future that will have an outcome of applying the given transform to this future's value.
  * But if this future fails, the transform is not invoked and the returned future becomes done with the same throwable.

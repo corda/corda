@@ -121,6 +121,7 @@ abstract class StatemachineErrorHandlingTest {
         }
     }
 
+    // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
         override fun call(): HospitalCounts =

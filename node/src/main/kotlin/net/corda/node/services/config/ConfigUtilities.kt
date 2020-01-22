@@ -45,6 +45,10 @@ object ConfigHelper {
         val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
+        // Detect the number of cores
+        val coreCount = Runtime.getRuntime().availableProcessors()
+        val multiThreadingConfig = configOf("flowExternalOperationThreadPoolSize" to coreCount.toString())
+
         val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
         val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOf(
@@ -55,6 +59,7 @@ object ConfigHelper {
                 .withFallback(environmentOverrides)
                 .withFallback(appConfig)
                 .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
+                .withFallback(multiThreadingConfig)
                 .withFallback(defaultConfig)
                 .resolve()
 

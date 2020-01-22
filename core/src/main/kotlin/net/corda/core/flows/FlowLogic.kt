@@ -4,13 +4,22 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowAsyncOperation
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ServiceHubCoreInternal
+import net.corda.core.internal.WaitForStateConsumption
+import net.corda.core.internal.abbreviate
+import net.corda.core.internal.checkPayloadIs
+import net.corda.core.internal.concurrent.asCordaFuture
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -24,7 +33,10 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import org.slf4j.Logger
 import java.time.Duration
-import java.util.*
+import java.util.HashMap
+import java.util.LinkedHashMap
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -432,7 +444,12 @@ abstract class FlowLogic<out T> {
      * @param stateRefs the StateRefs which will be consumed in the future.
      */
     @Suspendable
-    fun waitForStateConsumption(stateRefs: Set<StateRef>) = executeAsync(WaitForStateConsumption(stateRefs, serviceHub))
+    fun waitForStateConsumption(stateRefs: Set<StateRef>) {
+        // Manually call the equivalent of [await] to remove extra wrapping of objects
+        // Makes serializing of object easier for [CheckpointDumper] as well
+        val request = FlowIORequest.ExecuteAsyncOperation(WaitForStateConsumption(stateRefs, serviceHub))
+        return stateMachine.suspend(request, false)
+    }
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect
@@ -503,6 +520,72 @@ abstract class FlowLogic<out T> {
     private fun <R> castMapValuesToKnownType(map: Map<FlowSession, UntrustworthyData<Any>>): List<UntrustworthyData<R>> {
         return map.values.map { uncheckedCast<Any, UntrustworthyData<R>>(it) }
     }
+
+    /**
+     * Executes the specified [operation] and suspends until operation completion.
+     *
+     * An implementation of [FlowExternalAsyncOperation] should be provided that creates a new future that the state machine awaits
+     * completion of.
+     *
+     */
+    @Suspendable
+    fun <R : Any> await(operation: FlowExternalAsyncOperation<R>): R {
+        // Wraps the passed in [FlowExternalAsyncOperation] so its [CompletableFuture] can be converted into a [CordaFuture]
+        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalAsyncOperation<R> {
+            override val operation = operation
+            override fun execute(deduplicationId: String): CordaFuture<R> {
+                return this.operation.execute(deduplicationId).asCordaFuture()
+            }
+        }
+        val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
+        return stateMachine.suspend(request, false)
+    }
+
+    /**
+     * Executes the specified [operation] and suspends until operation completion.
+     *
+     * An implementation of [FlowExternalOperation] should be provided that returns a result which the state machine will run on a separate
+     * thread (using the node's external operation thread pool).
+     *
+     */
+    @Suspendable
+    fun <R : Any> await(operation: FlowExternalOperation<R>): R {
+        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalOperation<R> {
+            override val serviceHub = this@FlowLogic.serviceHub as ServiceHubCoreInternal
+            override val operation = operation
+            override fun execute(deduplicationId: String): CordaFuture<R> {
+                // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
+                // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
+                return CompletableFuture.supplyAsync(
+                    Supplier { this.operation.execute(deduplicationId) },
+                    serviceHub.externalOperationExecutor
+                ).asCordaFuture()
+            }
+        }
+        val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
+        return stateMachine.suspend(request, false)
+    }
+}
+
+/**
+ * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
+ * [FlowExternalAsyncOperation].
+ */
+private interface WrappedFlowExternalAsyncOperation<R : Any> {
+    val operation: FlowExternalAsyncOperation<R>
+}
+
+/**
+ * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
+ * [FlowExternalOperation].
+ *
+ * The reference to [ServiceHub] is is also needed by Kryo to properly keep a reference to [ServiceHub] so that
+ * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
+ * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
+ */
+private interface WrappedFlowExternalOperation<R : Any> {
+    val serviceHub: ServiceHub
+    val operation: FlowExternalOperation<R>
 }
 
 /**

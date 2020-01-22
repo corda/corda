@@ -4,13 +4,19 @@ import co.paralleluniverse.fibers.Stack
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility
 import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.BeanDescription
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.ObjectWriter
+import com.fasterxml.jackson.databind.SerializationConfig
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.BeanPropertyWriter
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
@@ -27,8 +33,16 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
 import net.corda.core.node.AppServiceHub.Companion.SERVICE_PRIORITY_NORMAL
+import net.corda.core.internal.FlowAsyncOperation
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.WaitForStateConsumption
+import net.corda.core.internal.declaredField
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.outputStream
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
@@ -45,7 +59,17 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.reportSuccess
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.FlowSessionImpl
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.utilities.JVMAgentUtil.getJvmAgentProperties
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
@@ -55,7 +79,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
@@ -97,6 +121,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                     addSerializer(FlowSessionImplSerializer)
                     addSerializer(MapSerializer)
                     addSerializer(AttachmentSerializer)
+                    setMixInAnnotation(FlowAsyncOperation::class.java, FlowAsyncOperationMixin::class.java)
                     setMixInAnnotation(FlowLogic::class.java, FlowLogicMixin::class.java)
                     setMixInAnnotation(SessionId::class.java, SessionIdMixin::class.java)
                 })
@@ -365,6 +390,15 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private interface SessionIdMixin {
         @get:JsonValue
         val toLong: Long
+    }
+
+    @Suppress("unused")
+    private interface FlowAsyncOperationMixin {
+        @get:JsonIgnore
+        val serviceHub: ServiceHub
+        // [Any] used so this single mixin can serialize [FlowExternalOperation] and [FlowExternalAsyncOperation]
+        @get:JsonUnwrapped
+        val operation: Any
     }
 
     @JsonAutoDetect(getterVisibility = Visibility.NONE, isGetterVisibility = Visibility.NONE, fieldVisibility = Visibility.ANY)
