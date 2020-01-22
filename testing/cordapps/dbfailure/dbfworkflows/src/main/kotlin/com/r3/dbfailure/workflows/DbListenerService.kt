@@ -18,14 +18,8 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
         val log = contextLogger()
         var onError: ((Throwable) -> Unit)? = null
 
-        // make flow executed on a outOfProcess node throw an unrecoverable error the first time only
+        // make the service throw an unrecoverable error (should be executed in an outOfProcess node so that it wont halt testing jvm)
         var throwUnrecoverableError = false
-        @StartableByRPC
-        class MakeServiceThrowErrorFlow: FlowLogic<Unit>() {
-            override fun call() {
-                throwUnrecoverableError = true
-            }
-        }
     }
 
     init {
@@ -128,5 +122,12 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
             services.vaultService.rawUpdates.subscribe(onNext)
         }
 
+    }
+
+    @StartableByRPC
+    class MakeServiceThrowErrorFlow: FlowLogic<Unit>() {
+        override fun call() {
+            throwUnrecoverableError = true
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
 import com.r3.dbfailure.workflows.DbListenerService
+import com.r3.dbfailure.workflows.DbListenerService.MakeServiceThrowErrorFlow
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
 import net.corda.core.internal.concurrent.openFuture
@@ -341,8 +342,8 @@ class VaultObserverExceptionTest {
     fun `out of memory error halts JVM, on node restart flow retries, and succeeds`() {
         driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            var aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = false).getOrThrow()
-            aliceNode.rpc.startFlow(DbListenerService.Companion::MakeServiceThrowErrorFlow).returnValue.getOrThrow()
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = false).getOrThrow()
+            aliceNode.rpc.startFlow(::MakeServiceThrowErrorFlow).returnValue.getOrThrow()
             aliceNode.rpc.startFlow(::Initiator, "UnrecoverableError", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowUnrecoverableError))
 
