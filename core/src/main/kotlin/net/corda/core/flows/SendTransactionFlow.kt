@@ -19,7 +19,6 @@ import net.corda.core.utilities.unwrap
  * length of the objects to pack them into the 10MB max message size buffer. We do not want to serialize them multiple times
  * so it's a lot more efficient to send the byte stream.
  */
-//++++ added start
 @CordaSerializable
 class MaybeSerializedSignedTransaction(override val id: SecureHash, val serialized: SerializedBytes<SignedTransaction>?,
                                        val nonSerialised: SignedTransaction?) : NamedByHash {
@@ -29,7 +28,6 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
         } else if (serialized != null) {
             val tranBytes = SerializedBytes<SignedTransaction>(serialized.bytes)
             tranBytes.deserialize()
-            //++++ assign here?
         } else {
             throw Exception("MaybeSerializedSignedTransaction.get(${id}): May not be called with null object content.")
         }
@@ -41,9 +39,7 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
         return if (serialized == null) { 0 } else { serialized.bytes.size }
     }
 }
-//++++ added end
 
-val DEFAULT_MAX_MULTI_TRAN_BYTE_COUNT = 500001 //+++++ make 0.5MB zero // Unsupported in O/S
 /**
  * The [SendTransactionFlow] should be used to send a transaction to another peer that wishes to verify that transaction's
  * integrity by resolving and checking the dependencies as well. The other side should invoke [ReceiveTransactionFlow] at
@@ -75,12 +71,18 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // User can override this method to perform custom request verification.
     }
 
-    public var maxMultiTranByteCount = DEFAULT_MAX_MULTI_TRAN_BYTE_COUNT //++++
-
     @Suspendable
     override fun call(): Void? {
-        val plt = payload.javaClass.typeName //++++
-        println("\n >>>>>> DataVendingFlow++++: Call: PLT1=$plt: MAX-TRAN-SIZE = $maxMultiTranByteCount")//++++
+        //++++val plt = payload.javaClass.typeName //++++
+        val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize //++++
+        var maxTransactionSize = networkMaxMessageSize / 2 //++++ make val again
+
+
+        maxTransactionSize = 100000 //++++ REMOVE REMOVE REMOVE
+
+
+        println("DataVendingFlow: Call: Network max message size = ${networkMaxMessageSize}, Max Transaction Size = $maxTransactionSize")
+
 
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment/network parameters data.
         var payload = payload
@@ -106,13 +108,14 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
-        var cntxxxx = 0 //++++
+        var loopCount = 0
         while (true) {
-            println("\nXXXX++++ WHILE [$cntxxxx]...") ; cntxxxx++//++++
+            val loopCnt = loopCount++
+            println("DataVendingFlow: Main While [$loopCnt]...");
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
-                val rqt = request.javaClass.name//++++
+                //++++val rqt = request.javaClass.name//++++
                 //++++val nmx = request.namexxxx()
-                println("sendPayloadAndReceiveDataRequest()++++ $rqt")//++++
+                println("sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}")//++++
                 when (request) {
                     is FetchDataFlow.Request.Data -> {
                         // Security TODO: Check for abnormally large or malformed data requests
@@ -120,22 +123,22 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                         request
                     }
                     FetchDataFlow.Request.End -> {
-                        println("<<<<<< DataVendingFlow++++: END"); return null } //++++
+                        println("DataVendingFlow: END"); return null } //++++
                 }
             }
 
-            val st = dataRequest.dataType.name
-            println("send stuff++++ $st")//++++
-            var failCntInd = 0 //++++ remove for test reject third item
-            var maxByteCount = maxMultiTranByteCount // Sample once before the loop
+            //++++val st = dataRequest.dataType.name
+            println("Sending data (Type = ${dataRequest.dataType.name})")//++++
+            var failCntIndex = 0 //++++ remove for test reject third item
+            var maxByteCount = maxTransactionSize // Sample once before the loop
             var totalByteCount = 0
             var firstItem = true
             var multiFetchCountExceeded = false
             var numSent = 0
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    val sz1=dataRequest.hashes.size //++++
-                    println("send stuff TRANSACTION++++ (dataRequest.hashes.size=$sz1)")//++++
+                    //++++val sz1=dataRequest.hashes.size //++++
+                    println("Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size})")//++++
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
@@ -143,21 +146,23 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             ?: throw FetchDataFlow.HashNotFound(txId)
                     authorisedTransactions.removeAuthorised(tx.id)
                     authorisedTransactions.addAuthorised(getInputTransactions(tx))
+                    totalByteCount += tx.txBits.size
+                    numSent++
                     tx
                 }
                 FetchDataFlow.DataType.MULTI_TRANSACTION -> dataRequest.hashes.map { txId -> //++++
-                    val sz1=dataRequest.hashes.size //++++
+                   //++++ val sz1=dataRequest.hashes.size //++++
                     val txs = txId.toString() //++++
                     //++++  val sendItem = failCntInd != 2 && failCntInd != 3 //++++ test fail
 
-                    println("[$failCntInd]send stuff MULTI_TRANSACTION Exceed=${multiFetchCountExceeded} [$txId]++++ (num=$sz1): '$txs'")//++++
+                    println("[$failCntIndex]: Sending: MULTI_TRANSACTION Exceeded = ${multiFetchCountExceeded}, ID = '$txId' (num=${dataRequest.hashes.size})")//++++
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         //++++if (sendItem && !authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
-                    //++++ we should not just throw here as it's not recoverable on the client side. Might be better to send a reason code or
+                    // Maybe we should not just throw here as it's not recoverable on the client side. Might be better to send a reason code or
                     // remove the restriction on sending once.
-                    println("Auth OK '$txs'")//++++
+                    println("Transaction authorised OK: '$txs'")//++++
                     // ++++   var sendItem = false
                     var serialized: SerializedBytes<SignedTransaction>? = null
                     if (!multiFetchCountExceeded) {
@@ -165,11 +170,11 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                         // is required, just reject all additional items.
                         val tx = serviceHub.validatedTransactions.getTransaction(txId)
                                 ?: throw FetchDataFlow.HashNotFound(txId) //++++ how do we handle not found on one item?
-                        println("Get OK '$txs'")//++++
+                        println("Transaction get OK: '$txs'")//++++
                         serialized = tx.serialize() //++++zzzz might break the code
 
                         val itemByteCount = serialized.size
-                        println("CHK first=$firstItem total=$totalByteCount item=$itemByteCount max=$maxByteCount")//++++
+                        println("Multi-Send: first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = '$itemByteCount' maximum = '$maxByteCount'")//++++
                         if (firstItem || (totalByteCount + itemByteCount) < maxByteCount) {
                             totalByteCount += itemByteCount
                             numSent++
@@ -180,9 +185,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             authorisedTransactions.addAuthorised(getInputTransactions(tx))
                             //++++SerializedBytes<SignedTransaction>
                             //++++println("adding to return set ++++ ${tx.javaClass.name}")//++++
-                            println("adding to return set ++++ ${serialized.javaClass.name} ${txId}")//++++
+                            println("Adding item to return set: '${txId}'")//++++
                         } else {
-                            println("EXCEEDED -> TRUE")
+                            println("Fetch block size EXCEEDED.") //++++
                             multiFetchCountExceeded = true
                         }
                     }
@@ -192,69 +197,30 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     //++++}
                     //val serTran = SerializedSignedTransaction(txId, serialized)
 //++++ put back                    val maybeser = MaybeSerializedSignedTransaction(txId, serialized, null)
-                    if (multiFetchCountExceeded) { println("TEST-EXCLUDE++++ '${txId} (") }
+                    if (multiFetchCountExceeded) { println("Excluding '${txId}' from return set due to exceeded count.") }
+
                     // Send null if limit is exceeded
-                    val maybeser = MaybeSerializedSignedTransaction(txId, if (multiFetchCountExceeded) { null } else { serialized }, null)
+                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (multiFetchCountExceeded) { null } else { serialized }, null)
                     firstItem = false
-                    failCntInd++//REMOVE++++
-                    maybeser
+                    failCntIndex++//REMOVE++++
+                    maybeserialized
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    println("send stuff ATTACHMENT++++")//++++
+                    println("Sending: Attachments")//++++
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    println("send stuff PARAMETERS++++")//++++
+                    println("Sending: Parameters")//++++
                     (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)
                             ?: throw FetchDataFlow.MissingNetworkParameters(it)
                 }
                 FetchDataFlow.DataType.UNKNOWN -> dataRequest.hashes.map {
-                    println("Message from from future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType")//++++throw?
+                    println("Message from from a future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType")//++++warn
                 }
             }
-            println("BLOCK TOTAL SIZE ${totalByteCount} (${numSent} / ${dataRequest.hashes.size})")//++++
-            val pls = payload.javaClass.name//++++
-            val als = payload.size
-            println("send stuff PLS++++ sz=$als $pls")//++++
+            println("Block total size = ${totalByteCount}: Num Items = (${numSent} of ${dataRequest.hashes.size} total)")//++++
         }
-
-        /*++++ remove old impl
-        while (true) {
-            val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
-                when (request) {
-                    is FetchDataFlow.Request.Data -> {
-                        // Security TODO: Check for abnormally large or malformed data requests
-                        verifyDataRequest(request)
-                        request
-                    }
-                    FetchDataFlow.Request.End -> return null
-                }
-            }
-
-            payload = when (dataRequest.dataType) {
-                FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    if (!authorisedTransactions.isAuthorised(txId)) {
-                        throw FetchDataFlow.IllegalTransactionRequest(txId)
-                    }
-                    val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                            ?: throw FetchDataFlow.HashNotFound(txId)
-                    authorisedTransactions.removeAuthorised(tx.id)
-                    authorisedTransactions.addAuthorised(getInputTransactions(tx))
-                    tx
-                }
-                FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    serviceHub.attachments.openAttachment(it)?.open()?.readFully()
-                            ?: throw FetchDataFlow.HashNotFound(it)
-                }
-                FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)
-                            ?: throw FetchDataFlow.MissingNetworkParameters(it)
-                }
-            }
-        }
-
-        +++++ */
     }
 
     @Suspendable

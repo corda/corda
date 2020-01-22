@@ -43,17 +43,10 @@ import java.util.*
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
 
-val DEFAULT_MAX_TRANSACTION_SIZE = 499 //++++ make 10MB once tested.
-
 sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSideSession: FlowSession,
-        protected val dataType: DataType,
-        protected val maxTransactionSize: Int /*++++*/) : FlowLogic<FetchDataFlow.Result<T>>() {
-
-/*++++    companion object {
-        protected val DEFAULT_MAX_TRANSACTION_SIZE = 499999 //++++ make 10MB once tested.
-    }*/
+        protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
@@ -76,7 +69,6 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         object End : Request()
     }
 
-    //++++ add annotation regarding default usage. Also add value for does not match.
     // https://docs.corda.net/serialization-enum-evolution.html
     // Below annotations added to map two new enum values (MULTI_TRANSACTION and UNKNOWN) onto  TRANSACTION. The effect of this is that
     // if a that does not have these enum values receives it will not throw an error during deserialization. The purpose of adding
@@ -96,16 +88,13 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()
-        val fds = fromDisk.size //++++ remove
-        val tofs = toFetch.size //++++ remove
-        println("\nFetchDataFlow.call(): From disk size = $fds, to fetch size = $tofs, Max-Transactions Size = $maxTransactionSize")//++++ remove
-
 
         return if (toFetch.isEmpty()) {
-            println("return early (empty).++++") //++++ trace message
+            println("FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}: No items to fetch.")//++++ trace
             val loadedFromDisk = loadExpected(fromDisk)
             Result(loadedFromDisk, emptyList())
         } else {
+            println("FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}, To-fetch size = ${toFetch.size}")//++++ trace
             logger.debug { "Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}" }
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
@@ -117,87 +106,39 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             // network layer.
             val maybeItems = ArrayList<W>()
 
-//++++            val maybeItems = ArrayList<W>(toFetch.size)
-
-
-
-           // val platformVersion = otherSideSession.getCounterpartyFlowInfo().flowVersion // For system flows this is platform version
-           // println("PLAT VER OTHER SIDE = '${platformVersion}'")//++++ trace
-            //++++ include platform version test ....
             if (toFetch.size == 1) {
                 for (hash in toFetch) {
                     // Technically not necessary to loop when the outer test is for one item only. Safer than toFetch[0]
                     // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                     // The only thing checked is the object type. It is a protocol violation to send results out of order.
                     // TODO We need to page here after large messages will work.
-                    println("otherSideSession.sendAndReceive($hash)")//++++
+                    println("[Single fetch]: otherSideSession.sendAndReceive($hash): Fetch type: ${dataType.name}")//++++trace
                     // should only pass single item dataType below.
                     maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
-                    println("FetchDataFlow.call3b ++++ $hash : ${dataType.name}")
                 }
-            } else { //++++ XXXX
-                // val tofs = toFetch.size
-                // println("FOR START ++++($tofs)")
-                //++++var index: Int = 0
-
+            } else {
                 val fetchSet = LinkedHashSet<SecureHash>()
                 for (hash in toFetch) {
                     fetchSet.add(hash)
                 }
-                println("END FOR ++++(${fetchSet.size})")
 
                 //val fetchItems = NonEmptySet<SecureHash>.copyOf(toFetch)
-                println("otherSideSession.sendAndReceive(list of ${fetchSet.size})")//++++
+                println("[Multi fetch]: otherSideSession.sendAndReceive(list of ${fetchSet.size}): Fetch type: ${dataType.name})")//++++
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.copyOf(fetchSet), dataType))
                         .unwrap { it }
-                println("FetchDataFlow.call3b ++++ : ${dataType.name}")
 
-                //++++    maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(toFetch.get(0), toFetch.get(1)), dataType))
-                //++++ .unwrap { it } //++++ nasty POC hack use 2 items
-                val mb1 = maybeItems.size
-                println("FetchDataFlow.otherSideSession.sendAndReceive done ($mb1) ++++ ${dataType.name}")
+                println("[Multi fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})")
             }
-
-
-
-
-/*OLD - remove +++++
-            for (hash in toFetch) {
-                // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
-                // The only thing checked is the object type. It is a protocol violation to send results out of order.
-                // TODO We need to page here after large messages will work.
-                maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
-            }
-
- ++++*/
-
-            //++++ remove copy // Check for a buggy/malicious peer answering with something that we didn't ask for.
-//++++ remove old            val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
 
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
-            val mb2 = maybeItems.size//++++
-            println("validating fetch response ++++maybe2_sz=$mb2, tofetch_sz=$tofs")
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
-            println("downloaded fetch response ++++(downloaded_sz=${downloaded.size}) maybe2=$mb2, cls=${downloaded.javaClass.name}")
-
-
-
+            println("validateFetchResponse() -> OK: Downloaded fetch response size = ${downloaded.size}, maybeItems.size = ${maybeItems.size}") //+++++
 
             logger.debug { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}" }
             maybeWriteToDisk(downloaded)
+
             // Re-load items already present before the download procedure. This ensures these objects are not unnecessarily checkpointed.
             val loadedFromDisk = loadExpected(fromDisk)
-
-
-            for (dnd in loadedFromDisk) {
-                println("DN-DISK = '${dnd.javaClass.name} '${dnd.id}'")//++++
-            }
-            for (dnl in downloaded) {
-                println("DN-REMO = '${dnl.javaClass.name} '${dnl.id}'")//++++
-            }
-
-
-
             Result(loadedFromDisk, downloaded)
         }
     }
@@ -236,68 +177,55 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W>>,
                                       requests: List<SecureHash>): List<T> {
         return maybeItems.unwrap { response ->
-            println("PT U0++++ ${response.size} ${requests.size}")//++++
+            println("validateFetchResponse(): Response size = ${response.size}, Request size = ${requests.size}")//++++trace
             if (response.size != requests.size) {
-                println("PT U1++++ response.size != requests.size")
+                println("maybeItems.unwrap: RespType Response.size (${requests.size}) != requests.size (${response.size})") //++++ trace
                 throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
             }
-            println("U0a: type=${response.javaClass.name} ++++")
-            for (rr in response) { //++++
-                println("  RespType = ${rr.javaClass.name}") // ++++ make trace level
+
+            println("Request size = ${requests.size}")
+            var reqIndex = 0
+            for (req in requests) {
+                val reqInd = reqIndex++
+                println("Requested[${reqInd}] = '${req}'")//++++
             }
 
             val answers = response.map { convert(it) }
-            println("PT U2++++ ans=${answers.javaClass.name} ${answers.size}")//++++
-            for (aa in answers) {
-                if (aa is SignedTransaction) {
-                    println("PT U2a++++ ${aa.javaClass.name}: SignedTran: tx size = ${aa.txBits.size}")
-                } else if (aa is MaybeSerializedSignedTransaction) {
-                    val cnt = if (aa.isNull()) { "<Null>" } else if (aa.serialized != null) { aa.serialized.size } else { -1 }
-                    println("PT U2a++++ ${aa.javaClass.name}: MayBe: tx size = $cnt")
+            println("Answers size = ${answers.size}")
+            var respIndex = 0
+            for (item in answers) {
+                val respInd = respIndex++
+                if (item is SignedTransaction) {
+                    println("ValidateItem[$respInd]: '${item}': Type = SignedTransaction: size = ${item.txBits.size}")
+                } else if (item is MaybeSerializedSignedTransaction) {
+                    val tranSize = if (item.isNull()) { "<Null>" } else if (item.serialized != null) { item.serialized.size } else { -1 }
+                    val isSer = item.serialized != null
+                    val isObj = item.nonSerialised != null
+                    println("ValidateItem[$respInd]: '${item.id}': Type = MaybeSerializedSignedTransaction: size = ${tranSize}, serialized = ${isSer}, isObj = $isObj")
                 } else {
-                    println("PT U2a++++ ${aa.javaClass.name}: Unknown")
+                    println("ValidateItem[$respInd]: Type = ${item.javaClass.name}: Unknown Object type") //++++ warn
                 }
             }
-            for (req in requests) {
-                println("REQ = '${req}")//++++
-            }
 
-            println("PT U3++++ ${answers.size}")
             // Check transactions actually hash to what we requested, if this fails the remote node
             // is a malicious flow violator or buggy.
             var badDataIndex = -1
-            var badDataId : SecureHash? = null //++++SecureHash("NOT-SET"
+            var badDataId : SecureHash? = null
             for ((index, item) in answers.withIndex()) {
-                println("PT U5++++ Index='${requests[index]}' item='${item.id}'")
-
                 if (item.id != requests[index]) {
-                    println("PT U5t++++ ${item.id} ${requests[index]}")
-                    badDataIndex = index //++++
+                    badDataIndex = index
                     badDataId = item.id
-                    println("Will Throw: DownloadedVsRequestedDataMismatch(${requests[index]}, ${item.id}")
+                    println("Will Throw on DownloadedVsRequestedDataMismatch(Req item = '${requests[index]}', Resp item = ${item.id}")
                 }
             }
+
             if (badDataIndex >= 0 && badDataId != null) {
+                println("Throwing DownloadedVsRequestedDataMismatch due to bad verification on: '${requests[badDataIndex]}', ID = ${badDataId}") //++++ ERROR
                 throw DownloadedVsRequestedDataMismatch(requests[badDataIndex], badDataId)
             }
 
             answers
         }
-/* ++++ remove old
-        return maybeItems.unwrap { response ->
-            if (response.size != requests.size)
-                throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
-            val answers = response.map { convert(it) }
-            // Check transactions actually hash to what we requested, if this fails the remote node
-            // is a malicious flow violator or buggy.
-            for ((index, item) in answers.withIndex()) {
-                if (item.id != requests[index])
-                    throw DownloadedVsRequestedDataMismatch(requests[index], item.id)
-            }
-            answers
-        }
-
- ++++*/
     }
 }
 
@@ -306,7 +234,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: FlowSession) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT, DEFAULT_MAX_TRANSACTION_SIZE) {
+                           otherSide: FlowSession) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
 
     private val uploader = "$P2P_UPLOADER:${otherSideSession.counterparty.name}"
 
@@ -354,17 +282,14 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
  * Note that returned transactions are not inserted into the database, because it's up to the caller to actually verify the transactions are valid.
  */
 class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
-        FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION, DEFAULT_MAX_TRANSACTION_SIZE) {
+        FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }
 
-//++++ added start: Move to enterprise?
-class FetchMultiTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession, maxTransactionSize: Int) : //++++
-        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.MULTI_TRANSACTION, maxTransactionSize) { //++++
+class FetchMultiTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
+        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.MULTI_TRANSACTION) {
 
-    //override fun namexxxx() : String { return "FetchMultiTransactionsFlow"} //++++
-    //override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
         val tran = serviceHub.validatedTransactions.getTransaction(txid)
         return if (tran == null) {
@@ -374,7 +299,6 @@ class FetchMultiTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
         }
     }
 }
-//++++ added end
 
 /**
  * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
@@ -383,8 +307,7 @@ class FetchMultiTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>,
-                                 SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS,
-                                 DEFAULT_MAX_TRANSACTION_SIZE) {
+                                 SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
     override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
         return (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(txid)
     }
