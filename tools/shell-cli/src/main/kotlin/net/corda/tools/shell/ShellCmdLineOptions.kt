@@ -56,18 +56,6 @@ class ShellCmdLineOptions {
 
 
     @Option(
-            names = ["--sshd-port"],
-            description = ["Enables SSH server for shell."]
-    )
-    var sshdPort: String? = null
-
-    @Option(
-            names = ["--sshd-hostkey-directory"],
-            description = ["The directory with hostkey.pem file for SSH server."]
-    )
-    var sshdHostKeyDirectory: Path? = null
-
-    @Option(
             names = ["--truststore-password"],
             description = ["The password to unlock the TrustStore file."]
     )
@@ -100,11 +88,6 @@ class ShellCmdLineOptions {
         trustStoreFile?.apply { cmdOpts["ssl.truststore.path"] = this.toString() }
         trustStorePassword?.apply { cmdOpts["ssl.truststore.password"] = this }
         trustStoreType?.apply { cmdOpts["ssl.truststore.type"] = this }
-        sshdPort?.apply {
-            cmdOpts["extensions.sshd.port"] = this
-            cmdOpts["extensions.sshd.enabled"] = true
-        }
-        sshdHostKeyDirectory?.apply { cmdOpts["extensions.sshd.hostkeypath"] = this.toString() }
 
         return ConfigFactory.parseMap(cmdOpts)
     }
@@ -140,19 +123,12 @@ private class ShellConfigurationFile {
             val path: String
     )
 
-    data class Sshd(
-            val enabled: Boolean,
-            val port: Int,
-            val hostkeypath: String?
-    )
-
     data class Commands(
             val path: String
     )
 
     data class Extensions(
             val cordapps: Cordapps?,
-            val sshd: Sshd?,
             val commands: Commands?
     )
 
@@ -187,9 +163,7 @@ private class ShellConfigurationFile {
                     user = node.user ?: "",
                     password = node.password ?: "",
                     hostAndPort = NetworkHostAndPort(node.addresses.rpc.host, node.addresses.rpc.port),
-                    ssl = sslOptions,
-                    sshdPort = extensions?.sshd?.let { if (it.enabled) it.port else null },
-                    sshHostKeyDirectory = extensions?.sshd?.let { if (it.enabled && it.hostkeypath != null) Paths.get(it.hostkeypath) else null })
+                    ssl = sslOptions)
         }
     }
 }
