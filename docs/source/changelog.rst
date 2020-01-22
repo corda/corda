@@ -103,6 +103,8 @@ Unreleased
 * Environment variables and system properties can now be provided with underscore separators instead of dots. Neither are case sensitive.
   See :ref:`overriding config values <corda_configuration_file_overriding_config>` for more information.
 
+* SSH server in the :doc:`shell` has been updated to remove outdated weak ciphers and algorithms.
+
 .. _changelog_v4.1:
 
 Version 4.1
