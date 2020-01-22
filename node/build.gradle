@@ -259,7 +259,9 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Test) {
-    systemProperty "junit.timeout.test", "1000"
+
+    systemProperty "junit.timeout.test", "300000"
+    systemProperty "junit.max.retry", "2"
 
     doFirst {
         def junitFoundation = configurations.testCompile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'junit-foundation' }
