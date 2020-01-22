@@ -101,7 +101,7 @@ class CordaPersistence(
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: DatabaseTransaction.(t: Throwable) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {}
 ) : Closeable {
     companion object {
         private val log = contextLogger()

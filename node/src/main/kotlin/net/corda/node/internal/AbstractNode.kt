@@ -1253,11 +1253,11 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
         jdbcUrl,
         cacheFactory,
         attributeConverters, customClassLoader,
-        errorHandler = { t ->
+        errorHandler = { e ->
             // "corrupting" a DatabaseTransaction only inside a flow state machine execution
             FlowStateMachineImpl.currentStateMachine()?.let {
                 // register only the very first exception thrown throughout a chain of logical transactions
-                firstExceptionInDatabaseTransaction = t
+                firstExceptionInDatabaseTransaction = e
             }
         })
 }

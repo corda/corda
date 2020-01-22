@@ -57,7 +57,7 @@ class DatabaseTransaction(
      * The purpose of this property is to make sure this exception cannot be suppressed in user code.
      * The exception will be thrown on the next [commit]. It is used only inside a flow state machine execution.
      */
-    var firstExceptionInDatabaseTransaction: Throwable? = null
+    var firstExceptionInDatabaseTransaction: Exception? = null
         set(e) {
             if (field == null) {
                 field = e
