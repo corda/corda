@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
-import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import org.hibernate.Session
 import org.hibernate.Transaction
@@ -82,17 +81,18 @@ class DatabaseTransaction(
         if (!connection.isClosed) {
             connection.rollback()
         }
+        firstExceptionInDatabaseTransaction = null
     }
 
     fun close() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
-            firstExceptionInDatabaseTransaction = null
         }
-
         if (database.closeConnection) {
             connection.close()
         }
+        firstExceptionInDatabaseTransaction = null
+
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {
