@@ -72,8 +72,8 @@ class ANSIProgressRendererTest {
         verify(printWriter, times(updates)).flush()
     }
 
-    @Test
-    fun `test that steps are rendered appropriately depending on their status`() {
+    @Test(timeout=300_000)
+	fun `test that steps are rendered appropriately depending on their status`() {
         progressRenderer.render(flowProgressHandle)
         feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(0, STEP_2_LABEL), Pair(0, STEP_3_LABEL)))
         // The flow is currently at step 3, while step 1 has been completed and step 2 has been skipped.
@@ -84,8 +84,8 @@ class ANSIProgressRendererTest {
         checkTrackingState(captor, 2, listOf(stepSuccess(STEP_1_LABEL), stepSkipped(STEP_2_LABEL), stepActive(STEP_3_LABEL)))
     }
 
-    @Test
-    fun `changing tree causes correct steps to be marked as done`() {
+    @Test(timeout=300_000)
+	fun `changing tree causes correct steps to be marked as done`() {
         progressRenderer.render(flowProgressHandle)
         feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(1, STEP_2_LABEL), Pair(1, STEP_3_LABEL), Pair(0, STEP_4_LABEL), Pair(0, STEP_5_LABEL)))
         indexSubject.onNext(0)
@@ -99,8 +99,8 @@ class ANSIProgressRendererTest {
         checkTrackingState(captor, 4, listOf(stepActive(STEP_1_LABEL), stepNotRun(STEP_4_LABEL), stepNotRun(STEP_5_LABEL)))
     }
 
-    @Test
-    fun `duplicate steps in different children handled correctly`() {
+    @Test(timeout=300_000)
+	fun `duplicate steps in different children handled correctly`() {
         val captor = argumentCaptor<Ansi>()
         progressRenderer.render(flowProgressHandle)
         feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(0, STEP_2_LABEL)))

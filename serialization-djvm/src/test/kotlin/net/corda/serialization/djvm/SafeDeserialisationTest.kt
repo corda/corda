@@ -29,8 +29,8 @@ class SafeDeserialisationTest : TestBase(KOTLIN) {
         const val NUMBER = 123.toShort()
     }
 
-    @Test
-    fun `test deserialising an evil class`() {
+    @Test(timeout=300_000)
+	fun `test deserialising an evil class`() {
         val context = (_contextSerializationEnv.get() ?: fail("No serialization environment!")).p2pContext
 
         val innocent = InnocentData(MESSAGE, NUMBER)

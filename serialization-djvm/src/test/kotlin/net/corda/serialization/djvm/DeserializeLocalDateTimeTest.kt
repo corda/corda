@@ -12,8 +12,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeLocalDateTimeTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing local date-time`() {
+    @Test(timeout=300_000)
+	fun `test deserializing local date-time`() {
         val dateTime = LocalDateTime.now()
         val data = dateTime.serialize()
 

@@ -31,8 +31,8 @@ class CustomTypeJsonParsingTests {
         objectMapper.registerModule(simpleModule)
     }
 
-    @Test
-    fun `Deserializing UniqueIdentifier by parsing string`() {
+    @Test(timeout=300_000)
+	fun `Deserializing UniqueIdentifier by parsing string`() {
         val id = "26b37265-a1fd-4c77-b2e0-715917ef619f"
         val json = """{"linearId":"$id"}"""
         val state = objectMapper.readValue<State>(json)
@@ -40,8 +40,8 @@ class CustomTypeJsonParsingTests {
         assertEquals(id, state.linearId.id.toString())
     }
 
-    @Test
-    fun `Deserializing UniqueIdentifier by parsing string with underscore`() {
+    @Test(timeout=300_000)
+	fun `Deserializing UniqueIdentifier by parsing string with underscore`() {
         val json = """{"linearId":"extkey564_26b37265-a1fd-4c77-b2e0-715917ef619f"}"""
         val state = objectMapper.readValue<State>(json)
 
@@ -55,8 +55,8 @@ class CustomTypeJsonParsingTests {
         objectMapper.readValue<State>(json)
     }
 
-    @Test
-    fun `Deserializing UUID by parsing string`() {
+    @Test(timeout=300_000)
+	fun `Deserializing UUID by parsing string`() {
         val json = """{"uuid":"26b37265-a1fd-4c77-b2e0-715917ef619f"}"""
         val state = objectMapper.readValue<UuidState>(json)
 

@@ -41,13 +41,13 @@ class ZeroCouponBond {
     val outStateWrong = UniversalContract.State(listOf(DUMMY_NOTARY), transferWrong)
 
     val outStateMove = UniversalContract.State(listOf(DUMMY_NOTARY), contractMove)
-    @Test
-    fun basic() {
+    @Test(timeout=300_000)
+	fun basic() {
         assertEquals(Zero(), Zero())
     }
 
-    @Test
-    fun `issue - signature`() {
+    @Test(timeout=300_000)
+	fun `issue - signature`() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, inState)
             tweak {
@@ -59,8 +59,8 @@ class ZeroCouponBond {
         }
     }
 
-    @Test
-    fun execute() {
+    @Test(timeout=300_000)
+	fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState)
@@ -75,8 +75,8 @@ class ZeroCouponBond {
         }
     }
 
-    @Test
-    fun `execute - not authorized`() {
+    @Test(timeout=300_000)
+	fun `execute - not authorized`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState)
@@ -86,8 +86,8 @@ class ZeroCouponBond {
         }
     }
 
-    @Test
-    fun `execute - outState mismatch`() {
+    @Test(timeout=300_000)
+	fun `execute - outState mismatch`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outStateWrong)
@@ -97,8 +97,8 @@ class ZeroCouponBond {
         }
     }
 
-    @Test
-    fun move() {
+    @Test(timeout=300_000)
+	fun move() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             tweak {

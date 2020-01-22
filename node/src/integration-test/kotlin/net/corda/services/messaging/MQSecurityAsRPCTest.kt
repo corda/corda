@@ -11,8 +11,8 @@ class MQSecurityAsRPCTest : RPCMQSecurityTest() {
         return clientTo(alice.node.configuration.rpcOptions.address)
     }
 
-    @Test
-    fun `send message on logged in user's RPC address`() {
+    @Test(timeout=300_000)
+	fun `send message on logged in user's RPC address`() {
         val user1Queue = loginToRPCAndGetClientQueue()
         assertSendAttackFails(user1Queue)
     }

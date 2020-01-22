@@ -17,8 +17,8 @@ class JavaCordaServiceLifecycleTests {
         const val TEST_PHRASE = "javaTestPhrase"
     }
 
-    @Test
-    fun `corda service receives events`() {
+    @Test(timeout=300_000)
+	fun `corda service receives events`() {
         eventsCaptured.clear()
         val result = driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME).getOrThrow()

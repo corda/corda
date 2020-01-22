@@ -22,15 +22,15 @@ class CordaPersistenceTest {
         database.close()
     }
 
-    @Test
-    fun `onAllOpenTransactionsClosed with zero transactions calls back immediately`() {
+    @Test(timeout=300_000)
+	fun `onAllOpenTransactionsClosed with zero transactions calls back immediately`() {
         val counter = AtomicInteger(0)
         database.onAllOpenTransactionsClosed { counter.incrementAndGet() }
         assertEquals(1, counter.get())
     }
 
-    @Test
-    fun `onAllOpenTransactionsClosed with one transaction calls back after closing`() {
+    @Test(timeout=300_000)
+	fun `onAllOpenTransactionsClosed with one transaction calls back after closing`() {
         val counter = AtomicInteger(0)
         database.transaction {
             database.onAllOpenTransactionsClosed { counter.incrementAndGet() }
@@ -39,8 +39,8 @@ class CordaPersistenceTest {
         assertEquals(1, counter.get())
     }
 
-    @Test
-    fun `onAllOpenTransactionsClosed after one transaction has closed calls back immediately`() {
+    @Test(timeout=300_000)
+	fun `onAllOpenTransactionsClosed after one transaction has closed calls back immediately`() {
         val counter = AtomicInteger(0)
         database.transaction {
             database.onAllOpenTransactionsClosed { counter.incrementAndGet() }
@@ -51,8 +51,8 @@ class CordaPersistenceTest {
         assertEquals(2, counter.get())
     }
 
-    @Test
-    fun `onAllOpenTransactionsClosed with two transactions calls back after closing both`() {
+    @Test(timeout=300_000)
+	fun `onAllOpenTransactionsClosed with two transactions calls back after closing both`() {
         val counter = AtomicInteger(0)
         val phaser = openTransactionInOtherThreadAndCloseWhenISay()
         // Wait for tx to be started.
@@ -67,7 +67,7 @@ class CordaPersistenceTest {
         assertEquals(1, counter.get())
     }
 
-    @Test
+    @Test(timeout = 10_000)
     fun `onAllOpenTransactionsClosed with two transactions calls back after closing both - instigator closes last`() {
         val counter = AtomicInteger(0)
         val phaser = openTransactionInOtherThreadAndCloseWhenISay()

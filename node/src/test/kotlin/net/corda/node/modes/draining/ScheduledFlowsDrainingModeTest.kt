@@ -58,8 +58,8 @@ class ScheduledFlowsDrainingModeTest {
         executor!!.shutdown()
     }
 
-    @Test
-    fun `flows draining mode ignores scheduled flows until unset`() {
+    @Test(timeout=300_000)
+	fun `flows draining mode ignores scheduled flows until unset`() {
         val latch = CountDownLatch(1)
         var shouldFail = true
 

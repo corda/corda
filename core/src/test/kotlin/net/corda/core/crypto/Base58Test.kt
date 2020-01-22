@@ -12,8 +12,8 @@ import kotlin.test.fail
  * Modified from the bitcoinj library.
  */
 class Base58Test {
-    @Test
-    fun testEncode() {
+    @Test(timeout=300_000)
+	fun testEncode() {
         val testbytes = "Hello World".toByteArray()
         assertEquals("JxF12TrwUP45BMd", Base58.encode(testbytes))
 
@@ -30,8 +30,8 @@ class Base58Test {
         assertEquals("", Base58.encode(EMPTY_BYTE_ARRAY))
     }
 
-    @Test
-    fun testDecode() {
+    @Test(timeout=300_000)
+	fun testDecode() {
         val testbytes = "Hello World".toByteArray()
         val actualbytes = Base58.decode("JxF12TrwUP45BMd")
         assertTrue(String(actualbytes)) { Arrays.equals(testbytes, actualbytes) }
@@ -72,8 +72,8 @@ class Base58Test {
         Base58.decodeChecked("93VYUMzRG9DdbRP72uQXjaWibbQwygnvaCu9DumcqDjGybD864T")
     }
 
-    @Test
-    fun testDecodeToBigInteger() {
+    @Test(timeout=300_000)
+	fun testDecodeToBigInteger() {
         val input = Base58.decode("129")
         assertEquals(BigInteger(1, input), Base58.decodeToBigInteger("129"))
     }

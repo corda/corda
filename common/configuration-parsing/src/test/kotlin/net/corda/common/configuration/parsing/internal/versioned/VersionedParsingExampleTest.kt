@@ -9,8 +9,8 @@ import org.junit.Test
 
 class VersionedParsingExampleTest {
 
-    @Test
-    fun correct_parsing_function_is_used_for_present_version() {
+    @Test(timeout=300_000)
+	fun correct_parsing_function_is_used_for_present_version() {
 
         val versionParser = Configuration.Version.Extractor.fromPath("configuration.metadata.version")
         val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parseRequired(config) }
@@ -31,8 +31,8 @@ class VersionedParsingExampleTest {
         assertResult(rpcSettingsFromVersion2Conf, principalAddressValue, adminAddressValue)
     }
 
-    @Test
-    fun default_value_is_used_for_absent_version() {
+    @Test(timeout=300_000)
+	fun default_value_is_used_for_absent_version() {
 
         val defaultVersion = 2
         val versionParser = Configuration.Version.Extractor.fromPath("configuration.metadata.version", defaultVersion)

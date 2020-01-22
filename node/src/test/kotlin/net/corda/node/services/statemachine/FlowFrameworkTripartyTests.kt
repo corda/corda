@@ -68,8 +68,8 @@ class FlowFrameworkTripartyTests {
         return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
     }
 
-    @Test
-    fun `sending to multiple parties`() {
+    @Test(timeout=300_000)
+	fun `sending to multiple parties`() {
         bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it)
                 .nonTerminating() }
         charlieNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it)
@@ -99,8 +99,8 @@ class FlowFrameworkTripartyTests {
         )
     }
 
-    @Test
-    fun `receiving from multiple parties`() {
+    @Test(timeout=300_000)
+	fun `receiving from multiple parties`() {
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(bobPayload, it) }
@@ -127,8 +127,8 @@ class FlowFrameworkTripartyTests {
         )
     }
 
-    @Test
-    fun `FlowException only propagated to parent`() {
+    @Test(timeout=300_000)
+	fun `FlowException only propagated to parent`() {
         charlieNode.registerCordappFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
         val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob))
@@ -137,8 +137,8 @@ class FlowFrameworkTripartyTests {
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
     }
 
-    @Test
-    fun `FlowException thrown and there is a 3rd unrelated party flow`() {
+    @Test(timeout=300_000)
+	fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
         // onto Charlie which will throw the exception
         val node2Fiber = bobNode

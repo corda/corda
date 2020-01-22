@@ -102,8 +102,8 @@ class StatusTransitionsTest {
         private val ledgerServices = MockServices(ALICE_ID, BOB_ID, BIGCORP_ID)
     }
 
-    @Test
-    fun `basic correct cases`() {
+    @Test(timeout=300_000)
+	fun `basic correct cases`() {
         ledgerServices.ledger  {
             transaction {
                 output(integerContract, IntegerTestState("1"))
@@ -134,8 +134,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `disallowed output`() {
+    @Test(timeout=300_000)
+	fun `disallowed output`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))
@@ -147,8 +147,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `disallowed command`() {
+    @Test(timeout=300_000)
+	fun `disallowed command`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))
@@ -160,8 +160,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `disallowed signer`() {
+    @Test(timeout=300_000)
+	fun `disallowed signer`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))
@@ -173,8 +173,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `irrelevant commands fail`() {
+    @Test(timeout=300_000)
+	fun `irrelevant commands fail`() {
         ledgerServices.ledger {
             transaction {
                 output(integerContract, IntegerTestState("8"))
@@ -185,8 +185,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `multiple relevant commands accepted`() {
+    @Test(timeout=300_000)
+	fun `multiple relevant commands accepted`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("11"))
@@ -199,8 +199,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `multiple relevant commands failed`() {
+    @Test(timeout=300_000)
+	fun `multiple relevant commands failed`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("2"))
@@ -213,8 +213,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `multiple inputs failed`() {
+    @Test(timeout=300_000)
+	fun `multiple inputs failed`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))
@@ -227,8 +227,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `multiple outputs failed`() {
+    @Test(timeout=300_000)
+	fun `multiple outputs failed`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))
@@ -241,8 +241,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `role change signer correct`() {
+    @Test(timeout=300_000)
+	fun `role change signer correct`() {
         ledgerServices.ledger {
             transaction {
                 output(ownedIntegerContract, TestOwnedIntegerState("0"))
@@ -274,8 +274,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `multiple signers disallowed`() {
+    @Test(timeout=300_000)
+	fun `multiple signers disallowed`() {
         ledgerServices.ledger {
             transaction {
                 input(ownedIntegerContract, TestOwnedIntegerState("10"))
@@ -287,8 +287,8 @@ class StatusTransitionsTest {
         }
     }
 
-    @Test
-    fun `spend disallowed`() {
+    @Test(timeout=300_000)
+	fun `spend disallowed`() {
         ledgerServices.ledger {
             transaction {
                 input(integerContract, IntegerTestState("1"))

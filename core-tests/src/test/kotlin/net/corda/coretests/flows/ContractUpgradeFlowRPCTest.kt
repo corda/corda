@@ -42,8 +42,8 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     private val alice = aliceNode.info.singleIdentity()
     private val bob = bobNode.info.singleIdentity()
 
-    @Test
-    fun `2 parties contract upgrade using RPC`() = rpcDriver {
+    @Test(timeout=300_000)
+	fun `2 parties contract upgrade using RPC`() = rpcDriver {
         val testUser = createTestUser()
         val rpcA = startProxy(aliceNode, testUser)
         val rpcB = startProxy(bobNode, testUser)

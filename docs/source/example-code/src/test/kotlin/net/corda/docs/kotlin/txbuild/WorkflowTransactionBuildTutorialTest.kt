@@ -46,8 +46,8 @@ class WorkflowTransactionBuildTutorialTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `Run workflow to completion`() {
+    @Test(timeout=300_000)
+	fun `Run workflow to completion`() {
         // Setup a vault subscriber to wait for successful upload of the proposal to NodeB
         val nodeBVaultUpdate = bobNode.services.vaultService.updates.toFuture()
         // Kick of the proposal flow

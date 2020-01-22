@@ -29,8 +29,8 @@ class DeserializeWithCustomSerializerTest: TestBase(KOTLIN) {
     @JvmField
     val serialization = LocalSerialization(setOf(CustomSerializer()), emptySet())
 
-    @Test
-    fun `test deserializing custom object`() {
+    @Test(timeout=300_000)
+	fun `test deserializing custom object`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 
@@ -52,8 +52,8 @@ class DeserializeWithCustomSerializerTest: TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserialization needs custom serializer`() {
+    @Test(timeout=300_000)
+	fun `test deserialization needs custom serializer`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 

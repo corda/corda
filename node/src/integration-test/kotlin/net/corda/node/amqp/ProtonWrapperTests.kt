@@ -56,8 +56,8 @@ class ProtonWrapperTests {
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
-    @Test
-    fun `Simple AMPQ Client to Server`() {
+    @Test(timeout=300_000)
+	fun `Simple AMPQ Client to Server`() {
         val amqpServer = createServer(serverPort)
         amqpServer.use {
             amqpServer.start()
@@ -89,8 +89,8 @@ class ProtonWrapperTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client fails to connect when crl soft fail check is disabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client fails to connect when crl soft fail check is disabled`() {
         val amqpServer = createServer(serverPort, maxMessageSize = MAX_MESSAGE_SIZE, crlCheckSoftFail = false)
         amqpServer.use {
             amqpServer.start()
@@ -104,8 +104,8 @@ class ProtonWrapperTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client refuses to connect to unexpected server`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client refuses to connect to unexpected server`() {
         val amqpServer = createServer(serverPort, CordaX500Name("Rogue 1", "London", "GB"))
         amqpServer.use {
             amqpServer.start()
@@ -124,8 +124,8 @@ class ProtonWrapperTests {
         trustStore.get(true)[X509Utilities.CORDA_ROOT_CA] = rootCert
     }
 
-    @Test
-    fun `Test AMQP Client with invalid root certificate`() {
+    @Test(timeout=300_000)
+	fun `Test AMQP Client with invalid root certificate`() {
         val certificatesDirectory = temporaryFolder.root.toPath()
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
         val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = "serverstorepass")
@@ -200,8 +200,8 @@ class ProtonWrapperTests {
     }
 
 
-    @Test
-    fun `Client Failover for multiple IP`() {
+    @Test(timeout=300_000)
+	fun `Client Failover for multiple IP`() {
         val amqpServer = createServer(serverPort)
         val amqpServer2 = createServer(serverPort2)
         val amqpClient = createClient()
@@ -254,8 +254,8 @@ class ProtonWrapperTests {
         }
     }
 
-    @Test
-    fun `Send a message from AMQP to Artemis inbox`() {
+    @Test(timeout=300_000)
+	fun `Send a message from AMQP to Artemis inbox`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
         val clientConnected = amqpClient.onConnection.toFuture()
@@ -280,8 +280,8 @@ class ProtonWrapperTests {
         server.stop()
     }
 
-    @Test
-    fun `Send a message larger then maxMessageSize from AMQP to Artemis inbox`() {
+    @Test(timeout=300_000)
+	fun `Send a message larger then maxMessageSize from AMQP to Artemis inbox`() {
         val maxMessageSize = 100_000
         val (server, artemisClient) = createArtemisServerAndClient(maxMessageSize)
         val amqpClient = createClient(maxMessageSize)
@@ -326,8 +326,8 @@ class ProtonWrapperTests {
         server.stop()
     }
 
-    @Test
-    fun `shared AMQPClient threadpool tests`() {
+    @Test(timeout=300_000)
+	fun `shared AMQPClient threadpool tests`() {
         val amqpServer = createServer(serverPort)
         amqpServer.use {
             val connectionEvents = amqpServer.onConnection.toBlocking().iterator
@@ -376,8 +376,8 @@ class ProtonWrapperTests {
         }
     }
 
-    @Test
-    fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
+    @Test(timeout=300_000)
+	fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
         var connected = false

@@ -30,8 +30,8 @@ class ObservablesTests {
         toBeClosed.clear()
     }
 
-    @Test
-    fun `bufferUntilDatabaseCommit delays until transaction closed`() {
+    @Test(timeout=300_000)
+	fun `bufferUntilDatabaseCommit delays until transaction closed`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -59,8 +59,8 @@ class ObservablesTests {
 
     class TestException : Exception("Synthetic exception for tests")
 
-    @Test
-    fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
+    @Test(timeout=300_000)
+	fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -89,8 +89,8 @@ class ObservablesTests {
         assertThat(firstEvent.get()).isEqualTo(1 to true)
     }
 
-    @Test
-    fun `bufferUntilDatabaseCommit propagates error if transaction rolled back`() {
+    @Test(timeout=300_000)
+	fun `bufferUntilDatabaseCommit propagates error if transaction rolled back`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -121,8 +121,8 @@ class ObservablesTests {
         assertThat(secondEvent.get()).isEqualTo(2 to false)
     }
 
-    @Test
-    fun `bufferUntilDatabaseCommit delays until transaction closed repeatable`() {
+    @Test(timeout=300_000)
+	fun `bufferUntilDatabaseCommit delays until transaction closed repeatable`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -155,8 +155,8 @@ class ObservablesTests {
         assertThat(secondEvent.get()).isEqualTo(1 to false)
     }
 
-    @Test
-    fun `tee correctly copies observations to multiple observers`() {
+    @Test(timeout=300_000)
+	fun `tee correctly copies observations to multiple observers`() {
 
         val source1 = PublishSubject.create<Int>()
         val source2 = PublishSubject.create<Int>()
@@ -186,8 +186,8 @@ class ObservablesTests {
         assertThat(source3.hasCompleted()).isTrue()
     }
 
-    @Test
-    fun `combine tee and bufferUntilDatabaseCommit`() {
+    @Test(timeout=300_000)
+	fun `combine tee and bufferUntilDatabaseCommit`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -215,8 +215,8 @@ class ObservablesTests {
         assertThat(teedEvent.get()).isEqualTo(0 to true)
     }
 
-    @Test
-    fun `new transaction open in observer when wrapped`() {
+    @Test(timeout=300_000)
+	fun `new transaction open in observer when wrapped`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -255,8 +255,8 @@ class ObservablesTests {
         assertThat(delayedEventFromSecondObserver.get().second).isEqualTo(delayedEventFromThirdObserver.get().second)
     }
 
-    @Test
-    fun `check wrapping in db tx doesn't eagerly subscribe`() {
+    @Test(timeout=300_000)
+	fun `check wrapping in db tx doesn't eagerly subscribe`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -278,8 +278,8 @@ class ObservablesTests {
         assertThat(event.get()).isEqualTo(0)
     }
 
-    @Test
-    fun `check wrapping in db tx unsubscribes`() {
+    @Test(timeout=300_000)
+	fun `check wrapping in db tx unsubscribes`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -300,8 +300,8 @@ class ObservablesTests {
         assertThat(unsubscribed).isTrue()
     }
 
-    @Test
-    fun `check wrapping in db tx restarts if we pass through zero subscribers`() {
+    @Test(timeout=300_000)
+	fun `check wrapping in db tx restarts if we pass through zero subscribers`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()

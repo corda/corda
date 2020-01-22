@@ -35,8 +35,8 @@ interface IIII {
 }
 
 class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
-    @Test
-    fun interfaceParent1() {
+    @Test(timeout=300_000)
+	fun interfaceParent1() {
         class A(override val j: Int) : J
 
         val (_, env) = A(20).roundTrip()
@@ -51,8 +51,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(20, asJ.j)
     }
 
-    @Test
-    fun interfaceParent2() {
+    @Test(timeout=300_000)
+	fun interfaceParent2() {
         @Suppress("UNUSED")
         class A(override val j: Int, val jj: Int) : J
 
@@ -67,8 +67,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(23, asJ.j)
     }
 
-    @Test
-    fun multipleInterfaces() {
+    @Test(timeout=300_000)
+	fun multipleInterfaces() {
         class A(override val i: Int, override val ii: Int) : I, II
 
         val (_, env) = A(23, 42).roundTrip()
@@ -85,8 +85,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(42, ii.ii)
     }
 
-    @Test
-    fun nestedInterfaces() {
+    @Test(timeout=300_000)
+	fun nestedInterfaces() {
         class A(override val i: Int, override val iii: Int) : III
 
         val (_, env) = A(23, 42).roundTrip()
@@ -104,8 +104,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(42, iii.iii)
     }
 
-    @Test
-    fun memberInterface() {
+    @Test(timeout=300_000)
+	fun memberInterface() {
         class A(override val i: Int) : I
         class B(override val i: I, override val iiii: Int) : IIII
 
@@ -121,8 +121,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(42, iiii.iiii)
     }
 
-    @Test
-    fun memberInterface2() {
+    @Test(timeout=300_000)
+	fun memberInterface2() {
         class A(override val i: Int) : I
 
         val (_, env) = A(23).roundTrip()
@@ -134,8 +134,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
                 env.getMangled<A>().mangle<I>()) }
     }
 
-    @Test
-    fun interfaceAndImplementation() {
+    @Test(timeout=300_000)
+	fun interfaceAndImplementation() {
         class A(override val i: Int) : I
 
         val (_, env) = A(23).roundTrip()
@@ -144,8 +144,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertCanLoadAll(testSerializationContext, env.getMangled<A>().mangle<I>(), env.getMangled<I>())
     }
 
-    @Test
-    fun twoInterfacesAndImplementation() {
+    @Test(timeout=300_000)
+	fun twoInterfacesAndImplementation() {
         class A(override val i: Int, override val ii: Int) : I, II
 
         val (_, env) = A(23, 42).roundTrip()
@@ -157,8 +157,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         )
     }
 
-    @Test
-    fun nestedInterfacesAndImplementation() {
+    @Test(timeout=300_000)
+	fun nestedInterfacesAndImplementation() {
         class A(override val i: Int, override val iii: Int) : III
 
         val (_, env) = A(23, 42).roundTrip()

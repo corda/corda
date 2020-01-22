@@ -25,8 +25,8 @@ class NetworkMapCacheTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `key collision`() {
+    @Test(timeout=300_000)
+	fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
         val aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = entropy))
         val alice = aliceNode.info.singleIdentity()
@@ -42,8 +42,8 @@ class NetworkMapCacheTest {
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(alice.owningKey).singleOrNull(), bobNode.info)
     }
 
-    @Test
-    fun getNodeByLegalIdentity() {
+    @Test(timeout=300_000)
+	fun getNodeByLegalIdentity() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val alice = aliceNode.info.singleIdentity()
         val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -56,8 +56,8 @@ class NetworkMapCacheTest {
         // TODO: Should have a test case with anonymous lookup
     }
 
-    @Test
-    fun getPeerByLegalName() {
+    @Test(timeout=300_000)
+	fun getPeerByLegalName() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache
@@ -67,8 +67,8 @@ class NetworkMapCacheTest {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `caches get cleared on modification`() {
+    @Test(timeout=300_000)
+	fun `caches get cleared on modification`() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache
@@ -92,8 +92,8 @@ class NetworkMapCacheTest {
         assertEquals(aliceNode.info, bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).single())
     }
 
-    @Test
-    fun `remove node from cache`() {
+    @Test(timeout=300_000)
+	fun `remove node from cache`() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bob = bobNode.info.singleIdentity()
@@ -108,8 +108,8 @@ class NetworkMapCacheTest {
         }
     }
 
-    @Test
-    fun `add two nodes the same name different keys`() {
+    @Test(timeout=300_000)
+	fun `add two nodes the same name different keys`() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val aliceCache = aliceNode.services.networkMapCache
         val alicePartyAndCert2 = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public)

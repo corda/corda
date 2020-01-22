@@ -14,8 +14,8 @@ import net.corda.serialization.internal.MAX_TYPE_PARAM_DEPTH
 
 class AMQPTypeIdentifierParserTests {
 
-    @Test
-    fun `primitives and arrays`() {
+    @Test(timeout=300_000)
+	fun `primitives and arrays`() {
         assertParseResult<Int>("int")
         assertParseResult<IntArray>("int[p]")
         assertParseResult<Array<Int>>("int[]")
@@ -34,8 +34,8 @@ class AMQPTypeIdentifierParserTests {
         }
     }
 
-    @Test
-    fun `unparameterised types`() {
+    @Test(timeout=300_000)
+	fun `unparameterised types`() {
         assertParseResult<LocalDateTime>("java.time.LocalDateTime")
         assertParseResult<Array<LocalDateTime>>("java.time.LocalDateTime[]")
         assertParseResult<Array<Array<LocalDateTime>>>("java.time.LocalDateTime[][]")
@@ -50,8 +50,8 @@ class AMQPTypeIdentifierParserTests {
         val q: WithParameter<Array<Q>>
     }
 
-    @Test
-    fun `parameterised types, nested, with arrays`() {
+    @Test(timeout=300_000)
+	fun `parameterised types, nested, with arrays`() {
         assertParsesTo<WithParameters<IntArray, WithParameter<Array<WithParameters<Array<Array<Date>>, UUID>>>>>(
                 "WithParameters<int[], WithParameter<WithParameters<Date[][], UUID>[]>>"
         )
@@ -62,8 +62,8 @@ class AMQPTypeIdentifierParserTests {
         }
     }
 
-    @Test
-    fun `compatibility test`() {
+    @Test(timeout=300_000)
+	fun `compatibility test`() {
         assertParsesCompatibly<Int>()
         assertParsesCompatibly<IntArray>()
         assertParsesCompatibly<Array<Int>>()
@@ -75,28 +75,28 @@ class AMQPTypeIdentifierParserTests {
     }
 
     // Old tests for DeserializedParameterizedType
-    @Test
-    fun `test nested`() {
+    @Test(timeout=300_000)
+	fun `test nested`() {
         verify(" java.util.Map < java.util.Map< java.lang.String, java.lang.Integer >, java.util.Map < java.lang.Long , java.lang.String > >")
     }
 
-    @Test
-    fun `test simple`() {
+    @Test(timeout=300_000)
+	fun `test simple`() {
         verify("java.util.List<java.lang.String>")
     }
 
-    @Test
-    fun `test multiple args`() {
+    @Test(timeout=300_000)
+	fun `test multiple args`() {
         verify("java.util.Map<java.lang.String,java.lang.Integer>")
     }
 
-    @Test
-    fun `test trailing whitespace`() {
+    @Test(timeout=300_000)
+	fun `test trailing whitespace`() {
         verify("java.util.Map<java.lang.String, java.lang.Integer> ")
     }
 
-    @Test
-    fun `test list of commands`() {
+    @Test(timeout=300_000)
+	fun `test list of commands`() {
         verify("java.util.List<net.corda.core.contracts.Command<net.corda.core.contracts.Command<net.corda.core.contracts.CommandData>>>")
     }
 
@@ -145,8 +145,8 @@ class AMQPTypeIdentifierParserTests {
         verify("java.util.List<java.lang.String, java.lang.Integer>")
     }
 
-    @Test
-    fun `test no parameters`() {
+    @Test(timeout=300_000)
+	fun `test no parameters`() {
         verify("java.lang.String")
     }
 

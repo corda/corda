@@ -12,8 +12,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeMonthDayTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing month-day`() {
+    @Test(timeout=300_000)
+	fun `test deserializing month-day`() {
         val monthDay = MonthDay.now()
         val data = monthDay.serialize()
 

@@ -32,8 +32,8 @@ class ContractWithCustomSerializerTest {
         }
     }
 
-    @Test
-    fun `flow with custom serializer by rpc`() {
+    @Test(timeout=300_000)
+	fun `flow with custom serializer by rpc`() {
         val user = User("u", "p", setOf(Permissions.all()))
         driver(DriverParameters(
             portAllocation = incrementalPortAllocation(),

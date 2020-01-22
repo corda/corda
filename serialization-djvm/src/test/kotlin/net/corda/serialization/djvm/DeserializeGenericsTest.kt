@@ -13,8 +13,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeGenericsTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing generic wrapper with String`() {
+    @Test(timeout=300_000)
+	fun `test deserializing generic wrapper with String`() {
         val wrappedString = GenericWrapper(data = "Hello World!")
         val data = wrappedString.serialize()
 
@@ -32,8 +32,8 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing generic wrapper with Integer`() {
+    @Test(timeout=300_000)
+	fun `test deserializing generic wrapper with Integer`() {
         val wrappedInteger = GenericWrapper(data = 1000)
         val data = wrappedInteger.serialize()
 
@@ -51,8 +51,8 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing generic wrapper with array of Integer`() {
+    @Test(timeout=300_000)
+	fun `test deserializing generic wrapper with array of Integer`() {
         val wrappedArrayOfInteger = GenericWrapper(arrayOf(1000, 2000, 3000))
         val data = wrappedArrayOfInteger.serialize()
 
@@ -71,8 +71,8 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing generic wrapper with primitive int array`() {
+    @Test(timeout=300_000)
+	fun `test deserializing generic wrapper with primitive int array`() {
         val wrappedArrayOfInteger = GenericWrapper(intArrayOf(1000, 2000, 3000))
         val data = wrappedArrayOfInteger.serialize()
 
@@ -91,8 +91,8 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing generic list`() {
+    @Test(timeout=300_000)
+	fun `test deserializing generic list`() {
         val wrappedList = GenericWrapper(data = listOf("Hello World!"))
         val data = wrappedList.serialize()
 
@@ -133,8 +133,8 @@ class DeserializeGenericsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing concrete wrapper`() {
+    @Test(timeout=300_000)
+	fun `test deserializing concrete wrapper`() {
         val wrapped = ConcreteWrapper(
             first = GenericWrapper("Hello World"),
             second = GenericWrapper('!')

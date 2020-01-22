@@ -50,8 +50,8 @@ class DeterministicContractCryptoTest {
         }
     }
 
-    @Test
-    fun `test DJVM can verify using crypto`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can verify using crypto`() {
         val keyPair = KeyPairGenerator.getInstance(DEFAULT_SIGNATURE_SCHEME.algorithmName).genKeyPair()
         val importantData = OpaqueBytes(MESSAGE.toByteArray())
         val signature = OpaqueBytes(Crypto.doSign(DEFAULT_SIGNATURE_SCHEME, keyPair.`private`, importantData.bytes))

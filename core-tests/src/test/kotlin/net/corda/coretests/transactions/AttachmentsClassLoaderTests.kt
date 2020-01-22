@@ -77,15 +77,15 @@ class AttachmentsClassLoaderTests {
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(internalStorage, cacheFactory)
     }
 
-    @Test
-    fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
+    @Test(timeout=300_000)
+	fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
         assertFailsWith<ClassNotFoundException> {
             Class.forName(ISOLATED_CONTRACT_CLASS_NAME)
         }
     }
 
-    @Test
-    fun `Dynamically load AnotherDummyContract from isolated contracts jar using the AttachmentsClassLoader`() {
+    @Test(timeout=300_000)
+	fun `Dynamically load AnotherDummyContract from isolated contracts jar using the AttachmentsClassLoader`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
 
         val classloader = createClassloader(isolatedId)
@@ -94,8 +94,8 @@ class AttachmentsClassLoaderTests {
         assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
     }
 
-    @Test
-    fun `Test non-overlapping contract jar`() {
+    @Test(timeout=300_000)
+	fun `Test non-overlapping contract jar`() {
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val att2 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH_V4.openStream(), "app", "isolated-4.0.jar")
 
@@ -104,8 +104,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Test valid overlapping contract jar`() {
+    @Test(timeout=300_000)
+	fun `Test valid overlapping contract jar`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val signedJar = signContractJar(ISOLATED_CONTRACTS_JAR_PATH, copyFirst = true)
         val isolatedSignedId = importAttachment(signedJar.first.toUri().toURL().openStream(), "app", "isolated-signed.jar")
@@ -114,8 +114,8 @@ class AttachmentsClassLoaderTests {
         createClassloader(listOf(isolatedId, isolatedSignedId))
     }
 
-    @Test
-    fun `Test non-overlapping different contract jars`() {
+    @Test(timeout=300_000)
+	fun `Test non-overlapping different contract jars`() {
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val att2 = importAttachment(FINANCE_CONTRACTS_CORDAPP.jarFile.inputStream(), "app", "finance.jar")
 
@@ -123,8 +123,8 @@ class AttachmentsClassLoaderTests {
         createClassloader(listOf(att1, att2))
     }
 
-    @Test
-    fun `Load text resources from AttachmentsClassLoader`() {
+    @Test(timeout=300_000)
+	fun `Load text resources from AttachmentsClassLoader`() {
         val att1 = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
@@ -136,8 +136,8 @@ class AttachmentsClassLoaderTests {
         assertEquals("some other data", txt1)
     }
 
-    @Test
-    fun `Test valid overlapping file condition`() {
+    @Test(timeout=300_000)
+	fun `Test valid overlapping file condition`() {
         val att1 = importAttachment(fakeAttachment("file1.txt", "same data", "file2.txt", "same other data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file1.txt", "same data", "file3.txt", "same totally different").inputStream(), "app", "file2.jar")
 
@@ -146,8 +146,8 @@ class AttachmentsClassLoaderTests {
         assertEquals("same data", txt)
     }
 
-    @Test
-    fun `No overlapping exception thrown on certain META-INF files`() {
+    @Test(timeout=300_000)
+	fun `No overlapping exception thrown on certain META-INF files`() {
         listOf("meta-inf/manifest.mf", "meta-inf/license", "meta-inf/test.dsa", "meta-inf/test.sf").forEach { path ->
             val att1 = importAttachment(fakeAttachment(path, "some data").inputStream(), "app", "file1.jar")
             val att2 = importAttachment(fakeAttachment(path, "some other data").inputStream(), "app", "file2.jar")
@@ -156,16 +156,16 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Overlapping rules for META-INF SerializationWhitelist files`() {
+    @Test(timeout=300_000)
+	fun `Overlapping rules for META-INF SerializationWhitelist files`() {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some other data").inputStream(), "app", "file2.jar")
 
         createClassloader(listOf(att1, att2))
     }
 
-    @Test
-    fun `Overlapping rules for META-INF random service files`() {
+    @Test(timeout=300_000)
+	fun `Overlapping rules for META-INF random service files`() {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some other data").inputStream(), "app", "file2.jar")
 
@@ -174,8 +174,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Test overlapping file exception`() {
+    @Test(timeout=300_000)
+	fun `Test overlapping file exception`() {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
@@ -184,8 +184,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `partial overlaps not possible`() {
+    @Test(timeout=300_000)
+	fun `partial overlaps not possible`() {
         // Cover a previous bug whereby overlap checking had been optimized to only check contract classes, which isn't
         // a valid optimization as code used by the contract class could then be overlapped.
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", ISOLATED_CONTRACTS_JAR_PATH.file)
@@ -195,8 +195,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Check platform independent path handling in attachment jars`() {
+    @Test(timeout=300_000)
+	fun `Check platform independent path handling in attachment jars`() {
         val att1 = importAttachment(fakeAttachment("/folder1/foldera/file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("\\folder1\\folderb\\file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
@@ -213,8 +213,8 @@ class AttachmentsClassLoaderTests {
         assertArrayEquals("some other data".toByteArray(), data2b)
     }
 
-    @Test
-    fun `Allow loading untrusted resource jars but only trusted jars that contain class files`() {
+    @Test(timeout=300_000)
+	fun `Allow loading untrusted resource jars but only trusted jars that contain class files`() {
         val trustedResourceJar = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file0.jar")
         val untrustedResourceJar = importAttachment(fakeAttachment("file2.txt", "some malicious data").inputStream(), "untrusted", "file1.jar")
         val untrustedClassJar = importAttachment(fakeAttachment("/com/example/something/MaliciousClass.class", "some malicious data").inputStream(), "untrusted", "file2.jar")
@@ -231,8 +231,8 @@ class AttachmentsClassLoaderTests {
         return jar.use { storage.importAttachment(jar, uploader, filename) }
     }
 
-    @Test
-    fun `Allow loading an untrusted contract jar if another attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
+    @Test(timeout=300_000)
+	fun `Allow loading an untrusted contract jar if another attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val classJar = fakeAttachment(
@@ -260,8 +260,8 @@ class AttachmentsClassLoaderTests {
         createClassloader(untrustedAttachment)
     }
 
-    @Test
-    fun `Allow loading an untrusted contract jar if another attachment exists that was signed by a trusted uploader - intersection of keys match existing attachment`() {
+    @Test(timeout=300_000)
+	fun `Allow loading an untrusted contract jar if another attachment exists that was signed by a trusted uploader - intersection of keys match existing attachment`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val keyPairC = Crypto.generateKeyPair()
@@ -290,8 +290,8 @@ class AttachmentsClassLoaderTests {
         createClassloader(untrustedAttachment)
     }
 
-    @Test
-    fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys`() {
+    @Test(timeout=300_000)
+	fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val untrustedClassJar = fakeAttachment(
@@ -310,8 +310,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
+    @Test(timeout=300_000)
+	fun `Cannot load an untrusted contract jar if no other attachment exists that was signed with the same keys and uploaded by a trusted uploader`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val classJar = fakeAttachment(
@@ -341,8 +341,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Attachments with inherited trust do not grant trust to attachments being loaded (no chain of trust)`() {
+    @Test(timeout=300_000)
+	fun `Attachments with inherited trust do not grant trust to attachments being loaded (no chain of trust)`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
         val keyPairC = Crypto.generateKeyPair()
@@ -387,8 +387,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Cannot load an untrusted contract jar if it is signed by a blacklisted key even if there is another attachment signed by the same keys that is trusted`() {
+    @Test(timeout=300_000)
+	fun `Cannot load an untrusted contract jar if it is signed by a blacklisted key even if there is another attachment signed by the same keys that is trusted`() {
         val keyPairA = Crypto.generateKeyPair()
         val keyPairB = Crypto.generateKeyPair()
 
@@ -425,8 +425,8 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Test
-    fun `Allow loading a trusted attachment that is signed by a blacklisted key`() {
+    @Test(timeout=300_000)
+	fun `Allow loading a trusted attachment that is signed by a blacklisted key`() {
         val keyPairA = Crypto.generateKeyPair()
 
         attachmentTrustCalculator = NodeAttachmentTrustCalculator(

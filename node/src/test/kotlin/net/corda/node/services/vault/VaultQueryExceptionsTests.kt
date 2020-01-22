@@ -38,8 +38,8 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     @JvmField
     val rollbackRule = VaultQueryRollbackRule(this)
 
-    @Test
-    fun `query attempting to use unregistered schema`() {
+    @Test(timeout=300_000)
+	fun `query attempting to use unregistered schema`() {
         database.transaction {
             // CashSchemaV3 NOT registered with NodeSchemaService
             val logicalExpression = builder { SampleCashSchemaV3.PersistentCashState::currency.equal(GBP.currencyCode) }

@@ -50,8 +50,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         return deserialize(bytes, T::class.java, context ?: testSerializationContext)
     }
 
-    @Test
-    fun verySimpleType() {
+    @Test(timeout=300_000)
+	fun verySimpleType() {
         val testVal = 10
         val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
@@ -83,8 +83,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(testVal, deserializedObj4::class.java.getMethod("getA").invoke(deserializedObj4))
     }
 
-    @Test
-    fun repeatedTypesAreRecognised() {
+    @Test(timeout=300_000)
+	fun repeatedTypesAreRecognised() {
         val testValA = 10
         val testValB = 20
         val testValC = 20
@@ -121,8 +121,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotEquals(deserialisedB::class.java, deserialisedC::class.java)
     }
 
-    @Test
-    fun simpleTypeKnownInterface() {
+    @Test(timeout=300_000)
+	fun simpleTypeKnownInterface() {
         val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(
                 testName(), mapOf("name" to NonNullableField(String::class.java)),
                 interfaces = listOf(I::class.java)))
@@ -136,8 +136,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(testVal, (deserializedObj as I).getName())
     }
 
-    @Test
-    fun arrayOfTypes() {
+    @Test(timeout=300_000)
+	fun arrayOfTypes() {
         val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
 
@@ -171,8 +171,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 deserializedObj.a[2]::class.java.getMethod("getA").invoke(deserializedObj.a[2]))
     }
 
-    @Test
-    fun reusedClasses() {
+    @Test(timeout=300_000)
+	fun reusedClasses() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val innerType = cc.build(ClassSchema("${testName()}.inner", mapOf("a" to NonNullableField(Int::class.java))))
@@ -190,8 +190,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 (deserialisedO::class.java.getMethod("getA").invoke(deserialisedO))::class.java)
     }
 
-    @Test
-    fun nestedTypes() {
+    @Test(timeout=300_000)
+	fun nestedTypes() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
@@ -207,8 +207,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals("name", inner::class.java.getMethod("getName").invoke(inner))
     }
 
-    @Test
-    fun repeatedNestedTypes() {
+    @Test(timeout=300_000)
+	fun repeatedNestedTypes() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
@@ -227,8 +227,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals("bar", deserializedObj.b::class.java.getMethod("getName").invoke(deserializedObj.b))
     }
 
-    @Test
-    fun listOfType() {
+    @Test(timeout=300_000)
+	fun listOfType() {
         val unknownClass = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
@@ -252,8 +252,8 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         }
     }
 
-    @Test
-    fun unknownInterface() {
+    @Test(timeout=300_000)
+	fun unknownInterface() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val interfaceClass = cc.build(InterfaceSchema(

@@ -14,8 +14,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeKotlinAliasTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing kotlin alias`() {
+    @Test(timeout=300_000)
+	fun `test deserializing kotlin alias`() {
         val attachmentId = SecureHash.allOnesHash
         val data = attachmentId.serialize()
 
@@ -39,8 +39,8 @@ class DeserializeKotlinAliasTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing data with kotlin alias`() {
+    @Test(timeout=300_000)
+	fun `test deserializing data with kotlin alias`() {
         val attachment = AttachmentData(SecureHash.allOnesHash)
         val data = attachment.serialize()
 

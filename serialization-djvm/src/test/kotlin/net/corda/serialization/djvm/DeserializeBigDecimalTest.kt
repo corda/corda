@@ -17,8 +17,8 @@ class DeserializeBigDecimalTest : TestBase(KOTLIN) {
         const val VERY_BIG_DECIMAL = 994349993939.32737232
     }
 
-    @Test
-    fun `test deserializing big decimal`() {
+    @Test(timeout=300_000)
+	fun `test deserializing big decimal`() {
         val bigDecimal = BigDecimalData(BigDecimal.valueOf(VERY_BIG_DECIMAL))
         val data = bigDecimal.serialize()
 

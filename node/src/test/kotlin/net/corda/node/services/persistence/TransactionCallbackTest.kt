@@ -16,8 +16,8 @@ class TransactionCallbackTest {
         database.close()
     }
 
-    @Test
-    fun `onCommit called and onRollback not called on commit`() {
+    @Test(timeout=300_000)
+	fun `onCommit called and onRollback not called on commit`() {
         var onCommitCount = 0
         var onRollbackCount = 0
         database.transaction {
@@ -28,8 +28,8 @@ class TransactionCallbackTest {
         assertEquals(0, onRollbackCount)
     }
 
-    @Test
-    fun `onCommit not called and onRollback called on rollback`() {
+    @Test(timeout=300_000)
+	fun `onCommit not called and onRollback called on rollback`() {
         class TestException : Exception()
 
         var onCommitCount = 0

@@ -56,8 +56,8 @@ class ContractWithMissingCustomSerializerTest {
     /*
      * Test that we can still verify a transaction that is missing a custom serializer.
      */
-    @Test
-    fun `flow with missing custom serializer and fixup`() {
+    @Test(timeout=300_000)
+	fun `flow with missing custom serializer and fixup`() {
         val contractId = contractCorDapp.jarFile.hash
         val flowId = flowCorDapp.jarFile.hash
         val fixupCorDapp = cordappWithFixups(listOf(setOf(contractId) to setOf(contractId, flowId))).signed()
@@ -81,8 +81,8 @@ class ContractWithMissingCustomSerializerTest {
     /*
      * Test we fail properly when we cannot fix-up a missing serializer.
      */
-    @Test
-    fun `flow with missing custom serializer but without fixup`() {
+    @Test(timeout=300_000)
+	fun `flow with missing custom serializer but without fixup`() {
         driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<BrokenTransactionException> {
@@ -102,8 +102,8 @@ class ContractWithMissingCustomSerializerTest {
      * Test that TransactionBuilder prevents us from creating a
      * transaction that has a custom serializer missing.
      */
-    @Test
-    fun `transaction builder flow with missing custom serializer by rpc`() {
+    @Test(timeout=300_000)
+	fun `transaction builder flow with missing custom serializer by rpc`() {
         driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<CordaRuntimeException> {

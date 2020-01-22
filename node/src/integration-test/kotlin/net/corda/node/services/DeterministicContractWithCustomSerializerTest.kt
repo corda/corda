@@ -59,8 +59,8 @@ class DeterministicContractWithCustomSerializerTest {
         }
     }
 
-    @Test
-    fun `test DJVM can verify using custom serializer`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can verify using custom serializer`() {
         driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
@@ -71,8 +71,8 @@ class DeterministicContractWithCustomSerializerTest {
         }
     }
 
-    @Test
-    fun `test DJVM can fail verify using custom serializer`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can fail verify using custom serializer`() {
         driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val currantsy = Currantsy(BAD_CURRANTS)

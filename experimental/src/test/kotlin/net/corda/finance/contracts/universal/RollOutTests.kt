@@ -120,28 +120,28 @@ class RollOutTests {
         next()
     }
 
-    @Test
-    fun `arrangement equality transfer`() {
+    @Test(timeout=300_000)
+	fun `arrangement equality transfer`() {
         assertEquals(contract_transfer1, contract_transfer2)
     }
 
-    @Test
-    fun `arrangement equality action`() {
+    @Test(timeout=300_000)
+	fun `arrangement equality action`() {
         assertEquals(contract_action1, contract_action2)
     }
 
-    @Test
-    fun `arrangement equality and`() {
+    @Test(timeout=300_000)
+	fun `arrangement equality and`() {
         assertEquals(contract_and1, contract_and2)
     }
 
-    @Test
-    fun `arrangement equality complex`() {
+    @Test(timeout=300_000)
+	fun `arrangement equality complex`() {
         assertEquals(contract, contract2)
     }
 
-    @Test
-    fun issue() {
+    @Test(timeout=300_000)
+	fun issue() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, stateStart)
             timeWindow(TEST_TX_TIME_1)
@@ -155,8 +155,8 @@ class RollOutTests {
         }
     }
 
-    @Test
-    fun execute() {
+    @Test(timeout=300_000)
+	fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateStart)
             output(UNIVERSAL_PROGRAM_ID, stateStep1a)

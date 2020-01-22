@@ -39,8 +39,8 @@ class InMemoryIdentityServiceTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun `get all identities`() {
+    @Test(timeout=300_000)
+	fun `get all identities`() {
         val service = createService()
         // Nothing registered, so empty set
         assertNull(service.getAllIdentities().firstOrNull())
@@ -57,8 +57,8 @@ class InMemoryIdentityServiceTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `get identity by key`() {
+    @Test(timeout=300_000)
+	fun `get identity by key`() {
         val service = createService()
         assertNull(service.partyFromKey(ALICE_PUBKEY))
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
@@ -66,14 +66,14 @@ class InMemoryIdentityServiceTests {
         assertNull(service.partyFromKey(BOB_PUBKEY))
     }
 
-    @Test
-    fun `get identity by name with no registered identities`() {
+    @Test(timeout=300_000)
+	fun `get identity by name with no registered identities`() {
         val service = createService()
         assertNull(service.wellKnownPartyFromX500Name(ALICE.name))
     }
 
-    @Test
-    fun `get identity by substring match`() {
+    @Test(timeout=300_000)
+	fun `get identity by substring match`() {
         val service = createService()
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
         service.verifyAndRegisterIdentity(BOB_IDENTITY)
@@ -84,8 +84,8 @@ class InMemoryIdentityServiceTests {
         assertEquals(setOf(BOB), service.partiesFromName("Bob Plc", true))
     }
 
-    @Test
-    fun `get identity by name`() {
+    @Test(timeout=300_000)
+	fun `get identity by name`() {
         val service = createService()
         val identities = listOf("Org A", "Org B", "Org C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
@@ -97,8 +97,8 @@ class InMemoryIdentityServiceTests {
     /**
      * Generate a certificate path from a root CA, down to a transaction key, store and verify the association.
      */
-    @Test
-    fun `assert unknown anonymous key is unrecognised`() {
+    @Test(timeout=300_000)
+	fun `assert unknown anonymous key is unrecognised`() {
         val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Principal, rootKey)
         val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -116,8 +116,8 @@ class InMemoryIdentityServiceTests {
      * Generate a pair of certificate paths from a root CA, down to a transaction key, store and verify the associations.
      * Also checks that incorrect associations are rejected.
      */
-    @Test
-    fun `get anonymous identity by key`() {
+    @Test(timeout=300_000)
+	fun `get anonymous identity by key`() {
         val (alice, aliceTxIdentity) = createConfidentialIdentity(ALICE.name)
         val (_, bobTxIdentity) = createConfidentialIdentity(ALICE.name)
 
@@ -138,8 +138,8 @@ class InMemoryIdentityServiceTests {
      * Generate a pair of certificate paths from a root CA, down to a transaction key, store and verify the associations.
      * Also checks that incorrect associations are rejected.
      */
-    @Test
-    fun `assert ownership`() {
+    @Test(timeout=300_000)
+	fun `assert ownership`() {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
@@ -182,8 +182,8 @@ class InMemoryIdentityServiceTests {
     /**
      * Ensure if we feed in a full identity, we get the same identity back.
      */
-    @Test
-    fun `deanonymising a well known identity should return the identity`() {
+    @Test(timeout=300_000)
+	fun `deanonymising a well known identity should return the identity`() {
         val service = createService()
         val expected = ALICE
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
@@ -194,8 +194,8 @@ class InMemoryIdentityServiceTests {
     /**
      * Ensure we don't blindly trust what an anonymous identity claims to be.
      */
-    @Test
-    fun `deanonymising a false well known identity should return null`() {
+    @Test(timeout=300_000)
+	fun `deanonymising a false well known identity should return null`() {
         val service = createService()
         val notAlice = Party(ALICE.name, generateKeyPair().public)
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)

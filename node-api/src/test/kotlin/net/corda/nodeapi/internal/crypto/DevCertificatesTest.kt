@@ -18,8 +18,8 @@ class DevCertificatesTest {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    @Test
-    fun `create server certificate in keystore for SSL`() {
+    @Test(timeout=300_000)
+	fun `create server certificate in keystore for SSL`() {
         // given
         val newTrustStore = loadDevCaTrustStore()
         val newTrustRoot = newTrustStore[X509Utilities.CORDA_ROOT_CA]

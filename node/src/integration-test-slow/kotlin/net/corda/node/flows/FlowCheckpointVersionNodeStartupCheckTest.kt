@@ -31,8 +31,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
         val defaultCordapp = enclosedCordapp()
     }
 
-    @Test
-    fun `restart node with mismatch between suspended flow and installed CorDapps`() {
+    @Test(timeout=300_000)
+	fun `restart node with mismatch between suspended flow and installed CorDapps`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows

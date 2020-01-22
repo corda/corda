@@ -14,22 +14,22 @@ class UniqueIdentifierTest {
         private val TEST_UUID: UUID = UUID.fromString("00000000-1111-2222-3333-444444444444")
     }
 
-    @Test
-    fun testNewInstance() {
+    @Test(timeout=300_000)
+	fun testNewInstance() {
         val id = UniqueIdentifier(NAME, TEST_UUID)
         assertEquals("${NAME}_$TEST_UUID", id.toString())
         assertEquals(NAME, id.externalId)
         assertEquals(TEST_UUID, id.id)
     }
 
-    @Test
-    fun testPrimaryConstructor() {
+    @Test(timeout=300_000)
+	fun testPrimaryConstructor() {
         val primary = UniqueIdentifier::class.primaryConstructor ?: throw AssertionError("primary constructor missing")
         assertThat(primary.call(NAME, TEST_UUID)).isEqualTo(UniqueIdentifier(NAME, TEST_UUID))
     }
 
-    @Test
-    fun testConstructors() {
+    @Test(timeout=300_000)
+	fun testConstructors() {
         assertEquals(1, UniqueIdentifier::class.constructors.size)
         val ex = assertFailsWith<IllegalArgumentException> { UniqueIdentifier::class.constructors.first().call() }
         assertThat(ex).hasMessage("Callable expects 2 arguments, but 0 were provided.")

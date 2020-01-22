@@ -80,8 +80,8 @@ class ObserverNodeTransactionTests {
         }
     }
 
-    @Test
-    fun `Broadcasting an old transaction does not cause 2 unconsumed states`() {
+    @Test(timeout=300_000)
+	fun `Broadcasting an old transaction does not cause 2 unconsumed states`() {
         val node = mockNet.createPartyNode(ALICE_NAME)
         val regulator = mockNet.createPartyNode(BOB_NAME)
         val notary = mockNet.defaultNotaryIdentity
@@ -96,8 +96,8 @@ class ObserverNodeTransactionTests {
         checkObserverTransactions(outputMessage, regulator)
     }
 
-    @Test
-    fun `Non relevant states are recorded if transaction is re-received with new states to record`() {
+    @Test(timeout=300_000)
+	fun `Non relevant states are recorded if transaction is re-received with new states to record`() {
         val node = mockNet.createPartyNode(ALICE_NAME)
         val regulator = mockNet.createPartyNode(BOB_NAME)
         val notary = mockNet.defaultNotaryIdentity
@@ -112,8 +112,8 @@ class ObserverNodeTransactionTests {
         checkObserverTransactions(outputMessage, regulator)
     }
 
-    @Test
-    fun `Re-recording a transaction adds non-relevant states`() {
+    @Test(timeout=300_000)
+	fun `Re-recording a transaction adds non-relevant states`() {
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
         val notary = mockNet.defaultNotaryIdentity
@@ -127,8 +127,8 @@ class ObserverNodeTransactionTests {
         checkObserverTransactions(message, bob, 2)
     }
 
-    @Test
-    fun `Re-recording a transaction at only relevant does not cause failures`() {
+    @Test(timeout=300_000)
+	fun `Re-recording a transaction at only relevant does not cause failures`() {
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
         val notary = mockNet.defaultNotaryIdentity
@@ -142,8 +142,8 @@ class ObserverNodeTransactionTests {
         checkObserverTransactions(message, bob, 1)
     }
 
-    @Test
-    fun `Recording a transaction twice at all visible works`() {
+    @Test(timeout=300_000)
+	fun `Recording a transaction twice at all visible works`() {
         val alice = mockNet.createPartyNode(ALICE_NAME)
         val bob = mockNet.createPartyNode(BOB_NAME)
         val notary = mockNet.defaultNotaryIdentity

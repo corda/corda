@@ -9,34 +9,34 @@ import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.Test
 
 class WhitelistGeneratorTest {
-    @Test
-    fun `no jars against empty whitelist`() {
+    @Test(timeout=300_000)
+	fun `no jars against empty whitelist`() {
         val whitelist = generateWhitelist(emptyMap(), emptyList(), emptyList())
         assertThat(whitelist).isEmpty()
     }
 
-    @Test
-    fun `no jars against single whitelist`() {
+    @Test(timeout=300_000)
+	fun `no jars against single whitelist`() {
         val existingWhitelist = mapOf("class1" to listOf(SecureHash.randomSHA256()))
         val newWhitelist = generateWhitelist(existingWhitelist, emptyList(), emptyList())
         assertThat(newWhitelist).isEqualTo(existingWhitelist)
     }
 
-    @Test
-    fun `empty jar against empty whitelist`() {
+    @Test(timeout=300_000)
+	fun `empty jar against empty whitelist`() {
         val whitelist = generateWhitelist(emptyMap(), emptyList(), listOf(TestContractsJar(contractClassNames = emptyList())))
         assertThat(whitelist).isEmpty()
     }
 
-    @Test
-    fun `empty jar against single whitelist`() {
+    @Test(timeout=300_000)
+	fun `empty jar against single whitelist`() {
         val existingWhitelist = mapOf("class1" to listOf(SecureHash.randomSHA256()))
         val newWhitelist = generateWhitelist(existingWhitelist, emptyList(), listOf(TestContractsJar(contractClassNames = emptyList())))
         assertThat(newWhitelist).isEqualTo(existingWhitelist)
     }
 
-    @Test
-    fun `jar with single contract against empty whitelist`() {
+    @Test(timeout=300_000)
+	fun `jar with single contract against empty whitelist`() {
         val jar = TestContractsJar(contractClassNames = listOf("class1"))
         val whitelist = generateWhitelist(emptyMap(), emptyList(), listOf(jar))
         assertThat(whitelist).isEqualTo(mapOf(
@@ -44,8 +44,8 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `single contract jar against single whitelist of different contract`() {
+    @Test(timeout=300_000)
+	fun `single contract jar against single whitelist of different contract`() {
         val class1JarHash = SecureHash.randomSHA256()
         val existingWhitelist = mapOf("class1" to listOf(class1JarHash))
         val jar = TestContractsJar(contractClassNames = listOf("class2"))
@@ -56,8 +56,8 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `same jar with single contract`() {
+    @Test(timeout=300_000)
+	fun `same jar with single contract`() {
         val jarHash = SecureHash.randomSHA256()
         val existingWhitelist = mapOf("class1" to listOf(jarHash))
         val jar = TestContractsJar(hash = jarHash, contractClassNames = listOf("class1"))
@@ -65,8 +65,8 @@ class WhitelistGeneratorTest {
         assertThat(newWhitelist).isEqualTo(existingWhitelist)
     }
 
-    @Test
-    fun `jar with updated contract`() {
+    @Test(timeout=300_000)
+	fun `jar with updated contract`() {
         val previousJarHash = SecureHash.randomSHA256()
         val existingWhitelist = mapOf("class1" to listOf(previousJarHash))
         val newContractsJar = TestContractsJar(contractClassNames = listOf("class1"))
@@ -76,8 +76,8 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `jar with one existing contract and one new one`() {
+    @Test(timeout=300_000)
+	fun `jar with one existing contract and one new one`() {
         val previousJarHash = SecureHash.randomSHA256()
         val existingWhitelist = mapOf("class1" to listOf(previousJarHash))
         val newContractsJar = TestContractsJar(contractClassNames = listOf("class1", "class2"))
@@ -88,8 +88,8 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `two versions of the same contract`() {
+    @Test(timeout=300_000)
+	fun `two versions of the same contract`() {
         val version1Jar = TestContractsJar(contractClassNames = listOf("class1"))
         val version2Jar = TestContractsJar(contractClassNames = listOf("class1"))
         val newWhitelist = generateWhitelist(emptyMap(), emptyList(), listOf(version1Jar, version2Jar))
@@ -98,15 +98,15 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `jar with single new contract that's excluded`() {
+    @Test(timeout=300_000)
+	fun `jar with single new contract that's excluded`() {
         val jar = TestContractsJar(contractClassNames = listOf("class1"))
         val whitelist = generateWhitelist(emptyMap(), listOf("class1"), listOf(jar))
         assertThat(whitelist).isEmpty()
     }
 
-    @Test
-    fun `jar with two new contracts, one of which is excluded`() {
+    @Test(timeout=300_000)
+	fun `jar with two new contracts, one of which is excluded`() {
         val jar = TestContractsJar(contractClassNames = listOf("class1", "class2"))
         val whitelist = generateWhitelist(emptyMap(), listOf("class1"), listOf(jar))
         assertThat(whitelist).isEqualTo(mapOf(
@@ -114,8 +114,8 @@ class WhitelistGeneratorTest {
         ))
     }
 
-    @Test
-    fun `jar with updated contract but it's excluded`() {
+    @Test(timeout=300_000)
+	fun `jar with updated contract but it's excluded`() {
         val existingWhitelist = mapOf("class1" to listOf(SecureHash.randomSHA256()))
         val jar = TestContractsJar(contractClassNames = listOf("class1"))
         assertThatIllegalArgumentException().isThrownBy {

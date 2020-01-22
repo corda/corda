@@ -7,8 +7,8 @@ import kotlin.test.assertTrue
 
 class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
 
-    @Test
-    fun oneValue() {
+    @Test(timeout=300_000)
+	fun oneValue() {
         val enumConstants = mapOf("A" to EnumField())
 
         val schema = EnumSchema("gen.enum", enumConstants)
@@ -16,8 +16,8 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
         assertTrue(cc.build(schema).isEnum)
     }
 
-    @Test
-    fun oneValueInstantiate() {
+    @Test(timeout=300_000)
+	fun oneValueInstantiate() {
         val enumConstants = mapOf("A" to EnumField())
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
@@ -29,8 +29,8 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals("A", (clazz.enumConstants.first() as Enum<*>).name)
     }
 
-    @Test
-    fun twoValuesInstantiate() {
+    @Test(timeout=300_000)
+	fun twoValuesInstantiate() {
         val enumConstants = mapOf("left" to EnumField(), "right" to EnumField())
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
@@ -47,8 +47,8 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals("right", right.name)
     }
 
-    @Test
-    fun manyValues() {
+    @Test(timeout=300_000)
+	fun manyValues() {
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
                 "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })
         val schema = EnumSchema("gen.enum", enumConstants)
@@ -65,8 +65,8 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
         }
     }
 
-    @Test
-    fun assignment() {
+    @Test(timeout=300_000)
+	fun assignment() {
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateBy({ it }, { EnumField() })
         val schema = EnumSchema("gen.enum", enumConstants)
         val clazz = cc.build(schema)
@@ -83,8 +83,8 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
 
     // if anything goes wrong with this test it's going to end up throwing *some*
     // exception, hence the lack of asserts
-    @Test
-    fun assignAndTest() {
+    @Test(timeout=300_000)
+	fun assignAndTest() {
         val cc2 = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val schema1 = EnumSchema("gen.enum",

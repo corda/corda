@@ -50,13 +50,13 @@ class NotaryServiceTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `should reject a transaction with too many inputs`() {
+    @Test(timeout=300_000)
+	fun `should reject a transaction with too many inputs`() {
         notariseWithTooManyInputs(aliceNode, alice, notary, mockNet)
     }
 
-    @Test
-    fun `should reject when network parameters component is not visible`() {
+    @Test(timeout=300_000)
+	fun `should reject when network parameters component is not visible`() {
         val stx = generateTransaction(aliceNode, alice, notary, null, 13)
         val future = aliceNode.services.startFlow(DummyClientFlow(stx, notary)).resultFuture
         mockNet.runNetwork()
@@ -65,8 +65,8 @@ class NotaryServiceTests {
         assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
     }
 
-    @Test
-    fun `should reject when parameters not current`() {
+    @Test(timeout=300_000)
+	fun `should reject when parameters not current`() {
         val hash = SecureHash.randomSHA256()
         val stx = generateTransaction(aliceNode, alice, notary, hash, 13)
         val future = aliceNode.services.startFlow(DummyClientFlow(stx, notary)).resultFuture

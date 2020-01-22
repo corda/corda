@@ -12,8 +12,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializePeriodTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing period`() {
+    @Test(timeout=300_000)
+	fun `test deserializing period`() {
         val period = Period.of(1, 2, 3)
         val data = period.serialize()
 

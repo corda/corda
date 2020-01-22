@@ -28,23 +28,23 @@ class SignedNodeInfoTest {
 
     private val nodeInfoBuilder = TestNodeInfoBuilder()
 
-    @Test
-    fun `verifying single identity`() {
+    @Test(timeout=300_000)
+	fun `verifying single identity`() {
         nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned()
         assertThat(signedNodeInfo.verified()).isEqualTo(nodeInfo)
     }
 
-    @Test
-    fun `verifying multiple identities`() {
+    @Test(timeout=300_000)
+	fun `verifying multiple identities`() {
         nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned()
         assertThat(signedNodeInfo.verified()).isEqualTo(nodeInfo)
     }
 
-    @Test
-    fun `verifying missing signature`() {
+    @Test(timeout=300_000)
+	fun `verifying missing signature`() {
         val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val nodeInfo = nodeInfoBuilder.build()
@@ -54,8 +54,8 @@ class SignedNodeInfoTest {
                 .hasMessageContaining("Missing signatures")
     }
 
-    @Test
-    fun `verifying composite keys only`() {
+    @Test(timeout=300_000)
+	fun `verifying composite keys only`() {
         val aliceKeyPair = generateKeyPair()
         val bobKeyPair = generateKeyPair()
         val identityKeyPair = generateKeyPair()
@@ -67,8 +67,8 @@ class SignedNodeInfoTest {
                 .hasMessageContaining("At least one identity with a non-composite key needs to be specified.")
     }
 
-    @Test
-    fun `verifying extra signature`() {
+    @Test(timeout=300_000)
+	fun `verifying extra signature`() {
         val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(aliceKey, generateKeyPair().private))
@@ -77,8 +77,8 @@ class SignedNodeInfoTest {
                 .hasMessageContaining("Extra signatures")
     }
 
-    @Test
-    fun `verifying incorrect signature`() {
+    @Test(timeout=300_000)
+	fun `verifying incorrect signature`() {
         nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(generateKeyPair().private))
@@ -87,8 +87,8 @@ class SignedNodeInfoTest {
                 .hasMessageContaining(ALICE_NAME.toString())
     }
 
-    @Test
-    fun `verifying with signatures in wrong order`() {
+    @Test(timeout=300_000)
+	fun `verifying with signatures in wrong order`() {
         val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val (_, bobKey) = nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val nodeInfo = nodeInfoBuilder.build()

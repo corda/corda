@@ -20,8 +20,8 @@ class ConcurrencyUtilsTest {
         doNothing().whenever(it).error(any(), any<Throwable>())
     }
 
-    @Test
-    fun `firstOf short circuit`() {
+    @Test(timeout=300_000)
+	fun `firstOf short circuit`() {
         // Order not significant in this case:
         val g = firstOf(arrayOf(f2, f1), log) {
             ++invocations
@@ -38,8 +38,8 @@ class ConcurrencyUtilsTest {
         verifyNoMoreInteractions(log)
     }
 
-    @Test
-    fun `firstOf re-entrant handler attempt due to cancel`() {
+    @Test(timeout=300_000)
+	fun `firstOf re-entrant handler attempt due to cancel`() {
         val futures = arrayOf(f1, f2)
         val g = firstOf(futures, log) {
             ++invocations
@@ -56,8 +56,8 @@ class ConcurrencyUtilsTest {
     /**
      * Note that if you set CancellationException on CompletableFuture it will report isCancelled.
      */
-    @Test
-    fun `firstOf re-entrant handler attempt not due to cancel`() {
+    @Test(timeout=300_000)
+	fun `firstOf re-entrant handler attempt not due to cancel`() {
         val futures = arrayOf(f1, f2)
         val nonCancel = IllegalStateException()
         val g = firstOf(futures, log) {
@@ -73,8 +73,8 @@ class ConcurrencyUtilsTest {
         assertThatThrownBy { f2.getOrThrow() }.isSameAs(nonCancel)
     }
 
-    @Test
-    fun `firstOf cancel is not special`() {
+    @Test(timeout=300_000)
+	fun `firstOf cancel is not special`() {
         val g = firstOf(arrayOf(f2, f1), log) {
             ++invocations
             it.getOrThrow() // This can always do something fancy if 'it' was cancelled.
@@ -85,8 +85,8 @@ class ConcurrencyUtilsTest {
         verifyNoMoreInteractions(log)
     }
 
-    @Test
-    fun `match does not pass failure of success block into the failure block`() {
+    @Test(timeout=300_000)
+	fun `match does not pass failure of success block into the failure block`() {
         val f = CompletableFuture.completedFuture(100)
         val successes = mutableListOf<Any?>()
         val failures = mutableListOf<Any?>()
@@ -101,8 +101,8 @@ class ConcurrencyUtilsTest {
         assertEquals(emptyList<Any?>(), failures)
     }
 
-    @Test
-    fun `match does not pass ExecutionException to failure block`() {
+    @Test(timeout=300_000)
+	fun `match does not pass ExecutionException to failure block`() {
         val e = Throwable()
         val f = CompletableFuture<Void>().apply { completeExceptionally(e) }
         val successes = mutableListOf<Any?>()

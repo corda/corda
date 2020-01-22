@@ -15,42 +15,42 @@ import org.junit.Test
  * the attacker to [alice].
  */
 abstract class RPCMQSecurityTest : MQSecurityTest() {
-    @Test
-    fun `consume message from P2P queue`() {
+    @Test(timeout=300_000)
+	fun `consume message from P2P queue`() {
         assertConsumeAttackFailsNonexistent("$P2P_PREFIX${alice.info.singleIdentity().owningKey.toStringShort()}")
     }
 
-    @Test
-    fun `consume message from peer queue`() {
+    @Test(timeout=300_000)
+	fun `consume message from peer queue`() {
         val bobParty = startBobAndCommunicateWithAlice()
         assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
     }
 
-    @Test
-    fun `send message to address of peer which has been communicated with`() {
+    @Test(timeout=300_000)
+	fun `send message to address of peer which has been communicated with`() {
         val bobParty = startBobAndCommunicateWithAlice()
         assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
     }
 
-    @Test
-    fun `create queue for peer which has not been communicated with`() {
+    @Test(timeout=300_000)
+	fun `create queue for peer which has not been communicated with`() {
         val bob = startNode(BOB_NAME)
         assertConsumeAttackFailsNonexistent("$PEERS_PREFIX${bob.info.singleIdentity().owningKey.toBase58String()}")
     }
 
-    @Test
-    fun `create queue for unknown peer`() {
+    @Test(timeout=300_000)
+	fun `create queue for unknown peer`() {
         val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
         assertConsumeAttackFailsNonexistent(invalidPeerQueue)
     }
 
-    @Test
-    fun `consume message from RPC requests queue`() {
+    @Test(timeout=300_000)
+	fun `consume message from RPC requests queue`() {
         assertConsumeAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
-    @Test
-    fun `consume message from logged in user's RPC queue`() {
+    @Test(timeout=300_000)
+	fun `consume message from logged in user's RPC queue`() {
         val user1Queue = loginToRPCAndGetClientQueue()
         assertConsumeAttackFails(user1Queue)
     }

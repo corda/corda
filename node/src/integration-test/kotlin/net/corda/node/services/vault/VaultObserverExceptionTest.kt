@@ -49,8 +49,8 @@ class VaultObserverExceptionTest {
      * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
      * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation
      */
-    @Test
-    fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
+    @Test(timeout=300_000)
+	fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
@@ -83,8 +83,8 @@ class VaultObserverExceptionTest {
      * Throwing a random (non-SQL releated) exception from a vault observer causes the flow to be
      * aborted when unhandled in user code
      */
-    @Test
-    fun otherExceptionsFromVaultObserverBringFlowDown() {
+    @Test(timeout=300_000)
+	fun otherExceptionsFromVaultObserverBringFlowDown() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
@@ -104,8 +104,8 @@ class VaultObserverExceptionTest {
      * A random exception from a VaultObserver will bring the Rx Observer down, but can be handled in the flow
      * triggering the observer, and the flow will continue successfully (for some values of success)
      */
-    @Test
-    fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
+    @Test(timeout=300_000)
+	fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
@@ -123,8 +123,8 @@ class VaultObserverExceptionTest {
      * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
      * and keep it in for observation if errors persist.
      */
-    @Test
-    fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
+    @Test(timeout=300_000)
+	fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
         var admitted = 0
         var observation = 0
         StaffedFlowHospital.onFlowAdmitted.add {
@@ -152,8 +152,8 @@ class VaultObserverExceptionTest {
      * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
      * the vault observer will trigger a flush that throws. This will be kept in for observation.
      */
-    @Test
-    fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
+    @Test(timeout=300_000)
+	fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -193,8 +193,8 @@ class VaultObserverExceptionTest {
      * does not change the outcome - the first exception in the service will bring the service down and will
      * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
      */
-    @Test
-    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
+    @Test(timeout=300_000)
+	fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -231,8 +231,8 @@ class VaultObserverExceptionTest {
      * Trying to catch and suppress that exception inside the service does protect the service, but the new
      * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
      */
-    @Test
-    fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
+    @Test(timeout=300_000)
+	fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
@@ -267,8 +267,8 @@ class VaultObserverExceptionTest {
      * therefore handling it in flow code is no good, and the error will be passed to the flow hospital via the
      * interceptor.
      */
-    @Test
-    fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
+    @Test(timeout=300_000)
+	fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             log.info("Flow has been kept for overnight observation")
@@ -296,8 +296,8 @@ class VaultObserverExceptionTest {
      * User code throwing a syntax error and catching suppressing that within the observer code is fine
      * and should not have any impact on the rest of the flow
      */
-    @Test
-    fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
+    @Test(timeout=300_000)
+	fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {

@@ -63,8 +63,8 @@ class RaftTransactionCommitLogTests {
         databases.forEach { it.close() }
     }
 
-    @Test
-    fun `stores entries correctly`() {
+    @Test(timeout=300_000)
+	fun `stores entries correctly`() {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
@@ -83,8 +83,8 @@ class RaftTransactionCommitLogTests {
         assertEquals(value2.getOrThrow(), txId)
     }
 
-    @Test
-    fun `returns conflict for duplicate entries`() {
+    @Test(timeout=300_000)
+	fun `returns conflict for duplicate entries`() {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
@@ -103,8 +103,8 @@ class RaftTransactionCommitLogTests {
         assertEquals(states.toSet(), conflict.consumedStates.keys)
     }
 
-    @Test
-    fun `transactions outside their time window are rejected`() {
+    @Test(timeout=300_000)
+	fun `transactions outside their time window are rejected`() {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
@@ -120,8 +120,8 @@ class RaftTransactionCommitLogTests {
         assertThat(commitError, instanceOf(NotaryError.TimeWindowInvalid::class.java))
     }
 
-    @Test
-    fun `transactions can be re-notarised outside their time window`() {
+    @Test(timeout=300_000)
+	fun `transactions can be re-notarised outside their time window`() {
         val client = cluster.last().client
 
         val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))

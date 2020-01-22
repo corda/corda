@@ -30,8 +30,8 @@ class DeserializeWithSerializationWhitelistTest: TestBase(KOTLIN) {
     @JvmField
     val serialization = LocalSerialization(emptySet(), setOf(CustomWhitelist))
 
-    @Test
-    fun `test deserializing custom object`() {
+    @Test(timeout=300_000)
+	fun `test deserializing custom object`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 
@@ -53,8 +53,8 @@ class DeserializeWithSerializationWhitelistTest: TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserialization needs whitelisting`() {
+    @Test(timeout=300_000)
+	fun `test deserialization needs whitelisting`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 

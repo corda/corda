@@ -7,8 +7,8 @@ import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.Test
 
 class NodeHandleTests {
-    @Test
-    fun object_defined_functions_are_static_for_node_rpc_ops() {
+    @Test(timeout=300_000)
+	fun object_defined_functions_are_static_for_node_rpc_ops() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptyList())) {
             val rpcClient = startNode().getOrThrow().rpc
 

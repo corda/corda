@@ -19,8 +19,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class CordappScanningDriverTest {
-    @Test
-    fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
+    @Test(timeout=300_000)
+	fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList())) {

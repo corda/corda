@@ -32,14 +32,14 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun `passed with expected UseCases`() {
+    @Test(timeout=300_000)
+	fun `passed with expected UseCases`() {
         assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
         assertTrue { privateKey.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
-    @Test
-    fun `failed with wrong UseCase`() {
+    @Test(timeout=300_000)
+	fun `failed with wrong UseCase`() {
         assertThatThrownBy { privateKey.serialize(context = SerializationDefaults.P2P_CONTEXT) }
                 .isInstanceOf(IllegalStateException::class.java)
                 .hasMessageContaining("UseCase '$P2P' is not 'Storage")

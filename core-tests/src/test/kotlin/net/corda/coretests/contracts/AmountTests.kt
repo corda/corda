@@ -19,14 +19,14 @@ import kotlin.test.assertTrue
  * Tests of the [Amount] class.
  */
 class AmountTests {
-    @Test
-    fun `make sure Amount has decimal places`() {
+    @Test(timeout=300_000)
+	fun `make sure Amount has decimal places`() {
         val x = Amount(1, Currency.getInstance("USD"))
         assertTrue("0.01" in x.toString())
     }
 
-    @Test
-    fun `decimal conversion`() {
+    @Test(timeout=300_000)
+	fun `decimal conversion`() {
         val quantity = 1234L
         val amountGBP = Amount(quantity, GBP)
         val expectedGBP = BigDecimal("12.34")
@@ -48,8 +48,8 @@ class AmountTests {
         override fun toString(): String = name
     }
 
-    @Test
-    fun split() {
+    @Test(timeout=300_000)
+	fun split() {
         for (baseQuantity in 0..1000) {
             val baseAmount = Amount(baseQuantity.toLong(), GBP)
             for (partitionCount in 1..100) {
@@ -63,8 +63,8 @@ class AmountTests {
         }
     }
 
-    @Test
-    fun `amount transfers equality`() {
+    @Test(timeout=300_000)
+	fun `amount transfers equality`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -88,8 +88,8 @@ class AmountTests {
         assertNotEquals(transferE.hashCode(), transferA.hashCode())
     }
 
-    @Test
-    fun `amount transfer aggregation`() {
+    @Test(timeout=300_000)
+	fun `amount transfer aggregation`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -119,8 +119,8 @@ class AmountTests {
         assertEquals(negativeTransfer, sumUntilNegative)
     }
 
-    @Test
-    fun `amount transfer apply`() {
+    @Test(timeout=300_000)
+	fun `amount transfer apply`() {
         val partyA = "A"
         val partyB = "B"
         val partyC = "C"
@@ -167,8 +167,8 @@ class AmountTests {
         assertEquals(originalTotals[Pair(partyB, GBP)], newTotals3[Pair(partyB, GBP)])
     }
 
-    @Test
-    fun testGbpParse() {
+    @Test(timeout=300_000)
+	fun testGbpParse() {
         assertEquals(POUNDS(10), Amount.parseCurrency("10 GBP"))
         assertEquals(POUNDS(11), Amount.parseCurrency("£11"))
     }

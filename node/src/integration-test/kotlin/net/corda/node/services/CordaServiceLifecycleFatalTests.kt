@@ -49,8 +49,8 @@ class CordaServiceLifecycleFatalTests {
         }
     }
 
-    @Test
-    fun `JVM terminates on critical failure`() {
+    @Test(timeout=300_000)
+	fun `JVM terminates on critical failure`() {
         // Scenario terminates JVM - node should be running out of process
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
                 notarySpecs = emptyList(), systemProperties = mapOf(Pair(SECRET_PROPERTY_NAME, "true")))) {

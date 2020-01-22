@@ -43,8 +43,8 @@ class NetworkParametersTest {
     }
 
     // Minimum Platform Version tests
-    @Test
-    fun `node shutdowns when on lower platform version than network`() {
+    @Test(timeout=300_000)
+	fun `node shutdowns when on lower platform version than network`() {
         val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MOCK_VERSION_INFO.copy(platformVersion = 1)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
@@ -54,8 +54,8 @@ class NetworkParametersTest {
         assertThatThrownBy { alice.start() }.hasMessageContaining("platform version")
     }
 
-    @Test
-    fun `node works fine when on higher platform version`() {
+    @Test(timeout=300_000)
+	fun `node works fine when on higher platform version`() {
         val alice = mockNet.createUnstartedNode(InternalMockNodeParameters(legalName = ALICE_NAME, forcedID = 100, version = MOCK_VERSION_INFO.copy(platformVersion = 2)))
         val aliceDirectory = mockNet.baseDirectory(100)
         val netParams = testNetworkParameters(
@@ -65,8 +65,8 @@ class NetworkParametersTest {
         alice.start()
     }
 
-    @Test
-    fun `that we can copy while preserving the event horizon`() {
+    @Test(timeout=300_000)
+	fun `that we can copy while preserving the event horizon`() {
         // this is defensive tests in response to CORDA-2769
         val aliceNotaryParty = TestIdentity(ALICE_NAME).party
         val aliceNotaryInfo = NotaryInfo(aliceNotaryParty, false)
@@ -94,8 +94,8 @@ class NetworkParametersTest {
     }
 
     // Notaries tests
-    @Test
-    fun `choosing notary not specified in network parameters will fail`() {
+    @Test(timeout=300_000)
+	fun `choosing notary not specified in network parameters will fail`() {
         val fakeNotary = mockNet.createNode(
                 InternalMockNodeParameters(
                         legalName = BOB_NAME,
@@ -112,8 +112,8 @@ class NetworkParametersTest {
         }
     }
 
-    @Test
-    fun `package ownership checks are correct`() {
+    @Test(timeout=300_000)
+	fun `package ownership checks are correct`() {
         val key1 = generateKeyPair().public
         val key2 = generateKeyPair().public
 

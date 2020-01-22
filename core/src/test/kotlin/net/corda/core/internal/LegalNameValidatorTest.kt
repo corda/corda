@@ -5,30 +5,30 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class LegalNameValidatorTest {
-    @Test
-    fun `no double spaces`() {
+    @Test(timeout=300_000)
+	fun `no double spaces`() {
         assertFailsWith(IllegalArgumentException::class) {
             LegalNameValidator.validateOrganization("Test Legal  Name", LegalNameValidator.Validation.FULL)
         }
         LegalNameValidator.validateOrganization(LegalNameValidator.normalize("Test Legal  Name"), LegalNameValidator.Validation.FULL)
     }
 
-    @Test
-    fun `no trailing white space`() {
+    @Test(timeout=300_000)
+	fun `no trailing white space`() {
         assertFailsWith(IllegalArgumentException::class) {
             LegalNameValidator.validateOrganization("Test ", LegalNameValidator.Validation.FULL)
         }
     }
 
-    @Test
-    fun `no prefixed white space`() {
+    @Test(timeout=300_000)
+	fun `no prefixed white space`() {
         assertFailsWith(IllegalArgumentException::class) {
             LegalNameValidator.validateOrganization(" Test", LegalNameValidator.Validation.FULL)
         }
     }
 
-    @Test
-    fun `blacklisted characters`() {
+    @Test(timeout=300_000)
+	fun `blacklisted characters`() {
         LegalNameValidator.validateOrganization("Test", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
             LegalNameValidator.validateOrganization("\$Test", LegalNameValidator.Validation.FULL)
@@ -44,8 +44,8 @@ class LegalNameValidatorTest {
         }
     }
 
-    @Test
-    fun `unicode range in organization`() {
+    @Test(timeout=300_000)
+	fun `unicode range in organization`() {
         LegalNameValidator.validateOrganization("The quick brown fox jumped over the lazy dog.1234567890", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
             // Null
@@ -69,8 +69,8 @@ class LegalNameValidatorTest {
         }
     }
 
-    @Test
-    fun `unicode range in general attributes`() {
+    @Test(timeout=300_000)
+	fun `unicode range in general attributes`() {
         LegalNameValidator.validateNameAttribute("The quick brown fox jumped over the lazy dog.1234567890", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
             // Right to left direction override
@@ -92,8 +92,8 @@ class LegalNameValidatorTest {
         }
     }
 
-    @Test
-    fun `legal name length less then 256 characters`() {
+    @Test(timeout=300_000)
+	fun `legal name length less then 256 characters`() {
         val longLegalName = StringBuilder()
         while (longLegalName.length < 255) {
             longLegalName.append("A")
@@ -105,8 +105,8 @@ class LegalNameValidatorTest {
         }
     }
 
-    @Test
-    fun `legal name should be capitalized`() {
+    @Test(timeout=300_000)
+	fun `legal name should be capitalized`() {
         LegalNameValidator.validateOrganization("Good legal name", LegalNameValidator.Validation.FULL)
         assertFailsWith(IllegalArgumentException::class) {
             LegalNameValidator.validateOrganization("bad name", LegalNameValidator.Validation.FULL)
@@ -116,8 +116,8 @@ class LegalNameValidatorTest {
         }
     }
 
-    @Test
-    fun `correctly handle whitespaces`() {
+    @Test(timeout=300_000)
+	fun `correctly handle whitespaces`() {
         assertEquals("Legal Name With Tab", LegalNameValidator.normalize("Legal Name With\tTab"))
         assertEquals("Legal Name With Unicode Whitespaces", LegalNameValidator.normalize("Legal Name\u2004With\u0009Unicode\u0020Whitespaces"))
         assertEquals("Legal Name With Line Breaks", LegalNameValidator.normalize("Legal Name With\n\rLine\nBreaks"))

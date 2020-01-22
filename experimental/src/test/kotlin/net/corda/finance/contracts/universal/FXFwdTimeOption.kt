@@ -48,8 +48,8 @@ class FXFwdTimeOption {
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY), initialContract)
     val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract1)
     val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract2)
-    @Test
-    fun `issue - signature`() {
+    @Test(timeout=300_000)
+	fun `issue - signature`() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, inState)
             timeWindow(TEST_TX_TIME_1)
@@ -67,8 +67,8 @@ class FXFwdTimeOption {
         }
     }
 
-    @Test
-    fun `maturity, bank exercise`() {
+    @Test(timeout=300_000)
+	fun `maturity, bank exercise`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -96,8 +96,8 @@ class FXFwdTimeOption {
         }
     }
 
-    @Test
-    fun `maturity, corp exercise`() {
+    @Test(timeout=300_000)
+	fun `maturity, corp exercise`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)

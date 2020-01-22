@@ -41,8 +41,8 @@ class AttachmentsClassLoaderSerializationTests {
     private val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
     private val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
 
-    @Test
-    fun `Can serialize and deserialize with an attachment classloader`() {
+    @Test(timeout=300_000)
+	fun `Can serialize and deserialize with an attachment classloader`() {
 
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
@@ -77,8 +77,8 @@ class AttachmentsClassLoaderSerializationTests {
     }
 
     // These tests are not Attachment specific. Should they be removed?
-    @Test
-    fun `test serialization of SecureHash`() {
+    @Test(timeout=300_000)
+	fun `test serialization of SecureHash`() {
         val secureHash = SecureHash.randomSHA256()
         val bytes = secureHash.serialize()
         val copiedSecuredHash = bytes.deserialize()
@@ -86,8 +86,8 @@ class AttachmentsClassLoaderSerializationTests {
         assertEquals(secureHash, copiedSecuredHash)
     }
 
-    @Test
-    fun `test serialization of OpaqueBytes`() {
+    @Test(timeout=300_000)
+	fun `test serialization of OpaqueBytes`() {
         val opaqueBytes = OpaqueBytes("0123456789".toByteArray())
         val bytes = opaqueBytes.serialize()
         val copiedOpaqueBytes = bytes.deserialize()
@@ -95,8 +95,8 @@ class AttachmentsClassLoaderSerializationTests {
         assertEquals(opaqueBytes, copiedOpaqueBytes)
     }
 
-    @Test
-    fun `test serialization of sub-sequence OpaqueBytes`() {
+    @Test(timeout=300_000)
+	fun `test serialization of sub-sequence OpaqueBytes`() {
         val bytesSequence = ByteSequence.of("0123456789".toByteArray(), 3, 2)
         val bytes = bytesSequence.serialize()
         val copiedBytesSequence = bytes.deserialize()

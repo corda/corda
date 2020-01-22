@@ -24,8 +24,8 @@ import kotlin.test.assertTrue
 open class SignatureConstraintMigrationFromWhitelistConstraintTests  : SignatureConstraintVersioningTests() {
 
 
-    @Test
-    fun `can evolve from lower contract class version to higher one`() {
+    @Test(timeout=300_000)
+	fun `can evolve from lower contract class version to higher one`() {
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
@@ -71,8 +71,8 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
         assertEquals(transformedMessage, stateAndRef!!.state.data.message)
     }
 
-    @Test
-    fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
+    @Test(timeout=300_000)
+	fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -92,8 +92,8 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
         assertTrue(consumingTransaction.outputs.single().constraint is SignatureAttachmentConstraint)
     }
 
-    @Test
-    fun `WhitelistConstraint cannot be migrated to SignatureConstraint if platform version is not 4 or greater`() {
+    @Test(timeout=300_000)
+	fun `WhitelistConstraint cannot be migrated to SignatureConstraint if platform version is not 4 or greater`() {
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -114,8 +114,8 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
         assertTrue(consumingTransaction.outputs.single().constraint is WhitelistedByZoneAttachmentConstraint)
     }
 
-    @Test
-    fun `WhitelistConstraint cannot be migrated to SignatureConstraint if signed JAR is not whitelisted`() {
+    @Test(timeout=300_000)
+	fun `WhitelistConstraint cannot be migrated to SignatureConstraint if signed JAR is not whitelisted`() {
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         Assertions.assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             upgradeCorDappBetweenTransactions(
@@ -129,8 +129,8 @@ open class SignatureConstraintMigrationFromWhitelistConstraintTests  : Signature
                 .withMessageContaining("Selected output constraint: $WhitelistedByZoneAttachmentConstraint not satisfying")
     }
 
-    @Test
-    fun `auto migration from WhitelistConstraint to SignatureConstraint will only transition states that do not have a constraint specified`() {
+    @Test(timeout=300_000)
+	fun `auto migration from WhitelistConstraint to SignatureConstraint will only transition states that do not have a constraint specified`() {
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,

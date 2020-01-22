@@ -49,8 +49,8 @@ class NetworkParametersReaderTest {
         fs.close()
     }
 
-    @Test
-    fun `read correct set of parameters from file`() {
+    @Test(timeout=300_000)
+	fun `read correct set of parameters from file`() {
         val baseDirectory = fs.getPath("/node").createDirectories()
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(baseDirectory)
@@ -65,8 +65,8 @@ class NetworkParametersReaderTest {
         assertEquals(server.networkParameters, parametersFromFile)
     }
 
-    @Test
-    fun `read network parameters from file when network map server is down`() {
+    @Test(timeout=300_000)
+	fun `read network parameters from file when network map server is down`() {
         server.close()
         val baseDirectory = fs.getPath("/node").createDirectories()
         val fileParameters = testNetworkParameters(epoch = 1)
@@ -75,8 +75,8 @@ class NetworkParametersReaderTest {
         assertThat(parameters).isEqualTo(fileParameters)
     }
 
-    @Test
-    fun `serialized parameters compatibility`() {
+    @Test(timeout=300_000)
+	fun `serialized parameters compatibility`() {
         // Network parameters file from before eventHorizon extension
         val inputStream = javaClass.classLoader.getResourceAsStream("network-compatibility/network-parameters")
         assertNotNull(inputStream)

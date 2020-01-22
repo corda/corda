@@ -16,8 +16,8 @@ interface I_ {
 
 class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
-    @Test
-    fun parentIsUnknown() {
+    @Test(timeout=300_000)
+	fun parentIsUnknown() {
         @CordaSerializable
         data class A(val a: Int)
 
@@ -30,8 +30,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertCanLoadAll(testSerializationContext, envelope.getMangled<B>())
     }
 
-    @Test
-    fun bothAreUnknown() {
+    @Test(timeout=300_000)
+	fun bothAreUnknown() {
         @CordaSerializable
         data class A(override val a: Int) : I_
 
@@ -46,8 +46,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
                 envelope.getMangled<B>().mangle<A>(), envelope.getMangled<A>())
     }
 
-    @Test
-    fun oneIsUnknown() {
+    @Test(timeout=300_000)
+	fun oneIsUnknown() {
         @CordaSerializable
         data class A(override val a: Int) : I_
 
@@ -63,8 +63,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
     }
 
     // See https://github.com/corda/corda/issues/4107
-    @Test
-    fun withUUID() {
+    @Test(timeout=300_000)
+	fun withUUID() {
         @CordaSerializable
         data class IOUStateData(
                 val value: Int,
@@ -79,8 +79,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(uuid, instance.get("ref"))
     }
 
-    @Test
-    fun mapWithUnknown() {
+    @Test(timeout=300_000)
+	fun mapWithUnknown() {
         data class C(val a: Int)
         data class D(val m: Map<String, C>)
         val (_, envelope) = D(mapOf("c" to C(1))).roundTrip()
@@ -96,8 +96,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertCanLoadAll(testSerializationContext, infoForD, mangledMap, mangledC)
     }
 
-    @Test
-    fun parameterisedNonCollectionWithUnknown() {
+    @Test(timeout=300_000)
+	fun parameterisedNonCollectionWithUnknown() {
         data class C(val a: Int)
         data class NotAMap<K, V>(val key: K, val value: V)
         data class D(val m: NotAMap<String, C>)

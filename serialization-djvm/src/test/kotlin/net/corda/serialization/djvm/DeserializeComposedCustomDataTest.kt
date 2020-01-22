@@ -32,8 +32,8 @@ class DeserializeComposedCustomDataTest: TestBase(KOTLIN) {
     @JvmField
     val serialization = LocalSerialization(setOf(StringAtomSerializer(), LongAtomSerializer()), emptySet())
 
-    @Test
-    fun `test deserializing composed object`() {
+    @Test(timeout=300_000)
+	fun `test deserializing composed object`() {
         val composed = ComposedData(StringAtom(MESSAGE), LongAtom(BIG_NUMBER))
         val data = composed.serialize()
 
@@ -58,8 +58,8 @@ class DeserializeComposedCustomDataTest: TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserialization needs custom serializer`() {
+    @Test(timeout=300_000)
+	fun `test deserialization needs custom serializer`() {
         val composed = ComposedData(StringAtom(MESSAGE), LongAtom(BIG_NUMBER))
         val data = composed.serialize()
 

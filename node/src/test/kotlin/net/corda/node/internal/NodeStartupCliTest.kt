@@ -24,8 +24,8 @@ class NodeStartupCliTest {
         }
     }
 
-    @Test
-    fun `no command line arguments`() {
+    @Test(timeout=300_000)
+	fun `no command line arguments`() {
         CommandLine.populateCommand(startup)
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory)
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "node.conf")
@@ -42,8 +42,8 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
-    @Test
-    fun `--base-directory`() {
+    @Test(timeout=300_000)
+	fun `--base-directory`() {
         CommandLine.populateCommand(startup, CommonCliConstants.BASE_DIR, (workingDirectory / "another-base-dir").toString())
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")

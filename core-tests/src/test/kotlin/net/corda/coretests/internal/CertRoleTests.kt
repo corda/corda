@@ -10,15 +10,15 @@ import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
 class CertRoleTests {
-    @Test
-    fun `should deserialize valid value`() {
+    @Test(timeout=300_000)
+	fun `should deserialize valid value`() {
         val expected = CertRole.DOORMAN_CA
         val actual = CertRole.getInstance(ASN1Integer(1L))
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `should reject invalid values`() {
+    @Test(timeout=300_000)
+	fun `should reject invalid values`() {
         // Below the lowest used value
         assertFailsWith<IllegalArgumentException> { CertRole.getInstance(ASN1Integer(0L)) }
         // Outside of the array size, but a valid integer
@@ -27,8 +27,8 @@ class CertRoleTests {
         assertFailsWith<IllegalArgumentException> { CertRole.getInstance(ASN1Integer(Integer.MAX_VALUE + 1L)) }
     }
 
-    @Test
-    fun `check cert roles verify for various cert hierarchies`() {
+    @Test(timeout=300_000)
+	fun `check cert roles verify for various cert hierarchies`() {
 
         // Testing for various certificate hierarchies (with or without NodeCA).
         // ROOT -> Intermediate Root -> Doorman -> NodeCA -> Legal Identity cert -> Confidential key cert

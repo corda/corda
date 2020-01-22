@@ -66,16 +66,16 @@ class FlowFrameworkPersistenceTests {
         receivedSessionMessages.clear()
     }
 
-    @Test
-    fun `newly added flow is preserved on restart`() {
+    @Test(timeout=300_000)
+	fun `newly added flow is preserved on restart`() {
         aliceNode.services.startFlow(NoOpFlow(nonTerminating = true))
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val restoredFlow = aliceNode.restartAndGetRestoredFlow<NoOpFlow>()
         assertThat(restoredFlow.flowStarted).isTrue()
     }
 
-    @Test
-    fun `flow restarted just after receiving payload`() {
+    @Test(timeout=300_000)
+	fun `flow restarted just after receiving payload`() {
         bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it)
                 .nonTerminating() }
         aliceNode.services.startFlow(SendFlow("Hello", bob))
@@ -90,8 +90,8 @@ class FlowFrameworkPersistenceTests {
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
-    @Test
-    fun `flow loaded from checkpoint will respond to messages from before start`() {
+    @Test(timeout=300_000)
+	fun `flow loaded from checkpoint will respond to messages from before start`() {
         aliceNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
@@ -99,8 +99,8 @@ class FlowFrameworkPersistenceTests {
     }
 
     @Ignore("Some changes in startup order make this test's assumptions fail.")
-    @Test
-    fun `flow with send will resend on interrupted restart`() {
+    @Test(timeout=300_000)
+	fun `flow with send will resend on interrupted restart`() {
         val payload = random63BitValue()
         val payload2 = random63BitValue()
 

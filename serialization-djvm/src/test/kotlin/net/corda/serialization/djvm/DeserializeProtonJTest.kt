@@ -21,8 +21,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeProtonJTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing unsigned long`() {
+    @Test(timeout=300_000)
+	fun `test deserializing unsigned long`() {
         val protonJ = HasUnsignedLong(UnsignedLong.valueOf(12345678))
         val data = protonJ.serialize()
 
@@ -46,8 +46,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing unsigned integer`() {
+    @Test(timeout=300_000)
+	fun `test deserializing unsigned integer`() {
         val protonJ = HasUnsignedInteger(UnsignedInteger.valueOf(123456))
         val data = protonJ.serialize()
 
@@ -71,8 +71,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing unsigned short`() {
+    @Test(timeout=300_000)
+	fun `test deserializing unsigned short`() {
         val protonJ = HasUnsignedShort(UnsignedShort.valueOf(12345))
         val data = protonJ.serialize()
 
@@ -96,8 +96,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing unsigned byte`() {
+    @Test(timeout=300_000)
+	fun `test deserializing unsigned byte`() {
         val protonJ = HasUnsignedByte(UnsignedByte.valueOf(0x8f.toByte()))
         val data = protonJ.serialize()
 
@@ -121,8 +121,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing 128 bit decimal`() {
+    @Test(timeout=300_000)
+	fun `test deserializing 128 bit decimal`() {
         val protonJ = HasDecimal128(Decimal128(12345678, 98765432))
         val data = protonJ.serialize()
 
@@ -146,8 +146,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing 64 bit decimal`() {
+    @Test(timeout=300_000)
+	fun `test deserializing 64 bit decimal`() {
         val protonJ = HasDecimal64(Decimal64(98765432))
         val data = protonJ.serialize()
 
@@ -170,8 +170,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing 32 bit decimal`() {
+    @Test(timeout=300_000)
+	fun `test deserializing 32 bit decimal`() {
         val protonJ = HasDecimal32(Decimal32(123456))
         val data = protonJ.serialize()
 
@@ -194,8 +194,8 @@ class DeserializeProtonJTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing symbol`() {
+    @Test(timeout=300_000)
+	fun `test deserializing symbol`() {
         val protonJ = HasSymbol(Symbol.valueOf("-my-symbol-value-"))
         val data = protonJ.serialize()
 

@@ -15,22 +15,22 @@ class EncodingUtilsTest {
     val testHexString = "48656C6C6F20576F726C64" // HEX format for Hello World.
 
     // Encoding tests
-    @Test
-    fun `encoding Hello World`() {
+    @Test(timeout=300_000)
+	fun `encoding Hello World`() {
         assertEquals(testBase58String, testBytes.toBase58())
         assertEquals(testBase64String, testBytes.toBase64())
         assertEquals(testHexString, testBytes.toHex())
     }
 
-    @Test
-    fun `empty encoding`() {
+    @Test(timeout=300_000)
+	fun `empty encoding`() {
         assertEquals("", EMPTY_BYTE_ARRAY.toBase58())
         assertEquals("", EMPTY_BYTE_ARRAY.toBase64())
         assertEquals("", EMPTY_BYTE_ARRAY.toHex())
     }
 
-    @Test
-    fun `encoding 7 zero bytes`() {
+    @Test(timeout=300_000)
+	fun `encoding 7 zero bytes`() {
         val sevenZeroByteArray = ByteArray(7)
         assertEquals("1111111", sevenZeroByteArray.toBase58())
         assertEquals("AAAAAAAAAA==", sevenZeroByteArray.toBase64())
@@ -38,22 +38,22 @@ class EncodingUtilsTest {
     }
 
     //Decoding tests
-    @Test
-    fun `decoding to real String`() {
+    @Test(timeout=300_000)
+	fun `decoding to real String`() {
         assertEquals(testString, testBase58String.base58ToRealString())
         assertEquals(testString, testBase64String.base64ToRealString())
         assertEquals(testString, testHexString.hexToRealString())
     }
 
-    @Test
-    fun `decoding empty Strings`() {
+    @Test(timeout=300_000)
+	fun `decoding empty Strings`() {
         assertEquals("", "".base58ToRealString())
         assertEquals("", "".base64ToRealString())
         assertEquals("", "".hexToRealString())
     }
 
-    @Test
-    fun `decoding lowercase and mixed HEX`() {
+    @Test(timeout=300_000)
+	fun `decoding lowercase and mixed HEX`() {
         val testHexStringLowercase = testHexString.toLowerCase()
         assertEquals(testHexString.hexToRealString(), testHexStringLowercase.hexToRealString())
 
@@ -61,8 +61,8 @@ class EncodingUtilsTest {
         assertEquals(testHexString.hexToRealString(), testHexStringMixed.hexToRealString())
     }
 
-    @Test
-    fun `decoding on wrong format`() {
+    @Test(timeout=300_000)
+	fun `decoding on wrong format`() {
         // the String "Hello World" is not a valid Base58 or Base64 or HEX format
         try {
             testString.base58ToRealString()
@@ -87,8 +87,8 @@ class EncodingUtilsTest {
     }
 
     //Encoding changers tests
-    @Test
-    fun `change encoding between base58, base64, hex`() {
+    @Test(timeout=300_000)
+	fun `change encoding between base58, base64, hex`() {
         // base58 to base64
         assertEquals(testBase64String, testBase58String.base58toBase64())
         // base58 to hex

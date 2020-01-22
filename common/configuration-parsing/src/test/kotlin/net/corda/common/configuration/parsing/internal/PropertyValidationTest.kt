@@ -7,8 +7,8 @@ import org.junit.Test
 
 class PropertyValidationTest {
 
-    @Test
-    fun absent_value() {
+    @Test(timeout=300_000)
+	fun absent_value() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
@@ -26,8 +26,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun missing_value() {
+    @Test(timeout=300_000)
+	fun missing_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -45,8 +45,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun absent_list_value() {
+    @Test(timeout=300_000)
+	fun absent_list_value() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
@@ -64,8 +64,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun missing_list_value() {
+    @Test(timeout=300_000)
+	fun missing_list_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -83,8 +83,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun whole_list_validation_valid_value() {
+    @Test(timeout=300_000)
+	fun whole_list_validation_valid_value() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -97,8 +97,8 @@ class PropertyValidationTest {
         assertThat(property.validate(configuration).errors).isEmpty()
     }
 
-    @Test
-    fun whole_list_validation_invalid_value() {
+    @Test(timeout=300_000)
+	fun whole_list_validation_invalid_value() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -125,8 +125,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun wrong_type() {
+    @Test(timeout=300_000)
+	fun wrong_type() {
 
         val key = "a.b.c"
 
@@ -145,8 +145,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun wrong_floating_numeric_type_when_integer_expected() {
+    @Test(timeout=300_000)
+	fun wrong_floating_numeric_type_when_integer_expected() {
 
         val key = "a.b.c"
 
@@ -165,8 +165,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun integer_numeric_type_when_floating_expected_works() {
+    @Test(timeout=300_000)
+	fun integer_numeric_type_when_floating_expected_works() {
 
         val key = "a.b.c"
 
@@ -177,8 +177,8 @@ class PropertyValidationTest {
         assertThat(property.validate(configuration).isValid).isTrue()
     }
 
-    @Test
-    fun wrong_element_type_for_list() {
+    @Test(timeout=300_000)
+	fun wrong_element_type_for_list() {
 
         val key = "a.b.c"
 
@@ -197,8 +197,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun list_type_when_declared_single() {
+    @Test(timeout=300_000)
+	fun list_type_when_declared_single() {
 
         val key = "a.b.c"
 
@@ -217,8 +217,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun single_type_when_declared_list() {
+    @Test(timeout=300_000)
+	fun single_type_when_declared_list() {
 
         val key = "a.b.c"
 
@@ -237,8 +237,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun wrong_type_in_nested_property() {
+    @Test(timeout=300_000)
+	fun wrong_type_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -260,8 +260,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun absent_value_in_nested_property() {
+    @Test(timeout=300_000)
+	fun absent_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -283,8 +283,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun missing_value_in_nested_property() {
+    @Test(timeout=300_000)
+	fun missing_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -306,8 +306,8 @@ class PropertyValidationTest {
         }
     }
 
-    @Test
-    fun nested_property_without_schema_does_not_validate() {
+    @Test(timeout=300_000)
+	fun nested_property_without_schema_does_not_validate() {
 
         val key = "a.b.c"
 
@@ -320,8 +320,8 @@ class PropertyValidationTest {
         assertThat(property.validate(configuration).isValid).isTrue()
     }
 
-    @Test
-    fun valid_mapped_property() {
+    @Test(timeout=300_000)
+	fun valid_mapped_property() {
 
         val key = "a"
 
@@ -336,8 +336,8 @@ class PropertyValidationTest {
         assertThat(property.validate(configuration).isValid).isTrue()
     }
 
-    @Test
-    fun invalid_mapped_property() {
+    @Test(timeout=300_000)
+	fun invalid_mapped_property() {
 
         val key = "a.b.c"
 

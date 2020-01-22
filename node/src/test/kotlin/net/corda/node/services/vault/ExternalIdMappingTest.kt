@@ -65,8 +65,8 @@ class ExternalIdMappingTest {
         return stx.tx.outputsOfType<DummyState>().single()
     }
 
-    @Test
-    fun `Two states can be mapped to a single externalId`() {
+    @Test(timeout=300_000)
+	fun `Two states can be mapped to a single externalId`() {
         val vaultService = services.vaultService
         // Create new external ID and two keys mapped to it.
         val id = UUID.randomUUID()
@@ -88,8 +88,8 @@ class ExternalIdMappingTest {
         assertEquals(setOf(dummyStateOne, dummyStateTwo), resultTwo.map { it.state.data }.toSet())
     }
 
-    @Test
-    fun `externalIds query criteria test`() {
+    @Test(timeout=300_000)
+	fun `externalIds query criteria test`() {
         val vaultService = services.vaultService
 
         // Create new external ID and two keys mapped to it.
@@ -129,8 +129,8 @@ class ExternalIdMappingTest {
         assertEquals(setOf(dummyStateOne, dummyStateTwo, dummyStateThree), resultFour.map { it.state.data }.toSet())
     }
 
-    @Test
-    fun `One state can be mapped to multiple externalIds`() {
+    @Test(timeout=300_000)
+	fun `One state can be mapped to multiple externalIds`() {
         val vaultService = services.vaultService
         // Create new external ID.
         val idOne = UUID.randomUUID()
@@ -146,8 +146,8 @@ class ExternalIdMappingTest {
         assertEquals(dummyState, result.single().state.data)
     }
 
-    @Test
-    fun `roger uber keys test`() {
+    @Test(timeout=300_000)
+	fun `roger uber keys test`() {
         // IDs.
         val id = UUID.randomUUID()
         val idTwo = UUID.randomUUID()

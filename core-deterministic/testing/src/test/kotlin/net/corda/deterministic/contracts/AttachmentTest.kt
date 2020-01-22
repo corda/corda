@@ -55,8 +55,8 @@ class AttachmentTest {
         }
     }
 
-    @Test
-    fun testAttachmentJar() {
+    @Test(timeout=300_000)
+	fun testAttachmentJar() {
         attachment.openAsJAR().use { jar ->
             val entry = jar.nextJarEntry ?: return@use
             assertEquals("data.bin", entry.name)
@@ -68,8 +68,8 @@ class AttachmentTest {
         }
     }
 
-    @Test
-    fun testExtractFromAttachment() {
+    @Test(timeout=300_000)
+	fun testExtractFromAttachment() {
         val resultData = ByteArrayOutputStream().use {
             attachment.extractFile("data.bin", it)
             it.toByteArray()

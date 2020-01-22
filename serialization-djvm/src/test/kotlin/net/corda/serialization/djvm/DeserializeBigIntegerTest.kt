@@ -17,8 +17,8 @@ class DeserializeBigIntegerTest : TestBase(KOTLIN) {
         const val VERY_BIG_NUMBER = 1234567890123456789
     }
 
-    @Test
-    fun `test deserializing big integer`() {
+    @Test(timeout=300_000)
+	fun `test deserializing big integer`() {
         val bigInteger = BigIntegerData(BigInteger.valueOf(VERY_BIG_NUMBER))
         val data = bigInteger.serialize()
 

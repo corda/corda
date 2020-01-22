@@ -54,56 +54,56 @@ class MappedSchemasCrossReferenceDetectionTests {
         ) : PersistentState()
     }
 
-    @Test
-    fun `no cross reference to other schema`() {
+    @Test(timeout=300_000)
+	fun `no cross reference to other schema`() {
         assertThat(fieldsFromOtherMappedSchema(GoodSchema)).isEmpty()
         assertThat(methodsFromOtherMappedSchema(GoodSchema)).isEmpty()
     }
 
-    @Test
-    fun `cross reference to other schema is detected`() {
+    @Test(timeout=300_000)
+	fun `cross reference to other schema is detected`() {
         assertThat(fieldsFromOtherMappedSchema(BadSchema)).isNotEmpty
         assertThat(methodsFromOtherMappedSchema(BadSchema)).isEmpty()
     }
 
-    @Test
-    fun `cross reference via non JPA field is allowed`() {
+    @Test(timeout=300_000)
+	fun `cross reference via non JPA field is allowed`() {
         assertThat(fieldsFromOtherMappedSchema(TrickySchema)).isEmpty()
         assertThat(methodsFromOtherMappedSchema(TrickySchema)).isEmpty()
     }
 
-    @Test
-    fun `cross reference via transient field is allowed`() {
+    @Test(timeout=300_000)
+	fun `cross reference via transient field is allowed`() {
         assertThat(fieldsFromOtherMappedSchema(PoliteSchema)).isEmpty()
         assertThat(methodsFromOtherMappedSchema(PoliteSchema)).isEmpty()
     }
 
-    @Test
-    fun `no cross reference to other schema java`() {
+    @Test(timeout=300_000)
+	fun `no cross reference to other schema java`() {
         assertThat(fieldsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
         assertThat(methodsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
     }
 
-    @Test
-    fun `cross reference to other schema is detected java`() {
+    @Test(timeout=300_000)
+	fun `cross reference to other schema is detected java`() {
         assertThat(fieldsFromOtherMappedSchema(BadSchemaJavaV1())).isEmpty()
         assertThat(methodsFromOtherMappedSchema(BadSchemaJavaV1())).isNotEmpty
     }
 
-    @Test
-    fun `cross reference to other schema via field is detected java`() {
+    @Test(timeout=300_000)
+	fun `cross reference to other schema via field is detected java`() {
         assertThat(fieldsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isNotEmpty
         assertThat(methodsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isEmpty()
     }
 
-    @Test
-    fun `cross reference via non JPA field is allowed java`() {
+    @Test(timeout=300_000)
+	fun `cross reference via non JPA field is allowed java`() {
         assertThat(fieldsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
         assertThat(methodsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
     }
 
-    @Test
-    fun `cross reference via transient field is allowed java`() {
+    @Test(timeout=300_000)
+	fun `cross reference via transient field is allowed java`() {
         assertThat(fieldsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
         assertThat(methodsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
     }

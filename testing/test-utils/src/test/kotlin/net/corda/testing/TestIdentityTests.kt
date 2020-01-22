@@ -8,16 +8,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class TestIdentityTests {
-    @Test
-    fun `entropy works`() {
+    @Test(timeout=300_000)
+	fun `entropy works`() {
         val a = TestIdentity(ALICE_NAME, 123)
         val b = TestIdentity(BOB_NAME, 123)
         assertEquals(a.publicKey, b.publicKey)
         assertEquals(a.keyPair.private, b.keyPair.private)
     }
 
-    @Test
-    fun `fresh works`() {
+    @Test(timeout=300_000)
+	fun `fresh works`() {
         val x = TestIdentity.fresh("xx")
         val y = TestIdentity.fresh("yy")
         // The param is called organisation so we'd better use it as such:

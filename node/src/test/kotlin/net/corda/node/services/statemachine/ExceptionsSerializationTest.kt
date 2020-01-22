@@ -32,8 +32,8 @@ class ExceptionsSerializationTest(private val initialException: CordaException, 
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun testMarshal() {
+    @Test(timeout=300_000)
+	fun testMarshal() {
         val fromSerialized = performRoundTripSerialization(initialException)
         assertEquals(initialException.message, fromSerialized.message)
     }

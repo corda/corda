@@ -46,8 +46,8 @@ class FlowHospitalTest {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
 
-    @Test
-    fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
+    @Test(timeout=300_000)
+	fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
         driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
             val charlie = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
@@ -95,8 +95,8 @@ class FlowHospitalTest {
         }
     }
 
-    @Test
-    fun `HospitalizeFlowException thrown`() {
+    @Test(timeout=300_000)
+	fun `HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
@@ -117,8 +117,8 @@ class FlowHospitalTest {
         }
     }
 
-    @Test
-    fun `Custom exception wrapping HospitalizeFlowException thrown`() {
+    @Test(timeout=300_000)
+	fun `Custom exception wrapping HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
@@ -139,8 +139,8 @@ class FlowHospitalTest {
         }
     }
 
-    @Test
-    fun `Custom exception extending HospitalizeFlowException thrown`() {
+    @Test(timeout=300_000)
+	fun `Custom exception extending HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
@@ -162,8 +162,8 @@ class FlowHospitalTest {
         }
     }
 
-    @Test
-    fun `HospitalizeFlowException cloaking an important exception thrown`() {
+    @Test(timeout=300_000)
+	fun `HospitalizeFlowException cloaking an important exception thrown`() {
         var dischargedCounter = 0
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ ->

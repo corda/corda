@@ -24,14 +24,14 @@ class PartyAndCertificateTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun `reject a path with no roles`() {
+    @Test(timeout=300_000)
+	fun `reject a path with no roles`() {
         val path = X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
         assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
     }
 
-    @Test
-    fun `kryo serialisation`() {
+    @Test(timeout=300_000)
+	fun `kryo serialisation`() {
         val original = getTestPartyAndCertificate(Party(
                 CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
                 entropyToKeyPair(BigInteger.valueOf(83)).public))
@@ -41,8 +41,8 @@ class PartyAndCertificateTest {
         assertThat(copy.certificate).isEqualTo(original.certificate)
     }
 
-    @Test
-    fun `jdk serialization`() {
+    @Test(timeout=300_000)
+	fun `jdk serialization`() {
         val identity = getTestPartyAndCertificate(Party(
                 CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
                 entropyToKeyPair(BigInteger.valueOf(83)).public))

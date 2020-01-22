@@ -46,8 +46,8 @@ class CordaRPCClientReconnectionTest {
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     }
 
-    @Test
-    fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
+    @Test(timeout=300_000)
+	fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
@@ -84,8 +84,8 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
-    @Test
-    fun `a client can successfully unsubscribe a reconnecting observable`() {
+    @Test(timeout=300_000)
+	fun `a client can successfully unsubscribe a reconnecting observable`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
@@ -122,8 +122,8 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
-    @Test
-    fun `rpc client calls and returned observables continue working when there is failover between servers`() {
+    @Test(timeout=300_000)
+	fun `rpc client calls and returned observables continue working when there is failover between servers`() {
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val latch = CountDownLatch(2)
 
@@ -161,8 +161,8 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
-    @Test
-    fun `an RPC call fails, when the maximum number of attempts is exceeded`() {
+    @Test(timeout=300_000)
+	fun `an RPC call fails, when the maximum number of attempts is exceeded`() {
         driver(DriverParameters(cordappsForAllNodes = emptyList())) {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
 
@@ -189,8 +189,8 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
-    @Test
-    fun `establishing an RPC connection fails if there is no node listening to the specified address`() {
+    @Test(timeout=300_000)
+	fun `establishing an RPC connection fails if there is no node listening to the specified address`() {
         rpcDriver {
             assertThatThrownBy {
                 CordaRPCClient(NetworkHostAndPort("localhost", portAllocator.nextPort()))

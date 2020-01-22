@@ -37,8 +37,8 @@ class CashIssueFlowTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `issue some cash`() {
+    @Test(timeout=300_000)
+	fun `issue some cash`() {
         val expected = 500.DOLLARS
         val ref = OpaqueBytes.of(0x01)
         val future = bankOfCordaNode.startFlow(CashIssueFlow(expected, ref, notary))
@@ -48,8 +48,8 @@ class CashIssueFlowTests {
         assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), output.amount)
     }
 
-    @Test
-    fun `issue zero cash`() {
+    @Test(timeout=300_000)
+	fun `issue zero cash`() {
         val expected = 0.DOLLARS
         val ref = OpaqueBytes.of(0x01)
         val future = bankOfCordaNode.startFlow(CashIssueFlow(expected, ref, notary))

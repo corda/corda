@@ -16,8 +16,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeMapsTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing map`() {
         val stringMap = StringMap(mapOf("Open" to "Hello World", "Close" to "Goodbye, Cruel World"))
         val data = stringMap.serialize()
 
@@ -41,8 +41,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing sorted map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing sorted map`() {
         val sortedMap = StringSortedMap(sortedMapOf(
             100 to "Goodbye, Cruel World",
             10 to "Hello World",
@@ -70,8 +70,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing navigable map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing navigable map`() {
         val navigableMap = StringNavigableMap(mapOf(
             10000L to "Goodbye, Cruel World",
             1000L to "Hello World",
@@ -99,8 +99,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing linked hash map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing linked hash map`() {
         val linkedHashMap = StringLinkedHashMap(linkedMapOf(
             "Close" to "Goodbye, Cruel World",
             "Open" to "Hello World",
@@ -129,8 +129,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing tree map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing tree map`() {
         val treeMap = StringTreeMap(mapOf(
             10000 to "Goodbye, Cruel World",
             1000 to "Hello World",
@@ -158,8 +158,8 @@ class DeserializeMapsTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing enum map`() {
+    @Test(timeout=300_000)
+	fun `test deserializing enum map`() {
         val enumMap = EnumMap(mapOf(
             ExampleEnum.ONE to "One!",
             ExampleEnum.TWO to "Two!"

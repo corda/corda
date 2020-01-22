@@ -12,8 +12,8 @@ import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
 class DeserializeStringTest : TestBase(KOTLIN) {
-    @Test
-    fun `test deserializing string`() {
+    @Test(timeout=300_000)
+	fun `test deserializing string`() {
         val stringMessage = StringMessage("Hello World!")
         val data = stringMessage.serialize()
 
@@ -37,8 +37,8 @@ class DeserializeStringTest : TestBase(KOTLIN) {
         }
     }
 
-    @Test
-    fun `test deserializing string list of arrays`() {
+    @Test(timeout=300_000)
+	fun `test deserializing string list of arrays`() {
         val stringListArray = StringListOfArray(listOf(
             arrayOf("Hello"), arrayOf("World"), arrayOf("!"))
         )
