@@ -52,7 +52,7 @@ class CordaServiceLifecycleFatalTests {
         object FailingObserver : ServiceLifecycleObserver {
             override fun onServiceLifecycleEvent(event: ServiceLifecycleEvent) {
                 val tmpFile = File(System.getProperty(tempFilePropertyName))
-                tmpFile.appendText(readyToThrowMarker)
+                tmpFile.appendText("\n" + readyToThrowMarker)
                 eventually(duration = 30.seconds) {
                     assertEquals(goodToThrowMarker, tmpFile.readLines().last())
                 }
@@ -63,29 +63,34 @@ class CordaServiceLifecycleFatalTests {
 
     @Test
     fun `JVM terminates on critical failure`() {
-        // Scenario terminates JVM - node should be running out of process
-        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
-                notarySpecs = emptyList(),
-                systemProperties = mapOf(SECRET_PROPERTY_NAME to "true", tempFilePropertyName to tmpFile.absolutePath))) {
-            val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
+        (1..20).forEach {
 
-            val rpcInterface = nodeHandle.rpc
-            eventually(duration = 60.seconds) {
-                assertEquals(readyToThrowMarker, tmpFile.readLines().last())
-            }
+            logger.info("Rep #$it")
 
-            rpcInterface.protocolVersion
+            // Scenario terminates JVM - node should be running out of process
+            driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
+                    notarySpecs = emptyList(),
+                    systemProperties = mapOf(SECRET_PROPERTY_NAME to "true", tempFilePropertyName to tmpFile.absolutePath))) {
+                val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
 
-            tmpFile.appendText("\n" + goodToThrowMarker)
+                val rpcInterface = nodeHandle.rpc
+                eventually(duration = 60.seconds) {
+                    assertEquals(readyToThrowMarker, tmpFile.readLines().last())
+                }
 
-            // We signalled that it is good to throw which will eventually trigger node shutdown and RPC interface no longer working.
-            eventually(duration = 30.seconds) {
-                assertFailsWith(Exception::class) {
-                    try {
-                        rpcInterface.protocolVersion
-                    } catch (ex: Exception) {
-                        logger.info("Thrown as expected", ex)
-                        throw ex
+                rpcInterface.protocolVersion
+
+                tmpFile.appendText("\n" + goodToThrowMarker)
+
+                // We signalled that it is good to throw which will eventually trigger node shutdown and RPC interface no longer working.
+                eventually(duration = 30.seconds) {
+                    assertFailsWith(Exception::class) {
+                        try {
+                            rpcInterface.protocolVersion
+                        } catch (ex: Exception) {
+                            logger.info("Thrown as expected", ex)
+                            throw ex
+                        }
                     }
                 }
             }
