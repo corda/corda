@@ -250,7 +250,6 @@ dependencies {
     slowIntegrationTestRuntime configurations.testRuntime
 
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
-    testCompile 'com.nordstrom.tools:junit-foundation:11.0.0'
 }
 
 tasks.withType(JavaCompile) {
@@ -259,14 +258,6 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Test) {
-
-    systemProperty "junit.timeout.test", "300000"
-    systemProperty "junit.max.retry", "2"
-
-    doFirst {
-        def junitFoundation = configurations.testCompile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'junit-foundation' }
-        jvmArgs "-javaagent:${junitFoundation.file}"
-    }
 
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         jvmArgs '-Djdk.attach.allowAttachSelf=true'
