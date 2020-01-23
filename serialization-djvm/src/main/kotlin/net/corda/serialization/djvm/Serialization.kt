@@ -49,15 +49,16 @@ fun createSandboxSerializationEnv(
          PrimitiveSerializer(clazz, sandboxBasicInput)
     }
 
+    val schemeBuilder = SandboxSerializationSchemeBuilder(
+        classLoader = classLoader,
+        sandboxBasicInput = sandboxBasicInput,
+        rawTaskFactory = rawTaskFactory,
+        customSerializerClassNames = customSerializerClassNames,
+        serializationWhitelistNames = serializationWhitelistNames,
+        serializerFactoryFactory = SandboxSerializerFactoryFactory(primitiveSerializerFactory)
+    )
     val factory = SerializationFactoryImpl(mutableMapOf()).apply {
-        registerScheme(AMQPSerializationScheme(
-            classLoader = classLoader,
-            sandboxBasicInput = sandboxBasicInput,
-            rawTaskFactory = rawTaskFactory,
-            customSerializerClassNames = customSerializerClassNames,
-            serializationWhitelistNames = serializationWhitelistNames,
-            serializerFactoryFactory = SandboxSerializerFactoryFactory(primitiveSerializerFactory)
-        ))
+        registerScheme(schemeBuilder.buildFor(p2pContext))
     }
     return SerializationEnvironment.with(factory, p2pContext = p2pContext)
 }
