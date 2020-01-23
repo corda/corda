@@ -50,7 +50,8 @@ updates related to issuance, sale, purchase and exit of bonds.
 Writing and building apps that run on both Corda (open source) and Corda Enterprise
 -----------------------------------------------------------------------------------
 Corda and Corda Enterprise are moving towards an Open Core approach, which means in practice that the APIs and dependencies for CorDapps
-should all be open source, and all CorDapps need to be compiled against the Open Source Corda core library.
+should all be open source, and all CorDapps (whether targeting Corda open source or Corda Enterprise) can now be compiled against the Open
+Source Corda core library, as Corda Enterprise itself is compiled against the Open Source core library.
 To make this work in practice you should follow these steps:
 
 1. Ensure your CorDapp is designed per :doc:`Structuring a CorDapp <writing-a-cordapp>` and annotated according to :ref:`CorDapp separation <cordapp_separation_ref>`.
