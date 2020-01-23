@@ -172,7 +172,7 @@ style:
     ignoreNamedArgument: true
     ignoreEnums: true
   MaxLineLength:
-    active: true
+    active: false
     excludes: "**/buildSrc/**"
     maxLineLength: 140
     excludePackageStatements: true
