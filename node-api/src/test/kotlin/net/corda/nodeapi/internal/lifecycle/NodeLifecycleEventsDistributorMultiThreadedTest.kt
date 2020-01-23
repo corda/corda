@@ -15,8 +15,6 @@ internal class NodeLifecycleEventsDistributorMultiThreadedTest {
         private val logger = contextLogger()
     }
 
-    private val instance = NodeLifecycleEventsDistributor()
-
     private val addedCounter = AtomicLong()
 
     private val eventsDeliveredCounter = AtomicLong()
@@ -24,29 +22,32 @@ internal class NodeLifecycleEventsDistributorMultiThreadedTest {
     @Test
     fun addAndDistributeConcurrently() {
 
-        val initialObserversCount = 10
-        repeat(initialObserversCount) { instance.add(MyObserver(it)) }
+        NodeLifecycleEventsDistributor().use { instance ->
 
-        val operationsCount = 100_000
-        val event = NodeLifecycleEvent.BeforeNodeStart(mock())
-        val additionFreq = 1000
-        val distributionFutures = (1..operationsCount).stream(true).mapToObj {
-            if(it % additionFreq == 0) {
-                logger.debug("Adding observer")
-                instance.add(MyObserver(it))
-                addedCounter.incrementAndGet()
-                logger.info("Progress so far: $it")
+            val initialObserversCount = 10
+            repeat(initialObserversCount) { instance.add(MyObserver(it)) }
+
+            val operationsCount = 100_000
+            val event = NodeLifecycleEvent.BeforeNodeStart(mock())
+            val additionFreq = 1000
+            val distributionFutures = (1..operationsCount).stream(true).mapToObj {
+                if (it % additionFreq == 0) {
+                    logger.debug("Adding observer")
+                    instance.add(MyObserver(it))
+                    addedCounter.incrementAndGet()
+                    logger.info("Progress so far: $it")
+                }
+                logger.debug("Distributing event")
+                instance.distributeEvent(event)
             }
-            logger.debug("Distributing event")
-            instance.distributeEvent(event)
-        }
-        distributionFutures.forEach { it.get() }
+            distributionFutures.forEach { it.get() }
 
-        with(eventsDeliveredCounter.get()) {
-            // Greater than original observers times events
-            assertTrue("$this") { this > initialObserversCount.toLong() * operationsCount }
-            // Less than ever added observers times events
-            assertTrue("$this") { this < (initialObserversCount.toLong() + addedCounter.get()) * operationsCount }
+            with(eventsDeliveredCounter.get()) {
+                // Greater than original observers times events
+                assertTrue("$this") { this > initialObserversCount.toLong() * operationsCount }
+                // Less than ever added observers times events
+                assertTrue("$this") { this < (initialObserversCount.toLong() + addedCounter.get()) * operationsCount }
+            }
         }
     }
 
