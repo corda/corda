@@ -23,6 +23,7 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
+import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.util.*
 
@@ -60,6 +61,10 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
 
+    inline fun Logger.trace(msg: () -> String) {
+        if (isTraceEnabled) trace(msg())
+    }
+
     @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
@@ -90,11 +95,11 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         val (fromDisk, toFetch) = loadWhatWeHave()
 
         return if (toFetch.isEmpty()) {
-            logger.debug { "FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}: No items to fetch." }
+            logger.trace { "FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}: No items to fetch." }
             val loadedFromDisk = loadExpected(fromDisk)
             Result(loadedFromDisk, emptyList())
         } else {
-            logger.debug { "FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}, To-fetch size = ${toFetch.size}" }
+            logger.trace { "FetchDataFlow.call(): loadWhatWeHave(): From disk size = ${fromDisk.size}, To-fetch size = ${toFetch.size}" }
             logger.debug { "Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}" }
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
@@ -112,7 +117,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
                     // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                     // The only thing checked is the object type. It is a protocol violation to send results out of order.
                     // TODO We need to page here after large messages will work.
-                    logger.debug { "[Single fetch]: otherSideSession.sendAndReceive($hash): Fetch type: ${dataType.name}" }
+                    logger.trace { "[Single fetch]: otherSideSession.sendAndReceive($hash): Fetch type: ${dataType.name}" }
                     // should only pass single item dataType below.
                     maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
                 }
@@ -122,17 +127,16 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
                     fetchSet.add(hash)
                 }
 
-                //val fetchItems = NonEmptySet<SecureHash>.copyOf(toFetch)
-                logger.debug { "[Multi fetch]: otherSideSession.sendAndReceive(list of ${fetchSet.size}): Fetch type: ${dataType.name})" }
+                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive(list of ${fetchSet.size}): Fetch type: ${dataType.name})" }
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.copyOf(fetchSet), dataType))
                         .unwrap { it }
 
-                logger.debug { "[Multi fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})" }
+                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})" }
             }
 
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
-            logger.debug { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}, maybeItems.size = ${maybeItems.size}" }
+            logger.trace { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}, maybeItems.size = ${maybeItems.size}" }
             maybeWriteToDisk(downloaded)
 
             // Re-load items already present before the download procedure. This ensures these objects are not unnecessarily checkpointed.
@@ -175,33 +179,33 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W>>,
                                       requests: List<SecureHash>): List<T> {
         return maybeItems.unwrap { response ->
-            logger.debug { "validateFetchResponse(): Response size = ${response.size}, Request size = ${requests.size}" }
+            logger.trace { "validateFetchResponse(): Response size = ${response.size}, Request size = ${requests.size}" }
             if (response.size != requests.size) {
-                logger.debug { "maybeItems.unwrap: RespType Response.size (${requests.size}) != requests.size (${response.size})" }
+                logger.trace { "maybeItems.unwrap: RespType Response.size (${requests.size}) != requests.size (${response.size})" }
                 throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
             }
 
-            if (logger.isDebugEnabled()) {
-                logger.debug { "Request size = ${requests.size}" }
+            if (logger.isTraceEnabled()) {
+                logger.trace { "Request size = ${requests.size}" }
                 var reqIndex = 0
                 for (req in requests) {
                     val reqInd = reqIndex++
-                    logger.debug { "Requested[${reqInd}] = '${req}'" }
+                    logger.trace { "Requested[${reqInd}] = '${req}'" }
                 }
             }
 
             val answers = response.map { convert(it) }
-            logger.debug { "Answers size = ${answers.size}" }
+            logger.trace { "Answers size = ${answers.size}" }
             var respIndex = 0
             for (item in answers) {
                 val respInd = respIndex++
                 if (item is SignedTransaction) {
-                    logger.debug { "ValidateItem[$respInd]: '${item}': Type = SignedTransaction: size = ${item.txBits.size}" }
+                    logger.trace { "ValidateItem[$respInd]: '${item}': Type = SignedTransaction: size = ${item.txBits.size}" }
                 } else if (item is MaybeSerializedSignedTransaction) {
                     val tranSize = if (item.isNull()) { "<Null>" } else if (item.serialized != null) { item.serialized.size } else { -1 }
                     val isSer = item.serialized != null
                     val isObj = item.nonSerialised != null
-                    logger.debug { "ValidateItem[$respInd]: '${item.id}': Type = MaybeSerializedSignedTransaction: size = ${tranSize}, serialized = ${isSer}, isObj = $isObj" }
+                    logger.trace { "ValidateItem[$respInd]: '${item.id}': Type = MaybeSerializedSignedTransaction: size = ${tranSize}, serialized = ${isSer}, isObj = $isObj" }
                 } else {
                     logger.warn("ValidateItem[$respInd]: Type = ${item.javaClass.name}: Unknown Object type")
                 }
