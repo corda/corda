@@ -45,10 +45,10 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes) // Keep things unique but ordered, for unit test stability.
         val topologicalSort = TopologicalSort()
 
-        println("O/S DbTransactionsResolver.downloadDependencies(MultiMode=${multiMode})") //++++
+        logger.debug { "O/S DbTransactionsResolver.downloadDependencies(MultiMode=${multiMode})" }
 
         while (nextRequests.isNotEmpty()) {
-            println("Main fetch loop: size_remaining=${nextRequests.size}")//++++
+            logger.debug { "Main fetch loop: size_remaining=${nextRequests.size}" }
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
             nextRequests.removeAll(topologicalSort.transactionIds)

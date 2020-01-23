@@ -11,9 +11,10 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
+import org.slf4j.Logger
 
 /**
- * In the words of Matt Nesbit on 26/09/19 working code is more important then pretty code. This class that contains code that may
+ * In the words of Matt working code is more important then pretty code. This class that contains code that may
  * be serialized. If it were always serialized then the local disk fetch would need to serialize then de-serialize
  * which wastes time. However over the wire we get MULTI fetch items serialized. This is because we need to get the exact
  * length of the objects to pack them into the 10MB max message size buffer. We do not want to serialize them multiple times
@@ -38,6 +39,10 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
     fun serializedByteCount(): Int {
         return if (serialized == null) { 0 } else { serialized.bytes.size }
     }
+}
+
+inline fun Logger.trace(msg: () -> String) {
+    if (isTraceEnabled) trace(msg())
 }
 
 /**
@@ -73,16 +78,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
     @Suspendable
     override fun call(): Void? {
-        //++++val plt = payload.javaClass.typeName //++++
-        val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize //++++
-        var maxTransactionSize = networkMaxMessageSize / 2 //++++ make val again
+        val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
+        val maxTransactionSize = networkMaxMessageSize / 2
 
-
-        maxTransactionSize = 100000 //++++ REMOVE REMOVE REMOVE
-
-
-        println("DataVendingFlow: Call: Network max message size = ${networkMaxMessageSize}, Max Transaction Size = $maxTransactionSize")
-
+        logger.trace { "DataVendingFlow: Call: Network max message size = ${networkMaxMessageSize}, Max Transaction Size = $maxTransactionSize" }
 
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment/network parameters data.
         var payload = payload
@@ -111,11 +110,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         var loopCount = 0
         while (true) {
             val loopCnt = loopCount++
-            println("DataVendingFlow: Main While [$loopCnt]...");
+            logger.trace { "DataVendingFlow: Main While [$loopCnt]..." }
             val dataRequest = sendPayloadAndReceiveDataRequest(otherSideSession, payload).unwrap { request ->
-                //++++val rqt = request.javaClass.name//++++
-                //++++val nmx = request.namexxxx()
-                println("sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}")//++++
+                logger.trace { "sendPayloadAndReceiveDataRequest(): ${request.javaClass.name}" }
                 when (request) {
                     is FetchDataFlow.Request.Data -> {
                         // Security TODO: Check for abnormally large or malformed data requests
@@ -123,13 +120,12 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                         request
                     }
                     FetchDataFlow.Request.End -> {
-                        println("DataVendingFlow: END"); return null } //++++
+                        logger.trace {"DataVendingFlow: END" }
+                        return null }
                 }
             }
 
-            //++++val st = dataRequest.dataType.name
-            println("Sending data (Type = ${dataRequest.dataType.name})")//++++
-            var failCntIndex = 0 //++++ remove for test reject third item
+            logger.trace { "Sending data (Type = ${dataRequest.dataType.name})" }
             var maxByteCount = maxTransactionSize // Sample once before the loop
             var totalByteCount = 0
             var firstItem = true
@@ -137,8 +133,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
             var numSent = 0
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    //++++val sz1=dataRequest.hashes.size //++++
-                    println("Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size})")//++++
+                    logger.trace { "Sending: TRANSACTION (dataRequest.hashes.size=${dataRequest.hashes.size})" }
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
@@ -150,76 +145,62 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     numSent++
                     tx
                 }
-                FetchDataFlow.DataType.MULTI_TRANSACTION -> dataRequest.hashes.map { txId -> //++++
-                   //++++ val sz1=dataRequest.hashes.size //++++
-                    val txs = txId.toString() //++++
-                    //++++  val sendItem = failCntInd != 2 && failCntInd != 3 //++++ test fail
-
-                    println("[$failCntIndex]: Sending: MULTI_TRANSACTION Exceeded = ${multiFetchCountExceeded}, ID = '$txId' (num=${dataRequest.hashes.size})")//++++
+                FetchDataFlow.DataType.MULTI_TRANSACTION -> dataRequest.hashes.map { txId ->
                     if (!authorisedTransactions.isAuthorised(txId)) {
-                        //++++if (sendItem && !authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
                     // Maybe we should not just throw here as it's not recoverable on the client side. Might be better to send a reason code or
                     // remove the restriction on sending once.
-                    println("Transaction authorised OK: '$txs'")//++++
-                    // ++++   var sendItem = false
+                    logger.trace { "Transaction authorised OK: '${txId}'" }
                     var serialized: SerializedBytes<SignedTransaction>? = null
                     if (!multiFetchCountExceeded) {
                         // Only fetch and serialize if we have not already exceeded the maximum byte count. Once we have, no more fetching
                         // is required, just reject all additional items.
                         val tx = serviceHub.validatedTransactions.getTransaction(txId)
-                                ?: throw FetchDataFlow.HashNotFound(txId) //++++ how do we handle not found on one item?
-                        println("Transaction get OK: '$txs'")//++++
-                        serialized = tx.serialize() //++++zzzz might break the code
+                                ?: throw FetchDataFlow.HashNotFound(txId)
+                        logger.trace { "Transaction get OK: '${txId}'" }
+                        serialized = tx.serialize()
 
                         val itemByteCount = serialized.size
-                        println("Multi-Send: first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = '$itemByteCount' maximum = '$maxByteCount'")//++++
+                        logger.trace { "Multi-Send: first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = ${itemByteCount}, maximum = ${maxByteCount}" }
                         if (firstItem || (totalByteCount + itemByteCount) < maxByteCount) {
                             totalByteCount += itemByteCount
                             numSent++
                             // Always include at least one item else if the max is set too low nothing will ever get returned.
                             // Splitting items will be a separate Jira if need be
-                            //++++ sendItem = true
                             authorisedTransactions.removeAuthorised(tx.id)
                             authorisedTransactions.addAuthorised(getInputTransactions(tx))
-                            //++++SerializedBytes<SignedTransaction>
-                            //++++println("adding to return set ++++ ${tx.javaClass.name}")//++++
-                            println("Adding item to return set: '${txId}'")//++++
+                            logger.trace { "Adding item to return set: '${txId}'" }
                         } else {
-                            println("Fetch block size EXCEEDED.") //++++
+                            logger.trace { "Fetch block size EXCEEDED." }
                             multiFetchCountExceeded = true
                         }
                     }
 
-                    //++++if (!multiFetchCountExceeded) {
-                    //++++    println("NOT adding to return set ++++ $txId")//++++
-                    //++++}
-                    //val serTran = SerializedSignedTransaction(txId, serialized)
-//++++ put back                    val maybeser = MaybeSerializedSignedTransaction(txId, serialized, null)
-                    if (multiFetchCountExceeded) { println("Excluding '${txId}' from return set due to exceeded count.") }
+                    if (multiFetchCountExceeded) {
+                        logger.trace { "Excluding '${txId}' from return set due to exceeded count." }
+                    }
 
                     // Send null if limit is exceeded
                     val maybeserialized = MaybeSerializedSignedTransaction(txId, if (multiFetchCountExceeded) { null } else { serialized }, null)
                     firstItem = false
-                    failCntIndex++//REMOVE++++
                     maybeserialized
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    println("Sending: Attachments")//++++
+                    logger.trace { "Sending: Attachments" }
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    println("Sending: Parameters")//++++
+                    logger.trace { "Sending: Parameters" }
                     (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)
                             ?: throw FetchDataFlow.MissingNetworkParameters(it)
                 }
                 FetchDataFlow.DataType.UNKNOWN -> dataRequest.hashes.map {
-                    println("Message from from a future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType")//++++warn
+                    logger.warn("Message from from a future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType")
                 }
             }
-            println("Block total size = ${totalByteCount}: Num Items = (${numSent} of ${dataRequest.hashes.size} total)")//++++
+            logger.trace { "Block total size = ${totalByteCount}: Num Items = (${numSent} of ${dataRequest.hashes.size} total)" }
         }
     }
 

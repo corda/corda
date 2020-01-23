@@ -9,6 +9,7 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import org.slf4j.Logger
 
 /**
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
@@ -36,6 +37,10 @@ class ResolveTransactionsFlow private constructor(
 
     private var fetchNetParamsFromCounterpart = false
 
+    inline fun Logger.trace(msg: () -> String) {
+        if (isTraceEnabled) trace(msg())
+    }
+
     @Suspendable
     override fun call() {
         // TODO This error should actually cause the flow to be sent to the flow hospital to be retried
@@ -47,7 +52,7 @@ class ResolveTransactionsFlow private constructor(
         // request to node V3 that doesn't know about this protocol.
         fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= 4
         val multiMode = counterpartyPlatformVersion >= 6
-        println("ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Multi mode = $multiMode")
+        logger.trace { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Multi mode = $multiMode" }
 
         if (initialTx != null) {
             fetchMissingAttachments(initialTx)
@@ -57,7 +62,7 @@ class ResolveTransactionsFlow private constructor(
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
         resolver.downloadDependencies(multiMode)
 
-        println("ResolveTransactionsFlow: Sending END.") //++++
+        logger.trace { "ResolveTransactionsFlow: Sending END." }
         otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
 
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
