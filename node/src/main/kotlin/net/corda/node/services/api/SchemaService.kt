@@ -10,14 +10,9 @@ import net.corda.core.schemas.PersistentState
  */
 interface SchemaService {
     /**
-     * Represents any options configured on the node for a schema.
+     * All available schemas in this node
      */
-    data class SchemaOptions(val databaseSchema: String? = null, val tablePrefix: String? = null)
-
-    /**
-     * Options configured for this node's schemas.  A missing entry for a schema implies all properties are null.
-     */
-    val schemaOptions: Map<MappedSchema, SchemaOptions>
+    val schemas: Set<MappedSchema>
 
     /**
      * Given a state, select schemas to map it to that are supported by [generateMappedObject] and that are configured

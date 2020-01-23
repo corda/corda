@@ -10,7 +10,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -52,20 +51,21 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     }
 
     // Required schemas are those used by internal Corda services
-    private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
-            mapOf(Pair(CommonSchemaV1, SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaOptions()),
-                  Pair(NodeCoreV1, SchemaOptions()))
+    private val requiredSchemas: Set<MappedSchema> =
+            setOf(CommonSchemaV1,
+                    VaultSchemaV1,
+                    NodeInfoSchemaV1,
+                    NodeCoreV1)
 
-    fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
+    fun internalSchemas() = requiredSchemas + extraSchemas.filter { schema ->
+        // when mapped schemas from the finance module are present, they are considered as internal ones
         schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
                 schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
                 schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1" ||
                 schema::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
     }
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
+    override val schemas: Set<MappedSchema> = requiredSchemas + extraSchemas
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> {
@@ -95,7 +95,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
 
     /** Returns list of [MappedSchemaValidator.SchemaCrossReferenceReport] violations. */
     fun mappedSchemasWarnings(): List<MappedSchemaValidator.SchemaCrossReferenceReport> =
-            schemaOptions.keys.map { schema -> crossReferencesToOtherMappedSchema(schema) }.flatMap { it.toList() }
+            schemas.map { schema -> crossReferencesToOtherMappedSchema(schema) }.flatMap { it.toList() }
 
 }
 

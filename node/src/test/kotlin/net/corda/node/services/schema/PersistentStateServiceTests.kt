@@ -50,7 +50,7 @@ class PersistentStateServiceTests {
     fun `test child objects are persisted`() {
         val testSchema = TestSchema
         val schemaService = object : SchemaService {
-            override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(testSchema to SchemaService.SchemaOptions())
+            override val schemas: Set<MappedSchema> = setOf(testSchema)
 
             override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(testSchema)
 
