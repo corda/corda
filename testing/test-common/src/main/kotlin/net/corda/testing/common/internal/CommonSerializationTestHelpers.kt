@@ -1,11 +1,19 @@
 package net.corda.testing.common.internal
 
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal._contextSerializationEnv
-import net.corda.core.serialization.internal._inheritableContextSerializationEnv
+import net.corda.core.serialization.internal._driverSerializationEnv
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+val log: Logger = LoggerFactory.getLogger("TestSerializationRuleHelper")
+
 
 fun <T> SerializationEnvironment.asContextEnv(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
-    val property = if (inheritable) _inheritableContextSerializationEnv else _contextSerializationEnv
+    val property = _driverSerializationEnv
+    if (property.get() != null) {
+        log.warn("Environment was not cleared up before previous test")
+        property.set(null)
+    }
     property.set(this)
     try {
         return callable(this)
