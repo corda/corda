@@ -23,11 +23,14 @@ import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.math.min
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    private const val FLOW_EXTERNAL_OPERATION_THREAD_POOL_SIZE_MAX = 10
 
     private const val CORDA_PROPERTY_PREFIX = "corda."
     private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
@@ -47,7 +50,9 @@ object ConfigHelper {
 
         // Detect the number of cores
         val coreCount = Runtime.getRuntime().availableProcessors()
-        val multiThreadingConfig = configOf("flowExternalOperationThreadPoolSize" to coreCount.toString())
+        val multiThreadingConfig = configOf(
+                "flowExternalOperationThreadPoolSize" to min(coreCount, FLOW_EXTERNAL_OPERATION_THREAD_POOL_SIZE_MAX).toString()
+        )
 
         val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
         val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
