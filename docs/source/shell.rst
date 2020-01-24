@@ -110,8 +110,7 @@ Run the following command from the terminal:
 .. code:: bash
 
     corda-shell [-hvV] [--logging-level=<loggingLevel>] [--password=<password>]
-                [--sshd-hostkey-directory=<sshdHostKeyDirectory>]
-                [--sshd-port=<sshdPort>] [--truststore-file=<trustStoreFile>]
+                [--truststore-file=<trustStoreFile>]
                 [--truststore-password=<trustStorePassword>]
                 [--truststore-type=<trustStoreType>] [--user=<user>] [-a=<host>]
                 [-c=<cordappDirectory>] [-f=<configFile>] [-o=<commandsDirectory>]
@@ -126,8 +125,6 @@ Where:
 * ``--port``, ``-p``: The RPC port of the Corda node.
 * ``--user=<user>``: The RPC user name.
 * ``--password=<password>`` The RPC user password. If not provided it will be prompted for on startup.
-* ``--sshd-port=<sshdPort>`` Enables SSH server for shell.
-* ``--sshd-hostkey-directory=<sshHostKeyDirectory``: The directory containing the hostkey.pem file for the SSH server.
 * ``--truststore-password=<trustStorePassword>``: The password to unlock the TrustStore file.
 * ``--truststore-file=<trustStoreFile>``: The path to the TrustStore file.
 * ``--truststore-type=<trustStoreType>``: The type of the TrustStore (e.g. JKS).
@@ -157,10 +154,6 @@ The format of ``config-file``:
         cordapps {
             path : /path/to/cordapps/dir
         }
-        sshd {
-            enabled : "false"
-            port : 2223
-        }
     }
     ssl {
         keystore {
@@ -177,13 +170,7 @@ The format of ``config-file``:
     user : demo
     password : demo
 
-
-Standalone Shell via SSH
-------------------------
-The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
-To run SSH server use ``--sshd-port`` option when starting standalone shell or ``extensions.sshd`` entry in the configuration file.
-For connection to SSH refer to `Connecting to the shell`_.
-Certain operations (like starting Flows) will require Shell's ``--cordpass-directory`` to be configured correctly (see `Starting the standalone shell`_).
+.. note:: SSH server is not supported inside the standalone shell.
 
 Shell Safe Mode
 ---------------
