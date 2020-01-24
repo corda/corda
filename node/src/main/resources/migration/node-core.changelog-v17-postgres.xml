@@ -4,11 +4,11 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="drop_existing_checkpoints_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="drop_existing_checkpoints_table" dbms="postgresql">
         <dropTable tableName="node_checkpoints"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_checkpoints_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="add_new_checkpoints_table" dbms="postgresql">
         <createTable tableName="node_checkpoints">
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
@@ -40,15 +40,15 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_checkpoint_blob_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="add_new_checkpoint_blobs_table" dbms="postgresql">
         <createTable tableName="node_checkpoint_blobs">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="checkpoint_value" type="blob">
+            <column name="checkpoint_value" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_state" type="blob">
+            <column name="flow_state" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
@@ -61,12 +61,12 @@
     </changeSet>
 
 
-    <changeSet author="R3.Corda" id="add_new_flow_result_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_result_table" dbms="postgresql">
         <createTable tableName="node_flow_results">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="result_value" type="blob">
+            <column name="result_value" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
@@ -75,7 +75,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_flow_exceptions_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_exceptions_table" dbms="postgresql">
         <createTable tableName="node_flow_exceptions">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -83,7 +83,7 @@
             <column name="type" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
-            <column name="exception_value" type="blob">
+            <column name="exception_value" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
@@ -92,7 +92,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_flow_metadata_table" dbms="!postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_metadata_table" dbms="postgresql">
         <createTable tableName="node_flow_metadata">
             <column name="invocation_id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -109,7 +109,7 @@
             <column name="started_type" type="NVARCHAR(32)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_parameters" type="blob">
+            <column name="flow_parameters" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
             <column name="cordapp_name" type="NVARCHAR(64)">
