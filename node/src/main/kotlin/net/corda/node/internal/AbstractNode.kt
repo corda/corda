@@ -954,7 +954,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         runOnStop.clear()
         shutdownExecutor.shutdown()
         _started = null
-        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStop(nodeServicesContext))
+        nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStop(nodeServicesContext)).then {
+            nodeLifecycleEventsDistributor.close()
+        }
     }
 
     protected abstract fun makeMessagingService(): MessagingService
@@ -1246,13 +1248,13 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
             databaseConfig,
-            schemaService.schemaOptions.keys,
+            schemaService.schemas,
             jdbcUrl,
             cacheFactory,
             attributeConverters, customClassLoader,
             errorHandler = { t ->
                 FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
-    })
+            })
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {

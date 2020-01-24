@@ -94,7 +94,7 @@ class DbMapDeadlockTest {
         val dbConfig = DatabaseConfig(initialiseSchema = true, transactionIsolationLevel = TransactionIsolationLevel.READ_COMMITTED)
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
-            startHikariPool(hikariProperties, dbConfig, schemaService.schemaOptions.keys, ourName = TestIdentity(ALICE_NAME, 70).name)
+            startHikariPool(hikariProperties, dbConfig, schemaService.schemas, ourName = TestIdentity(ALICE_NAME, 70).name)
         }.use { persistence ->
 
             // First clean up any remains from previous test runs

@@ -7,6 +7,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.CordaServiceCriticalFailureException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
+import java.io.Closeable
 import java.util.Collections.singleton
 import java.util.LinkedList
 import java.util.concurrent.Executors
@@ -23,7 +24,7 @@ import kotlin.system.exitProcess
  *
  * The class is safe for concurrent use from multiple threads.
  */
-class NodeLifecycleEventsDistributor {
+class NodeLifecycleEventsDistributor : Closeable {
 
     companion object {
         private val log = contextLogger()
@@ -43,7 +44,7 @@ class NodeLifecycleEventsDistributor {
     private val readWriteLock: ReadWriteLock = ReentrantReadWriteLock()
 
     private val executor = Executors.newSingleThreadExecutor(
-            ThreadFactoryBuilder().setNameFormat("NodeLifecycleEventsDistributor-%d").build())
+            ThreadFactoryBuilder().setNameFormat("NodeLifecycleEventsDistributor-%d").setDaemon(true).build())
 
     /**
      * Adds observer to the distribution list.
@@ -88,19 +89,24 @@ class NodeLifecycleEventsDistributor {
 
         val result = openFuture<Any?>()
 
-        executor.execute {
-            val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
-            orderedSnapshot.forEach {
-                log.debug("Distributing event $event to: $it")
-                val updateResult = it.update(event)
-                if (updateResult.isSuccess) {
-                    log.debug("Event $event distribution outcome: $updateResult")
-                } else {
-                    log.error("Failed to distribute event $event, failure outcome: $updateResult")
-                    handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
-                }
-            }
+        if(executor.isShutdown || executor.isTerminated) {
+            log.warn("Not distributing $event as executor been already shutdown. Double close() case?")
             result.set(null)
+        } else {
+            executor.execute {
+                val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
+                orderedSnapshot.forEach {
+                    log.debug("Distributing event $event to: $it")
+                    val updateResult = it.update(event)
+                    if (updateResult.isSuccess) {
+                        log.debug("Event $event distribution outcome: $updateResult")
+                    } else {
+                        log.error("Failed to distribute event $event, failure outcome: $updateResult")
+                        handlePossibleFatalTermination(event, updateResult as Try.Failure<String>)
+                    }
+                }
+                result.set(null)
+            }
         }
         return result.map { }
     }
@@ -112,6 +118,10 @@ class NodeLifecycleEventsDistributor {
         } else {
             log.warn("During processing of $event non-critical failure been reported: $updateFailed.")
         }
+    }
+
+    override fun close() {
+        executor.shutdown()
     }
 
     /**

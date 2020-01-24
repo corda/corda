@@ -34,7 +34,7 @@ class NodeSchemaServiceTest {
         val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
-        assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
+        assertTrue(schemaService.schemas.contains(DummyLinearStateSchemaV1))
         mockNet.stopNodes()
     }
 
@@ -45,7 +45,7 @@ class NodeSchemaServiceTest {
         val schemaService = mockNode.services.schemaService
 
         // check against NodeCore schemas
-        assertTrue(schemaService.schemaOptions.containsKey(NodeCoreV1))
+        assertTrue(schemaService.schemas.contains(NodeCoreV1))
         mockNet.stopNodes()
     }
 
@@ -56,7 +56,7 @@ class NodeSchemaServiceTest {
         val schemaService = mockNotaryNode.services.schemaService
 
         // check against NodeCore Schema
-        assertTrue(schemaService.schemaOptions.containsKey(NodeCoreV1))
+        assertTrue(schemaService.schemas.contains(NodeCoreV1))
         mockNet.stopNodes()
     }
 
@@ -112,7 +112,7 @@ class NodeSchemaServiceTest {
         @Suspendable
         override fun call(): List<String> {
             // returning MappedSchema's as String'ified family names to avoid whitelist serialization errors
-            return (this.serviceHub as ServiceHubInternal).schemaService.schemaOptions.keys.map { it.name }
+            return (this.serviceHub as ServiceHubInternal).schemaService.schemas.map { it.name }
         }
     }
 

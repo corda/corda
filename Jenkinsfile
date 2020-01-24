@@ -19,7 +19,7 @@ pipeline {
         stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew " +
+                    sh "./gradlew --no-daemon " +
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
@@ -34,7 +34,7 @@ pipeline {
             parallel {
                 stage('Integration Tests') {
                     steps {
-                        sh "./gradlew " +
+                        sh "./gradlew --no-daemon " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
@@ -47,7 +47,7 @@ pipeline {
                 }
                 stage('Unit Tests') {
                     steps {
-                        sh "./gradlew " +
+                        sh "./gradlew --no-daemon " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
