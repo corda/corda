@@ -49,10 +49,10 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -61,11 +61,9 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
-import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
 import net.corda.djvm.source.UserSource
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -85,7 +83,6 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.NodePropertiesStore
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
@@ -155,8 +152,11 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
 import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
@@ -178,9 +178,12 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Properties
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
@@ -737,11 +740,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun createExternalOperationExecutor(numberOfThreads: Int): ExecutorService {
         when (numberOfThreads) {
             1 -> log.info("Flow external operation executor has $numberOfThreads thread")
-            else -> log.info("Flow external operation executor has $numberOfThreads threads")
+            else -> log.info("Flow external operation executor has a max of $numberOfThreads threads")
         }
-        return Executors.newFixedThreadPool(
+        // Start with 1 thread and scale up to the configured thread pool size if needed
+        // Parameters of [ThreadPoolExecutor] based on [Executors.newFixedThreadPool]
+        return ThreadPoolExecutor(
+            1,
             numberOfThreads,
-            ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").build()
+            0L,
+            TimeUnit.MILLISECONDS,
+            LinkedBlockingQueue<Runnable>(),
+            ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").setDaemon(true).build()
         )
     }
 
