@@ -8,7 +8,8 @@ API: Service Classes
 ====================
 
 Service classes are long-lived instances that can trigger or be triggered by flows from within a node. A Service class is limited to a
-single instance per node. During startup, the node handles the creation of the service.
+single instance per node. During startup, the node handles the creation of the service. If there is problem when instantiating service
+the node will report in the log what the problem was and terminate.
 
 Services allow related, reusable, functions to be separated into their own class where their functionality is
 grouped together. These functions can then be called from other services or flows.

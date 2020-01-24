@@ -757,7 +757,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // This sets the Cordapp classloader on the contextClassLoader of the current thread, prior to initializing services
         // Needed because of bug CORDA-2653 - some Corda services can utilise third-party libraries that require access to
         // the Thread context class loader
-
         val oldContextClassLoader: ClassLoader? = Thread.currentThread().contextClassLoader
         try {
             Thread.currentThread().contextClassLoader = cordappLoader.appClassLoader
@@ -768,14 +767,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 } catch (e: NoSuchMethodException) {
                     log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                             ServiceHub::class.java.name)
+                    throw e
                 } catch (e: ServiceInstantiationException) {
                     if (e.cause != null) {
                         log.error("Corda service ${it.name} failed to instantiate. Reason was: ${e.cause?.rootMessage}", e.cause)
                     } else {
                         log.error("Corda service ${it.name} failed to instantiate", e)
                     }
+                    throw e
                 } catch (e: Exception) {
                     log.error("Unable to install Corda service ${it.name}", e)
+                    throw e
                 }
             }
         } finally {

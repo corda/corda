@@ -80,7 +80,7 @@ class CordaServiceIssueOnceAtStartupTests {
             // Without the "secret" property service upon instantiation will be subscribed to lifecycle events which would be unwanted.
             // Also do not do this for Notary
             val myName = services.myInfo.legalIdentities.single().name
-            val notaryName = services.networkMapCache.notaryIdentities.single().name
+            val notaryName = services.networkMapCache.notaryIdentities.firstOrNull()?.name
             if(java.lang.Boolean.getBoolean(armedPropName) && myName != notaryName) {
                 services.register(observer = MyServiceLifecycleObserver())
             } else {
