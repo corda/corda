@@ -54,6 +54,11 @@ class HibernateConfiguration(
                     applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
                 }
 
+                // When connecting to SqlServer or Oracle, do we need to tell hibernate to use
+                // nationalised (i.e. Unicode) strings by default
+                val forceUnicodeForSqlServer = listOf(":oracle:", ":sqlserver:").any { jdbcUrl.contains(it, ignoreCase = true) }
+                enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
+
                 return build()
             }
         }
@@ -74,23 +79,38 @@ class HibernateConfiguration(
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val hbm2dll: String =
-        if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
-            "update"
-        } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
-                || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
-            "validate"
-        } else {
-            "none"
-        }
-
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.format_sql", "true")
-                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
-                .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("javax.persistence.validation.mode", "none")
+
+        if (isH2Database(jdbcUrl)) {
+            val hbm2dll: String =
+                    if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                        "update"
+                    } else if ((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                            || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                        "validate"
+                    } else {
+                        "none"
+                    }
+            config.setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+        } else if (!isNonStopSqlMxDatabase(jdbcUrl)) //Enterprise only NonStop database - NonStop Hibernate dialect doesn't support validation
+            config.setProperty("hibernate.hbm2ddl.auto", "validate")
+
+        databaseConfig.schema?.apply {
+            // Enterprise only - preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
+            val schemaName = if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && !databaseConfig.schema.startsWith("\"")) {
+                "\"" + databaseConfig.schema + "\""
+            } else {
+                databaseConfig.schema
+            }
+            config.setProperty("hibernate.default_schema", schemaName)
+        }
+        databaseConfig.hibernateDialect?.apply {
+            config.setProperty("hibernate.dialect", this)
+        }
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
@@ -219,4 +239,13 @@ class HibernateConfiguration(
             return "corda-blob"
         }
     }
+
+    //Enterprise only check
+    private fun isNonStopSqlMxDatabase(jdbcUrl: String) = jdbcUrl.contains(":t4sqlmx:") || jdbcUrl.contains(":sqlmx:")
+
+    // Enterprise only: allow batching the vault update query for consumed states to avoid overloading SQLServer
+    val vaultUpdateBatchSize: Int? = databaseConfig.vaultUpdateBatchSize ?: if (jdbcUrl.contains(":sqlserver:")) 40 else null
 }
+
+/** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
+fun oracleJdbcDriverSerialFilter(clazz: Class<*>): Boolean = clazz.name.startsWith("oracle.sql.converter.")

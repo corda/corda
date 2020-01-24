@@ -57,21 +57,20 @@ abstract class CordaMigration : CustomTaskChange {
         val metricRegistry = MetricRegistry()
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
-        _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
-        cordaDB.start(dataSource)
+        _cordaDB = createDatabase(cacheFactory, identityService, schema)
+        cordaDB.start(dataSource, url)
         identityService.database = cordaDB
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
         cordaDB.transaction {
             identityService.ourNames = setOf(ourName)
-             val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
-             val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
+            val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
+            val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
             _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
         }
     }
 
-    private fun createDatabase(jdbcUrl: String,
-                               cacheFactory: MigrationNamedCacheFactory,
+    private fun createDatabase(cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>): CordaPersistence {
         val configDefaults = DatabaseConfig()
@@ -83,7 +82,7 @@ abstract class CordaMigration : CustomTaskChange {
         )
         // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
         // migrations may fail.
-        return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+        return CordaPersistence(configDefaults, schema, cacheFactory, attributeConverters, closeConnection = false)
     }
 
     override fun validate(database: Database?): ValidationErrors? {

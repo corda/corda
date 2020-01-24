@@ -159,9 +159,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
-import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
@@ -240,7 +240,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            configuration.dataSourceProperties,
             cacheFactory,
             cordappLoader.appClassLoader)
 
@@ -1245,7 +1244,6 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
-                           hikariProperties: Properties,
                            cacheFactory: NamedCacheFactory,
                            customClassLoader: ClassLoader?): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
@@ -1256,11 +1254,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
 
-    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
             databaseConfig,
             schemaService.schemas,
-            jdbcUrl,
             cacheFactory,
             attributeConverters, customClassLoader,
             errorHandler = { t ->
@@ -1271,14 +1267,19 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
-        start(dataSource)
+        val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName,
+                !isH2Database(jdbcUrl))
+        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
+        start(dataSource, jdbcUrl)
     } catch (ex: Exception) {
         when {
-            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
-            ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
+                    "Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
+                    "Could not find the database driver class. Please add it to the 'drivers' folder. " +
+                            "See: https://docs.corda.net/corda-configuration-file.html", ex.cause)
+            ex is DatabaseMigrationException -> throw ex
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }
