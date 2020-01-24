@@ -25,7 +25,11 @@ pipeline {
                         }
                     }
                     steps {
-                        sh "./gradlew --no-daemon test"
+                        try{
+                            sh "./gradlew --no-daemon test"
+                        }catch(error){
+                            junit '**/build/test-results/**/*.xml'
+                        }
                     }
                 }
 
@@ -36,7 +40,11 @@ pipeline {
                         }
                     }
                     steps {
-                        sh "./gradlew --no-daemon integrationTest"
+                        try{
+                            sh "./gradlew --no-daemon integrationTest"
+                        }catch(error){
+                            junit '**/build/test-results/**/*.xml'
+                        }
                     }
                 }
 
@@ -45,9 +53,6 @@ pipeline {
     }
 
     post {
-        always {
-            junit '**/build/test-results/**/*.xml'
-        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
