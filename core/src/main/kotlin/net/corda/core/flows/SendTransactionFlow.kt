@@ -11,7 +11,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
-import org.slf4j.Logger
+import net.corda.core.utilities.trace
 
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
@@ -39,10 +39,6 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
     fun serializedByteCount(): Int {
         return if (serialized == null) { 0 } else { serialized.bytes.size }
     }
-}
-
-inline fun Logger.trace(msg: () -> String) {
-    if (isTraceEnabled) trace(msg())
 }
 
 /**

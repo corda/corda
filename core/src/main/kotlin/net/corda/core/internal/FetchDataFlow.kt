@@ -23,7 +23,7 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
-import org.slf4j.Logger
+import net.corda.core.utilities.trace
 import java.nio.file.FileAlreadyExistsException
 import java.util.*
 
@@ -60,10 +60,6 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     class MissingNetworkParameters(val requested: SecureHash) : FlowException("Failed to fetch network parameters with hash: $requested")
 
     class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
-
-    inline fun Logger.trace(msg: () -> String) {
-        if (isTraceEnabled) trace(msg())
-    }
 
     @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
@@ -110,7 +106,6 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             // Above that, we start losing authentication data on the message fragments and take exceptions in the
             // network layer.
             val maybeItems = ArrayList<W>()
-
             if (toFetch.size == 1) {
                 for (hash in toFetch) {
                     // Technically not necessary to loop when the outer test is for one item only. Safer than toFetch[0]

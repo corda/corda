@@ -3,7 +3,6 @@ package net.corda.node.services
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FetchMultiTransactionsFlow
 import net.corda.core.internal.FetchTransactionsFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.TransactionsResolver
@@ -11,10 +10,9 @@ import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import sun.management.snmp.jvminstr.JvmThreadInstanceEntryImpl.ThreadStateMap.Byte0.suspended
 import java.util.*
 
 class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : TransactionsResolver {
@@ -44,8 +42,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
         val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes) // Keep things unique but ordered, for unit test stability.
         val topologicalSort = TopologicalSort()
-
-        logger.debug { "O/S DbTransactionsResolver.downloadDependencies(MultiMode=${multiMode})" }
+        logger.debug { "DbTransactionsResolver.downloadDependencies(MultiMode=${multiMode})" }
 
         while (nextRequests.isNotEmpty()) {
             logger.debug { "Main fetch loop: size_remaining=${nextRequests.size}" }
@@ -99,7 +96,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     override fun recordDependencies(usedStatesToRecord: StatesToRecord) {
         val sortedDependencies = checkNotNull(this.sortedDependencies)
-        logger.debug { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
+        logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.
