@@ -1,6 +1,8 @@
 package net.corda.serialization.internal.model
 
 import java.lang.reflect.*
+import java.util.function.Function
+import java.util.function.Predicate
 
 /**
  * Provides a means for looking up [LocalTypeInformation] by [Type] and [TypeIdentifier], falling back to building it
@@ -24,6 +26,12 @@ interface LocalTypeLookup {
      * because it is not whitelisted.
      */
     fun isExcluded(type: Type): Boolean
+
+    /**
+     * These classes are used by [LocalTypeInformationBuilder] to
+     * build the correct [LocalTypeInformation] subclasses.
+     */
+    val baseTypes: BaseLocalTypes
 }
 
 /**
@@ -72,6 +80,8 @@ class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeMo
 
         override fun isExcluded(type: Type): Boolean = typeModelConfiguration.isExcluded(type)
 
+        override val baseTypes = typeModelConfiguration.baseTypes
+
         /**
          * Merge the local cache back into the global cache, once we've finished traversal (and patched all cycles).
          */
@@ -111,4 +121,20 @@ interface LocalTypeModelConfiguration {
      * [LocalTypeInformation], usually because they are not included in a whitelist.
      */
     fun isExcluded(type: Type): Boolean
+
+    /**
+     * These classes are used by [LocalTypeInformationBuilder] to
+     * build the correct [LocalTypeInformation] subclasses.
+     */
+    val baseTypes: BaseLocalTypes
 }
+
+class BaseLocalTypes(
+    val collectionClass: Class<*>,
+    val enumSetClass: Class<*>,
+    val exceptionClass: Class<*>,
+    val mapClass: Class<*>,
+    val stringClass: Class<*>,
+    val isEnum: Predicate<Class<*>>,
+    val enumConstants: Function<Class<*>, Array<out Any>>
+)

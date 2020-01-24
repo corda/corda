@@ -7,6 +7,10 @@ import net.corda.serialization.djvm.SandboxType.KOTLIN
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.LocalTypeInformation.ACollection
+import net.corda.serialization.internal.model.LocalTypeInformation.AnEnum
+import net.corda.serialization.internal.model.LocalTypeInformation.AMap
+import net.corda.serialization.internal.model.LocalTypeInformation.Abstract
 import net.corda.serialization.internal.model.LocalTypeInformation.Atomic
 import net.corda.serialization.internal.model.LocalTypeInformation.Opaque
 import org.apache.qpid.proton.amqp.Decimal128
@@ -19,11 +23,10 @@ import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.amqp.UnsignedShort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import java.util.Date
+import java.util.EnumSet
 import java.util.UUID
 
-@ExtendWith(LocalSerialization::class)
 class LocalTypeModelTest : TestBase(KOTLIN) {
     private val serializerFactory: SerializerFactory get() {
         val factory = SerializationFactory.defaultFactory as SerializationFactoryImpl
@@ -47,7 +50,7 @@ class LocalTypeModelTest : TestBase(KOTLIN) {
     @Test
     fun testString() = sandbox {
         _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
-        assertLocalType<Opaque>(sandbox<String>(classLoader))
+        assertLocalType<Atomic>(sandbox<String>(classLoader))
     }
 
     @Test
@@ -157,5 +160,32 @@ class LocalTypeModelTest : TestBase(KOTLIN) {
     fun testDate() = sandbox {
         _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
         assertLocalType<Opaque>(sandbox<Date>(classLoader))
+    }
+
+    @Test
+    fun testCollection() = sandbox {
+        _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
+        assertLocalType<ACollection>(sandbox<Collection<*>>(classLoader))
+    }
+
+    @Test
+    fun testEnum() = sandbox {
+        _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
+        assertLocalType<AnEnum>(sandbox<ExampleEnum>(classLoader))
+    }
+
+    @Test
+    fun testEnumSet() = sandbox {
+        _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
+        assertLocalType<Abstract>(sandbox<EnumSet<*>>(classLoader))
+
+        val exampleEnumSet = EnumSet.noneOf(ExampleEnum::class.java)
+        assertLocalType<Opaque>(classLoader.toSandboxClass(exampleEnumSet::class.java))
+    }
+
+    @Test
+    fun testMap() = sandbox {
+        _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
+        assertLocalType<AMap>(sandbox<Map<*,*>>(classLoader))
     }
 }
