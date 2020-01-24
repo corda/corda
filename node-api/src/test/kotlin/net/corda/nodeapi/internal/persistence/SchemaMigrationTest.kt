@@ -35,7 +35,7 @@ class SchemaMigrationTest {
                                   cordappLoader: CordappLoader? = null): CordaPersistence =
             createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(),
                     cordappLoader?.appClassLoader).apply {
-                startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys,
+                startHikariPool(hikariProperties, databaseConfig, schemaService.schemas,
                         ourName = TestIdentity(ALICE_NAME, 70).name, cordappLoader = cordappLoader)
             }
 
@@ -65,7 +65,7 @@ class SchemaMigrationTest {
 
         //run the migration on the database
         val migration = SchemaMigration(
-                schemaService.schemaOptions.keys,
+                schemaService.schemas,
                 HikariDataSource(HikariConfig(dataSourceProps)),
                 DatabaseConfig(),
                 currentDirectory = null,
