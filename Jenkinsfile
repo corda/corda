@@ -2,7 +2,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('existing-build-control')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
-killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+//killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'k8s' }
@@ -25,9 +25,10 @@ pipeline {
                         }
                     }
                     steps {
-                        try{
-                            sh "./gradlew --no-daemon test"
-                        }catch(error){
+                        script {
+                            catchError {
+                                sh "./gradlew --no-daemon test"
+                            }
                             junit '**/build/test-results/**/*.xml'
                         }
                     }
@@ -40,10 +41,12 @@ pipeline {
                         }
                     }
                     steps {
-                        try{
-                            sh "./gradlew --no-daemon integrationTest"
-                        }catch(error){
-                            junit '**/build/test-results/**/*.xml'
+                        script {
+                            try {
+                                sh "./gradlew --no-daemon integrationTest"
+                            } catch (error) {
+                                junit '**/build/test-results/**/*.xml'
+                            }
                         }
                     }
                 }
