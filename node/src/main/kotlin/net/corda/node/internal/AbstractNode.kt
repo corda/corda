@@ -118,7 +118,6 @@ import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
@@ -1165,6 +1164,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction {
+                session.flush()
                 block(restrictedEntityManager)
             }
         }
@@ -1258,14 +1258,18 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-            databaseConfig,
-            schemaService.schemas,
-            jdbcUrl,
-            cacheFactory,
-            attributeConverters, customClassLoader,
-            errorHandler = { t ->
-                FlowStateMachineImpl.currentStateMachine()?.scheduleEvent(Event.Error(t))
-            })
+        databaseConfig,
+        schemaService.schemas,
+        jdbcUrl,
+        cacheFactory,
+        attributeConverters, customClassLoader,
+        errorHandler = { e ->
+            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
+            FlowStateMachineImpl.currentStateMachine()?.let {
+                // register only the very first exception thrown throughout a chain of logical transactions
+                setException(e)
+            }
+        })
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {

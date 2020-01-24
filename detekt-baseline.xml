@@ -173,6 +173,7 @@
     <ID>ComplexMethod:NodeNamedCache.kt$DefaultNamedCacheFactory$open protected fun &lt;K, V&gt; configuredForNamed(caffeine: Caffeine&lt;K, V&gt;, name: String): Caffeine&lt;K, V&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun makeUpdates(batch: Iterable&lt;CoreTransaction&gt;, statesToRecord: StatesToRecord, previouslySeen: Boolean): List&lt;Vault.Update&lt;ContractState&gt;&gt;</ID>
+    <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun processAndNotify(updates: List&lt;Vault.Update&lt;ContractState&gt;&gt;)</ID>
     <ID>ComplexMethod:ObjectDiffer.kt$ObjectDiffer$fun diff(a: Any?, b: Any?): DiffTree?</ID>
     <ID>ComplexMethod:Obligation.kt$Obligation$override fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:QuasarInstrumentationHook.kt$QuasarInstrumentationHookAgent.Companion$@JvmStatic fun premain(argumentsString: String?, instrumentation: Instrumentation)</ID>
@@ -196,6 +197,7 @@
     <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TransactionUtils.kt$ fun createComponentGroups(inputs: List&lt;StateRef&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;Command&lt;*&gt;&gt;, attachments: List&lt;SecureHash&gt;, notary: Party?, timeWindow: TimeWindow?, references: List&lt;StateRef&gt;, networkParametersHash: SecureHash?): List&lt;ComponentGroup&gt;</ID>
+    <ID>ComplexMethod:TransitionExecutorImpl.kt$TransitionExecutorImpl$@Suppress("NestedBlockDepth", "ReturnCount") @Suspendable override fun executeTransition( fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor ): Pair&lt;FlowContinuation, StateMachineState&gt;</ID>
     <ID>ComplexMethod:TypeModellingFingerPrinter.kt$FingerPrintingState$// For a type we haven't seen before, determine the correct path depending on the type of type it is. private fun fingerprintNewType(type: LocalTypeInformation)</ID>
     <ID>ComplexMethod:UniversalContract.kt$UniversalContract$override fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:Util.kt$fun &lt;T&gt; debugCompare(perLeft: Perceivable&lt;T&gt;, perRight: Perceivable&lt;T&gt;)</ID>
@@ -3975,6 +3977,7 @@
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverTests.kt$DriverTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ErrorCodeLoggingTests.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ErrorHandling.kt$ErrorHandling.CheckpointAfterErrorFlow$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:EventProcessor.kt$EventProcessor$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:Eventually.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:Expect.kt$exception: Exception</ID>
@@ -4109,6 +4112,7 @@
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however they only have $senderQuantity!" )</ID>
+    <ID>TooGenericExceptionThrown:DbListenerService.kt$DbListenerService$throw Exception("Mother of all exceptions")</ID>
     <ID>TooGenericExceptionThrown:FlowAsyncOperationTests.kt$FlowAsyncOperationTests.ErroredExecute$throw Exception()</ID>
     <ID>TooGenericExceptionThrown:FlowFrameworkTests.kt$FlowFrameworkTests$throw Exception("Error")</ID>
     <ID>TooGenericExceptionThrown:Generator.kt$Generator$throw Exception("Failed to generate", error)</ID>

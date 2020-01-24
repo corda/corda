@@ -26,6 +26,8 @@ object CreateStateFlow {
         ServiceReadState(4),
         ServiceCheckForState(5),
         ServiceThrowInvalidParameter(6),
+        ServiceThrowMotherOfAllExceptions(7),
+        ServiceThrowUnrecoverableError(8),
         TxInvalidState(10),
         FlowSwallowErrors(100),
         ServiceSwallowErrors(1000)
@@ -56,6 +58,9 @@ object CreateStateFlow {
     @InitiatingFlow
     @StartableByRPC
     class Initiator(private val randomValue: String, private val errorTarget: Int) : FlowLogic<UniqueIdentifier>() {
+        companion object {
+            var onExitingCall: () -> Unit =  {}
+        }
 
         @Suspendable
         override fun call(): UniqueIdentifier {
@@ -93,6 +98,7 @@ object CreateStateFlow {
                 }
             }
             logger.info("Test flow: returning")
+            onExitingCall()
             return state.linearId
         }
     }
