@@ -102,7 +102,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
          * statemachine.
          */
         val flowPatients = HashMap<StateMachineRunId, FlowMedicalHistory>()
-        val treatableSessionInits = HashMap<UUID, InternalSessionInitRecord>()
+        val treatableSessionInits = HashMap<StateMachineRunId, InternalSessionInitRecord>()
         val recordsPublisher = PublishSubject.create<MedicalRecord>()
     })
     private val secureRandom = newSecureRandom()
@@ -111,8 +111,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * The node was unable to initiate the [InitialSessionMessage] from [sender].
      */
     fun sessionInitErrored(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent, error: Throwable) {
+        val id = event.flowId
         val time = clock.instant()
-        val id = UUID.randomUUID()
         val outcome = if (error is SessionRejectException.UnknownClass) {
             // We probably don't have the CorDapp installed so let's pause the message in the hopes that the CorDapp is
             // installed on restart, at which point the message will be able proceed as normal. If not then it will need
@@ -154,7 +154,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      * to send back the relevant session error to the initiator party and acknowledge its receipt from the message broker
      * so that it never gets redelivered.
      */
-    fun dropSessionInit(id: UUID): Boolean {
+    fun dropSessionInit(id: StateMachineRunId): Boolean {
         val (sessionMessage, event, publicRecord) = mutex.locked {
             treatableSessionInits.remove(id) ?: return false
         }
@@ -339,7 +339,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                         override val outcome: Outcome) : MedicalRecord()
 
         /** Medical record for a session initiation that was unsuccessful. */
-        data class SessionInit(val id: UUID,
+        data class SessionInit(val id: StateMachineRunId,
                                override val time: Instant,
                                override val outcome: Outcome,
                                val initiatorFlowClassName: String,
