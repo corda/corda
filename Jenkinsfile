@@ -46,7 +46,7 @@ pipeline {
 
     post {
         always {
-            junit '**/build/test-results-xml/**/*.xml'
+            junit '**/build/test-results/**/*.xml'
         }
         cleanup {
             deleteDir() /* clean up our workspace */
