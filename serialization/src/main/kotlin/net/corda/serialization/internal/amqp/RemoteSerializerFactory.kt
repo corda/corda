@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import java.util.Collections.singletonList
@@ -66,7 +67,7 @@ class DefaultRemoteSerializerFactory(
     ): AMQPSerializer<Any> =
         // If we have seen this descriptor before, we assume we have seen everything in this schema before.
         descriptorBasedSerializerRegistry.getOrBuild(typeDescriptor) {
-            logger.trace("get Serializer descriptor=$typeDescriptor")
+            logger.trace { "get Serializer descriptor=$typeDescriptor" }
 
             // Interpret all of the types in the schema into RemoteTypeInformation, and reflect that into LocalTypeInformation.
             val remoteTypeInformationMap = remoteTypeModel.interpret(schema)

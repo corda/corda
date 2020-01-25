@@ -4,6 +4,8 @@ import net.corda.core.CordaThrowable
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.DefaultCacheProvider
 import net.corda.serialization.internal.model.TypeIdentifier
 import java.lang.reflect.Type
@@ -93,10 +95,10 @@ class CachingCustomSerializerRegistry(
      * that expects to find getters and a constructor with a parameter for each property.
      */
     override fun register(customSerializer: CustomSerializer<out Any>) {
-        logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
+        logger.trace { "action=\"Registering custom serializer\", class=\"${customSerializer.type}\"" }
 
         if (customSerializersCache.isNotEmpty()) {
-            logger.warn("Attempting to register custom serializer $customSerializer.type} in an active cache." +
+            logger.warn("Attempting to register custom serializer ${customSerializer.type} in an active cache." +
                     "All serializers should be registered before the cache comes into use.")
         }
 
@@ -119,7 +121,7 @@ class CachingCustomSerializerRegistry(
     }
 
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {
-        logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
+        logger.trace { "action=\"Registering external serializer\", class=\"${customSerializer.type}\"" }
 
         if (customSerializersCache.isNotEmpty()) {
             logger.warn("Attempting to register custom serializer ${customSerializer.type} in an active cache." +
@@ -153,8 +155,7 @@ class CachingCustomSerializerRegistry(
                 (declaredSuperClass == null
                         || !customSerializer.isSerializerFor(declaredSuperClass)
                         || !customSerializer.revealSubclassesInSchema) -> {
-                    logger.debug("action=\"Using custom serializer\", class=${clazz.typeName}, " +
-                            "declaredType=${declaredType.typeName}")
+                    logger.debug { "action=\"Using custom serializer\", class=${clazz.typeName}, declaredType=${declaredType.typeName}" }
 
                     @Suppress("UNCHECKED_CAST")
                     customSerializer as? AMQPSerializer<Any>
