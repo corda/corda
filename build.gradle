@@ -634,7 +634,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 10
     streamOutput false
-    coresPerFork 5
+    coresPerFork 4
     memoryInGbPerFork 12
     distribute DistributeTestsBy.METHOD
     nodeTaints "big"
