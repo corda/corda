@@ -15,7 +15,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
 
-class DbTransactionsResolver(private val flow: ResolveTransactionsFlow): TransactionsResolver {
+class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : TransactionsResolver {
     private var sortedDependencies: List<SecureHash>? = null
     private val logger = flow.logger
 

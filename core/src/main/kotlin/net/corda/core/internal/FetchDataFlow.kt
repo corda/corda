@@ -44,31 +44,31 @@ import java.util.*
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
 
-sealed class FetchDataFlow<T: NamedByHash, in W: Any>(
+sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSideSession: FlowSession,
-        protected val dataType: DataType): FlowLogic<FetchDataFlow.Result<T>>() {
+        protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
 
     @CordaSerializable
-    class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash): IllegalArgumentException()
+    class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
 
     @CordaSerializable
-    class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int): IllegalArgumentException()
+    class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int) : IllegalArgumentException()
 
-    class HashNotFound(val requested: SecureHash): FlowException()
+    class HashNotFound(val requested: SecureHash) : FlowException()
 
-    class MissingNetworkParameters(val requested: SecureHash): FlowException("Failed to fetch network parameters with hash: $requested")
+    class MissingNetworkParameters(val requested: SecureHash) : FlowException("Failed to fetch network parameters with hash: $requested")
 
-    class IllegalTransactionRequest(val requested: SecureHash): FlowException("Illegal attempt to request a transaction ($requested)"
+    class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction ($requested)"
             + " that is not in the transitive dependency graph of the sent transaction.")
 
     @CordaSerializable
-    data class Result<out T: NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
+    data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @CordaSerializable
     sealed class Request {
-        data class Data(val hashes: NonEmptySet<SecureHash>, val dataType: DataType): Request()
-        object End: Request()
+        data class Data(val hashes: NonEmptySet<SecureHash>, val dataType: DataType) : Request()
+        object End : Request()
     }
 
     // https://docs.corda.net/serialization-enum-evolution.html
@@ -145,8 +145,8 @@ sealed class FetchDataFlow<T: NamedByHash, in W: Any>(
             if (stx == null)
                 toFetch += txid
             else
-                // Although the full object is loaded here, only return the id. This prevents the full set of objects already present from
-                // being checkpointed every time a request is made to download an object the node does not yet have.
+            // Although the full object is loaded here, only return the id. This prevents the full set of objects already present from
+            // being checkpointed every time a request is made to download an object the node does not yet have.
                 fromDisk += txid
         }
         return Pair(fromDisk, toFetch)
@@ -220,7 +220,7 @@ sealed class FetchDataFlow<T: NamedByHash, in W: Any>(
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: FlowSession): FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
+                           otherSide: FlowSession) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
 
     private val uploader = "$P2P_UPLOADER:${otherSideSession.counterparty.name}"
 
@@ -246,10 +246,10 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class FetchedAttachment(dataLoader: () -> ByteArray, uploader: String?): AbstractAttachment(dataLoader, uploader), SerializeAsToken {
+    private class FetchedAttachment(dataLoader: () -> ByteArray, uploader: String?) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
         override val id: SecureHash by lazy { attachmentData.sha256() }
 
-        private class Token(private val id: SecureHash, private val uploader: String?): SerializationToken {
+        private class Token(private val id: SecureHash, private val uploader: String?) : SerializationToken {
             override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id), uploader)
         }
 
@@ -292,8 +292,8 @@ class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSessi
  * Nodes on lower versions won't respond to this flow.
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
-                                 otherSide: FlowSession): FetchDataFlow<SignedDataWithCert<NetworkParameters>,
-                                 SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
+                                 otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>,
+        SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
     override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
         return (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(txid)
     }

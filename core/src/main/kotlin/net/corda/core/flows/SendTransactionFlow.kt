@@ -22,7 +22,7 @@ import net.corda.core.utilities.trace
  */
 @CordaSerializable
 class MaybeSerializedSignedTransaction(override val id: SecureHash, val serialized: SerializedBytes<SignedTransaction>?,
-                                       val nonSerialised: SignedTransaction?): NamedByHash {
+                                       val nonSerialised: SignedTransaction?) : NamedByHash {
     init {
         check(serialized == null || nonSerialised == null) {
             "MaybeSerializedSignedTransaction: Serialized and non-serialized may not both be non-null."
@@ -39,17 +39,22 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
             null
         }
     }
+
     fun isNull(): Boolean {
         return serialized == null && nonSerialised == null
     }
+
     fun serializedByteCount(): Int {
         return serialized?.bytes?.size ?: 0
     }
+
     fun payloadContentDescription(): String {
         val tranSize = serializedByteCount()
         val isSer = serialized != null
         val isObj = nonSerialised != null
-        return if (isNull()) { "<Null>" } else "size = $tranSize, serialized = $isSer, isObj = $isObj"
+        return if (isNull()) {
+            "<Null>"
+        } else "size = $tranSize, serialized = $isSer, isObj = $isObj"
     }
 }
 
@@ -62,7 +67,7 @@ class MaybeSerializedSignedTransaction(override val id: SecureHash, val serializ
  * @param otherSide the target party.
  * @param stx the [SignedTransaction] being sent to the [otherSideSession].
  */
-open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction): DataVendingFlow(otherSide, stx)
+open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction) : DataVendingFlow(otherSide, stx)
 
 /**
  * The [SendStateAndRefFlow] should be used to send a list of input [StateAndRef] to another peer that wishes to verify
@@ -73,9 +78,9 @@ open class SendTransactionFlow(otherSide: FlowSession, stx: SignedTransaction): 
  * @param otherSideSession the target session.
  * @param stateAndRefs the list of [StateAndRef] being sent to the [otherSideSession].
  */
-open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>): DataVendingFlow(otherSideSession, stateAndRefs)
+open class SendStateAndRefFlow(otherSideSession: FlowSession, stateAndRefs: List<StateAndRef<*>>) : DataVendingFlow(otherSideSession, stateAndRefs)
 
-open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any): FlowLogic<Void?>() {
+open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) : FlowLogic<Void?>() {
     @Suspendable
     protected open fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any) = otherSideSession.sendAndReceive<FetchDataFlow.Request>(payload)
 
@@ -128,8 +133,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any):
                         request
                     }
                     FetchDataFlow.Request.End -> {
-                        logger.trace {"DataVendingFlow: END" }
-                        return null }
+                        logger.trace { "DataVendingFlow: END" }
+                        return null
+                    }
                 }
             }
 
@@ -190,7 +196,11 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any):
                     }
 
                     // Send null if limit is exceeded
-                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (batchFetchCountExceeded) { null } else { serialized },null)
+                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (batchFetchCountExceeded) {
+                        null
+                    } else {
+                        serialized
+                    }, null)
                     firstItem = false
                     maybeserialized
                 } // Batch response loop end

@@ -22,7 +22,7 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord
-): FlowLogic<Unit>() {
+) : FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(null, txHashes, otherSide, statesToRecord)
