@@ -71,17 +71,17 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     // https://docs.corda.net/serialization-enum-evolution.html
-    // Below annotations added to map two new enum values (MULTI_TRANSACTION and UNKNOWN) onto  TRANSACTION. The effect of this is that
+    // Below annotations added to map two new enum values (BATCH_TRANSACTION and UNKNOWN) onto  TRANSACTION. The effect of this is that
     // if a that does not have these enum values receives it will not throw an error during deserialization. The purpose of adding
     // UNKNOWN is such that future additions can default to UNKNOWN rather than an existing value. In this instance we are protecting
     // against not having unknown by using the platform version as a guard.
     @CordaSerializationTransformEnumDefaults(
-            CordaSerializationTransformEnumDefault("MULTI_TRANSACTION", "TRANSACTION"),
+            CordaSerializationTransformEnumDefault("BATCH_TRANSACTION", "TRANSACTION"),
             CordaSerializationTransformEnumDefault("UNKNOWN", "TRANSACTION")
     )
     @CordaSerializable
     enum class DataType {
-        TRANSACTION, ATTACHMENT, PARAMETERS, MULTI_TRANSACTION, UNKNOWN
+        TRANSACTION, ATTACHMENT, PARAMETERS, BATCH_TRANSACTION, UNKNOWN
     }
 
     @Suspendable
@@ -115,10 +115,10 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
                 // should only pass single item dataType below.
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
             } else {
-                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive(set of ${toFetch.size}): Fetch type: ${dataType.name})" }
+                logger.trace { "[Batch fetch]: otherSideSession.sendAndReceive(set of ${toFetch.size}): Fetch type: ${dataType.name})" }
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.copyOf(toFetch), dataType))
                         .unwrap { it }
-                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})" }
+                logger.trace { "[Batch fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})" }
             }
 
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
@@ -210,7 +210,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
                 if (item != answers[index].id) {
                     badDataIndex = index
                     badDataId = item
-                    logger.info("Will Throw on DownloadedVsRequestedDataMismatch(Req item = '$item', Resp item = ${answers[index].id}")
+                    logger.info("Will Throw on DownloadedVsRequestedDataMismatch(Req item = '$item', Resp item = '${answers[index].id}'")
                 }
             }
 
@@ -282,8 +282,8 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }
 
-class FetchMultiTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
-        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.MULTI_TRANSACTION) {
+class FetchBatchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
+        FetchDataFlow<MaybeSerializedSignedTransaction, MaybeSerializedSignedTransaction>(requests, otherSide, DataType.BATCH_TRANSACTION) {
 
     override fun load(txid: SecureHash): MaybeSerializedSignedTransaction? {
         val tran = serviceHub.validatedTransactions.getTransaction(txid)

@@ -48,8 +48,8 @@ class ResolveTransactionsFlow private constructor(
         // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
         // request to node V3 that doesn't know about this protocol.
         fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= 4
-        val multiMode = counterpartyPlatformVersion >= 6
-        logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Multi mode = $multiMode" }
+        val batchMode = counterpartyPlatformVersion >= 6
+        logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Batch mode = $batchMode" }
 
         if (initialTx != null) {
             fetchMissingAttachments(initialTx)
@@ -57,7 +57,7 @@ class ResolveTransactionsFlow private constructor(
         }
 
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
-        resolver.downloadDependencies(multiMode)
+        resolver.downloadDependencies(batchMode)
 
         logger.trace { "ResolveTransactionsFlow: Sending END." }
         otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.

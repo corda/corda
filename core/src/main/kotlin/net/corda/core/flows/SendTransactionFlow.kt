@@ -16,7 +16,7 @@ import net.corda.core.utilities.trace
 /**
  * In the words of Matt working code is more important then pretty code. This class that contains code that may
  * be serialized. If it were always serialized then the local disk fetch would need to serialize then de-serialize
- * which wastes time. However over the wire we get MULTI fetch items serialized. This is because we need to get the exact
+ * which wastes time. However over the wire we get batch fetch items serialized. This is because we need to get the exact
  * length of the objects to pack them into the 10MB max message size buffer. We do not want to serialize them multiple times
  * so it's a lot more efficient to send the byte stream.
  */
@@ -81,9 +81,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     @Suspendable
     override fun call(): Void? {
         val networkMaxMessageSize = serviceHub.networkParameters.maxMessageSize
-        val maxTransactionSize = networkMaxMessageSize / 2
+        val maxPayloadSize = networkMaxMessageSize / 2
 
-        logger.trace { "DataVendingFlow: Call: Network max message size = ${networkMaxMessageSize}, Max Transaction Size = $maxTransactionSize" }
+        logger.trace { "DataVendingFlow: Call: Network max message size = ${networkMaxMessageSize}, Max Payload Size = $maxPayloadSize" }
 
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment/network parameters data.
         var payload = payload
@@ -128,10 +128,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
             }
 
             logger.trace { "Sending data (Type = ${dataRequest.dataType.name})" }
-            var maxByteCount = maxTransactionSize // Sample once before the loop
+            var maxByteCount = maxPayloadSize // Sample once before the loop
             var totalByteCount = 0
             var firstItem = true
-            var multiFetchCountExceeded = false
+            var batchFetchCountExceeded = false
             var numSent = 0
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
@@ -148,7 +148,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     tx
                 }
                 // Loop on all items returned using dataRequest.hashes.map:
-                FetchDataFlow.DataType.MULTI_TRANSACTION -> dataRequest.hashes.map { txId ->
+                FetchDataFlow.DataType.BATCH_TRANSACTION -> dataRequest.hashes.map { txId ->
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
@@ -156,7 +156,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     // remove the restriction on sending once.
                     logger.trace { "Transaction authorised OK: '${txId}'" }
                     var serialized: SerializedBytes<SignedTransaction>? = null
-                    if (!multiFetchCountExceeded) {
+                    if (!batchFetchCountExceeded) {
                         // Only fetch and serialize if we have not already exceeded the maximum byte count. Once we have, no more fetching
                         // is required, just reject all additional items.
                         val tx = serviceHub.validatedTransactions.getTransaction(txId)
@@ -165,7 +165,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                         serialized = tx.serialize()
 
                         val itemByteCount = serialized.size
-                        logger.trace { "Multi-Send '${txId}': first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = ${itemByteCount}, Maximum = ${maxByteCount}" }
+                        logger.trace { "Batch-Send '${txId}': first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = ${itemByteCount}, Maximum = ${maxByteCount}" }
                         if (firstItem || (totalByteCount + itemByteCount) < maxByteCount) {
                             totalByteCount += itemByteCount
                             numSent++
@@ -176,19 +176,19 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             logger.trace { "Adding item to return set: '${txId}'" }
                         } else {
                             logger.trace { "Fetch block size EXCEEDED at '${txId}'." }
-                            multiFetchCountExceeded = true
+                            batchFetchCountExceeded = true
                         }
                     } // end
 
-                    if (multiFetchCountExceeded) {
+                    if (batchFetchCountExceeded) {
                         logger.trace { "Excluding '${txId}' from return set due to exceeded count." }
                     }
 
                     // Send null if limit is exceeded
-                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (multiFetchCountExceeded) { null } else { serialized }, null)
+                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (batchFetchCountExceeded) { null } else { serialized }, null)
                     firstItem = false
                     maybeserialized
-                } // Multi response loop end
+                } // Batch response loop end
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
                     logger.trace { "Sending: Attachments for '${it}'" }
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
