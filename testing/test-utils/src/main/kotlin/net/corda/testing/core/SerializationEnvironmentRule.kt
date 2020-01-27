@@ -41,7 +41,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     override fun apply(base: Statement, description: Description): Statement {
         env = createTestSerializationEnv()
         return object : Statement() {
-            override fun evaluate() = env.asTestContextEnv(inheritable) { base.evaluate() }
+            override fun evaluate() = env.asTestContextEnv { base.evaluate() }
         }
     }
 }

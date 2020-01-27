@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 val log: Logger = LoggerFactory.getLogger("TestSerializationRuleHelper")
 
 
-fun <T> SerializationEnvironment.asContextEnv(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
+fun <T> SerializationEnvironment.asContextEnv(callable: (SerializationEnvironment) -> T): T {
     val property = _driverSerializationEnv
     if (property.get() != null) {
         log.warn("Environment was not cleared up before previous test")
