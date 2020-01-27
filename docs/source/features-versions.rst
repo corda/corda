@@ -22,18 +22,13 @@ a minimumPlatformVersion in its network parameters that is greater than or equal
 feature. For example, Corda 4.0 nodes, which implement Corda Platform Version 4, can only take advantage of the Corda Reference States
 feature when connected to a network with mPV 4.
 
-Generally the rules work this way:
-
-- IF (CorDapp.mPV > node.PV) THEN
-    prevent the CorDapp from running (this signals that it cannot run without the new feature).
-- IF (CorDapp.mPV <= node.PV AND CorDapp.targetPV < node.PV) THEN
-    this means the node is ahead of the CorDapp so it might choose to trigger some code paths that emulate some old behaviour that the
-    CorDapp expected on that version.
-- IF (CorDapp.mPV <= node.PV AND CorDapp.targetPV == node.PV) THEN
-    just use the new mechanism because the CorDapp and the node are perfectly aligned.
-- IF (CorDapp.mPV <= node.PV AND CorDapp.targetPV > node.PV) THEN
-    this means that the CorDapp is ahead of the running node, but it must have some alternative runtime code paths built in to be able
-    to simulate the new behaviour using old apis.
+If there is a Platform Version below which your application will not run or is not supported, then signal that with the application's
+`CorDapp.mPV` field. This will prevent older nodes from running your app. Nodes which support newer Platform Versions may also use this
+field to trigger code paths that emulate behaviours that were in force on that older Platform Version to maximise compatibility. However,
+if you have tested your app against newer versions of Corda and know your node can take advantage of the new Platform Version behaviours
+if present, you can signal this by using `CorDapp.targetPV` to declare the latest Platform Version against which the app has been tested
+and is known to work. In this way, it is possible to ship CorDapps that can both run on all nodes supporting some minimum Platform Version
+of Corda as well as opt in to newer features should they happen to be available on any given node.
 
 .. list-table:: Corda Features
     :header-rows: 1
