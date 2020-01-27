@@ -185,7 +185,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     }
 
                     // Send null if limit is exceeded
-                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (batchFetchCountExceeded) { null } else { serialized }, null)
+                    val maybeserialized = MaybeSerializedSignedTransaction(txId, if (batchFetchCountExceeded) { null } else { serialized },null)
                     firstItem = false
                     maybeserialized
                 } // Batch response loop end
