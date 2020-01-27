@@ -1,5 +1,5 @@
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-@Library('existing-build-control')
+@Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())

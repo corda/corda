@@ -63,34 +63,29 @@ class CordaServiceLifecycleFatalTests {
 
     @Test(timeout=300_000)
     fun `JVM terminates on critical failure`() {
-        (1..20).forEach {
+        // Scenario terminates JVM - node should be running out of process
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
+                notarySpecs = emptyList(),
+                systemProperties = mapOf(SECRET_PROPERTY_NAME to "true", tempFilePropertyName to tmpFile.absolutePath))) {
+            val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
 
-            logger.info("Rep #$it")
+            val rpcInterface = nodeHandle.rpc
+            eventually(duration = 60.seconds) {
+                assertEquals(readyToThrowMarker, tmpFile.readLines().last())
+            }
 
-            // Scenario terminates JVM - node should be running out of process
-            driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()),
-                    notarySpecs = emptyList(),
-                    systemProperties = mapOf(SECRET_PROPERTY_NAME to "true", tempFilePropertyName to tmpFile.absolutePath))) {
-                val nodeHandle = startNode(providedName = ALICE_NAME).getOrThrow()
+            rpcInterface.protocolVersion
 
-                val rpcInterface = nodeHandle.rpc
-                eventually(duration = 60.seconds) {
-                    assertEquals(readyToThrowMarker, tmpFile.readLines().last())
-                }
+            tmpFile.appendText("\n" + goodToThrowMarker)
 
-                rpcInterface.protocolVersion
-
-                tmpFile.appendText("\n" + goodToThrowMarker)
-
-                // We signalled that it is good to throw which will eventually trigger node shutdown and RPC interface no longer working.
-                eventually(duration = 30.seconds) {
-                    assertFailsWith(Exception::class) {
-                        try {
-                            rpcInterface.protocolVersion
-                        } catch (ex: Exception) {
-                            logger.info("Thrown as expected", ex)
-                            throw ex
-                        }
+            // We signalled that it is good to throw which will eventually trigger node shutdown and RPC interface no longer working.
+            eventually(duration = 30.seconds) {
+                assertFailsWith(Exception::class) {
+                    try {
+                        rpcInterface.protocolVersion
+                    } catch (ex: Exception) {
+                        logger.info("Thrown as expected", ex)
+                        throw ex
                     }
                 }
             }

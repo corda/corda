@@ -173,6 +173,7 @@
     <ID>ComplexMethod:NodeNamedCache.kt$DefaultNamedCacheFactory$open protected fun &lt;K, V&gt; configuredForNamed(caffeine: Caffeine&lt;K, V&gt;, name: String): Caffeine&lt;K, V&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
     <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun makeUpdates(batch: Iterable&lt;CoreTransaction&gt;, statesToRecord: StatesToRecord, previouslySeen: Boolean): List&lt;Vault.Update&lt;ContractState&gt;&gt;</ID>
+    <ID>ComplexMethod:NodeVaultService.kt$NodeVaultService$private fun processAndNotify(updates: List&lt;Vault.Update&lt;ContractState&gt;&gt;)</ID>
     <ID>ComplexMethod:ObjectDiffer.kt$ObjectDiffer$fun diff(a: Any?, b: Any?): DiffTree?</ID>
     <ID>ComplexMethod:Obligation.kt$Obligation$override fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:QuasarInstrumentationHook.kt$QuasarInstrumentationHookAgent.Companion$@JvmStatic fun premain(argumentsString: String?, instrumentation: Instrumentation)</ID>
@@ -196,6 +197,7 @@
     <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TransactionUtils.kt$ fun createComponentGroups(inputs: List&lt;StateRef&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;Command&lt;*&gt;&gt;, attachments: List&lt;SecureHash&gt;, notary: Party?, timeWindow: TimeWindow?, references: List&lt;StateRef&gt;, networkParametersHash: SecureHash?): List&lt;ComponentGroup&gt;</ID>
+    <ID>ComplexMethod:TransitionExecutorImpl.kt$TransitionExecutorImpl$@Suppress("NestedBlockDepth", "ReturnCount") @Suspendable override fun executeTransition( fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor ): Pair&lt;FlowContinuation, StateMachineState&gt;</ID>
     <ID>ComplexMethod:TypeModellingFingerPrinter.kt$FingerPrintingState$// For a type we haven't seen before, determine the correct path depending on the type of type it is. private fun fingerprintNewType(type: LocalTypeInformation)</ID>
     <ID>ComplexMethod:UniversalContract.kt$UniversalContract$override fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:Util.kt$fun &lt;T&gt; debugCompare(perLeft: Perceivable&lt;T&gt;, perRight: Perceivable&lt;T&gt;)</ID>
@@ -1906,7 +1908,6 @@
     <ID>MaxLineLength:CordaRPCOps.kt$sorting: Sort = Sort(emptySet())</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()</ID>
     <ID>MaxLineLength:CordaRPCOpsImplTest.kt$CordaRPCOpsImplTest$val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType&lt;Cash.State&gt;().single()</ID>
-    <ID>MaxLineLength:CordaSSHAuthInfo.kt$CordaSSHAuthInfo : AuthInfo</ID>
     <ID>MaxLineLength:CordaServiceTest.kt$CordaServiceTest$mockNet = MockNetwork(MockNetworkParameters(threadPerNode = true, cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp())))</ID>
     <ID>MaxLineLength:CordaServiceTest.kt$CordaServiceTest.CordaServiceThatRequiresThreadContextClassLoader$assertNotNull(Thread.currentThread().contextClassLoader, "thread context classloader should not be null during service initialisation")</ID>
     <ID>MaxLineLength:CordaUtils.kt$ private fun owns(packageName: String, fullClassName: String): Boolean</ID>
@@ -3889,6 +3890,7 @@
     <ID>SpreadOperator:WithContracts.kt$WithContracts$(owner, magicNumber, *others)</ID>
     <ID>SpreadOperator:X509Utilities.kt$X509Utilities$(*certificates)</ID>
     <ID>ThrowsCount:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser$// Make sure our inputs aren't designed to blow things up. private fun validate(typeString: String)</ID>
+    <ID>ThrowsCount:AbstractNode.kt$AbstractNode$private fun installCordaServices()</ID>
     <ID>ThrowsCount:AbstractNode.kt$fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set&lt;MappedSchema&gt;, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name)</ID>
     <ID>ThrowsCount:ArtemisMessagingServer.kt$ArtemisMessagingServer$// TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from // Artemis IO errors @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class) private fun configureAndStartServer()</ID>
     <ID>ThrowsCount:BrokerJaasLoginModule.kt$BaseBrokerJaasLoginModule$@Suppress("DEPRECATION") // should use java.security.cert.X509Certificate protected fun getUsernamePasswordAndCerts(): Triple&lt;String, String, Array&lt;javax.security.cert.X509Certificate&gt;?&gt;</ID>
@@ -3975,6 +3977,7 @@
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverTests.kt$DriverTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ErrorCodeLoggingTests.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ErrorHandling.kt$ErrorHandling.CheckpointAfterErrorFlow$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:EventProcessor.kt$EventProcessor$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:Eventually.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:Expect.kt$exception: Exception</ID>
@@ -4109,6 +4112,7 @@
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however they only have $senderQuantity!" )</ID>
+    <ID>TooGenericExceptionThrown:DbListenerService.kt$DbListenerService$throw Exception("Mother of all exceptions")</ID>
     <ID>TooGenericExceptionThrown:FlowAsyncOperationTests.kt$FlowAsyncOperationTests.ErroredExecute$throw Exception()</ID>
     <ID>TooGenericExceptionThrown:FlowFrameworkTests.kt$FlowFrameworkTests$throw Exception("Error")</ID>
     <ID>TooGenericExceptionThrown:Generator.kt$Generator$throw Exception("Failed to generate", error)</ID>
@@ -4406,9 +4410,6 @@
     <ID>WildcardImport:CertificateRevocationListNodeTests.kt$import net.corda.nodeapi.internal.crypto.*</ID>
     <ID>WildcardImport:CertificateRevocationListNodeTests.kt$import org.bouncycastle.asn1.x509.*</ID>
     <ID>WildcardImport:CertificatesUtils.kt$import net.corda.nodeapi.internal.crypto.*</ID>
-    <ID>WildcardImport:CheckpointDumperImpl.kt$import com.fasterxml.jackson.databind.*</ID>
-    <ID>WildcardImport:CheckpointDumperImpl.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:CheckpointDumperImpl.kt$import net.corda.node.services.statemachine.*</ID>
     <ID>WildcardImport:CheckpointSerializationAPI.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:ClassCarpenter.kt$import org.objectweb.asm.Opcodes.*</ID>
     <ID>WildcardImport:ClassCarpenterTestUtils.kt$import net.corda.serialization.internal.amqp.*</ID>
@@ -4561,7 +4562,6 @@
     <ID>WildcardImport:FlowFrameworkTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowFrameworkTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowFrameworkTripartyTests.kt$import net.corda.testing.node.internal.*</ID>
-    <ID>WildcardImport:FlowLogic.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:FlowLogicRefFactoryImpl.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowMatchers.kt$import net.corda.testing.internal.matchers.*</ID>
     <ID>WildcardImport:FlowOverrideTests.kt$import net.corda.core.flows.*</ID>

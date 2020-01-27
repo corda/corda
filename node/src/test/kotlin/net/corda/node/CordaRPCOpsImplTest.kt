@@ -469,6 +469,16 @@ class CordaRPCOpsImplTest {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `attempt to start RPC flow with void return`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(startFlow<VoidRPCFlow>()) {
+            val result = rpc.startFlow(::VoidRPCFlow)
+            mockNet.runNetwork()
+            assertNull(result.returnValue.getOrThrow())
+        }
+    }
+
     @StartableByRPC
     class NewJoinerFlow : FlowLogic<String>() {
         @Suspendable
@@ -493,14 +503,7 @@ class CordaRPCOpsImplTest {
         override fun call() = Unit
     }
 
-    @Test(timeout=300_000)
-	fun `attempt to start RPC flow with void return`() {
-        withPermissions(startFlow<VoidRPCFlow>()) {
-            val result = rpc.startFlow(::VoidRPCFlow)
-            mockNet.runNetwork()
-            assertNull(result.returnValue.getOrThrow())
-        }
-    }
+
 
     @StartableByRPC
     class VoidRPCFlow : FlowLogic<Void?>() {

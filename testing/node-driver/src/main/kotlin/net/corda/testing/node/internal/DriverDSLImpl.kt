@@ -164,7 +164,7 @@ class DriverDSLImpl(
 
     private val bytemanJarPath: String? by lazy {
         try {
-            resolveJar("org.jboss.byteman.agent.Transformer")
+            resolveJar("org.jboss.byteman.agent.Transformer", verbose = false)
         } catch (e: Exception) {
             null
         }
@@ -180,13 +180,16 @@ class DriverDSLImpl(
         }
     }
 
-    private fun resolveJar(className: String): String {
+    private fun resolveJar(className: String, verbose: Boolean = true): String {
         return try {
             val type = Class.forName(className)
             val src = type.protectionDomain.codeSource
             src.location.toPath().toString()
         } catch (e: Exception) {
-            log.warn("Unable to locate JAR for class given by `$className` on classpath: ${e.message}", e)
+            when (verbose) {
+                true -> log.warn("Unable to locate JAR for class given by `$className` on classpath:", e)
+                false -> log.info("Unable to locate JAR for class given by `$className` on classpath")
+            }
             throw e
         }
     }

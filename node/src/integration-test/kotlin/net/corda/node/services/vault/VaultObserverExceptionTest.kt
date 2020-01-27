@@ -1,9 +1,13 @@
 package net.corda.node.services.vault
 
+import co.paralleluniverse.strands.concurrent.Semaphore
 import com.r3.dbfailure.workflows.CreateStateFlow
 import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
-import net.corda.core.CordaRuntimeException
+import com.r3.dbfailure.workflows.DbListenerService
+import com.r3.dbfailure.workflows.DbListenerService.MakeServiceThrowErrorFlow
+import com.r3.transactionfailure.workflows.ErrorHandling
+import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.contextLogger
@@ -13,19 +17,20 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
-import rx.exceptions.OnErrorNotImplementedException
+import java.lang.IllegalStateException
 import java.sql.SQLException
-import java.time.Duration
-import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class VaultObserverExceptionTest {
     companion object {
@@ -43,6 +48,7 @@ class VaultObserverExceptionTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
         StaffedFlowHospital.onFlowAdmitted.clear()
+        DbListenerService.onError = null
     }
 
     /**
@@ -50,12 +56,11 @@ class VaultObserverExceptionTest {
      * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation
      */
     @Test(timeout=300_000)
-	fun unhandledSqlExceptionFromVaultObserverGetsHospitatlised() {
+    fun unhandledSqlExceptionFromVaultObserverGetsHospitalised() {
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
                 is SQLException -> {
                     testControlFuture.complete(true)
                 }
@@ -80,32 +85,47 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * Throwing a random (non-SQL releated) exception from a vault observer causes the flow to be
-     * aborted when unhandled in user code
+     * None exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * because the recording of transaction states failed. The flow will be hospitalized.
+     * The exception will bring the rx.Observer down.
      */
     @Test(timeout=300_000)
-	fun otherExceptionsFromVaultObserverBringFlowDown() {
+    fun exceptionFromVaultObserverCannotBeSuppressedInFlow() {
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith(CordaRuntimeException::class, "Toys out of pram") {
-                aliceNode.rpc.startFlow(
-                        ::Initiator,
-                        "InvalidParameterException",
-                        CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter)
-                ).returnValue.getOrThrow(30.seconds)
-            }
+            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions,
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
+
+        Assert.assertEquals(1, observation)
     }
 
     /**
-     * A random exception from a VaultObserver will bring the Rx Observer down, but can be handled in the flow
-     * triggering the observer, and the flow will continue successfully (for some values of success)
+     * None runtime exception thrown from a vault observer can be suppressible in the flow that triggered the observer
+     * because the recording of transaction states failed. The flow will be hospitalized.
+     * The exception will bring the rx.Observer down.
      */
     @Test(timeout=300_000)
-	fun otherExceptionsFromVaultObserverCanBeSuppressedInFlow() {
+    fun runtimeExceptionFromVaultObserverCannotBeSuppressedInFlow() {
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
@@ -114,50 +134,21 @@ class VaultObserverExceptionTest {
             aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-                    .returnValue.getOrThrow(30.seconds)
-
-        }
-    }
-
-    /**
-     * If the state we are trying to persist triggers a persistence exception, the flow hospital will retry the flow
-     * and keep it in for observation if errors persist.
-     */
-    @Test(timeout=300_000)
-	fun persistenceExceptionOnCommitGetsRetriedAndThenGetsKeptForObservation() {
-        var admitted = 0
-        var observation = 0
-        StaffedFlowHospital.onFlowAdmitted.add {
-            ++admitted
-        }
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
-            ++observation
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
 
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            assertFailsWith<TimeoutException> {
-                aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(CreateStateFlow.ErrorTarget.TxInvalidState))
-                        .returnValue.getOrThrow(Duration.of(30, ChronoUnit.SECONDS))
-            }
-        }
-        Assert.assertTrue("Exception from service has not been to Hospital", admitted > 0)
         Assert.assertEquals(1, observation)
     }
 
     /**
-     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws. This will be kept in for observation.
+     * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
+     * the flow will be kept in for observation.
      */
     @Test(timeout=300_000)
-	fun persistenceExceptionOnFlushGetsRetriedAndThenGetsKeptForObservation() {
+    fun persistenceExceptionDuringRecordTransactionsGetsKeptForObservation() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -177,7 +168,6 @@ class VaultObserverExceptionTest {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith<TimeoutException>("PersistenceException") {
                 aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
-                        CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                         CreateStateFlow.ErrorTarget.TxInvalidState))
                         .returnValue.getOrThrow(30.seconds)
             }
@@ -187,56 +177,15 @@ class VaultObserverExceptionTest {
     }
 
     /**
-     * If we have a state causing a database error lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws.
-     * Trying to catch and suppress that exception in the flow around the code triggering the vault observer
-     * does not change the outcome - the first exception in the service will bring the service down and will
-     * be caught by the flow, but the state machine will error the flow anyway as Corda code threw.
+     * If we have a state causing a persistence exception during record transactions (in NodeVaultService#processAndNotify),
+     * trying to catch and suppress that exception inside the flow does protect the flow, but the new
+     * interceptor will fail the flow anyway. The flow will be kept in for observation.
      */
     @Test(timeout=300_000)
-	fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInFlow() {
+    fun persistenceExceptionDuringRecordTransactionsCannotBeSuppressedInFlow() {
         var counter = 0
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
             when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
-                is PersistenceException -> {
-                    ++counter
-                    log.info("Got a PersistentException in the flow hospital count = $counter")
-                }
-            }
-            false
-        }
-
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(
-                    ::Initiator,
-                    "EntityManager",
-                    CreateStateFlow.errorTargetsToNum(
-                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
-                            CreateStateFlow.ErrorTarget.TxInvalidState,
-                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
-            val flowResult = flowHandle.returnValue
-            assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
-            Assert.assertTrue("Flow has not been to hospital", counter > 0)
-        }
-    }
-
-    /**
-     * If we have a state causing a persistence exception lined up for persistence, calling jdbConnection() in
-     * the vault observer will trigger a flush that throws.
-     * Trying to catch and suppress that exception inside the service does protect the service, but the new
-     * interceptor will fail the flow anyway. The flow will be kept in for observation if errors persist.
-     */
-    @Test(timeout=300_000)
-	fun persistenceExceptionOnFlushInVaultObserverCannotBeSuppressedInService() {
-        var counter = 0
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
-            when (it) {
-                is OnErrorNotImplementedException -> Assert.fail("OnErrorNotImplementedException should be unwrapped")
                 is PersistenceException -> {
                     ++counter
                     log.info("Got a PersistentException in the flow hospital count = $counter")
@@ -253,9 +202,8 @@ class VaultObserverExceptionTest {
             val flowHandle = aliceNode.rpc.startFlow(
                     ::Initiator, "EntityManager",
                     CreateStateFlow.errorTargetsToNum(
-                            CreateStateFlow.ErrorTarget.ServiceValidUpdate,
                             CreateStateFlow.ErrorTarget.TxInvalidState,
-                            CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
+                            CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
             assertFailsWith<TimeoutException>("PersistenceException") { flowResult.getOrThrow(30.seconds) }
             Assert.assertTrue("Flow has not been to hospital", counter > 0)
@@ -268,7 +216,7 @@ class VaultObserverExceptionTest {
      * interceptor.
      */
     @Test(timeout=300_000)
-	fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
+    fun syntaxErrorInUserCodeInServiceCannotBeSuppressedInFlow() {
         val testControlFuture = openFuture<Boolean>()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             log.info("Flow has been kept for overnight observation")
@@ -297,7 +245,7 @@ class VaultObserverExceptionTest {
      * and should not have any impact on the rest of the flow
      */
     @Test(timeout=300_000)
-	fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
+    fun syntaxErrorInUserCodeInServiceCanBeSuppressedInService() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = testCordapps())) {
@@ -310,4 +258,109 @@ class VaultObserverExceptionTest {
             flowResult.getOrThrow(30.seconds)
         }
     }
+
+    /**
+     * Exceptions thrown from a vault observer ,are now wrapped and rethrown as a HospitalizeFlowException.
+     * The flow should get hospitalised and any potential following checkpoint should fail.
+     * In case of a SQLException or PersistenceException, this was already "breaking" the database transaction
+     * and therefore, the next checkpoint was failing.
+     */
+    @Test(timeout=300_000)
+    fun `attempt to checkpoint, following an error thrown in vault observer which gets supressed in flow, will fail`() {
+        var counterBeforeFirstCheckpoint = 0
+        var counterAfterFirstCheckpoint = 0
+        var counterAfterSecondCheckpoint = 0
+
+        ErrorHandling.hookBeforeFirstCheckpoint = { counterBeforeFirstCheckpoint++ }
+        ErrorHandling.hookAfterFirstCheckpoint = { counterAfterFirstCheckpoint++ }
+        ErrorHandling.hookAfterSecondCheckpoint = { counterAfterSecondCheckpoint++ }
+
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            waitUntilHospitalised.release()
+        }
+
+        driver(DriverParameters(
+                inMemoryDB = false,
+                startNodesInProcess = true,
+                isDebug = true,
+                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.transactionfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")))) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+
+            node.rpc.startFlow(::CheckpointAfterErrorFlow, CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions, // throw not persistence exception
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors
+            )
+            )
+            waitUntilHospitalised.acquire()
+
+            // restart node, see if flow retries from correct checkpoint
+            node.stop()
+            startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+            waitUntilHospitalised.acquire()
+
+            // check flow retries from correct checkpoint
+            assertTrue(counterBeforeFirstCheckpoint == 1)
+            assertTrue(counterAfterFirstCheckpoint == 2)
+            assertTrue(counterAfterSecondCheckpoint == 0)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `vault observer failing with OnErrorFailedException gets hospitalised`() {
+        DbListenerService.onError = {
+            log.info("Error in rx.Observer#OnError! - Observer will fail with OnErrorFailedException")
+            throw it
+        }
+
+        var observation = 0
+        val waitUntilHospitalised = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++observation
+            waitUntilHospitalised.release()
+        }
+
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                cordappsForAllNodes = testCordapps())) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
+            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
+        }
+
+        Assert.assertEquals(1, observation)
+    }
+
+    @Test(timeout=300_000)
+    fun `out of memory error halts JVM, on node restart flow retries, and succeeds`() {
+        driver(DriverParameters(inMemoryDB = false, cordappsForAllNodes = testCordapps())) {
+            val aliceUser = User("user", "foo", setOf(Permissions.all()))
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = false).getOrThrow()
+            aliceNode.rpc.startFlow(::MakeServiceThrowErrorFlow).returnValue.getOrThrow()
+            aliceNode.rpc.startFlow(::Initiator, "UnrecoverableError", CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceThrowUnrecoverableError))
+
+            val terminated = (aliceNode as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
+            if (terminated) {
+                aliceNode.stop()
+                // starting node within the same process this time to take advantage of threads sharing same heap space
+                val testControlFuture = openFuture<Boolean>().toCompletableFuture()
+                CreateStateFlow.Initiator.onExitingCall = {
+                    testControlFuture.complete(true)
+                }
+                startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = true).getOrThrow()
+                assert(testControlFuture.getOrThrow(30.seconds))
+            } else {
+                throw IllegalStateException("Out of process node is still up and running!")
+            }
+        }
+    }
+
 }

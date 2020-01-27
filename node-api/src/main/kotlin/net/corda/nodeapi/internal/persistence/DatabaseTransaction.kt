@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
-import org.hibernate.BaseSessionEventListener
+import net.corda.core.CordaRuntimeException
 import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
@@ -51,7 +51,27 @@ class DatabaseTransaction(
     private var committed = false
     private var closed = false
 
+    /**
+     * Holds the first exception thrown from a series of statements executed in the same [DatabaseTransaction].
+     * The purpose of this property is to make sure this exception cannot be suppressed in user code.
+     * The exception will be thrown on the next [commit]. It is used only inside a flow state machine execution.
+     */
+    private var firstExceptionInDatabaseTransaction: Exception? = null
+
+    fun setException(e: Exception) {
+        if (firstExceptionInDatabaseTransaction == null) {
+            firstExceptionInDatabaseTransaction = e
+        }
+    }
+
+    private fun clearException() {
+        firstExceptionInDatabaseTransaction = null
+    }
+
     fun commit() {
+        firstExceptionInDatabaseTransaction?.let {
+            throw DatabaseTransactionException(it)
+        }
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
@@ -66,16 +86,18 @@ class DatabaseTransaction(
         if (!connection.isClosed) {
             connection.rollback()
         }
+        clearException()
     }
 
     fun close() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-
         if (database.closeConnection) {
             connection.close()
         }
+        clearException()
+
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {
@@ -99,3 +121,7 @@ class DatabaseTransaction(
     }
 }
 
+/**
+ * Wrapper exception, for any exception registered as [DatabaseTransaction.firstExceptionInDatabaseTransaction].
+ */
+class DatabaseTransactionException(override val cause: Throwable): CordaRuntimeException(cause.message, cause)

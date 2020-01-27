@@ -314,10 +314,10 @@ extraNetworkMapKeys
 .. _corda_configuration_flow_external_operation_thread_pool_size:
 
 flowExternalOperationThreadPoolSize
-  The number of threads available to execute external operations called from flows. See the documentation on
-  :ref:`calling external systems inside of flows <api_flows_external_operations>` for more information.
+  The number of threads available to execute external operations that have been called from flows. See the documentation on
+  :ref:`calling external systems inside flows <api_flows_external_operations>` for more information.
 
-  *Default:* Set to the number of available cores on the machine the node is running on
+*Default:* Set to the lesser of either the maximum number of cores allocated to the node, or 10.
 
 flowMonitorPeriodMillis
   Duration of the period suspended flows waiting for IO are logged.

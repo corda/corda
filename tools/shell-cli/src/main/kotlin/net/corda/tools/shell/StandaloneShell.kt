@@ -105,7 +105,6 @@ class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone she
         InteractiveShell.runLocalShell {
             exit.countDown()
         }
-        configuration.sshdPort?.apply{ println("SSH server listening on port $this.") }
 
         exit.await()
         // because we can't clean certain Crash Shell threads that block on read()

@@ -21,7 +21,6 @@ class StandaloneShellArgsParserTest {
         assertEquals(expectedOptions.port, null)
         assertEquals(expectedOptions.user, null)
         assertEquals(expectedOptions.password, null)
-        assertEquals(expectedOptions.sshdPort, null)
     }
 
     @Test(timeout=300_000)
@@ -34,8 +33,6 @@ class StandaloneShellArgsParserTest {
         options.port = "1234"
         options.user = "demo"
         options.password = "abcd1234"
-        options.sshdPort = "2223"
-        options.sshdHostKeyDirectory = Paths.get("/x/y/ssh")
         options.trustStorePassword = "pass2"
         options.trustStoreFile = Paths.get("/x/y/truststore.jks")
         options.trustStoreType = "dummy"
@@ -50,8 +47,8 @@ class StandaloneShellArgsParserTest {
                 password = "abcd1234",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
                 ssl = expectedSsl,
-                sshdPort = 2223,
-                sshHostKeyDirectory = Paths.get("/x/y/ssh"),
+                sshdPort = null,
+                sshHostKeyDirectory = null,
                 noLocalShell = false)
 
         val config = options.toConfig()
@@ -69,8 +66,6 @@ class StandaloneShellArgsParserTest {
         options.port = null
         options.user = null
         options.password = null
-        options.sshdPort = null
-        options.sshdHostKeyDirectory = null
         options.trustStorePassword = null
         options.trustStoreFile = null
         options.trustStoreType = null
@@ -84,7 +79,7 @@ class StandaloneShellArgsParserTest {
                 ssl = ClientRpcSslOptions(
                         trustStorePath = Paths.get("/x/y/truststore.jks"),
                         trustStorePassword = "pass2"),
-                sshdPort = 2223)
+                sshdPort = null)
 
         val config = options.toConfig()
 
@@ -100,8 +95,6 @@ class StandaloneShellArgsParserTest {
         options.port = null
         options.user = null
         options.password = "blabla"
-        options.sshdPort = null
-        options.sshdHostKeyDirectory = null
         options.trustStorePassword = null
         options.trustStoreFile = null
         options.trustStoreType = null
@@ -116,7 +109,7 @@ class StandaloneShellArgsParserTest {
                 password = "blabla",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
                 ssl = expectedSsl,
-                sshdPort = 2223)
+                sshdPort = null)
 
         val config = options.toConfig()
 

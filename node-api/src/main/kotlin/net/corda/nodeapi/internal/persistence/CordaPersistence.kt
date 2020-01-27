@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -100,7 +101,7 @@ class CordaPersistence(
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: (t: Throwable) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {}
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -191,17 +192,17 @@ class CordaPersistence(
     }
 
     fun createSession(): Connection {
+        // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
+        _contextDatabase.set(this)
+        val transaction = contextTransaction
         try {
-            // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-            _contextDatabase.set(this)
-            currentDBSession().flush()
-            return contextTransaction.connection
-        } catch (sqlException: SQLException) {
-            errorHandler(sqlException)
-            throw sqlException
-        } catch (persistenceException: PersistenceException) {
-            errorHandler(persistenceException)
-            throw persistenceException
+            transaction.session.flush()
+            return transaction.connection
+        } catch (e: Exception) {
+            if (e is SQLException || e is PersistenceException) {
+                transaction.errorHandler(e)
+            }
+            throw e
         }
     }
 
@@ -230,18 +231,22 @@ class CordaPersistence(
                         recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
-        try {
-            return if (outer != null) {
+        return if (outer != null) {
+            // we only need to handle errors coming out of inner transactions because,
+            // a. whenever this code is being executed within the flow state machine, a top level transaction should have
+            // previously been created by the flow state machine in ActionExecutorImpl#executeCreateTransaction
+            // b. exceptions coming out from top level transactions are already being handled in CordaPersistence#inTopLevelTransaction
+            // i.e. roll back and close the transaction
+            try {
                 outer.statement()
-            } else {
-                inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
+            } catch (e: Exception) {
+                if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
+                    outer.errorHandler(e)
+                }
+                throw e
             }
-        } catch (sqlException: SQLException) {
-            errorHandler(sqlException)
-            throw sqlException
-        } catch (persistenceException: PersistenceException) {
-            errorHandler(persistenceException)
-            throw persistenceException
+        } else {
+            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
         }
     }
 
