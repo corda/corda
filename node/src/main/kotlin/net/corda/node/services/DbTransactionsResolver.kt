@@ -15,12 +15,12 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
 
-class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : TransactionsResolver {
+class DbTransactionsResolver(private val flow: ResolveTransactionsFlow): TransactionsResolver {
     private var sortedDependencies: List<SecureHash>? = null
     private val logger = flow.logger
 
     @Suspendable
-    override fun downloadDependencies(batchMode : Boolean) {
+    override fun downloadDependencies(batchMode: Boolean) {
         logger.debug { "Downloading dependencies for transactions ${flow.txHashes}" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
 
@@ -42,7 +42,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
         val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes) // Keep things unique but ordered, for unit test stability.
         val topologicalSort = TopologicalSort()
-        logger.debug { "DbTransactionsResolver.downloadDependencies(batchMode=${batchMode})" }
+        logger.debug { "DbTransactionsResolver.downloadDependencies(batchMode=$batchMode)" }
 
         while (nextRequests.isNotEmpty()) {
             logger.debug { "Main fetch loop: size_remaining=${nextRequests.size}" }

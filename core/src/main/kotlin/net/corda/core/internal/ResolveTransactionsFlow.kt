@@ -22,7 +22,7 @@ class ResolveTransactionsFlow private constructor(
         val txHashes: Set<SecureHash>,
         val otherSide: FlowSession,
         val statesToRecord: StatesToRecord
-) : FlowLogic<Unit>() {
+): FlowLogic<Unit>() {
 
     constructor(txHashes: Set<SecureHash>, otherSide: FlowSession, statesToRecord: StatesToRecord = StatesToRecord.NONE)
             : this(null, txHashes, otherSide, statesToRecord)
@@ -38,6 +38,7 @@ class ResolveTransactionsFlow private constructor(
 
     private var fetchNetParamsFromCounterpart = false
 
+    @Suppress("MagicNumber")
     @Suspendable
     override fun call() {
         // TODO This error should actually cause the flow to be sent to the flow hospital to be retried

@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutorService
 
 // TODO: This should really be called ServiceHubInternal but that name is already taken by net.corda.node.services.api.ServiceHubInternal.
 @DeleteForDJVM
-interface ServiceHubCoreInternal : ServiceHub {
+interface ServiceHubCoreInternal: ServiceHub {
 
     val externalOperationExecutor: ExecutorService
 
@@ -19,7 +19,6 @@ interface ServiceHubCoreInternal : ServiceHub {
 
 interface TransactionsResolver {
     @Suspendable
-    fun downloadDependencies(batchMode : Boolean)
-
+    fun downloadDependencies(batchMode: Boolean)
     fun recordDependencies(usedStatesToRecord: StatesToRecord)
 }
