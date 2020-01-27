@@ -183,7 +183,7 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-SNAPSHOT", changing: true
+        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
@@ -634,7 +634,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 10
     streamOutput false
-    coresPerFork 5
+    coresPerFork 2
     memoryInGbPerFork 12
     distribute DistributeTestsBy.METHOD
     nodeTaints "big"
@@ -644,7 +644,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
     streamOutput false
-    coresPerFork 3
+    coresPerFork 2
     memoryInGbPerFork 12
     distribute DistributeTestsBy.CLASS
     nodeTaints "small"
