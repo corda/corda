@@ -1,4 +1,4 @@
-@Library('existing-build-control')
+@Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
@@ -65,22 +65,13 @@ pipeline {
                      * copied to avoid collisions between files where the same test
                      * classes have run on multiple pods.
                      */
-                    sh label: 'Compact test results',
-                       script:
-                           '''#!/bin/bash
-                              shopt -s globstar
-                              rm -rf allure-input
-                              mkdir allure-input
-
-                              for i in **/test-results-xml/**/test-runs/test-reports/**
-                              do
-                                  [ -f $i ] &&
-                                  cp $i allure-input/$(echo $i | sed -e \\
-                                      \'s/.*test-results-xml\\/.*-\\(.*\\)\\/test-runs\\/.*\\/\\(.*\\)$/\\1\\-\\2/\')
-                              done
-
-                              echo "Finished compacting JUnit results"
-                       '''
+                    fileOperations([fileCopyOperation(
+                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
+                            targetLocation: 'allure-input',
+                            flattenFiles: true,
+                            renameFiles: true,
+                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
+                            targetNameExpression: '$1-$2')])
                     allure includeProperties: false,
                            jdk: '',
                            results: [[path: '**/allure-input']]
@@ -90,6 +81,40 @@ pipeline {
                     if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
                         currentBuild.result = 'UNSTABLE'
                     }
+                }
+            }
+            
+            script
+            {
+                // We want to send a summary email, but want to limit to once per day.
+                // Comparing the dates of the previous and current builds achieves this,
+                // i.e. we will only send an email for the first build on a given day.
+                def prevBuildDate = new Date(
+                        currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
+                def currentBuildDate = new Date(
+                        currentBuild.timeInMillis).clearTime()
+
+                if (prevBuildDate != currentBuildDate) {
+                    def statusSymbol = '\u2753'
+                    switch(currentBuild.result) {
+                        case 'SUCCESS':
+                            statusSymbol = '\u2705'
+                            break;
+                        case 'UNSTABLE':
+                        case 'FAILURE':
+                            statusSymbol = '\u274c'
+                            break;
+                        default:
+                            break;
+                    }
+
+                    echo('First build for this date, sending summary email')
+                    emailext to: '$DEFAULT_RECIPIENTS',
+                        subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
+                        mimeType: 'text/html',
+                        body: '${SCRIPT, template="groovy-html.template"}'
+                } else {
+                    echo('Already sent summary email today, suppressing')
                 }
             }
         }
