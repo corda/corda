@@ -23,14 +23,20 @@ import net.corda.core.utilities.trace
 @CordaSerializable
 class MaybeSerializedSignedTransaction(override val id: SecureHash, val serialized: SerializedBytes<SignedTransaction>?,
                                        val nonSerialised: SignedTransaction?) : NamedByHash {
-    fun get(): SignedTransaction {
+    init {
+        check(serialized == null || nonSerialised == null) {
+            "MaybeSerializedSignedTransaction: Serialized and non-serialized may not both be non-null."
+        }
+    }
+
+    fun get(): SignedTransaction? {
         return if (nonSerialised != null) {
             nonSerialised
         } else if (serialized != null) {
             val tranBytes = SerializedBytes<SignedTransaction>(serialized.bytes)
             tranBytes.deserialize()
         } else {
-            throw Exception("MaybeSerializedSignedTransaction.get(${id}): May not be called with null object content.")
+            null
         }
     }
     fun isNull(): Boolean {
@@ -141,6 +147,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     numSent++
                     tx
                 }
+                // Loop on all items returned using dataRequest.hashes.map:
                 FetchDataFlow.DataType.MULTI_TRANSACTION -> dataRequest.hashes.map { txId ->
                     if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
@@ -158,7 +165,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                         serialized = tx.serialize()
 
                         val itemByteCount = serialized.size
-                        logger.trace { "Multi-Send: first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = ${itemByteCount}, maximum = ${maxByteCount}" }
+                        logger.trace { "Multi-Send '${txId}': first = ${firstItem}, Total bytes = ${totalByteCount}, Item byte count = ${itemByteCount}, Maximum = ${maxByteCount}" }
                         if (firstItem || (totalByteCount + itemByteCount) < maxByteCount) {
                             totalByteCount += itemByteCount
                             numSent++
@@ -168,10 +175,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             authorisedTransactions.addAuthorised(getInputTransactions(tx))
                             logger.trace { "Adding item to return set: '${txId}'" }
                         } else {
-                            logger.trace { "Fetch block size EXCEEDED." }
+                            logger.trace { "Fetch block size EXCEEDED at '${txId}'." }
                             multiFetchCountExceeded = true
                         }
-                    }
+                    } // end
 
                     if (multiFetchCountExceeded) {
                         logger.trace { "Excluding '${txId}' from return set due to exceeded count." }
@@ -181,19 +188,19 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     val maybeserialized = MaybeSerializedSignedTransaction(txId, if (multiFetchCountExceeded) { null } else { serialized }, null)
                     firstItem = false
                     maybeserialized
-                }
+                } // Multi response loop end
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    logger.trace { "Sending: Attachments" }
+                    logger.trace { "Sending: Attachments for '${it}'" }
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    logger.trace { "Sending: Parameters" }
+                    logger.trace { "Sending: Parameters for '${it}'" }
                     (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)
                             ?: throw FetchDataFlow.MissingNetworkParameters(it)
                 }
                 FetchDataFlow.DataType.UNKNOWN -> dataRequest.hashes.map {
-                    logger.warn("Message from from a future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType")
+                    logger.warn("Message from from a future version of Corda with UNKNOWN enum value for FetchDataFlow.DataType: ID='${it}'")
                 }
             }
             logger.trace { "Block total size = ${totalByteCount}: Num Items = (${numSent} of ${dataRequest.hashes.size} total)" }

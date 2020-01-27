@@ -107,25 +107,17 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             // network layer.
             val maybeItems = ArrayList<W>()
             if (toFetch.size == 1) {
-                for (hash in toFetch) {
-                    // Technically not necessary to loop when the outer test is for one item only. Safer than toFetch[0]
-                    // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
-                    // The only thing checked is the object type. It is a protocol violation to send results out of order.
-                    // TODO We need to page here after large messages will work.
-                    logger.trace { "[Single fetch]: otherSideSession.sendAndReceive($hash): Fetch type: ${dataType.name}" }
-                    // should only pass single item dataType below.
-                    maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
-                }
+                val hash = toFetch.single()
+                // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
+                // The only thing checked is the object type.
+                // TODO We need to page here after large messages will work.
+                logger.trace { "[Single fetch]: otherSideSession.sendAndReceive($hash): Fetch type: ${dataType.name}" }
+                // should only pass single item dataType below.
+                maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
             } else {
-                val fetchSet = LinkedHashSet<SecureHash>()
-                for (hash in toFetch) {
-                    fetchSet.add(hash)
-                }
-
-                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive(list of ${fetchSet.size}): Fetch type: ${dataType.name})" }
-                maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.copyOf(fetchSet), dataType))
+                logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive(set of ${toFetch.size}): Fetch type: ${dataType.name})" }
+                maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.copyOf(toFetch), dataType))
                         .unwrap { it }
-
                 logger.trace { "[Multi fetch]: otherSideSession.sendAndReceive Done: count= ${maybeItems.size})" }
             }
 
@@ -144,9 +136,9 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         // Do nothing by default.
     }
 
-    private fun loadWhatWeHave(): Pair<List<SecureHash>, List<SecureHash>> {
+    private fun loadWhatWeHave(): Pair<List<SecureHash>, Set<SecureHash>> {
         val fromDisk = ArrayList<SecureHash>()
-        val toFetch = ArrayList<SecureHash>()
+        val toFetch = LinkedHashSet<SecureHash>()
         for (txid in requests) {
             val stx = load(txid)
             if (stx == null)
@@ -171,38 +163,42 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     protected open fun convert(wire: W): T = uncheckedCast(wire)
 
+    @Suppress("ComplexMethod")
     private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W>>,
-                                      requests: List<SecureHash>): List<T> {
+                                      requests: Set<SecureHash>): List<T> {
         return maybeItems.unwrap { response ->
             logger.trace { "validateFetchResponse(): Response size = ${response.size}, Request size = ${requests.size}" }
             if (response.size != requests.size) {
                 logger.trace { "maybeItems.unwrap: RespType Response.size (${requests.size}) != requests.size (${response.size})" }
-                throw DownloadedVsRequestedSizeMismatch(requests.size, response.size)
+                throw FetchDataFlow.DownloadedVsRequestedSizeMismatch(requests.size, response.size)
             }
 
             if (logger.isTraceEnabled()) {
                 logger.trace { "Request size = ${requests.size}" }
-                var reqIndex = 0
-                for (req in requests) {
-                    val reqInd = reqIndex++
-                    logger.trace { "Requested[${reqInd}] = '${req}'" }
+                for ((reqInd, req) in requests.withIndex()) {
+                    logger.trace { "Requested[$reqInd] = '${req}'" }
                 }
             }
 
             val answers = response.map { convert(it) }
-            logger.trace { "Answers size = ${answers.size}" }
-            var respIndex = 0
-            for (item in answers) {
-                val respInd = respIndex++
-                if (item is SignedTransaction) {
-                    logger.trace { "ValidateItem[$respInd]: '${item}': Type = SignedTransaction: size = ${item.txBits.size}" }
-                } else if (item is MaybeSerializedSignedTransaction) {
-                    val tranSize = if (item.isNull()) { "<Null>" } else if (item.serialized != null) { item.serialized.size } else { -1 }
-                    val isSer = item.serialized != null
-                    val isObj = item.nonSerialised != null
-                    logger.trace { "ValidateItem[$respInd]: '${item.id}': Type = MaybeSerializedSignedTransaction: size = ${tranSize}, serialized = ${isSer}, isObj = $isObj" }
-                } else {
-                    logger.warn("ValidateItem[$respInd]: Type = ${item.javaClass.name}: Unknown Object type")
+            if (logger.isTraceEnabled()) {
+                logger.trace { "Answers size = ${answers.size}" }
+                for ((respInd, item) in answers.withIndex()) {
+                    if (item is MaybeSerializedSignedTransaction) {
+                        val tranSize = if (item.isNull()) {
+                            "<Null>"
+                        } else if (item.serialized != null) {
+                            item.serialized.size
+                        } else {
+                            0
+                        }
+                        val isSer = item.serialized != null
+                        val isObj = item.nonSerialised != null
+                        logger.trace { "ValidateItem[$respInd]: '${item.id}': Type = MaybeSerializedSignedTransaction: size = ${tranSize},"
+                             " serialized = ${isSer}, isObj = $isObj" }
+                    } else {
+                        logger.trace("ValidateItem[$respInd]: Type = ${item.javaClass.name}")
+                    }
                 }
             }
 
@@ -210,17 +206,17 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             // is a malicious flow violator or buggy.
             var badDataIndex = -1
             var badDataId : SecureHash? = null
-            for ((index, item) in answers.withIndex()) {
-                if (item.id != requests[index]) {
+            for ((index, item) in requests.withIndex()) {
+                if (item != answers[index].id) {
                     badDataIndex = index
-                    badDataId = item.id
-                    logger.info("Will Throw on DownloadedVsRequestedDataMismatch(Req item = '${requests[index]}', Resp item = ${item.id}")
+                    badDataId = item
+                    logger.info("Will Throw on DownloadedVsRequestedDataMismatch(Req item = '$item', Resp item = ${answers[index].id}")
                 }
             }
 
             if (badDataIndex >= 0 && badDataId != null) {
-                logger.error("Throwing DownloadedVsRequestedDataMismatch due to bad verification on: '${requests[badDataIndex]}', ID = ${badDataId}")
-                throw DownloadedVsRequestedDataMismatch(requests[badDataIndex], badDataId)
+                logger.error("Throwing DownloadedVsRequestedDataMismatch due to bad verification on: ID = $badDataId, Answer[$badDataIndex]='${answers[badDataIndex].id}'")
+                throw DownloadedVsRequestedDataMismatch(badDataId, answers[badDataIndex].id)
             }
 
             answers
