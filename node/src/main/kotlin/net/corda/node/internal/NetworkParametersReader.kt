@@ -40,7 +40,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         val advertisedParametersHash = try {
             networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
         } catch (e: Exception) {
-            logger.info("Unable to download network map: $e")
+            logger.warn("Unable to download network map. Node will attempt to start using network-parameters file: $e")
             // If NetworkMap is down while restarting the node, we should be still able to continue with parameters from file
             null
         }
