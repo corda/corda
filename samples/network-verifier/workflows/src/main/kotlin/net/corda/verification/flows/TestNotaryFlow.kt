@@ -1,4 +1,4 @@
-package net.corda.verification
+package net.corda.verification.flows
 
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -6,6 +6,9 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.verification.contracts.NotaryTestCommand
+import net.corda.verification.contracts.NotaryTestContract
+import net.corda.verification.contracts.NotaryTestState
 
 @StartableByRPC
 class TestNotaryFlow : FlowLogic<String>() {

@@ -7,6 +7,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
@@ -119,7 +120,7 @@ class DeserializationInput constructor(
             des {
                 val envelope = getEnvelope(bytes, context.encodingWhitelist)
 
-                logger.trace("deserialize blob scheme=\"${envelope.schema}\"")
+                logger.trace { "deserialize blob scheme=\"${envelope.schema}\"" }
 
                 doReadObject(envelope, clazz, context)
             }

@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
@@ -26,11 +27,13 @@ import rx.Observable
 import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.sql.SQLException
 import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
+import javax.persistence.PersistenceException
 import javax.persistence.Tuple
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.CriteriaUpdate
@@ -393,12 +396,25 @@ class NodeVaultService(
                 persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 try {
                     updatesPublisher.onNext(vaultUpdate)
-                } catch (e: OnErrorNotImplementedException) {
-                    log.warn("Caught an Rx.OnErrorNotImplementedException " +
-                            "- caused by an exception in an RX observer that was unhandled " +
-                            "- the observer has been unsubscribed! The underlying exception will be rethrown.", e)
-                    // if the observer code threw, unwrap their exception from the RX wrapper
-                    throw e.cause ?: e
+                } catch (e: Exception) {
+                    // exception thrown here will cause the recording of transaction states to the vault being rolled back
+                    // it could cause the ledger go into an inconsistent state, therefore we should hospitalise this flow
+                    // observer code should either be fixed or ignored and have the flow retry from previous checkpoint
+                    log.error(
+                        "Failed to record transaction states locally " +
+                                "- the node could be now in an inconsistent state with other peers and/or the notary " +
+                                "- hospitalising the flow ", e
+                    )
+
+                    throw (e as? OnErrorNotImplementedException)?.let {
+                        it.cause?.let { wrapped ->
+                            if (wrapped is SQLException || wrapped is PersistenceException) {
+                                wrapped
+                            } else {
+                                HospitalizeFlowException(wrapped)
+                            }
+                        }
+                    } ?: HospitalizeFlowException(e)
                 }
             }
         }

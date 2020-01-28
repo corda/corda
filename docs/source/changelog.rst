@@ -105,6 +105,10 @@ Unreleased
 
 * SSH server in the :doc:`shell` has been updated to remove outdated weak ciphers and algorithms.
 
+* Removed support for external SSH connections to the standalone shell. As a result, ``--sshd-port`` and ``--sshd-hostkey-directory``
+  options, as well as ``extensions.sshd`` configuration entry, have been removed from the standalone shell.
+  Available alternatives are either to use the standalone shell directly, or connect to the node embedded shell via SSH.
+
 .. _changelog_v4.1:
 
 Version 4.1

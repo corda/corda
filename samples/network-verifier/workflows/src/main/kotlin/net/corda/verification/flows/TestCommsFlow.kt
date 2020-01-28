@@ -1,4 +1,4 @@
-package net.corda.verification
+package net.corda.verification.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
@@ -7,6 +7,9 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import net.corda.verification.contracts.CommsTestCommand
+import net.corda.verification.contracts.CommsTestContract
+import net.corda.verification.contracts.CommsTestState
 
 @StartableByRPC
 @InitiatingFlow

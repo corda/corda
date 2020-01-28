@@ -46,16 +46,6 @@
     required: false
     multiParam: false
     acceptableValues: []
-  - parameterName: "--sshd-hostkey-directory"
-    parameterType: "java.nio.file.Path"
-    required: false
-    multiParam: true
-    acceptableValues: []
-  - parameterName: "--sshd-port"
-    parameterType: "java.lang.String"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "--truststore-file"
     parameterType: "java.nio.file.Path"
     required: false
