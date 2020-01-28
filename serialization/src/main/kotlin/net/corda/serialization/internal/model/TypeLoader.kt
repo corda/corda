@@ -2,8 +2,6 @@ package net.corda.serialization.internal.model
 
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.*
-import java.io.NotSerializableException
-import java.lang.ClassCastException
 import java.lang.reflect.Type
 
 /**

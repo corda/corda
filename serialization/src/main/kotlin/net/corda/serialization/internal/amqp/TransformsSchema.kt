@@ -3,9 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
-import net.corda.serialization.internal.NotSerializableDetailedException
-import net.corda.serialization.internal.model.EnumTransforms
-import net.corda.serialization.internal.model.InvalidEnumTransformsException
 import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
