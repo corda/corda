@@ -100,13 +100,13 @@
             <column name="invocation_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_id" type="BIGINT">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="true"/>
             </column>
             <column name="flow_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_identifier" type="NVARCHAR(128)">
+            <column name="flow_identifier" type="NVARCHAR(512)">
                 <constraints nullable="true"/>
             </column>
             <column name="started_type" type="NVARCHAR(32)">

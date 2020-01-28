@@ -27,6 +27,36 @@ class DBCheckpointStorage : CheckpointStorage {
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+    class DBFlowCheckpoint(
+
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_blobs")
+    class DBFlowCheckpointBlob(
+
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
+    class DBFlowResult(
+
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
+    class DBFlowException(
+
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
+    class DBFlowMetadata(
+
+    )
+
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBCheckpoint(
             @Id
             @Suppress("MagicNumber") // database column width
