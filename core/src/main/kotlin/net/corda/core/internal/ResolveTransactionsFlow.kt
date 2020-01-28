@@ -9,6 +9,8 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 
 /**
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
@@ -36,15 +38,19 @@ class ResolveTransactionsFlow private constructor(
 
     private var fetchNetParamsFromCounterpart = false
 
+    @Suppress("MagicNumber")
     @Suspendable
     override fun call() {
         // TODO This error should actually cause the flow to be sent to the flow hospital to be retried
         val counterpartyPlatformVersion = checkNotNull(serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion) {
             "Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache"
         }
+
         // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
         // request to node V3 that doesn't know about this protocol.
         fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= 4
+        val batchMode = counterpartyPlatformVersion >= 6
+        logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Batch mode = $batchMode" }
 
         if (initialTx != null) {
             fetchMissingAttachments(initialTx)
@@ -52,8 +58,9 @@ class ResolveTransactionsFlow private constructor(
         }
 
         val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
-        resolver.downloadDependencies()
+        resolver.downloadDependencies(batchMode)
 
+        logger.trace { "ResolveTransactionsFlow: Sending END." }
         otherSide.send(FetchDataFlow.Request.End) // Finish fetching data.
 
         // If transaction resolution is performed for a transaction where some states are relevant, then those should be
