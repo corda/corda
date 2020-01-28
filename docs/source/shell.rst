@@ -26,11 +26,37 @@ Permissions
 When accessing the shell (embedded, standalone, via SSH) RPC permissions are required. This is because the shell actually communicates
 with the node using RPC calls.
 
+There are several operations that are read-only in nature and granting them should have no impact on the ledger state of the node.
+These permissions are:
+
+.. code:: bash
+
+    permissions=[
+        "InvokeRpc.nodeInfo",
+        "InvokeRpc.networkMapSnapshot",
+        "InvokeRpc.currentNodeTime",
+        "InvokeRpc.wellKnownPartyFromX500Name",
+        "InvokeRpc.vaultQuery",
+        "InvokeRpc.vaultQueryBy",
+        "InvokeRpc.stateMachinesSnapshot",
+        "InvokeRpc.nodeDiagnosticInfo",
+        "InvokeRpc.notaryIdentities",
+        "InvokeRpc.attachmentExists",
+        "InvokeRpc.partyFromKey",
+        "InvokeRpc.notaryPartyFromX500Name",
+        "InvokeRpc.partiesFromName",
+        "InvokeRpc.registeredFlows"
+    ]
+
+There are also operations that allow starting/killing the flows or even stopping the node as a whole:
+
 * Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``.
 * Starting flows requires ``InvokeRpc.startTrackedFlowDynamic``, ``InvokeRpc.registeredFlows`` and ``InvokeRpc.wellKnownPartyFromX500Name``, as well as a
   permission for the flow being started.
 * Killing flows (``flow kill``) requires ``InvokeRpc.killFlow``. This currently
   allows the user to kill *any* flow, so please be careful when granting it!
+
+Description of RPC operations can be found in :doc:`api-rpc`.
 
 The shell via the local terminal
 --------------------------------
