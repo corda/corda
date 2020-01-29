@@ -1,7 +1,9 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
@@ -16,8 +18,13 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import org.hibernate.annotations.Type
+import java.math.BigInteger
 import java.sql.Connection
 import java.sql.SQLException
+import java.time.Instant
+import javax.persistence.FetchType
+import javax.persistence.JoinColumn
+import javax.persistence.OneToOne
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -25,16 +32,71 @@ import java.sql.SQLException
 class DBCheckpointStorage : CheckpointStorage {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
 
+    enum class FlowStatus {
+        RUNNABLE,
+        FAILED,
+        COMPLETED,
+        HOSPITALIZED,
+        KILLED,
+        PAUSED
+    }
+
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBFlowCheckpoint(
+            @Id
+            @Column(name = "flow_id", length = 64, nullable = false)
+            private var id: String? = null,
 
+            @OneToOne(fetch = FetchType.LAZY)
+            @JoinColumn(name = "id")
+            private var blob: DBFlowCheckpointBlob? = null,
+
+            @OneToOne(fetch = FetchType.LAZY)
+            @JoinColumn(name = "id")
+            private var result: DBFlowResult? = null,
+
+            @OneToOne(fetch = FetchType.LAZY)
+            @JoinColumn(name = "id")
+            private var exceptionDetails: DBFlowException? = null,
+
+            @OneToOne(fetch = FetchType.LAZY)
+            @JoinColumn(name = "flow_id")
+            private var flowMetadata: DBFlowMetadata? = null,
+
+            @Column(name = "status")
+            private var status: FlowStatus? = null,
+
+            @Column(name = "compatible")
+            private var compatible: Boolean? = null,
+
+            @Column(name = "progress_step")
+            private var progressStep: String? = null,
+
+            @Column(name = "flow_io_request")
+            private val ioRequestType: Class<FlowIORequest<*>>? = null,
+
+            @Column(name = "timestamp")
+            private val checkpointInstant: Instant? = null
     )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_blobs")
     class DBFlowCheckpointBlob(
+            @Id
+            @Column(name = "id", nullable = false)
+            private var id: BigInteger? = null,
 
+            @Type(type = "corda-blob")
+            @Column(name = "checkpoint_value", nullable = false)
+            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+
+            @Type(type = "corda-blob")
+            @Column(name = "flow_state", nullable = false)
+            var flowStack: ByteArray = EMPTY_BYTE_ARRAY,
+
+            @Column(name = "timestamp")
+            private val instant: Instant? = null
     )
 
     @Entity
@@ -65,10 +127,10 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
-            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY          
+            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     ) {
-	    override fun toString() = "DBCheckpoint(checkpointId = ${checkpointId}, checkpointSize = ${checkpoint.size})"
-      }
+        override fun toString() = "DBCheckpoint(checkpointId = ${checkpointId}, checkpointSize = ${checkpoint.size})"
+    }
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
         currentDBSession().save(DBCheckpoint().apply {
@@ -85,7 +147,6 @@ class DBCheckpointStorage : CheckpointStorage {
             log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
         })
     }
-
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = currentDBSession()

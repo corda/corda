@@ -269,7 +269,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
             val result = logic.call()
-            suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
+            suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
             if(t.isUnrecoverable()) {
