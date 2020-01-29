@@ -36,11 +36,11 @@ Non-public API (experimental)
 
 The following are not part of the Corda's public API and no backwards compatibility guarantees are provided:
 
-* the incubating modules, for which we will do our best to minimise disruption to developers using them until we are able to graduate them into the public API
-* the internal modules, which are not to be used, and will change without notice
-* anything defined in a package containing ``.internal`` (for example, ``net.corda.core.internal`` and sub-packages should 
+* Incubating modules, for which we will do our best to minimise disruption to developers using them until we are able to graduate them into the public API
+* Internal modules, which are not to be used, and will change without notice
+* Anything defined in a package containing ``.internal`` (for example, ``net.corda.core.internal`` and sub-packages should 
   not be used)
-* any interfaces, classes or methods whose name contains the word ``internal`` or ``Internal``
+* Any interfaces, classes or methods whose name contains the word ``internal`` or ``Internal``
 
 The **finance module** was the first CorDapp ever written and is a legacy module. Although it is not a part of our API guarantees, we also
 don't anticipate much future change to it. Users should use the tokens SDK instead.
