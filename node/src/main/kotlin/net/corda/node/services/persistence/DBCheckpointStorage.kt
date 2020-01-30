@@ -66,7 +66,7 @@ class DBCheckpointStorage : CheckpointStorage {
             var exceptionDetails: DBFlowException? = null,
 
             @OneToOne(fetch = FetchType.LAZY)
-            @JoinColumn(name = "flow_id")
+            @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
             var flowMetadata: DBFlowMetadata? = null,
 
             @Column(name = "status")
@@ -145,9 +145,6 @@ class DBCheckpointStorage : CheckpointStorage {
     class DBFlowMetadata(
 
             @Id
-            @Column(name = "id", nullable = false)
-            var id: BigInteger? = null,
-
             @Column(name = "flow_id", length = 64, nullable = false)
             var flowId: String? = null,
 

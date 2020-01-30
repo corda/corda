@@ -34,6 +34,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
@@ -42,6 +43,7 @@ import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -586,6 +588,46 @@ class SingleThreadedStateMachineManager(
         val flowAlreadyExists = mutex.locked { flows[flowId] != null }
 
         val existingCheckpoint = if (flowAlreadyExists) {
+
+            val currentDBSession = currentDBSession()
+            val dbFlowCheckpoint = currentDBSession.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, flowId.toString())
+                    ?: DBCheckpointStorage.DBFlowCheckpoint(
+                            flowId.toString(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            DBCheckpointStorage.FlowStatus.RUNNABLE,
+                            true,
+                            flowLogic.progressTracker?.currentStep?.toString(),
+                            null,
+                            null
+                    )
+
+            var cordappName : String? = null
+            var initiatingParty: String? = null
+            var startReason: DBCheckpointStorage.StartReason = DBCheckpointStorage.StartReason.FLOW
+            when (flowStart) {
+                is FlowStart.Initiated -> {
+                    cordappName = flowStart.initiatedFlowInfo.appName
+                    initiatingParty = flowStart.peerSession.counterparty.name.toString()
+                    startReason = DBCheckpointStorage.StartReason.INITIATED
+                }
+            }
+
+            currentDBSession.get(DBCheckpointStorage.DBFlowMetadata::class.java, flowId.toString()) ?: DBCheckpointStorage.DBFlowMetadata(
+                    flowId = flowId.toString(),
+                    flowName = "thisIsAPlaceholder",
+                    userSuppliedIdentifier = "thisIsAnotherPlaceholder",
+                    startType =  startReason,
+                    initialParameters = null,
+                    launchingCordapp = cordappName
+            )
+
+
+            currentDBSession.persist(dbFlowCheckpoint)
+
+
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
