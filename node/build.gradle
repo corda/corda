@@ -138,9 +138,6 @@ dependencies {
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-jmx:$metrics_version"
 
-    // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
-    compile "com.google.jimfs:jimfs:1.1"
-
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
