@@ -135,10 +135,6 @@ dependencies {
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
-    compile("com.intellij:forms_rt:7.0.3") {
-        exclude group: "asm"
-    }
-
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-jmx:$metrics_version"
 
