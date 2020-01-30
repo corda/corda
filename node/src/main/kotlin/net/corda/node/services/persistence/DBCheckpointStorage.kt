@@ -18,6 +18,7 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import org.hibernate.annotations.Type
+import java.lang.Exception
 import java.math.BigInteger
 import java.sql.Connection
 import java.sql.SQLException
@@ -41,43 +42,47 @@ class DBCheckpointStorage : CheckpointStorage {
         PAUSED
     }
 
+    enum class StartReason {
+        RPC, FLOW, SERVICE, SCHEDULED, INITIATED
+    }
+
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_new")
     class DBFlowCheckpoint(
             @Id
             @Column(name = "flow_id", length = 64, nullable = false)
-            private var id: String? = null,
+            var id: String? = null,
 
             @OneToOne(fetch = FetchType.LAZY)
-            @JoinColumn(name = "id")
-            private var blob: DBFlowCheckpointBlob? = null,
+            @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
+            var blob: DBFlowCheckpointBlob? = null,
 
             @OneToOne(fetch = FetchType.LAZY)
-            @JoinColumn(name = "id")
-            private var result: DBFlowResult? = null,
+            @JoinColumn(name = "result_id", referencedColumnName = "id")
+            var result: DBFlowResult? = null,
 
             @OneToOne(fetch = FetchType.LAZY)
-            @JoinColumn(name = "id")
-            private var exceptionDetails: DBFlowException? = null,
+            @JoinColumn(name = "error_id", referencedColumnName = "id")
+            var exceptionDetails: DBFlowException? = null,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "flow_id")
-            private var flowMetadata: DBFlowMetadata? = null,
+            var flowMetadata: DBFlowMetadata? = null,
 
             @Column(name = "status")
-            private var status: FlowStatus? = null,
+            var status: FlowStatus? = null,
 
             @Column(name = "compatible")
-            private var compatible: Boolean? = null,
+            var compatible: Boolean? = null,
 
             @Column(name = "progress_step")
-            private var progressStep: String? = null,
+            var progressStep: String? = null,
 
             @Column(name = "flow_io_request")
-            private val ioRequestType: Class<FlowIORequest<*>>? = null,
+            var ioRequestType: Class<FlowIORequest<*>>? = null,
 
             @Column(name = "timestamp")
-            private val checkpointInstant: Instant? = null
+            var checkpointInstant: Instant? = null
     )
 
     @Entity
@@ -85,7 +90,7 @@ class DBCheckpointStorage : CheckpointStorage {
     class DBFlowCheckpointBlob(
             @Id
             @Column(name = "id", nullable = false)
-            private var id: BigInteger? = null,
+            var id: BigInteger? = null,
 
             @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
@@ -96,24 +101,88 @@ class DBCheckpointStorage : CheckpointStorage {
             var flowStack: ByteArray = EMPTY_BYTE_ARRAY,
 
             @Column(name = "timestamp")
-            private val instant: Instant? = null
+            var persistedInstant: Instant? = null
     )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
     class DBFlowResult(
+            @Id
+            @Column(name = "id", nullable = false)
+            var id: BigInteger? = null,
 
+            @Type(type = "corda-blob")
+            @Column(name = "result_value", nullable = false)
+            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+
+            @Column(name = "timestamp")
+            val persistedInstant: Instant? = null
     )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
     class DBFlowException(
+            @Id
+            @Column(name = "id", nullable = false)
+            var id: BigInteger? = null,
 
+            @Column(name = "type", nullable = false)
+            var type: Class<Exception>? = null,
+
+            @Type(type = "corda-blob")
+            @Column(name = "exception_value", nullable = false)
+            var value: ByteArray,
+
+            @Column(name = "exception_message")
+            var message: String? = null,
+
+            @Column(name = "timestamp")
+            val persistedInstant: Instant? = null
     )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
     class DBFlowMetadata(
+
+            @Id
+            @Column(name = "id", nullable = false)
+            var id: BigInteger? = null,
+
+            @Column(name = "flow_id", length = 64, nullable = false)
+            var flowId: String? = null,
+
+            @Column(name = "flow_name", nullable = false)
+            var flowName: String? = null,
+
+            @Column(name = "flow_identifier", nullable = true)
+            var userSuppliedIdentifier: String? = null,
+
+            @Column(name = "started_type", nullable = true)
+            var startType: StartReason? = null,
+
+            @Column(name = "flow_parameters", nullable = true)
+            var initialParameters: ByteArray? = null,
+
+            @Column(name = "cordapp_name", nullable = true)
+            var launchingCordapp: String? = null,
+
+            @Column(name = "platform_version", nullable = true)
+            var platformVersion: Int? = null,
+
+            @Column(name = "rpc_user", nullable = true)
+            var rpcUsername: String? = null,
+
+            @Column(name = "invocation_time", nullable = true)
+            var invocationInstant: Instant? = null,
+
+            @Column(name = "received_time", nullable = true)
+            var receivedInstant: Instant? = null,
+
+            @Column(name = "start_time", nullable = true)
+            var startInstant: Instant? = null,
+
+            @Column(name = "finish_time", nullable = true)
+            var finishInstant: Instant? = null
 
     )
 

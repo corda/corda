@@ -4,12 +4,8 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="drop_existing_checkpoints_table" dbms="postgresql">
-        <dropTable tableName="node_checkpoints"/>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="add_new_checkpoints_table" dbms="postgresql">
-        <createTable tableName="node_checkpoints">
+    <changeSet author="R3.Corda" id="add_new_checkpoints_table-pg" dbms="postgresql">
+        <createTable tableName="node_checkpoints_new">
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
@@ -22,7 +18,7 @@
             <column name="error_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
-            <column name="status" type="NVARCHAR(16)">
+            <column name="status" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
             <column name="compatible" type="BOOLEAN">
@@ -31,7 +27,8 @@
             <column name="progress_step" type="NVARCHAR(256)">
                 <constraints nullable="true"/>
             </column>
-            <column name="flow_io_request" type="NVARCHAR(32)">
+            <!-- net.corda.core.internal.FlowIORequest.SendAndReceive -->
+            <column name="flow_io_request" type="NVARCHAR(128)">
                 <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
@@ -40,7 +37,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_checkpoint_blobs_table" dbms="postgresql">
+    <changeSet author="R3.Corda" id="add_new_checkpoint_blob_table-pg" dbms="postgresql">
         <createTable tableName="node_checkpoint_blobs">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -61,7 +58,7 @@
     </changeSet>
 
 
-    <changeSet author="R3.Corda" id="add_new_flow_result_table" dbms="postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_result_table-pg" dbms="postgresql">
         <createTable tableName="node_flow_results">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -75,12 +72,12 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_flow_exceptions_table" dbms="postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_exceptions_table-pg" dbms="postgresql">
         <createTable tableName="node_flow_exceptions">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="NVARCHAR(128)">
+            <column name="type" type="NVARCHAR(256)">
                 <constraints nullable="false"/>
             </column>
             <column name="exception_value" type="varbinary(33554432)">
@@ -95,7 +92,7 @@
         </createTable>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_flow_metadata_table" dbms="postgresql">
+    <changeSet author="R3.Corda" id="add_new_flow_metadata_table-pg" dbms="postgresql">
         <createTable tableName="node_flow_metadata">
             <column name="invocation_id" type="BIGINT">
                 <constraints nullable="false"/>
@@ -109,7 +106,7 @@
             <column name="flow_identifier" type="NVARCHAR(512)">
                 <constraints nullable="true"/>
             </column>
-            <column name="started_type" type="NVARCHAR(32)">
+            <column name="started_type" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
             <column name="flow_parameters" type="varbinary(33554432)">
@@ -118,7 +115,7 @@
             <column name="cordapp_name" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="platform_version" type="BIGINT">
+            <column name="platform_version" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
             <column name="rpc_user" type="NVARCHAR(64)">
