@@ -1715,7 +1715,7 @@
     <ID>TooManyFunctions:LedgerTransaction.kt$LedgerTransaction : FullTransaction</ID>
     <ID>TooManyFunctions:LocalSerializerFactory.kt$DefaultLocalSerializerFactory : LocalSerializerFactory</ID>
     <ID>TooManyFunctions:LocalTypeInformationBuilder.kt$LocalTypeInformationBuilder</ID>
-    <ID>TooManyFunctions:MockNodeMessagingService.kt$MockNodeMessagingService : SingletonSerializeAsTokenMessagingService</ID>
+    <ID>TooManyFunctions:MockNodeMessagingService.kt$MockNodeMessagingService : SingletonSerializeAsTokenMessagingServiceServiceStateSupport</ID>
     <ID>TooManyFunctions:NetworkBootstrapper.kt$NetworkBootstrapper : NetworkBootstrapperWithOverridableParameters</ID>
     <ID>TooManyFunctions:Node.kt$Node : AbstractNode</ID>
     <ID>TooManyFunctions:NodeAttachmentService.kt$NodeAttachmentService : AttachmentStorageInternalSingletonSerializeAsToken</ID>
@@ -1724,7 +1724,7 @@
     <ID>TooManyFunctions:NodeVaultService.kt$NodeVaultService : SingletonSerializeAsTokenVaultServiceInternal</ID>
     <ID>TooManyFunctions:OGSwapPricingExample.kt$SwapPricingExample</ID>
     <ID>TooManyFunctions:ObservableUtilities.kt$net.corda.client.jfx.utils.ObservableUtilities.kt</ID>
-    <ID>TooManyFunctions:P2PMessagingClient.kt$P2PMessagingClient : SingletonSerializeAsTokenMessagingServiceAddressToArtemisQueueResolver</ID>
+    <ID>TooManyFunctions:P2PMessagingClient.kt$P2PMessagingClient : SingletonSerializeAsTokenMessagingServiceAddressToArtemisQueueResolverServiceStateSupport</ID>
     <ID>TooManyFunctions:PathUtils.kt$net.corda.core.internal.PathUtils.kt</ID>
     <ID>TooManyFunctions:Perceivable.kt$net.corda.finance.contracts.universal.Perceivable.kt</ID>
     <ID>TooManyFunctions:PersistentIdentityService.kt$PersistentIdentityService : SingletonSerializeAsTokenIdentityServiceInternal</ID>
