@@ -414,7 +414,7 @@ class NodeVaultService(
                                 HospitalizeFlowException(wrapped)
                             }
                         }
-                    } ?: HospitalizeFlowException(e)
+                    } ?: (e as? SQLException ?: (e as? PersistenceException ?: HospitalizeFlowException(e)))
                 }
             }
         }
