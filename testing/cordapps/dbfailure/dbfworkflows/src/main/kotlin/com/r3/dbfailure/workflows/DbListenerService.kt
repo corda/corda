@@ -9,6 +9,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
+import rx.observers.Subscribers
 import java.security.InvalidParameterException
 
 @CordaService
@@ -20,6 +21,7 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
 
         // make the service throw an unrecoverable error (should be executed in an outOfProcess node so that it wont halt testing jvm)
         var throwUnrecoverableError = false
+        var safeSubscription = true
     }
 
     init {
@@ -119,7 +121,11 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
         if (onError != null) {
             services.vaultService.rawUpdates.subscribe(onNext, onError) // onError is defined
         } else {
-            services.vaultService.rawUpdates.subscribe(onNext)
+            if (safeSubscription) {
+                services.vaultService.rawUpdates.subscribe(onNext)
+            } else {
+                services.vaultService.rawUpdates.unsafeSubscribe(Subscribers.create(onNext))
+            }
         }
 
     }
