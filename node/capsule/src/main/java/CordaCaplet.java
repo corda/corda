@@ -321,20 +321,25 @@ public class CordaCaplet extends Capsule {
      * Helper class so that we can parse the "systemProperties" element of node.conf.
      */
     private static class Property {
-        private final List<String> path;
+        private final String path;
         private final Object value;
 
-        Property(List<String> path, Object value) {
+        Property(String path, Object value) {
             this.path = path;
             this.value = value;
         }
 
         boolean isValid() {
-            return path.size() == 1;
+            try {
+                ConfigUtil.splitPath(path);
+                return true;
+            } catch (ConfigException e) {
+                return false;
+            }
         }
 
         String getKey() {
-            return path.get(0);
+            return path;
         }
 
         Object getValue() {
@@ -342,7 +347,7 @@ public class CordaCaplet extends Capsule {
         }
 
         static Property create(Map.Entry<String, ConfigValue> entry) {
-            return new Property(ConfigUtil.splitPath(entry.getKey()), entry.getValue().unwrapped());
+            return new Property(entry.getKey(), entry.getValue().unwrapped());
         }
     }
 }
