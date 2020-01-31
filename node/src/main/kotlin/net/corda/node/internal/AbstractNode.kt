@@ -317,7 +317,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
-    protected val network: MessagingService = makeMessagingService().tokenize()
+    protected val network: MessagingService = makeMessagingService().tokenize().apply {
+        activeChange.subscribe({
+            log.info("MessagingService active change to: $it")
+        }, {
+            log.warn("MessagingService subscription error", it)
+        })
+    }
     val services = ServiceHubInternalImpl().tokenize()
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
@@ -536,7 +542,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
             val readyFuture = smmStartedFuture.flatMap {
                 log.debug("SMM ready")
-                network.activeChange.toFuture()
+                network.activeChange.filter { it }.toFuture()
             }
             resultingNodeInfo to readyFuture
         }

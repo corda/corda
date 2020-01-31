@@ -461,6 +461,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             check(started)
             val prevRunning = running
             running = false
+            stateHelper.active = false
             networkChangeSubscription?.unsubscribe()
             require(p2pConsumer != null, { "stop can't be called twice" })
             require(producer != null, { "stop can't be called twice" })
