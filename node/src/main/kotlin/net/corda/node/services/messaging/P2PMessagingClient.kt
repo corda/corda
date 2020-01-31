@@ -7,8 +7,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.OpenFuture
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -42,6 +40,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
+import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
+import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -92,8 +92,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val metricRegistry: MetricRegistry,
                          cacheFactory: NamedCacheFactory,
                          private val isDrainingModeOn: () -> Boolean,
-                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
-) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
+                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
+                         private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)
+) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, ServiceStateSupport by stateHelper {
     companion object {
         private val log = contextLogger()
     }
@@ -140,12 +141,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
-    private val handlersChangedSignal = java.lang.Object()
+    private val handlersChangedSignal = Object()
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
     internal var messagingExecutor: MessagingExecutor? = null
-
-    override val ready: OpenFuture<Void?> = openFuture()
 
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
@@ -332,7 +331,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
-    fun run() {
+    override fun start() {
         val latch = CountDownLatch(1)
         try {
             synchronized(handlersChangedSignal) {
@@ -355,8 +354,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 p2pConsumer!!
             }
             consumer.start()
-            log.debug("Signalling ready")
-            ready.set(null)
+            log.debug("Signalling active")
+            stateHelper.active = true
             log.debug("Awaiting on latch")
             latch.await()
         } finally {
@@ -456,7 +455,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
      * it returns immediately and shutdown is asynchronous.
      */
-    fun stop() {
+    override fun stop() {
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(started)
@@ -503,8 +502,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // swallow
         }
     }
-
-    override fun close() = stop()
 
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {

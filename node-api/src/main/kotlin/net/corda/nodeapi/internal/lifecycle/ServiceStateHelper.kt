@@ -9,8 +9,8 @@ import kotlin.concurrent.withLock
 /**
  * Simple implementation of [ServiceStateSupport] service domino logic using RxObservables.
  */
-class ServiceStateHelper(val log: Logger, private val serviceName: String = log.name.split(".").last()) : ServiceStateSupport {
-    val lock = ReentrantLock()
+class ServiceStateHelper(private val log: Logger, private val serviceName: String = log.name.split(".").last()) : ServiceStateSupport {
+    private val lock = ReentrantLock()
 
     // Volatile to prevent deadlocks when locking on read.
     @Volatile

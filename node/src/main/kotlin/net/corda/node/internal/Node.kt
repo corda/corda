@@ -634,7 +634,7 @@ open class Node(configuration: NodeConfiguration,
     fun run() {
         internalRpcMessagingClient?.start(rpcBroker!!.serverControl)
         printBasicNodeInfo("Running P2PMessaging loop")
-        (network as P2PMessagingClient).run()
+        (network as P2PMessagingClient).start()
     }
 
     private var shutdown = false

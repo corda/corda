@@ -57,6 +57,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
@@ -535,16 +536,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
             val readyFuture = smmStartedFuture.flatMap {
                 log.debug("SMM ready")
-                network.ready
+                network.activeChange.toFuture()
             }
             resultingNodeInfo to readyFuture
         }
 
-        readyFuture.map {
-            // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
-            log.debug("Distributing events")
-            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
-            nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStarted(nodeServicesContext))
+        readyFuture.map { ready ->
+            if (ready) {
+                // NB: Dispatch lifecycle events outside of transaction to ensure attachments and the like persisted into the DB
+                log.debug("Distributing events")
+                nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.AfterNodeStart(nodeServicesContext))
+                nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.StateMachineStarted(nodeServicesContext))
+            } else {
+                log.warn("Not distributing events as NetworkMap is not ready")
+            }
         }
         return resultingNodeInfo
     }
