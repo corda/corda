@@ -49,7 +49,6 @@ class VaultObserverExceptionTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
         StaffedFlowHospital.onFlowAdmitted.clear()
         DbListenerService.onError = null
-        DbListenerService.safeSubscription = true
     }
 
     /**
@@ -78,40 +77,6 @@ class VaultObserverExceptionTest {
                     ::Initiator,
                     "Syntax Error in Custom SQL",
                     CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
-            ).returnValue.then { testControlFuture.complete(false) }
-            val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
-
-            Assert.assertTrue(foundExpectedException)
-        }
-    }
-
-    /**
-     * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
-     * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation - Unsafe subscribe
-     */
-    @Test
-    fun unhandledSqlExceptionFromVaultObserverGetsHospitalised_UnsafeSubscription() {
-        DbListenerService.safeSubscription = false
-        val testControlFuture = openFuture<Boolean>().toCompletableFuture()
-
-        StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add {
-            when (it) {
-                is SQLException -> {
-                    testControlFuture.complete(true)
-                }
-            }
-            false
-        }
-
-        driver(DriverParameters(
-            startNodesInProcess = true,
-            cordappsForAllNodes = testCordapps())) {
-            val aliceUser = User("user", "foo", setOf(Permissions.all()))
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(
-                ::Initiator,
-                "Syntax Error in Custom SQL",
-                CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
             val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
 
