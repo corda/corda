@@ -15,6 +15,7 @@ import net.corda.core.utilities.seconds
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
+import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
@@ -172,8 +173,8 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 @DeleteForDJVM
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
-    subject.subscribe(this)
-    teeTo.forEach { subject.subscribe(it) }
+    subject.unsafeSubscribe(Subscribers.from(this))
+    teeTo.forEach { subject.unsafeSubscribe(Subscribers.from(it)) }
     return subject
 }
 

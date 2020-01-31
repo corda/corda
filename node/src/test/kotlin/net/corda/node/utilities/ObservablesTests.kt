@@ -10,9 +10,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 import rx.Observable
+import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.lang.RuntimeException
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ObservablesTests {
     private fun isInDatabaseTransaction() = contextTransactionOrNull != null
@@ -184,6 +188,30 @@ class ObservablesTests {
         assertThat(source1.hasCompleted()).isTrue()
         assertThat(source2.hasCompleted()).isTrue()
         assertThat(source3.hasCompleted()).isTrue()
+    }
+
+    /**
+     * tee combines [PublishSubject]s under one PublishSubject. We need to make sure that they are not wrapped with a [SafeSubscriber].
+     * Otherwise, if a non Rx exception gets thrown from a subscriber under one of the PublishSubject it will get caught by the
+     * SafeSubscriber wrapping that PublishSubject and will call [PublishSubject.PublishSubjectState.onError], which will
+     * eventually shut down all of the subscribers under that PublishSubjectState.
+     */
+    @Test
+    fun `error in unsafe subscriber won't shutdown subscribers under same publish subject, after tee`() {
+        val source1 = PublishSubject.create<Int>()
+        val source2 = PublishSubject.create<Int>()
+        var count = 0
+
+        source1.subscribe { count += it } // safe subscriber
+        source1.unsafeSubscribe(Subscribers.create { throw RuntimeException() }) // this subscriber should not shut down the above subscriber
+
+        assertFailsWith<RuntimeException> {
+            source1.tee(source2).onNext(1)
+        }
+        assertFailsWith<RuntimeException> {
+            source1.tee(source2).onNext(1)
+        }
+        assertEquals(2, count)
     }
 
     @Test
