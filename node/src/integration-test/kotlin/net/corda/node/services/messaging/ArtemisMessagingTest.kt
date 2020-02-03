@@ -212,7 +212,7 @@ class ArtemisMessagingTest {
         startNodeMessagingClient(maxMessageSize = clientMaxMessageSize)
 
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread(isDaemon = true) { messagingClient.run() }
+        thread(isDaemon = true) { messagingClient.start() }
 
         return Pair(messagingClient, receivedMessages)
     }

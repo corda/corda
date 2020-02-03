@@ -13,6 +13,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 import java.time.Instant
 import javax.annotation.concurrent.ThreadSafe
 
@@ -27,7 +28,7 @@ import javax.annotation.concurrent.ThreadSafe
  * is *reliable* and as such messages may be stored to disk once queued.
  */
 @ThreadSafe
-interface MessagingService : AutoCloseable {
+interface MessagingService : ServiceLifecycleSupport {
     /**
      * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
      * number for message de-duplication at the recipient.
@@ -107,11 +108,6 @@ interface MessagingService : AutoCloseable {
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
-
-    /**
-     * Signals when ready and fully operational
-     */
-    val ready: CordaFuture<Void?>
 }
 
 fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
