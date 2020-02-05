@@ -219,7 +219,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         // present in the CorDapp.
         val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
                 scanResult.getClassesWithSuperclass(SinglePartyNotaryService::class)
-        if(!result.isEmpty()) {
+        if (result.isNotEmpty()) {
             logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
         }
         return result.firstOrNull()
@@ -270,10 +270,26 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
         val whitelists = URLClassLoader(arrayOf(cordappJarPath.url)).use {
             ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
+        }.filter {
+            it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix) && it.javaClass.location == cordappJarPath.url
         }
-        return whitelists.filter {
-            it.javaClass.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
-        } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
+
+        whitelists.filterNot {
+            it.javaClass.location == cordappJarPath.url
+        }.apply {
+            if (isNotEmpty()) {
+                throw NotCordappWhitelist("Whitelists ${showClasses(this)} not found within ${cordappJarPath.url}")
+            }
+        }
+        return whitelists + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
+    }
+
+    private fun showClasses(items: Iterable<Any>): String {
+        return items.map {
+            it::class.java
+        }.map {
+            "${it.name} in ${it.protectionDomain.codeSource.location}"
+        }.toString()
     }
 
     private fun findSerializers(scanResult: RestrictedScanResult): List<SerializationCustomSerializer<*, *>> {
@@ -380,6 +396,13 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
  * Thrown when scanning CorDapps.
  */
 class MultipleCordappsForFlowException(message: String) : Exception(message)
+
+/**
+ * Thrown when a [SerializationWhitelist] is loaded from outside the CorDapp.
+ * Most likely because you are testing with node-driver and "in-process" nodes.
+ * Try using "out-of-process" driver nodes instead.
+ */
+class NotCordappWhitelist(message: String) : Exception(message)
 
 /**
  * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
