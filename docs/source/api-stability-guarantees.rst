@@ -34,10 +34,13 @@ has a stable API.
 Non-public API (experimental)
 -----------------------------
 
-The following modules are not part of the Corda's public API and no backwards compatibility guarantees are provided. They are further categorized in 2 classes:
+The following are not part of the Corda's public API and no backwards compatibility guarantees are provided:
 
-* the incubating modules, for which we will do our best to minimise disruption to developers using them until we are able to graduate them into the public API
-* the internal modules, which are not to be used, and will change without notice
+* Incubating modules, for which we will do our best to minimise disruption to developers using them until we are able to graduate them into the public API
+* Internal modules, which are not to be used, and will change without notice
+* Anything defined in a package containing ``.internal`` (for example, ``net.corda.core.internal`` and sub-packages should 
+  not be used)
+* Any interfaces, classes or methods whose name contains the word ``internal`` or ``Internal``
 
 The **finance module** was the first CorDapp ever written and is a legacy module. Although it is not a part of our API guarantees, we also
 don't anticipate much future change to it. Users should use the tokens SDK instead.
@@ -53,8 +56,7 @@ Corda incubating modules
 Corda internal modules
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Everything else is internal and will change without notice, even deleted, and should not be used. This also includes any package that has
-``.internal`` in it. So for example, ``net.corda.core.internal`` and sub-packages should not be used.
+Every other module is internal and will change without notice, even deleted, and should not be used.
 
 Some of the public modules may depend on internal modules, so be careful to not rely on these transitive dependencies. In particular, the
 testing modules depend on the node module and so you may end having the node in your test classpath.

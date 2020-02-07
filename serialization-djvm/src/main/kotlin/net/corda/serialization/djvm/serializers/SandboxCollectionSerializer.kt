@@ -35,9 +35,9 @@ class SandboxCollectionSerializer(
 
     private val unsupportedTypes: Set<Class<Any>> = listOf(
         EnumSet::class.java
-    ).map {
+    ).mapTo(LinkedHashSet()) {
         classLoader.toSandboxAnyClass(it)
-    }.toSet()
+    }
 
     // The order matters here - the first match should be the most specific one.
     // Kotlin preserves the ordering for us by associating into a LinkedHashMap.
@@ -95,9 +95,9 @@ private class ConcreteCollectionSerializer(
     override val typeDescriptor: Symbol by lazy {
         factory.createDescriptor(
             LocalTypeInformation.ACollection(
-                observedType = declaredType.rawType,
+                observedType = declaredType,
                 typeIdentifier = TypeIdentifier.forGenericType(declaredType),
-                elementType =factory.getTypeInformation(declaredType.actualTypeArguments[0])
+                elementType = factory.getTypeInformation(declaredType.actualTypeArguments[0])
             )
         )
     }
@@ -109,7 +109,7 @@ private class ConcreteCollectionSerializer(
         context: SerializationContext
     ): Any {
         val inboundType = type.actualTypeArguments[0]
-        return ifThrowsAppend({ type.typeName }) {
+        return ifThrowsAppend(type::getTypeName) {
             val args = (obj as List<*>).map {
                 input.readObjectOrNull(redescribe(it, inboundType), schemas, inboundType, context)
             }.toTypedArray()

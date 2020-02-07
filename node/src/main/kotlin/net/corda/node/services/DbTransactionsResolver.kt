@@ -10,6 +10,7 @@ import net.corda.core.internal.dependencies
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.trace
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.WritableTransactionStorage
 import java.util.*
@@ -19,7 +20,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
     private val logger = flow.logger
 
     @Suspendable
-    override fun downloadDependencies() {
+    override fun downloadDependencies(batchMode: Boolean) {
         logger.debug { "Downloading dependencies for transactions ${flow.txHashes}" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
 
@@ -39,10 +40,12 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
         // the db contain the identities that were resolved when the transaction was first checked, or should we
         // accept this kind of change is possible? Most likely solution is for identity data to be an attachment.
 
-        val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes)   // Keep things unique but ordered, for unit test stability.
+        val nextRequests = LinkedHashSet<SecureHash>(flow.txHashes) // Keep things unique but ordered, for unit test stability.
         val topologicalSort = TopologicalSort()
+        logger.debug { "DbTransactionsResolver.downloadDependencies(batchMode=$batchMode)" }
 
         while (nextRequests.isNotEmpty()) {
+            logger.debug { "Main fetch loop: size_remaining=${nextRequests.size}" }
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
             nextRequests.removeAll(topologicalSort.transactionIds)
@@ -76,8 +79,8 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
                 nextRequests.addAll(dependencies)
             }
 
-            // If the flow did not suspend on the last iteration of the downloaded loop above, perform a suspend here to ensure no write
-            // locks are held going into the next while loop iteration.
+            // If the flow did not suspend on the last iteration of the downloaded loop above, perform a suspend here to ensure that
+            // all data is flushed to the database.
             if (!suspended) {
                 FlowLogic.sleep(0.seconds)
             }
@@ -93,7 +96,7 @@ class DbTransactionsResolver(private val flow: ResolveTransactionsFlow) : Transa
 
     override fun recordDependencies(usedStatesToRecord: StatesToRecord) {
         val sortedDependencies = checkNotNull(this.sortedDependencies)
-        logger.debug { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
+        logger.trace { "Recording ${sortedDependencies.size} dependencies for ${flow.txHashes.size} transactions" }
         val transactionStorage = flow.serviceHub.validatedTransactions as WritableTransactionStorage
         for (txId in sortedDependencies) {
             // Retrieve and delete the transaction from the unverified store.

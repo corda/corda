@@ -2,6 +2,7 @@ package net.corda.serialization.djvm.serializers
 
 import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
+import net.corda.serialization.djvm.deserializers.CheckEnum
 import net.corda.serialization.djvm.deserializers.DescribeEnum
 import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.AMQPNotSerializableException
@@ -19,23 +20,32 @@ import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.util.function.Function
+import java.util.function.Predicate
 
 class SandboxEnumSerializer(
     classLoader: SandboxClassLoader,
     taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
+    predicateFactory: Function<Class<out Predicate<*>>, out Predicate<in Any?>>,
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Enum::class.java)) {
     @Suppress("unchecked_cast")
-    private val describer: Function<Class<*>, Array<Any>>
+    private val describeEnum: Function<Class<*>, Array<Any>>
         = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
+    @Suppress("unchecked_cast")
+    private val isEnum: Predicate<Class<*>>
+        = predicateFactory.apply(CheckEnum::class.java) as Predicate<Class<*>>
 
     override val schemaForDocumentation: Schema = Schema(emptyList())
+
+    override fun isSerializerFor(clazz: Class<*>): Boolean {
+        return super.isSerializerFor(clazz) && isEnum.test(clazz)
+    }
 
     override fun specialiseFor(declaredType: Type): AMQPSerializer<Any>? {
         if (declaredType !is Class<*>) {
             return null
         }
-        val members = describer.apply(declaredType)
+        val members = describeEnum.apply(declaredType)
         return ConcreteEnumSerializer(declaredType, members, localFactory)
     }
 
@@ -68,7 +78,7 @@ private class ConcreteEnumSerializer(
             LocalTypeInformation.AnEnum(
                 declaredType,
                 TypeIdentifier.forGenericType(declaredType),
-                members.map { it.toString() },
+                members.map(Any::toString),
                 emptyList(),
                 EnumTransforms.empty
             )

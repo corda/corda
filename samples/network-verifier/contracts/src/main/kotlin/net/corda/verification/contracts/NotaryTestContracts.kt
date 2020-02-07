@@ -1,4 +1,4 @@
-package net.corda.verification
+package net.corda.verification.contracts
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract

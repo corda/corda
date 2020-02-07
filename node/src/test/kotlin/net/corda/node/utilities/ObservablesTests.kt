@@ -10,9 +10,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 import rx.Observable
+import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.lang.RuntimeException
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ObservablesTests {
     private fun isInDatabaseTransaction() = contextTransactionOrNull != null
@@ -31,7 +35,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `bufferUntilDatabaseCommit delays until transaction closed`() {
+    fun `bufferUntilDatabaseCommit delays until transaction closed`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -60,7 +64,7 @@ class ObservablesTests {
     class TestException : Exception("Synthetic exception for tests")
 
     @Test(timeout=300_000)
-	fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
+    fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -90,7 +94,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `bufferUntilDatabaseCommit propagates error if transaction rolled back`() {
+    fun `bufferUntilDatabaseCommit propagates error if transaction rolled back`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -122,7 +126,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `bufferUntilDatabaseCommit delays until transaction closed repeatable`() {
+    fun `bufferUntilDatabaseCommit delays until transaction closed repeatable`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -156,7 +160,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `tee correctly copies observations to multiple observers`() {
+    fun `tee correctly copies observations to multiple observers`() {
 
         val source1 = PublishSubject.create<Int>()
         val source2 = PublishSubject.create<Int>()
@@ -186,8 +190,32 @@ class ObservablesTests {
         assertThat(source3.hasCompleted()).isTrue()
     }
 
+    /**
+     * tee combines [PublishSubject]s under one PublishSubject. We need to make sure that they are not wrapped with a [SafeSubscriber].
+     * Otherwise, if a non Rx exception gets thrown from a subscriber under one of the PublishSubject it will get caught by the
+     * SafeSubscriber wrapping that PublishSubject and will call [PublishSubject.PublishSubjectState.onError], which will
+     * eventually shut down all of the subscribers under that PublishSubjectState.
+     */
     @Test(timeout=300_000)
-	fun `combine tee and bufferUntilDatabaseCommit`() {
+    fun `error in unsafe subscriber won't shutdown subscribers under same publish subject, after tee`() {
+        val source1 = PublishSubject.create<Int>()
+        val source2 = PublishSubject.create<Int>()
+        var count = 0
+
+        source1.subscribe { count += it } // safe subscriber
+        source1.unsafeSubscribe(Subscribers.create { throw RuntimeException() }) // this subscriber should not shut down the above subscriber
+
+        assertFailsWith<RuntimeException> {
+            source1.tee(source2).onNext(1)
+        }
+        assertFailsWith<RuntimeException> {
+            source1.tee(source2).onNext(1)
+        }
+        assertEquals(2, count)
+    }
+
+    @Test(timeout=300_000)
+    fun `combine tee and bufferUntilDatabaseCommit`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -216,7 +244,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `new transaction open in observer when wrapped`() {
+    fun `new transaction open in observer when wrapped`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -256,7 +284,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `check wrapping in db tx doesn't eagerly subscribe`() {
+    fun `check wrapping in db tx doesn't eagerly subscribe`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -279,7 +307,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `check wrapping in db tx unsubscribes`() {
+    fun `check wrapping in db tx unsubscribes`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()
@@ -301,7 +329,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-	fun `check wrapping in db tx restarts if we pass through zero subscribers`() {
+    fun `check wrapping in db tx restarts if we pass through zero subscribers`() {
         val database = createDatabase()
 
         val source = PublishSubject.create<Int>()

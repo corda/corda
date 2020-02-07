@@ -4,7 +4,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.verification.TestCommsFlowInitiator
+import net.corda.verification.flows.TestCommsFlowInitiator
 import org.junit.Assert
 import org.junit.Test
 

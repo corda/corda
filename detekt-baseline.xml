@@ -1126,9 +1126,6 @@
     <ID>MagicNumber:RPCServer.kt$RPCServer$5</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps$4</ID>
     <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$1000</ID>
-    <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$10</ID>
-    <ID>MagicNumber:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$9</ID>
-    <ID>MagicNumber:ResolveTransactionsFlow.kt$ResolveTransactionsFlow$4</ID>
     <ID>MagicNumber:RpcBrokerConfiguration.kt$RpcBrokerConfiguration$2000</ID>
     <ID>MagicNumber:RpcBrokerConfiguration.kt$RpcBrokerConfiguration$5L</ID>
     <ID>MagicNumber:RpcBrokerConfiguration.kt$RpcBrokerConfiguration$8</ID>
@@ -1669,6 +1666,7 @@
     <ID>TooGenericExceptionThrown:Generator.kt$Generator$throw Exception("Failed to generate", error)</ID>
     <ID>TooGenericExceptionThrown:MerkleTransaction.kt$FilteredTransaction$throw Exception("Malformed transaction, signers at index $internalIndex cannot be deserialised", e)</ID>
     <ID>TooGenericExceptionThrown:NodeConnection.kt$NodeConnection.ShellCommandOutput$throw Exception(diagnostic)</ID>
+    <ID>TooGenericExceptionThrown:ObservablesTests.kt$ObservablesTests$throw RuntimeException()</ID>
     <ID>TooGenericExceptionThrown:PhysicalLocationStructures.kt$CityDatabase$throw Exception("Could not parse line: $line")</ID>
     <ID>TooGenericExceptionThrown:RPCDriver.kt$RandomRpcUser.Companion$throw Exception("No generator for ${it.type}")</ID>
     <ID>TooGenericExceptionThrown:RpcExceptionHandlingTest.kt$RpcExceptionHandlingTest.ClientRelevantErrorFlow$throw Exception(message, SQLException("Oops!"))</ID>

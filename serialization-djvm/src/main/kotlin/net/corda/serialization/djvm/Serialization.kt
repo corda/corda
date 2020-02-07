@@ -7,14 +7,21 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.utilities.ByteSequence
+import net.corda.djvm.rewiring.createRawPredicateFactory
+import net.corda.djvm.rewiring.createSandboxPredicate
 import net.corda.djvm.rewiring.SandboxClassLoader
+import net.corda.serialization.djvm.deserializers.CheckEnum
+import net.corda.serialization.djvm.deserializers.DescribeEnum
 import net.corda.serialization.djvm.serializers.PrimitiveSerializer
 import net.corda.serialization.internal.GlobalTransientClassWhiteList
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AMQPSerializer
 import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.model.BaseLocalTypes
+import java.util.EnumSet
 import java.util.function.Function
+import java.util.function.Predicate
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun SandboxClassLoader.toSandboxAnyClass(clazz: Class<*>): Class<Any> {
@@ -42,20 +49,40 @@ fun createSandboxSerializationEnv(
         encoding = null
     )
 
-    val rawTaskFactory = classLoader.createRawTaskFactory()
     val sandboxBasicInput = classLoader.createBasicInput()
+    val rawTaskFactory = classLoader.createRawTaskFactory()
+    val taskFactory = rawTaskFactory.compose(classLoader.createSandboxFunction())
+    val predicateFactory = classLoader.createRawPredicateFactory().compose(classLoader.createSandboxPredicate())
 
     val primitiveSerializerFactory: Function<Class<*>, AMQPSerializer<Any>> = Function { clazz ->
          PrimitiveSerializer(clazz, sandboxBasicInput)
     }
+    @Suppress("unchecked_cast")
+    val isEnumPredicate = predicateFactory.apply(CheckEnum::class.java) as Predicate<Class<*>>
+    @Suppress("unchecked_cast")
+    val enumConstants = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<out Any>>
 
+    val sandboxLocalTypes = BaseLocalTypes(
+        collectionClass = classLoader.toSandboxClass(Collection::class.java),
+        enumSetClass = classLoader.toSandboxClass(EnumSet::class.java),
+        exceptionClass = classLoader.toSandboxClass(Exception::class.java),
+        mapClass = classLoader.toSandboxClass(Map::class.java),
+        stringClass = classLoader.toSandboxClass(String::class.java),
+        isEnum = isEnumPredicate,
+        enumConstants = enumConstants
+    )
     val schemeBuilder = SandboxSerializationSchemeBuilder(
         classLoader = classLoader,
         sandboxBasicInput = sandboxBasicInput,
         rawTaskFactory = rawTaskFactory,
+        taskFactory = taskFactory,
+        predicateFactory = predicateFactory,
         customSerializerClassNames = customSerializerClassNames,
         serializationWhitelistNames = serializationWhitelistNames,
-        serializerFactoryFactory = SandboxSerializerFactoryFactory(primitiveSerializerFactory)
+        serializerFactoryFactory = SandboxSerializerFactoryFactory(
+            primitiveSerializerFactory = primitiveSerializerFactory,
+            localTypes = sandboxLocalTypes
+        )
     )
     val factory = SerializationFactoryImpl(mutableMapOf()).apply {
         registerScheme(schemeBuilder.buildFor(p2pContext))
