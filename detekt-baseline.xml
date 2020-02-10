@@ -1656,6 +1656,7 @@
     <ID>TooGenericExceptionThrown:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$throw RuntimeException()</ID>
     <ID>TooGenericExceptionThrown:CommandParsers.kt$AzureParser.RegionConverter$throw Error("Unknown azure region: $value")</ID>
     <ID>TooGenericExceptionThrown:ContractHierarchyTest.kt$ContractHierarchyTest.IndirectContractParent$throw RuntimeException("Boom!")</ID>
+    <ID>TooGenericExceptionThrown:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$throw RuntimeException()</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated exit of ${request.amount} from $issuer, however there is no cash to exit!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
