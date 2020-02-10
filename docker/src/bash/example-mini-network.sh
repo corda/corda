@@ -7,9 +7,9 @@ DOCKER_IMAGE_VERSION="corda-zulu-5.0-snapshot"
 mkdir cordapps
 rm -f cordapps/*
 
-wget -O cordapps/finance-contracts.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/${CORDAPP_VERSION}/corda-finance-contracts-${CORDAPP_VERSION}.jar
-wget -O cordapps/finance-workflows.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/${CORDAPP_VERSION}/corda-finance-workflows-${CORDAPP_VERSION}.jar
-wget -O cordapps/confidential-identities.jar    https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/${CORDAPP_VERSION}/corda-confidential-identities-${CORDAPP_VERSION}.jar
+wget -O cordapps/finance-contracts.jar          https://software.r3.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/${CORDAPP_VERSION}/corda-finance-contracts-${CORDAPP_VERSION}.jar
+wget -O cordapps/finance-workflows.jar          https://software.r3.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/${CORDAPP_VERSION}/corda-finance-workflows-${CORDAPP_VERSION}.jar
+wget -O cordapps/confidential-identities.jar    https://software.r3.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/${CORDAPP_VERSION}/corda-confidential-identities-${CORDAPP_VERSION}.jar
 
 rm keystore
 
