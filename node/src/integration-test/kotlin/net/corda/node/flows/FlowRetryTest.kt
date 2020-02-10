@@ -2,6 +2,7 @@ package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.*
@@ -42,6 +43,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class FlowRetryTest {
+    val config = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryIntervalMultiplier = 1.1)
+
     @Before
     fun resetCounters() {
         InitiatorFlow.seen.clear()
@@ -69,7 +72,7 @@ class FlowRetryTest {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
             }
             result
@@ -87,7 +90,7 @@ class FlowRetryTest {
         )) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
             }
         }
@@ -103,7 +106,7 @@ class FlowRetryTest {
             )) {
                 val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-                val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                     it.proxy.startFlow(::RetryFlow).returnValue.getOrThrow()
                 }
                 result
@@ -121,7 +124,7 @@ class FlowRetryTest {
             )) {
                 val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-                val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                     it.proxy.startFlow(::ThrowingFlow).returnValue.getOrThrow()
                 }
                 result
@@ -136,7 +139,7 @@ class FlowRetryTest {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::TransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
                             .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -155,7 +158,7 @@ class FlowRetryTest {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::WrappedTransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
                             .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -175,7 +178,7 @@ class FlowRetryTest {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<CordaRuntimeException> {
                     it.proxy.startFlow(::GeneralExternalFailureFlow, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
                 }
@@ -193,7 +196,7 @@ class FlowRetryTest {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
                     it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
                 }.withMessageStartingWith("User not authorized to perform RPC call")

@@ -193,7 +193,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
     id "org.ajoberstar.grgit" version "4.0.0"
- }
+}
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
@@ -660,9 +660,9 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
-    numberOfShards 6
+    numberOfShards 15
     streamOutput false
-    coresPerFork 6
+    coresPerFork 2
     memoryInGbPerFork 10
     distribute DistributeTestsBy.METHOD
     nodeTaints "big"

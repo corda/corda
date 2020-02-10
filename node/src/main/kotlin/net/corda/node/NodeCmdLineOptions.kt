@@ -74,15 +74,16 @@ open class SharedNodeCmdLineOptions {
         }
         errors.forEach { error ->
             when (error) {
-                is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
+                is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile, error.cause))
                 else -> logger.error(error.message)
             }
         }
     }
 
-    private fun configFileNotFoundMessage(configFile: Path): String {
+    private fun configFileNotFoundMessage(configFile: Path, cause: Throwable?): String {
         return """
                 Unable to load the node config file from '$configFile'.
+                ${cause?.message?.let { "Cause: $it" } ?: ""}
 
                 Try setting the --base-directory flag to change which directory the node
                 is looking in, or use the --config-file flag to specify it explicitly.
