@@ -51,38 +51,38 @@ class DBCheckpointStorage : CheckpointStorage {
     class DBFlowCheckpoint(
             @Id
             @Column(name = "flow_id", length = 64, nullable = false)
-            var id: String? = null,
+            var id: String,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
-            var blob: DBFlowCheckpointBlob? = null,
+            var blob: DBFlowCheckpointBlob,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "result_id", referencedColumnName = "id")
-            var result: DBFlowResult? = null,
+            var result: DBFlowResult,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "error_id", referencedColumnName = "id")
-            var exceptionDetails: DBFlowException? = null,
+            var exceptionDetails: DBFlowException,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
-            var flowMetadata: DBFlowMetadata? = null,
+            var flowMetadata: DBFlowMetadata,
 
             @Column(name = "status")
-            var status: FlowStatus? = null,
+            var status: FlowStatus,
 
             @Column(name = "compatible")
-            var compatible: Boolean? = null,
+            var compatible: Boolean,
 
             @Column(name = "progress_step")
-            var progressStep: String? = null,
+            var progressStep: String,
 
             @Column(name = "flow_io_request")
-            var ioRequestType: Class<FlowIORequest<*>>? = null,
+            var ioRequestType: Class<FlowIORequest<*>>,
 
             @Column(name = "timestamp")
-            var checkpointInstant: Instant? = null
+            var checkpointInstant: Instant
     )
 
     @Entity
@@ -131,7 +131,7 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @Type(type = "corda-blob")
             @Column(name = "exception_value", nullable = false)
-            var value: ByteArray,
+            var value: ByteArray = EMPTY_BYTE_ARRAY,
 
             @Column(name = "exception_message")
             var message: String? = null,
@@ -146,40 +146,40 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @Id
             @Column(name = "flow_id", length = 64, nullable = false)
-            var flowId: String? = null,
+            var flowId: String,
 
             @Column(name = "flow_name", nullable = false)
-            var flowName: String? = null,
+            var flowName: String,
 
             @Column(name = "flow_identifier", nullable = true)
-            var userSuppliedIdentifier: String? = null,
+            var userSuppliedIdentifier: String,
 
             @Column(name = "started_type", nullable = true)
-            var startType: StartReason? = null,
+            var startType: StartReason,
 
             @Column(name = "flow_parameters", nullable = true)
-            var initialParameters: ByteArray? = null,
+            var initialParameters: ByteArray = EMPTY_BYTE_ARRAY,
 
             @Column(name = "cordapp_name", nullable = true)
-            var launchingCordapp: String? = null,
+            var launchingCordapp: String,
 
             @Column(name = "platform_version", nullable = true)
-            var platformVersion: Int? = null,
+            var platformVersion: Int,
 
             @Column(name = "rpc_user", nullable = true)
-            var rpcUsername: String? = null,
+            var rpcUsername: String,
 
             @Column(name = "invocation_time", nullable = true)
-            var invocationInstant: Instant? = null,
+            var invocationInstant: Instant,
 
             @Column(name = "received_time", nullable = true)
-            var receivedInstant: Instant? = null,
+            var receivedInstant: Instant,
 
             @Column(name = "start_time", nullable = true)
-            var startInstant: Instant? = null,
+            var startInstant: Instant,
 
             @Column(name = "finish_time", nullable = true)
-            var finishInstant: Instant? = null
+            var finishInstant: Instant
 
     )
 
