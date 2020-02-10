@@ -1,7 +1,7 @@
 buildscript {
     ext {
         corda_djvm_version = '5.0-SNAPSHOT'
-        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        artifactory_contextUrl = 'https://software.r3.com/artifactory'
     }
 
     repositories {

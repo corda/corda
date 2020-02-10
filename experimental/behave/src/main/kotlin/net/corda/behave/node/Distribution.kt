@@ -94,7 +94,7 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution.
          */
         fun fromArtifactory(version: String): Distribution {
-            val url = URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
+            val url = URL("https://software.r3.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
             log.info("Artifactory URL: $url\n")
             val distribution = Distribution(version, url = url)
             distributions.add(distribution)
