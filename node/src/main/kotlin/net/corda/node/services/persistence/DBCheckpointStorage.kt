@@ -59,11 +59,11 @@ class DBCheckpointStorage : CheckpointStorage {
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "result_id", referencedColumnName = "id")
-            var result: DBFlowResult,
+            var result: DBFlowResult?,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "error_id", referencedColumnName = "id")
-            var exceptionDetails: DBFlowException,
+            var exceptionDetails: DBFlowException?,
 
             @OneToOne(fetch = FetchType.LAZY)
             @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
@@ -127,7 +127,7 @@ class DBCheckpointStorage : CheckpointStorage {
             var id: BigInteger? = null,
 
             @Column(name = "type", nullable = false)
-            var type: Class<Exception>? = null,
+            var type: Class<Exception>,
 
             @Type(type = "corda-blob")
             @Column(name = "exception_value", nullable = false)
@@ -152,34 +152,34 @@ class DBCheckpointStorage : CheckpointStorage {
             var flowName: String,
 
             @Column(name = "flow_identifier", nullable = true)
-            var userSuppliedIdentifier: String,
+            var userSuppliedIdentifier: String?,
 
-            @Column(name = "started_type", nullable = true)
+            @Column(name = "started_type", nullable = false)
             var startType: StartReason,
 
-            @Column(name = "flow_parameters", nullable = true)
+            @Column(name = "flow_parameters", nullable = false)
             var initialParameters: ByteArray = EMPTY_BYTE_ARRAY,
 
-            @Column(name = "cordapp_name", nullable = true)
+            @Column(name = "cordapp_name", nullable = false)
             var launchingCordapp: String,
 
-            @Column(name = "platform_version", nullable = true)
+            @Column(name = "platform_version", nullable = false)
             var platformVersion: Int,
 
-            @Column(name = "rpc_user", nullable = true)
+            @Column(name = "rpc_user", nullable = false)
             var rpcUsername: String,
 
-            @Column(name = "invocation_time", nullable = true)
+            @Column(name = "invocation_time", nullable = false)
             var invocationInstant: Instant,
 
-            @Column(name = "received_time", nullable = true)
+            @Column(name = "received_time", nullable = false)
             var receivedInstant: Instant,
 
             @Column(name = "start_time", nullable = true)
-            var startInstant: Instant,
+            var startInstant: Instant?,
 
             @Column(name = "finish_time", nullable = true)
-            var finishInstant: Instant
+            var finishInstant: Instant?
 
     )
 
