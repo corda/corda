@@ -153,7 +153,7 @@ buildscript {
             url 'https://kotlin.bintray.com/kotlinx'
         }
         maven {
-            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies-dev"
+            url "$artifactory_contextUrl/corda-dependencies-dev"
         }
         maven {
             url "$artifactory_contextUrl/corda-releases"
