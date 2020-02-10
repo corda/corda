@@ -172,8 +172,8 @@ class CordaRPCOpsImplTest {
     }
 
     @Test(timeout=300_000)
-	fun `issue and move`() {
-        @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION")
+    fun `issue and move`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 invokeRpc(CordaRPCOps::stateMachinesFeed),
