@@ -370,11 +370,11 @@ class SingleThreadedStateMachineManager(
                 }
                 // Resurrect flow
                 createFlowFromCheckpoint(
-                    id = flowId,
-                    serializedCheckpoint = serializedCheckpoint,
-                    initialDeduplicationHandler = null,
-                    isAnyCheckpointPersisted = true,
-                    isStartIdempotent = false
+                        id = flowId,
+                        serializedCheckpoint = serializedCheckpoint,
+                        initialDeduplicationHandler = null,
+                        isAnyCheckpointPersisted = true,
+                        isStartIdempotent = false
                 ) ?: return
             } else {
                 // Just flow initiation message
@@ -409,9 +409,9 @@ class SingleThreadedStateMachineManager(
             // Failed to retry - manually put the flow in for observation rather than
             // relying on the [HospitalisingInterceptor] to do so
             val exceptions = (currentState.checkpoint.errorState as? ErrorState.Errored)
-                ?.errors
-                ?.map { it.exception }
-                ?.plus(e) ?: emptyList()
+                    ?.errors
+                    ?.map { it.exception }
+                    ?.plus(e) ?: emptyList()
             logger.info("Failed to retry flow $flowId, keeping in for observation and aborting")
             flowHospital.forceIntoOvernightObservation(flowId, exceptions)
             throw e
@@ -431,11 +431,11 @@ class SingleThreadedStateMachineManager(
 
     private fun <T> onExternalStartFlow(event: ExternalEvent.ExternalStartFlowEvent<T>) {
         val future = startFlow(
-            event.flowId,
-            event.flowLogic,
-            event.context,
-            ourIdentity = null,
-            deduplicationHandler = event.deduplicationHandler
+                event.flowId,
+                event.flowLogic,
+                event.context,
+                ourIdentity = null,
+                deduplicationHandler = event.deduplicationHandler
         )
         event.wireUpFuture(future)
     }
@@ -503,14 +503,14 @@ class SingleThreadedStateMachineManager(
                 is InitiatedFlowFactory.CorDapp -> null
             }
             startInitiatedFlow(
-                event.flowId,
-                flowLogic,
-                event.deduplicationHandler,
-                senderSession,
-                initiatedSessionId,
-                sessionMessage,
-                senderCoreFlowVersion,
-                initiatedFlowInfo
+                    event.flowId,
+                    flowLogic,
+                    event.deduplicationHandler,
+                    senderSession,
+                    initiatedSessionId,
+                    sessionMessage,
+                    senderCoreFlowVersion,
+                    initiatedFlowInfo
             )
         } catch (t: Throwable) {
             logger.warn("Unable to initiate flow from $sender (appName=${sessionMessage.appName} " +
@@ -605,13 +605,13 @@ class SingleThreadedStateMachineManager(
             null
         }
         val checkpoint = existingCheckpoint ?: Checkpoint.create(
-            invocationContext,
-            flowStart,
-            flowLogic.javaClass,
-            frozenFlowLogic,
-            ourIdentity,
-            flowCorDappVersion,
-            flowLogic.isEnabledTimedFlow()
+                invocationContext,
+                flowStart,
+                flowLogic.javaClass,
+                frozenFlowLogic,
+                ourIdentity,
+                flowCorDappVersion,
+                flowLogic.isEnabledTimedFlow()
         ).getOrThrow()
 
         val startedFuture = openFuture<Unit>()
