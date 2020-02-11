@@ -16,7 +16,7 @@ Unlike the official image, a `node.conf` file and CorDapps are embedded into the
 More backends may be added in future. The tool is open source, so contributions to add more
 destinations for the containers are welcome!
 
-`Download the Corda Network Builder <https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-network-builder/|corda_version|/corda-tools-network-builder-|corda_version|.jar>`_.
+`Download the Corda Network Builder <https://software.r3.com/artifactory/corda-releases/net/corda/corda-tools-network-builder/|corda_version|/corda-tools-network-builder-|corda_version|.jar>`_.
 
 .. _pre-requisites:
 
