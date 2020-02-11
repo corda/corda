@@ -3,7 +3,7 @@ buildscript {
     file("../constants.properties").withInputStream { constants.load(it) }
 
     ext {
-        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        artifactory_contextUrl = 'https://software.r3.com/artifactory'
         artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
         proguard_version = constants.getProperty("proguardVersion")
     }

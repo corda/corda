@@ -107,7 +107,7 @@ buildscript {
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = '3.3.1'
     ext.liquibase_version = '3.6.3'
-    ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+    ext.artifactory_contextUrl = 'https://software.r3.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.35.0'
     ext.selenium_version = '3.141.59'
@@ -153,7 +153,7 @@ buildscript {
             url 'https://kotlin.bintray.com/kotlinx'
         }
         maven {
-            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-dependencies-dev"
+            url "$artifactory_contextUrl/corda-dependencies-dev"
         }
         maven {
             url "$artifactory_contextUrl/corda-releases"
