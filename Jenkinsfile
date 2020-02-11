@@ -6,7 +6,10 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'k8s' }
-    options { timestamps() }
+    options {
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
 
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
