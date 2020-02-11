@@ -34,8 +34,8 @@ couple of resources.
 
    .. code-block:: bash
 
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts/|corda_version|/corda-finance-contracts-|corda_version|.jar
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows/|corda_version|/corda-finance-workflows-|corda_version|.jar
+       wget https://software.r3.com/artifactory/corda-releases/net/corda/corda-finance-contracts/|corda_version|/corda-finance-contracts-|corda_version|.jar
+       wget https://software.r3.com/artifactory/corda-releases/net/corda/corda-finance-workflows/|corda_version|/corda-finance-workflows-|corda_version|.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:
@@ -70,7 +70,7 @@ couple of resources.
 
    .. code:: bash
 
-       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|-corda/corda-tools-explorer-|corda_version|-corda.jar
+       https://software.r3.com/artifactory/corda-releases/net/corda/corda-tools-explorer/|corda_version|-corda/corda-tools-explorer-|corda_version|-corda.jar
 
    .. warning:: This Node Explorer is incompatible with the Corda Enterprise distribution and vice versa as they currently
       use different serialisation schemes (Kryo vs AMQP).
