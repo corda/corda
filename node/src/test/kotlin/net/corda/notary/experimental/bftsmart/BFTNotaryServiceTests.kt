@@ -105,8 +105,8 @@ class BFTNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `detect double spend`() {
+    @Test(timeout=300_000)
+	fun `detect double spend`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
@@ -147,8 +147,8 @@ class BFTNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `transactions outside their time window are rejected`() {
+    @Test(timeout=300_000)
+	fun `transactions outside their time window are rejected`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
@@ -168,8 +168,8 @@ class BFTNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `notarise issue tx with time-window`() {
+    @Test(timeout=300_000)
+	fun `notarise issue tx with time-window`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 setTimeWindow(services.clock.instant(), 30.seconds)
@@ -183,8 +183,8 @@ class BFTNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `transactions can be re-notarised outside their time window`() {
+    @Test(timeout=300_000)
+	fun `transactions can be re-notarised outside their time window`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)

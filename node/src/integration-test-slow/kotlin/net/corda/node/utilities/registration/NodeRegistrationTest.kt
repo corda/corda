@@ -73,8 +73,8 @@ class NodeRegistrationTest {
         server.close()
     }
 
-    @Test
-    fun `node registration correct root cert`() {
+    @Test(timeout=300_000)
+	fun `node registration correct root cert`() {
         val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
                 null,

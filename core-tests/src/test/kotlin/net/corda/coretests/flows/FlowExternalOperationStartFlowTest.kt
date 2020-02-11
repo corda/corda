@@ -16,8 +16,8 @@ import kotlin.test.assertEquals
 
 class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
-    @Test
-    fun `starting a flow inside of a flow that starts a future will succeed`() {
+    @Test(timeout=300_000)
+	fun `starting a flow inside of a flow that starts a future will succeed`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
@@ -29,8 +29,8 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
         }
     }
 
-    @Test
-    fun `multiple flows can be started and their futures joined from inside a flow`() {
+    @Test(timeout=300_000)
+	fun `multiple flows can be started and their futures joined from inside a flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()

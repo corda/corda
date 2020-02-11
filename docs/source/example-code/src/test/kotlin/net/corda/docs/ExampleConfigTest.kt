@@ -26,8 +26,8 @@ class ExampleConfigTest {
         }
     }
 
-    @Test
-    fun `example node_confs parses fine`() {
+    @Test(timeout=300_000)
+	fun `example node_confs parses fine`() {
         readAndCheckConfigurations("example-node.conf") {
             val baseDirectory = Paths.get("some-example-base-dir")
             assertThat(ConfigHelper.loadConfig(baseDirectory = baseDirectory, configFile = it).parseAsNodeConfiguration().isValid).isTrue()

@@ -626,7 +626,7 @@ object InteractiveShell {
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Decoration.bold, Color.red)
             if (e !is StringToMethodCallParser.UnparseableCallException.NoSuchFile) {
-                out.println("Please try 'man run' to learn what syntax is acceptable")
+                out.println("Please try 'run -h' to learn what syntax is acceptable")
             }
         } catch (e: Exception) {
             out.println("RPC failed: ${e.rootCause}", Decoration.bold, Color.red)

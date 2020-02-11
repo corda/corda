@@ -34,8 +34,8 @@ class FinalityFlowTests : WithFinality {
     @After
     fun tearDown() = mockNet.stopNodes()
 
-    @Test
-    fun `finalise a simple transaction`() {
+    @Test(timeout=300_000)
+	fun `finalise a simple transaction`() {
         val bob = createBob()
         val stx = aliceNode.issuesCashTo(bob)
 
@@ -46,8 +46,8 @@ class FinalityFlowTests : WithFinality {
                                 and visibleTo(bob)))
     }
 
-    @Test
-    fun `reject a transaction with unknown parties`() {
+    @Test(timeout=300_000)
+	fun `reject a transaction with unknown parties`() {
         // Charlie isn't part of this network, so node A won't recognise them
         val stx = aliceNode.issuesCashTo(CHARLIE)
 
@@ -56,8 +56,8 @@ class FinalityFlowTests : WithFinality {
                 willThrow<IllegalArgumentException>())
     }
 
-    @Test
-    fun `allow use of the old API if the CorDapp target version is 3`() {
+    @Test(timeout=300_000)
+	fun `allow use of the old API if the CorDapp target version is 3`() {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
         val resultFuture = CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
@@ -68,8 +68,8 @@ class FinalityFlowTests : WithFinality {
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 
-    @Test
-    fun `broadcasting to both new and old participants`() {
+    @Test(timeout=300_000)
+	fun `broadcasting to both new and old participants`() {
         val newCharlie = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)

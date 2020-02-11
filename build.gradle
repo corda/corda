@@ -183,7 +183,7 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-SNAPSHOT", changing: true
+        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
@@ -193,7 +193,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
     id "com.gradle.build-scan" version "2.2.1"
     id "org.ajoberstar.grgit" version "4.0.0"
- }
+}
 
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
@@ -634,7 +634,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     testGroups "integrationTest"
     numberOfShards 10
     streamOutput false
-    coresPerFork 5
+    coresPerFork 2
     memoryInGbPerFork 12
     distribute DistributeTestsBy.METHOD
     nodeTaints "big"
@@ -644,7 +644,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     testGroups "test"
     numberOfShards 10
     streamOutput false
-    coresPerFork 3
+    coresPerFork 2
     memoryInGbPerFork 12
     distribute DistributeTestsBy.CLASS
     nodeTaints "small"
@@ -660,9 +660,9 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
-    numberOfShards 6
+    numberOfShards 15
     streamOutput false
-    coresPerFork 6
+    coresPerFork 2
     memoryInGbPerFork 10
     distribute DistributeTestsBy.METHOD
     nodeTaints "big"

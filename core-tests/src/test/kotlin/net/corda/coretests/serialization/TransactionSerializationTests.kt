@@ -93,8 +93,8 @@ class TransactionSerializationTests {
         tx = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey)))
     }
 
-    @Test
-    fun signWireTX() {
+    @Test(timeout=300_000)
+	fun signWireTX() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
 
@@ -111,8 +111,8 @@ class TransactionSerializationTests {
         }
     }
 
-    @Test
-    fun wrongKeys() {
+    @Test(timeout=300_000)
+	fun wrongKeys() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
 
@@ -134,16 +134,16 @@ class TransactionSerializationTests {
         }
     }
 
-    @Test
-    fun timeWindow() {
+    @Test(timeout=300_000)
+	fun timeWindow() {
         tx.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
         assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
     }
 
-    @Test
-    fun storeAndLoadWhenSigning() {
+    @Test(timeout=300_000)
+	fun storeAndLoadWhenSigning() {
         val ptx = megaCorpServices.signInitialTransaction(tx)
         ptx.verifySignaturesExcept(DUMMY_NOTARY_KEY.public)
         val stored = ptx.serialize()

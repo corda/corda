@@ -97,8 +97,8 @@ class FlowFrameworkTests {
         receivedSessionMessages.clear()
     }
 
-    @Test
-    fun `flow can lazily use the serviceHub in its constructor`() {
+    @Test(timeout=300_000)
+	fun `flow can lazily use the serviceHub in its constructor`() {
         val flow = LazyServiceHubAccessFlow()
         aliceNode.services.startFlow(flow)
         assertThat(flow.lazyTime).isNotNull()
@@ -117,8 +117,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `exception while fiber suspended is retried and completes successfully`() {
+    @Test(timeout=300_000)
+	fun `exception while fiber suspended is retried and completes successfully`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         val flow = ReceiveFlow(bob)
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
@@ -133,8 +133,8 @@ class FlowFrameworkTests {
         assertThat(fiber.state).isEqualTo(Strand.State.WAITING)
     }
 
-    @Test
-    fun `both sides do a send as their first IO request`() {
+    @Test(timeout=300_000)
+	fun `both sides do a send as their first IO request`() {
         bobNode.registerCordappFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
         aliceNode.services.startFlow(PingPongFlow(bob, 10L))
         mockNet.runNetwork()
@@ -150,8 +150,8 @@ class FlowFrameworkTests {
         )
     }
 
-    @Test
-    fun `other side ends before doing expected send`() {
+    @Test(timeout=300_000)
+	fun `other side ends before doing expected send`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
@@ -160,8 +160,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `FlowMonitor flow suspends on a FlowIORequest`() { // alice flow only, suspends on a FlowIORequest
+    @Test(timeout=300_000)
+	fun `FlowMonitor flow suspends on a FlowIORequest`() { // alice flow only, suspends on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             val terminationSignal = Semaphore(0)
             // bob's flow need to wait otherwise it could end the session prematurely
@@ -178,8 +178,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `FlowMonitor flows suspend on a FlowIORequest`() { // alice and bob's flows, both suspend on a FlowIORequest
+    @Test(timeout=300_000)
+	fun `FlowMonitor flows suspend on a FlowIORequest`() { // alice and bob's flows, both suspend on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedReceiveFlow(it) }
             aliceNode.services.startFlow(ReceiveFlow(bob))
@@ -190,8 +190,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `FlowMonitor flow is running`() { // flow is running a "take a long time" task
+    @Test(timeout=300_000)
+	fun `FlowMonitor flow is running`() { // flow is running a "take a long time" task
         monitorFlows { aliceFlowMonitor, _ ->
             val terminationSignal = Semaphore(0)
             // "take a long time" task, implemented by a NoOpFlow stuck in call method
@@ -208,8 +208,8 @@ class FlowFrameworkTests {
         script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO), FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO))
     }
 
-    @Test
-    fun `receiving unexpected session end before entering sendAndReceive`() {
+    @Test(timeout=300_000)
+	fun `receiving unexpected session end before entering sendAndReceive`() {
         bobNode.registerCordappFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
         val sessionEndReceived = Semaphore(0)
         receivedSessionMessagesObservable().filter {
@@ -224,8 +224,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `FlowException thrown on other side`() {
+    @Test(timeout=300_000)
+	fun `FlowException thrown on other side`() {
         val erroringFlow = bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { MyFlowException("Nothing useful") }
         }
@@ -262,8 +262,8 @@ class FlowFrameworkTests {
         assertThat((lastMessage.payload as ErrorSessionMessage).flowException!!.stackTrace).isEmpty()
     }
 
-    @Test
-    fun `sub-class of FlowException can have a peer field without causing serialisation problems`() {
+    @Test(timeout=300_000)
+	fun `sub-class of FlowException can have a peer field without causing serialisation problems`() {
         val exception = MyPeerFlowException("Nothing useful", alice)
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { exception }
@@ -296,8 +296,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `retry subFlow due to receiving FlowException`() {
+    @Test(timeout=300_000)
+	fun `retry subFlow due to receiving FlowException`() {
         @InitiatingFlow
         class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
             @Suspendable
@@ -321,8 +321,8 @@ class FlowFrameworkTests {
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
     }
 
-    @Test
-    fun `serialisation issue in counterparty`() {
+    @Test(timeout=300_000)
+	fun `serialisation issue in counterparty`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(NonSerialisableData(1), it) }
         val result = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
@@ -331,8 +331,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `FlowException has non-serialisable object`() {
+    @Test(timeout=300_000)
+	fun `FlowException has non-serialisable object`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { NonSerialisableFlowException(NonSerialisableData(1)) }
         }
@@ -343,8 +343,8 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun waitForLedgerCommit() {
+    @Test(timeout=300_000)
+	fun waitForLedgerCommit() {
         val ptx = TransactionBuilder(notary = notaryIdentity)
             .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
             .addCommand(dummyCommand(alice.owningKey))
@@ -360,8 +360,8 @@ class FlowFrameworkTests {
         assertThat(committerStx.getOrThrow()).isEqualTo(waiterStx.getOrThrow()).isEqualTo(commitReceiverStx.getOrThrow())
     }
 
-    @Test
-    fun `waitForLedgerCommit throws exception if any active session ends in error`() {
+    @Test(timeout=300_000)
+	fun `waitForLedgerCommit throws exception if any active session ends in error`() {
         val ptx = TransactionBuilder(notary = notaryIdentity)
             .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
             .addCommand(dummyCommand())
@@ -375,31 +375,31 @@ class FlowFrameworkTests {
         }
     }
 
-    @Test
-    fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
+    @Test(timeout=300_000)
+	fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         aliceNode.registerCordappFlowFactory(VaultQueryFlow::class) { InitiatedSendFlow("Hello", it) }
         val result = bobNode.services.startFlow(VaultQueryFlow(alice)).resultFuture
         mockNet.runNetwork()
         result.getOrThrow()
     }
 
-    @Test
-    fun `customised client flow`() {
+    @Test(timeout=300_000)
+	fun `customised client flow`() {
         val receiveFlowFuture = bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it) }
         aliceNode.services.startFlow(CustomSendFlow("Hello", bob)).resultFuture
         mockNet.runNetwork()
         assertThat(receiveFlowFuture.getOrThrow().receivedPayloads).containsOnly("Hello")
     }
 
-    @Test
-    fun `customised client flow which has annotated @InitiatingFlow again`() {
+    @Test(timeout=300_000)
+	fun `customised client flow which has annotated @InitiatingFlow again`() {
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             aliceNode.services.startFlow(IncorrectCustomSendFlow("Hello", bob)).resultFuture
         }.withMessageContaining(InitiatingFlow::class.java.simpleName)
     }
 
-    @Test
-    fun `upgraded initiating flow`() {
+    @Test(timeout=300_000)
+	fun `upgraded initiating flow`() {
         bobNode.registerCordappFlowFactory(UpgradedFlow::class, initiatedFlowVersion = 1) { InitiatedSendFlow("Old initiated", it) }
         val result = aliceNode.services.startFlow(UpgradedFlow(bob)).resultFuture
         mockNet.runNetwork()
@@ -412,8 +412,8 @@ class FlowFrameworkTests {
         assertThat(node2FlowVersion).isEqualTo(1)
     }
 
-    @Test
-    fun `upgraded initiated flow`() {
+    @Test(timeout=300_000)
+	fun `upgraded initiated flow`() {
         bobNode.registerCordappFlowFactory(SendFlow::class, initiatedFlowVersion = 2) { UpgradedFlow(it) }
         val initiatingFlow = SendFlow("Old initiating", bob)
         val flowInfo = aliceNode.services.startFlow(initiatingFlow).resultFuture
@@ -425,8 +425,8 @@ class FlowFrameworkTests {
         assertThat(flowInfo.get().flowVersion).isEqualTo(2)
     }
 
-    @Test
-    fun `unregistered flow`() {
+    @Test(timeout=300_000)
+	fun `unregistered flow`() {
         val future = aliceNode.services.startFlow(NeverRegisteredFlow("Hello", bob)).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
@@ -434,8 +434,8 @@ class FlowFrameworkTests {
             .withMessageEndingWith("${NeverRegisteredFlow::class.java.name} is not registered")
     }
 
-    @Test
-    fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
+    @Test(timeout=300_000)
+	fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
         aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
@@ -450,8 +450,8 @@ class FlowFrameworkTests {
         assertThat((lastMessage.payload as RejectSessionMessage).message).isEqualTo("Don't know not.a.real.Class")
     }
 
-    @Test
-    fun `non-flow class in session init`() {
+    @Test(timeout=300_000)
+	fun `non-flow class in session init`() {
         aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, String::class.java.name, 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
@@ -459,24 +459,24 @@ class FlowFrameworkTests {
         assertThat((lastMessage.payload as RejectSessionMessage).message).isEqualTo("${String::class.java.name} is not a flow")
     }
 
-    @Test
-    fun `single inlined sub-flow`() {
+    @Test(timeout=300_000)
+	fun `single inlined sub-flow`() {
         bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
         val result = aliceNode.services.startFlow(SendAndReceiveFlow(bob, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
-    @Test
-    fun `double inlined sub-flow`() {
+    @Test(timeout=300_000)
+	fun `double inlined sub-flow`() {
         bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
         val result = aliceNode.services.startFlow(SendAndReceiveFlow(bob, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
-    @Test
-    fun `non-FlowException thrown on other side`() {
+    @Test(timeout=300_000)
+	fun `non-FlowException thrown on other side`() {
         val erroringFlowFuture = bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
         }
@@ -513,8 +513,8 @@ class FlowFrameworkTests {
         )
     }
 
-    @Test
-    fun `initiating flow using unknown AnonymousParty`() {
+    @Test(timeout=300_000)
+	fun `initiating flow using unknown AnonymousParty`() {
         val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
             .party.anonymise()
         bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
@@ -525,8 +525,8 @@ class FlowFrameworkTests {
             .withMessage("Could not resolve destination: $anonymousBob")
     }
 
-    @Test
-    fun `initiating flow using known AnonymousParty`() {
+    @Test(timeout=300_000)
+	fun `initiating flow using known AnonymousParty`() {
         val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
         aliceNode.services.identityService.verifyAndRegisterIdentity(anonymousBob)
         val bobResponderFlow = bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }

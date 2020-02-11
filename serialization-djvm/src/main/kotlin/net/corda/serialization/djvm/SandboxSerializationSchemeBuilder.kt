@@ -52,11 +52,14 @@ import java.math.BigInteger
 import java.util.Date
 import java.util.UUID
 import java.util.function.Function
+import java.util.function.Predicate
 
 class SandboxSerializationSchemeBuilder(
     private val classLoader: SandboxClassLoader,
     private val sandboxBasicInput: Function<in Any?, out Any?>,
     private val rawTaskFactory: Function<in Any, out Function<in Any?, out Any?>>,
+    private val taskFactory: Function<Class<out Function<*, *>>, out Function<in Any?, out Any?>>,
+    private val predicateFactory: Function<Class<out Predicate<*>>, out Predicate<in Any?>>,
     private val customSerializerClassNames: Set<String>,
     private val serializationWhitelistNames: Set<String>,
     private val serializerFactoryFactory: SerializerFactoryFactory
@@ -66,7 +69,6 @@ class SandboxSerializationSchemeBuilder(
     }
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
-        val taskFactory = rawTaskFactory.compose(classLoader.createSandboxFunction())
         return serializerFactoryFactory.make(context).apply {
             register(SandboxBitSetSerializer(classLoader, taskFactory, this))
             register(SandboxCertPathSerializer(classLoader, taskFactory, this))
@@ -100,7 +102,7 @@ class SandboxSerializationSchemeBuilder(
             register(SandboxCharacterSerializer(classLoader, sandboxBasicInput))
             register(SandboxCollectionSerializer(classLoader, taskFactory, this))
             register(SandboxMapSerializer(classLoader, taskFactory, this))
-            register(SandboxEnumSerializer(classLoader, taskFactory, this))
+            register(SandboxEnumSerializer(classLoader, taskFactory, predicateFactory, this))
             register(SandboxPublicKeySerializer(classLoader, taskFactory))
             register(SandboxToStringSerializer(BigDecimal::class.java, classLoader, rawTaskFactory, sandboxBasicInput))
             register(SandboxToStringSerializer(BigInteger::class.java, classLoader, rawTaskFactory, sandboxBasicInput))

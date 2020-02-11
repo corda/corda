@@ -54,8 +54,8 @@ class PackageOwnershipVerificationTests {
             )
     )
 
-    @Test
-    fun `Happy path - Transaction validates when package signed by owner`() {
+    @Test(timeout=300_000)
+	fun `Happy path - Transaction validates when package signed by owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachment(DUMMY_CONTRACT, SecureHash.allOnesHash, listOf(OWNER_KEY_PAIR.public))
@@ -66,8 +66,8 @@ class PackageOwnershipVerificationTests {
         }
     }
 
-    @Test
-    fun `Transaction validation fails when the selected attachment is not signed by the owner`() {
+    @Test(timeout=300_000)
+	fun `Transaction validation fails when the selected attachment is not signed by the owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachment(DUMMY_CONTRACT, SecureHash.allOnesHash, listOf(ALICE_PUBKEY))
@@ -78,8 +78,8 @@ class PackageOwnershipVerificationTests {
         }
     }
 
-    @Test
-    fun `packages that do not have contracts in are still ownable`() {
+    @Test(timeout=300_000)
+	fun `packages that do not have contracts in are still ownable`() {
         // The first version of this feature was incorrectly concerned with contract classes and only contract
         // classes, but for the feature to work it must apply to any package. This tests that by using a package
         // in isolated.jar that doesn't include any contracts.

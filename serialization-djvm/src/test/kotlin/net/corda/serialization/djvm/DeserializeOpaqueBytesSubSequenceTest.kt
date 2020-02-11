@@ -18,7 +18,7 @@ class DeserializeOpaqueBytesSubSequenceTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing opaquebytes subsequence`() {
+	fun `test deserializing opaquebytes subsequence`() {
         val subSequence = OpaqueBytesSubSequence(
             bytes = MESSAGE.toByteArray(),
             offset = OFFSET,

@@ -35,8 +35,8 @@ class FxTransactionBuildTutorialTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `Run ForeignExchangeFlow to completion`() {
+    @Test(timeout=300_000)
+	fun `Run ForeignExchangeFlow to completion`() {
         // Use NodeA as issuer and create some dollars and wait for the flow to stop
         nodeA.startFlow(CashIssueFlow(DOLLARS(1000),
                 OpaqueBytes.of(0x01),

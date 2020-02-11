@@ -46,8 +46,8 @@ class IdentitySyncFlowTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `sync confidential identities`() {
+    @Test(timeout=300_000)
+	fun `sync confidential identities`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -74,8 +74,8 @@ class IdentitySyncFlowTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `don't offer other's identities confidential identities`() {
+    @Test(timeout=300_000)
+	fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)

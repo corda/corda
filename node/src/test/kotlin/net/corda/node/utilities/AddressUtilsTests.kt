@@ -6,8 +6,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AddressUtilsTests {
-    @Test
-    fun `correctly determines if the provided address is public`() {
+    @Test(timeout=300_000)
+	fun `correctly determines if the provided address is public`() {
         assertFalse { AddressUtils.isPublic("localhost") }
         assertFalse { AddressUtils.isPublic("127.0.0.1") }
         assertFalse { AddressUtils.isPublic("::1") }

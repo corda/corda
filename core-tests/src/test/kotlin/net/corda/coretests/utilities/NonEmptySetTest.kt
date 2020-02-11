@@ -42,18 +42,18 @@ class NonEmptySetTest {
         @JvmField
         val testSerialization = SerializationEnvironmentRule()
 
-        @Test
-        fun `copyOf - empty source`() {
+        @Test(timeout=300_000)
+	fun `copyOf - empty source`() {
             assertThatThrownBy { NonEmptySet.copyOf(HashSet<Int>()) }.isInstanceOf(IllegalArgumentException::class.java)
         }
 
-        @Test
-        fun head() {
+        @Test(timeout=300_000)
+	fun head() {
             assertThat(NonEmptySet.of(1, 2).head()).isEqualTo(1)
         }
 
-        @Test
-        fun `serialize deserialize`() {
+        @Test(timeout=300_000)
+	fun `serialize deserialize`() {
             val original = NonEmptySet.of(-17, 22, 17)
             val copy = original.serialize().deserialize()
             assertThat(copy).isEqualTo(original).isNotSameAs(original)

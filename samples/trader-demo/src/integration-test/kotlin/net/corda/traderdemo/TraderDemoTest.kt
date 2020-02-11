@@ -28,8 +28,8 @@ import org.junit.Test
 import java.util.concurrent.Executors
 
 class TraderDemoTest {
-    @Test
-    fun `runs trader demo`() {
+    @Test(timeout=300_000)
+	fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
         val bankUser = User("user1", "test", permissions = setOf(
                 startFlow<CashIssueFlow>(),
@@ -84,8 +84,8 @@ class TraderDemoTest {
         }
     }
 
-    @Test
-    fun `Test restart node during flow works properly`() {
+    @Test(timeout=300_000)
+	fun `Test restart node during flow works properly`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 inMemoryDB = false,

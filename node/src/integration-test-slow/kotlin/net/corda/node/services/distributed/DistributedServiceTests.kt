@@ -81,8 +81,8 @@ class DistributedServiceTests {
     }
 
     // TODO This should be in RaftNotaryServiceTests
-    @Test
-    fun `cluster survives if a notary is killed`() {
+    @Test(timeout=300_000)
+	fun `cluster survives if a notary is killed`() {
         setup {
             // Issue 100 pounds, then pay ourselves 10x5 pounds
             issueCash(100.POUNDS)
@@ -119,15 +119,15 @@ class DistributedServiceTests {
 
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
-    @Test
-    fun `requests are distributed evenly amongst the nodes`() {
+    @Test(timeout=300_000)
+	fun `requests are distributed evenly amongst the nodes`() {
         setup {
             checkRequestsDistributedEvenly()
         }
     }
 
-    @Test
-    fun `requests are distributed evenly amongst the nodes with a composite public key`() {
+    @Test(timeout=300_000)
+	fun `requests are distributed evenly amongst the nodes with a composite public key`() {
         setup(true) {
             checkRequestsDistributedEvenly()
         }

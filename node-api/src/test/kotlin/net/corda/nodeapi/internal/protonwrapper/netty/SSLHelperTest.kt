@@ -12,8 +12,8 @@ import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertEquals
 
 class SSLHelperTest {
-    @Test
-    fun `ensure SNI header in correct format`() {
+    @Test(timeout=300_000)
+	fun `ensure SNI header in correct format`() {
         val legalName = CordaX500Name("Test", "London", "GB")
         val sslConfig = configureTestSSL(legalName)
 

@@ -15,8 +15,8 @@ class LazyMappedListTest {
     @get:Rule
     val exception: ExpectedException = ExpectedException.none()
 
-    @Test
-    fun `LazyMappedList works`() {
+    @Test(timeout=300_000)
+	fun `LazyMappedList works`() {
         val originalList = (1 until 10).toList()
 
         var callCounter = 0
@@ -42,8 +42,8 @@ class LazyMappedListTest {
         assertEquals(1, callCounter)
     }
 
-    @Test
-    fun testMissingAttachments() {
+    @Test(timeout=300_000)
+	fun testMissingAttachments() {
         exception.expect(MissingAttachmentsException::class.java)
         exception.expectMessage("Uncatchable!")
 
@@ -54,8 +54,8 @@ class LazyMappedListTest {
         lazyList.eagerDeserialise { _, _ -> -999 }
     }
 
-    @Test
-    fun testDeserialisationExceptions() {
+    @Test(timeout=300_000)
+	fun testDeserialisationExceptions() {
         val lazyList = (0 until 5).toList().lazyMapped<Int, Int> { _, index ->
             throw TransactionDeserialisationException(
                 OUTPUTS_GROUP, index, IllegalStateException("Catch this!"))

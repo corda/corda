@@ -128,8 +128,8 @@ class CashTests {
         MockServices(megaCorp).transaction(dummyNotary.party, script)
     }
 
-    @Test
-    fun trivial() {
+    @Test(timeout=300_000)
+	fun trivial() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
@@ -164,8 +164,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun twoMoves() {
+    @Test(timeout=300_000)
+	fun twoMoves() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
@@ -185,8 +185,8 @@ class CashTests {
         override val participants: List<AbstractParty> = emptyList()
     }
 
-    @Test
-    fun `issue by move`() {
+    @Test(timeout=300_000)
+	fun `issue by move`() {
         // Check we can't "move" money into existence.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -197,8 +197,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun issue() {
+    @Test(timeout=300_000)
+	fun issue() {
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
         // institution is allowed to issue as much cash as they want.
         transaction {
@@ -218,8 +218,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateIssueRaw() {
+    @Test(timeout=300_000)
+	fun generateIssueRaw() {
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = AnonymousParty(alice.publicKey), notary = dummyNotary.party)
@@ -233,8 +233,8 @@ class CashTests {
         assertEquals(miniCorp.publicKey, tx.commands[0].signers[0])
     }
 
-    @Test
-    fun generateIssueFromAmount() {
+    @Test(timeout=300_000)
+	fun generateIssueFromAmount() {
         // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` miniCorp.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
@@ -244,8 +244,8 @@ class CashTests {
         assertEquals(tx.outputs[0], tx.outputs[0])
     }
 
-    @Test
-    fun `extended issue examples`() {
+    @Test(timeout=300_000)
+	fun `extended issue examples`() {
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -314,8 +314,8 @@ class CashTests {
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = miniCorp.party, notary = dummyNotary.party)
     }
 
-    @Test
-    fun testMergeSplit() {
+    @Test(timeout=300_000)
+	fun testMergeSplit() {
         // Splitting value works.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -344,8 +344,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun zeroSizedValues() {
+    @Test(timeout=300_000)
+	fun zeroSizedValues() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             input(Cash.PROGRAM_ID, inState)
@@ -363,8 +363,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun trivialMismatches() {
+    @Test(timeout=300_000)
+	fun trivialMismatches() {
         // Can't change issuer.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -422,8 +422,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun exitLedger() {
+    @Test(timeout=300_000)
+	fun exitLedger() {
         // Single input/output straightforward case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -447,8 +447,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun `exit ledger with multiple issuers`() {
+    @Test(timeout=300_000)
+	fun `exit ledger with multiple issuers`() {
         // Multi-issuer case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -465,8 +465,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun `exit cash not held by its issuer`() {
+    @Test(timeout=300_000)
+	fun `exit cash not held by its issuer`() {
         // Single input/output straightforward case.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -478,8 +478,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun multiIssuer() {
+    @Test(timeout=300_000)
+	fun multiIssuer() {
         transaction {
             attachment(Cash.PROGRAM_ID)
             // Gather 2000 dollars from two different issuers.
@@ -505,8 +505,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun multiCurrency() {
+    @Test(timeout=300_000)
+	fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
             attachment(Cash.PROGRAM_ID)
@@ -552,8 +552,8 @@ class CashTests {
     /**
      * Try exiting an amount which matches a single state.
      */
-    @Test
-    fun generateSimpleExit() {
+    @Test(timeout=300_000)
+	fun generateSimpleExit() {
         val wtx = makeExit(miniCorpServices, 100.DOLLARS, megaCorp.party, 1)
         assertEquals(cashStates[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
@@ -567,8 +567,8 @@ class CashTests {
     /**
      * Try exiting an amount smaller than the smallest available input state, and confirm change is generated correctly.
      */
-    @Test
-    fun generatePartialExit() {
+    @Test(timeout=300_000)
+	fun generatePartialExit() {
         val wtx = makeExit(miniCorpServices, 50.DOLLARS, megaCorp.party, 1)
         val actualInput = wtx.inputs.single()
         // Filter the available inputs and confirm exactly one has been used
@@ -584,48 +584,48 @@ class CashTests {
     /**
      * Try exiting a currency we don't have.
      */
-    @Test
-    fun generateAbsentExit() {
+    @Test(timeout=300_000)
+	fun generateAbsentExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, megaCorp.party, 1) }
     }
 
     /**
      * Try exiting with a reference mis-match.
      */
-    @Test
-    fun generateInvalidReferenceExit() {
+    @Test(timeout=300_000)
+	fun generateInvalidReferenceExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, megaCorp.party, 2) }
     }
 
     /**
      * Try exiting an amount greater than the maximum available.
      */
-    @Test
-    fun generateInsufficientExit() {
+    @Test(timeout=300_000)
+	fun generateInsufficientExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 1000.DOLLARS, megaCorp.party, 1) }
     }
 
     /**
      * Try exiting for an owner with no states
      */
-    @Test
-    fun generateOwnerWithNoStatesExit() {
+    @Test(timeout=300_000)
+	fun generateOwnerWithNoStatesExit() {
         assertFailsWith<InsufficientBalanceException> { makeExit(miniCorpServices, 100.POUNDS, charlie.party, 1) }
     }
 
     /**
      * Try exiting when vault is empty
      */
-    @Test
-    fun generateExitWithEmptyVault() {
+    @Test(timeout=300_000)
+	fun generateExitWithEmptyVault() {
         assertFailsWith<IllegalArgumentException> {
             val tx = TransactionBuilder(dummyNotary.party)
             Cash().generateExit(tx, Amount(100, Issued(charlie.ref(1), GBP)), emptyList(), ourIdentity)
         }
     }
 
-    @Test
-    fun generateSimpleDirectSpend() {
+    @Test(timeout=300_000)
+	fun generateSimpleDirectSpend() {
         val wtx =
                 database.transaction {
                     makeSpend(ourServices, 100.DOLLARS, miniCorpAnonymised)
@@ -638,8 +638,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateSimpleSpendWithParties() {
+    @Test(timeout=300_000)
+	fun generateSimpleSpendWithParties() {
         database.transaction {
             val tx = TransactionBuilder(dummyNotary.party)
             CashUtils.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
@@ -648,8 +648,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateSimpleSpendWithChange() {
+    @Test(timeout=300_000)
+	fun generateSimpleSpendWithChange() {
         val wtx =
                 database.transaction {
                     makeSpend(ourServices, 10.DOLLARS, miniCorpAnonymised)
@@ -673,8 +673,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateSpendWithTwoInputs() {
+    @Test(timeout=300_000)
+	fun generateSpendWithTwoInputs() {
         val wtx =
                 database.transaction {
                     makeSpend(ourServices, 500.DOLLARS, miniCorpAnonymised)
@@ -689,8 +689,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateSpendMixedDeposits() {
+    @Test(timeout=300_000)
+	fun generateSpendMixedDeposits() {
         val wtx =
                 database.transaction {
                     val wtx = makeSpend(ourServices, 580.DOLLARS, miniCorpAnonymised)
@@ -710,8 +710,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun generateSpendInsufficientBalance() {
+    @Test(timeout=300_000)
+	fun generateSpendInsufficientBalance() {
         database.transaction {
             val e = assertFailsWith<InsufficientBalanceException> {
                 makeSpend(ourServices, 1000.DOLLARS, miniCorpAnonymised)
@@ -727,8 +727,8 @@ class CashTests {
     /**
      * Confirm that aggregation of states is correctly modelled.
      */
-    @Test
-    fun aggregation() {
+    @Test(timeout=300_000)
+	fun aggregation() {
         val fiveThousandDollarsFromMega = Cash.State(5000.DOLLARS `issued by` megaCorp.ref(2), megaCorp.party)
         val twoThousandDollarsFromMega = Cash.State(2000.DOLLARS `issued by` megaCorp.ref(2), miniCorp.party)
         val oneThousandDollarsFromMini = Cash.State(1000.DOLLARS `issued by` miniCorp.ref(3), megaCorp.party)
@@ -752,8 +752,8 @@ class CashTests {
         assertNotEquals((fiveThousandDollarsFromMega withDeposit defaultIssuer).amount.token, fiveThousandDollarsFromMega.amount.token)
     }
 
-    @Test
-    fun `summing by owner`() {
+    @Test(timeout=300_000)
+	fun `summing by owner`() {
         val states = listOf(
                 Cash.State(1000.DOLLARS `issued by` defaultIssuer, miniCorp.party),
                 Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
@@ -771,8 +771,8 @@ class CashTests {
         states.sumCashBy(miniCorp.party)
     }
 
-    @Test
-    fun `summing no currencies`() {
+    @Test(timeout=300_000)
+	fun `summing no currencies`() {
         val states = emptyList<Cash.State>()
         assertEquals(0.POUNDS `issued by` defaultIssuer, states.sumCashOrZero(GBP `issued by` defaultIssuer))
         assertNull(states.sumCashOrNull())
@@ -784,8 +784,8 @@ class CashTests {
         states.sumCash()
     }
 
-    @Test
-    fun `summing a single currency`() {
+    @Test(timeout=300_000)
+	fun `summing a single currency`() {
         val states = listOf(
                 Cash.State(1000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
                 Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
@@ -808,8 +808,8 @@ class CashTests {
     }
 
     // Double spend.
-    @Test
-    fun chainCashDoubleSpendFailsWith() {
+    @Test(timeout=300_000)
+	fun chainCashDoubleSpendFailsWith() {
         MockServices(megaCorp).ledger(dummyNotary.party) {
             unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID)
@@ -843,8 +843,8 @@ class CashTests {
         }
     }
 
-    @Test
-    fun multiSpend() {
+    @Test(timeout=300_000)
+	fun multiSpend() {
         val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {
             val payments = listOf(
@@ -866,8 +866,8 @@ class CashTests {
         assertEquals(megaCorp.party, out(3).amount.token.issuer.party)
     }
 
-    @Test
-    fun generateSpendTwiceWithinATransaction() {
+    @Test(timeout=300_000)
+	fun generateSpendTwiceWithinATransaction() {
         val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {
             val payments = listOf(

@@ -5,13 +5,13 @@ import org.junit.jupiter.api.Test
 @GroupA
 class GroupAMoreTests {
 
-    @Test
+    @Test()
     fun setExpectations() {
         AssertingTestDatabaseContext.addExpectations("groupA",
                 "specialSql1-setup", "specialSql2-setup", "specialSql2-teardown", "specialSql1-teardown")
     }
 
-    @Test
+    @Test()
     @SpecialSql1
     @SpecialSql2
     fun moreSpecialSqlRequired() {

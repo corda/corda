@@ -63,8 +63,8 @@ class CordappProviderImplTests {
         attachmentStore = MockAttachmentStorage()
     }
 
-    @Test
-    fun `isolated jar is loaded into the attachment store`() {
+    @Test(timeout=300_000)
+	fun `isolated jar is loaded into the attachment store`() {
         val provider = newCordappProvider(isolatedJAR)
         val maybeAttachmentId = provider.getCordappAttachmentId(provider.cordapps.first())
 
@@ -72,14 +72,14 @@ class CordappProviderImplTests {
         assertNotNull(attachmentStore.openAttachment(maybeAttachmentId!!))
     }
 
-    @Test
-    fun `empty jar is not loaded into the attachment store`() {
+    @Test(timeout=300_000)
+	fun `empty jar is not loaded into the attachment store`() {
         val provider = newCordappProvider(emptyJAR)
         assertNull(provider.getCordappAttachmentId(provider.cordapps.first()))
     }
 
-    @Test
-    fun `test that we find a cordapp class that is loaded into the store`() {
+    @Test(timeout=300_000)
+	fun `test that we find a cordapp class that is loaded into the store`() {
         val provider = newCordappProvider(isolatedJAR)
         val className = "net.corda.isolated.contracts.AnotherDummyContract"
 
@@ -90,8 +90,8 @@ class CordappProviderImplTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `test that we find an attachment for a cordapp contract class`() {
+    @Test(timeout=300_000)
+	fun `test that we find an attachment for a cordapp contract class`() {
         val provider = newCordappProvider(isolatedJAR)
         val className = "net.corda.isolated.contracts.AnotherDummyContract"
         val expected = provider.getAppContext(provider.cordapps.first()).attachmentId
@@ -101,8 +101,8 @@ class CordappProviderImplTests {
         assertEquals(actual!!, expected)
     }
 
-    @Test
-    fun `test cordapp configuration`() {
+    @Test(timeout=300_000)
+	fun `test cordapp configuration`() {
         val configProvider = MockCordappConfigProvider()
         configProvider.cordappConfigs[isolatedCordappName] = validConfig
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN)
@@ -113,8 +113,8 @@ class CordappProviderImplTests {
         assertThat(expected.getString("key")).isEqualTo("value")
     }
 
-    @Test
-    fun `test fixup rule that adds attachment`() {
+    @Test(timeout=300_000)
+	fun `test fixup rule that adds attachment`() {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules("$ID1 => $ID2, $ID3")
         val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
@@ -124,8 +124,8 @@ class CordappProviderImplTests {
         assertThat(fixedIDs).containsExactly(ID2, ID3)
     }
 
-    @Test
-    fun `test fixup rule that deletes attachment`() {
+    @Test(timeout=300_000)
+	fun `test fixup rule that deletes attachment`() {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules("$ID1 =>")
         val fixedIDs = with(newCordappProvider(fixupJar.toURI().toURL())) {
@@ -135,8 +135,8 @@ class CordappProviderImplTests {
         assertThat(fixedIDs).isEmpty()
     }
 
-    @Test
-    fun `test fixup rule with blank LHS`() {
+    @Test(timeout=300_000)
+	fun `test fixup rule with blank LHS`() {
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(" => $ID2")
         val ex = assertFailsWith<IllegalArgumentException> {
@@ -147,8 +147,8 @@ class CordappProviderImplTests {
         )
     }
 
-    @Test
-    fun `test fixup rule without arrows`() {
+    @Test(timeout=300_000)
+	fun `test fixup rule without arrows`() {
         val rule = " $ID1 "
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(rule)
@@ -160,8 +160,8 @@ class CordappProviderImplTests {
         )
     }
 
-    @Test
-    fun `test fixup rule with too many arrows`() {
+    @Test(timeout=300_000)
+	fun `test fixup rule with too many arrows`() {
         val rule = " $ID1 => $ID2 => $ID3 "
         val fixupJar = File.createTempFile("fixup", ".jar")
             .writeFixupRules(rule)
@@ -173,8 +173,8 @@ class CordappProviderImplTests {
         )
     }
 
-    @Test
-    fun `test fixup file containing multiple rules and comments`() {
+    @Test(timeout=300_000)
+	fun `test fixup file containing multiple rules and comments`() {
         val fixupJar = File.createTempFile("fixup", ".jar").writeFixupRules(
             "# Whole line comment",
             "\t$ID1,$ID2 =>  $ID2,,  $ID3 # EOl comment",

@@ -362,6 +362,7 @@ A more graceful form of reconnection is also available. This will:
 
 - reconnect any existing ``Observable``\s after a reconnection, so that they keep emitting events to the existing subscriptions.
 - block any RPC calls that arrive during a reconnection or any RPC calls that were not acknowledged at the point of reconnection and will execute them after the connection is re-established.
+- by default continue retrying indefinitely until the connection is re-established.  See ``CordaRPCClientConfiguration.maxReconnectAttempts`` for adjusting the number of retries.
 
 More specifically, the behaviour in the second case is a bit more subtle:
 
@@ -377,7 +378,7 @@ You can enable this graceful form of reconnection by using the ``gracefulReconne
 
 * ``onDisconnect``: A callback handler that will be invoked every time the connection is disconnected.
 * ``onReconnect``: A callback handler that will be invoked every time the connection is established again after a disconnection.
-* ``maxAttempts``: The maximum number of attempts that will be performed per RPC operation. A negative value implies infinite retries. The default value is 5.
+* ``maxAttempts``: The maximum number of attempts that will be performed per *RPC operation*. A negative value implies infinite retries. The default value is 5.
 
 This can be used in the following way:
 

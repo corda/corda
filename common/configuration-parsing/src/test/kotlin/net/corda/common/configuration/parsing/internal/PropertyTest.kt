@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 class PropertyTest {
 
-    @Test
-    fun present_value_with_correct_type() {
+    @Test(timeout=300_000)
+	fun present_value_with_correct_type() {
 
         val key = "a.b.c"
         val value = 1L
@@ -25,8 +25,8 @@ class PropertyTest {
         assertThat(configuration[property]).isEqualTo(value)
     }
 
-    @Test
-    fun present_value_with_wrong_type() {
+    @Test(timeout=300_000)
+	fun present_value_with_wrong_type() {
 
         val key = "a.b.c"
         val value = 1
@@ -41,8 +41,8 @@ class PropertyTest {
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
 
-    @Test
-    fun present_value_of_list_type() {
+    @Test(timeout=300_000)
+	fun present_value_of_list_type() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -57,8 +57,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
 
-    @Test
-    fun present_value_of_list_type_with_whole_list_mapping() {
+    @Test(timeout=300_000)
+	fun present_value_of_list_type_with_whole_list_mapping() {
 
         val key = "a.b.c"
         val value = listOf(1L, 3L, 2L)
@@ -73,8 +73,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(value.max())
     }
 
-    @Test
-    fun absent_value_of_list_type_with_whole_list_mapping() {
+    @Test(timeout=300_000)
+	fun absent_value_of_list_type_with_whole_list_mapping() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
@@ -88,8 +88,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(null)
     }
 
-    @Test
-    fun present_value_of_list_type_with_single_element_and_whole_list_mapping() {
+    @Test(timeout=300_000)
+	fun present_value_of_list_type_with_single_element_and_whole_list_mapping() {
 
         val key = "a.b.c"
         val value = listOf(1L, 3L, 2L)
@@ -104,8 +104,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(value.max())
     }
 
-    @Test
-    fun absent_value_of_list_type_with_single_element_and_whole_list_mapping() {
+    @Test(timeout=300_000)
+	fun absent_value_of_list_type_with_single_element_and_whole_list_mapping() {
 
         val key = "a.b.c"
         val configuration = configObject().toConfig()
@@ -119,8 +119,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(null)
     }
 
-    @Test
-    fun optional_present_value_of_list_type() {
+    @Test(timeout=300_000)
+	fun optional_present_value_of_list_type() {
 
         val key = "a.b.c"
         val value = listOf(1L, 2L, 3L)
@@ -135,8 +135,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
 
-    @Test
-    fun optional_absent_value_of_list_type() {
+    @Test(timeout=300_000)
+	fun optional_absent_value_of_list_type() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -151,8 +151,8 @@ class PropertyTest {
 
     }
 
-    @Test
-    fun optional_absent_value_of_list_type_with_default_value() {
+    @Test(timeout=300_000)
+	fun optional_absent_value_of_list_type_with_default_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -167,8 +167,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
     }
 
-    @Test
-    fun absent_value() {
+    @Test(timeout=300_000)
+	fun absent_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -182,8 +182,8 @@ class PropertyTest {
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
 
-    @Test
-    fun optional_present_value_with_correct_type() {
+    @Test(timeout=300_000)
+	fun optional_present_value_with_correct_type() {
 
         val key = "a.b.c"
         val value = 1L
@@ -198,8 +198,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
 
-    @Test
-    fun optional_present_value_with_wrong_type() {
+    @Test(timeout=300_000)
+	fun optional_present_value_with_wrong_type() {
 
         val key = "a.b.c"
         val value = 1
@@ -214,8 +214,8 @@ class PropertyTest {
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
 
-    @Test
-    fun optional_absent_value() {
+    @Test(timeout=300_000)
+	fun optional_absent_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
@@ -229,8 +229,8 @@ class PropertyTest {
         assertThat(property.valueIn(configuration)).isNull()
     }
 
-    @Test
-    fun optional_absent_with_default_value() {
+    @Test(timeout=300_000)
+	fun optional_absent_with_default_value() {
 
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()

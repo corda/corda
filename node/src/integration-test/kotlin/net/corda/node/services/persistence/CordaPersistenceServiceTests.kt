@@ -19,8 +19,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CordaPersistenceServiceTests {
-    @Test
-    fun `corda service can save many transactions from different threads`() {
+    @Test(timeout=300_000)
+	fun `corda service can save many transactions from different threads`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
 
             val port = incrementalPortAllocation().nextPort()

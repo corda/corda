@@ -6,8 +6,8 @@ import org.junit.Test
 import org.assertj.core.api.Assertions.assertThat
 
 class TypesafeCordappConfigTests {
-    @Test
-    fun `test that all value types can be retrieved`() {
+    @Test(timeout=300_000)
+	fun `test that all value types can be retrieved`() {
         val config = ConfigFactory.parseString("string=string\nint=1\nfloat=1.0\ndouble=1.0\nnumber=2\ndouble=1.01\nbool=false")
         val cordappConf = TypesafeCordappConfig(config)
 
@@ -20,16 +20,16 @@ class TypesafeCordappConfigTests {
         assertThat(cordappConf.getBoolean("bool")).isEqualTo(false)
     }
 
-    @Test
-    fun `test a nested path`() {
+    @Test(timeout=300_000)
+	fun `test a nested path`() {
         val config = ConfigFactory.parseString("outer: { inner: string }")
         val cordappConf = TypesafeCordappConfig(config)
 
         assertThat(cordappConf.getString("outer.inner")).isEqualTo("string")
     }
 
-    @Test
-    fun `test exists determines existence and lack of existence correctly`() {
+    @Test(timeout=300_000)
+	fun `test exists determines existence and lack of existence correctly`() {
         val config = ConfigFactory.parseString("exists=exists")
         val cordappConf = TypesafeCordappConfig(config)
 

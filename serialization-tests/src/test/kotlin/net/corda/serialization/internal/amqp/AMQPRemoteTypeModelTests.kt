@@ -40,8 +40,8 @@ class AMQPRemoteTypeModelTests {
 
     class SimpleClass(val a: Int, val b: Double, val c: Short?, val d: ByteArray, val e: ByteArray?)
 
-    @Test
-    fun `round-trip some types through AMQP serialisations`() {
+    @Test(timeout=300_000)
+	fun `round-trip some types through AMQP serialisations`() {
         arrayOf("").assertRemoteType("String[]")
         listOf(1).assertRemoteType("List<Object>")
         arrayOf(listOf(1)).assertRemoteType("List[]")

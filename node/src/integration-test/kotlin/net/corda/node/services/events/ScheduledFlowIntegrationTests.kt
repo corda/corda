@@ -96,8 +96,8 @@ class ScheduledFlowIntegrationTests {
         }
     }
 
-    @Test
-    fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
+    @Test(timeout=300_000)
+	fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage"), enclosedCordapp())

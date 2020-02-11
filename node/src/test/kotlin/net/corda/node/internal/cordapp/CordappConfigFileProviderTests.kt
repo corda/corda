@@ -23,21 +23,21 @@ class CordappConfigFileProviderTests {
 
     private val provider = CordappConfigFileProvider(listOf(cordappDir))
 
-    @Test
-    fun `test that config can be loaded`() {
+    @Test(timeout=300_000)
+	fun `test that config can be loaded`() {
         writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
     }
 
-    @Test
-    fun `config is idempotent if the underlying file is not changed`() {
+    @Test(timeout=300_000)
+	fun `config is idempotent if the underlying file is not changed`() {
         writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
     }
 
-    @Test
-    fun `config is not idempotent if the underlying file is changed`() {
+    @Test(timeout=300_000)
+	fun `config is not idempotent if the underlying file is changed`() {
         writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
 

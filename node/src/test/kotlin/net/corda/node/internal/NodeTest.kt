@@ -62,8 +62,8 @@ class NodeTest {
         }
     }
 
-    @Test
-    fun `generateAndSaveNodeInfo works`() {
+    @Test(timeout=300_000)
+	fun `generateAndSaveNodeInfo works`() {
         val configuration = createConfig(ALICE_NAME)
         val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
@@ -72,8 +72,8 @@ class NodeTest {
         }
     }
 
-    @Test
-    fun `clear network map cache works`() {
+    @Test(timeout=300_000)
+	fun `clear network map cache works`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo, _) = createNodeInfoAndSigned(ALICE_NAME)
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
@@ -99,8 +99,8 @@ class NodeTest {
         }
     }
 
-    @Test
-    fun `Node can start with multiple keypairs for its identity`() {
+    @Test(timeout=300_000)
+	fun `Node can start with multiple keypairs for its identity`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo1, _) = createNodeInfoAndSigned(ALICE_NAME)
         val (nodeInfo2, _) = createNodeInfoAndSigned(ALICE_NAME)
@@ -148,15 +148,15 @@ class NodeTest {
     }
 
     // JDK 11 check
-    @Test
-    fun `test getJavaRuntimeVersion`() {
+    @Test(timeout=300_000)
+	fun `test getJavaRuntimeVersion`() {
         assertTrue(SystemUtils.IS_JAVA_1_8 || SystemUtils.IS_JAVA_11)
     }
 
     // JDK11: revisit (JDK 9+ uses different numbering scheme: see https://docs.oracle.com/javase/9/docs/api/java/lang/Runtime.Version.html)
     @Ignore
-    @Test
-    fun `test getJavaUpdateVersion`() {
+    @Test(timeout=300_000)
+	fun `test getJavaUpdateVersion`() {
         assertThat(getJavaUpdateVersion("1.8.0_202-ea")).isEqualTo(202)
         assertThat(getJavaUpdateVersion("1.8.0_202")).isEqualTo(202)
         assertFailsWith<NumberFormatException> { getJavaUpdateVersion("1.8.0_202wrong-format") }

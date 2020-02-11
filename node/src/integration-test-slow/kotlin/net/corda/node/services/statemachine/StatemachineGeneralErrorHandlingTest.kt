@@ -25,8 +25,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times) and is then kept in
      * the hospital for observation.
      */
-    @Test
-    fun `error during transition with SendInitial action is retried 3 times and kept for observation if error persists`() {
+    @Test(timeout=300_000)
+	fun `error during transition with SendInitial action is retried 3 times and kept for observation if error persists`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -105,8 +105,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
      */
-    @Test
-    fun `error during transition with SendInitial action that does not persist will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `error during transition with SendInitial action that does not persist will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -185,8 +185,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * The exceptions should be swallowed. Therefore there should be no trips to the hospital and no retries.
      * The flow should complete successfully as the error is swallowed.
      */
-    @Test
-    fun `error during transition with AcknowledgeMessages action is swallowed and flow completes successfully`() {
+    @Test(timeout=300_000)
+	fun `error during transition with AcknowledgeMessages action is swallowed and flow completes successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -270,8 +270,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to
      * verify that 3 retries are attempted before recovering.
      */
-    @Test
-    fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -356,8 +356,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      *
      * CORDA-3352 - it is currently hanging after putting the flow in for observation
      */
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `error during transition with CommitTransaction action that occurs during the beginning of execution will retry and be kept for observation if error persists`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
@@ -443,8 +443,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to
      * verify that 3 retries are attempted before recovering.
      */
-    @Test
-    fun `error during transition with CommitTransaction action that occurs after the first suspend will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `error during transition with CommitTransaction action that occurs after the first suspend will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -540,8 +540,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      *
      * Each time the flow retries, it begins from the previous checkpoint where it suspended before failing.
      */
-    @Test
-    fun `error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -629,8 +629,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * The flow is discharged and replayed from the hospital once. After failing during the replay, the flow is forced into overnight
      * observation. It is not ran again after this point
      */
-    @Test
-    fun `error during retry of a flow will force the flow into overnight observation`() {
+    @Test(timeout=300_000)
+	fun `error during retry of a flow will force the flow into overnight observation`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -729,8 +729,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * flow will still finish successfully. This is due to the even being scheduled as part of the retry and the failure in the database
      * commit occurs after this point. As the flow is already scheduled, the failure has not affect on it.
      */
-    @Test
-    fun `error during commit transaction action when retrying a flow will retry the flow again and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `error during commit transaction action when retrying a flow will retry the flow again and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -828,8 +828,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * CORDA-3352 - it is currently hanging after putting the flow in for observation
      *
      */
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `error during retrying a flow that failed when committing its original checkpoint will force the flow into overnight observation`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
@@ -910,8 +910,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      *
      * Each time the flow retries, it begins from the previous checkpoint where it suspended before failing.
      */
-    @Test
-    fun `error during transition with CommitTransaction action and ConstraintViolationException that occurs when completing a flow will retry and be kept for observation if error persists`() {
+    @Test(timeout=300_000)
+	fun `error during transition with CommitTransaction action and ConstraintViolationException that occurs when completing a flow will retry and be kept for observation if error persists`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val alice = createBytemanNode(ALICE_NAME)
@@ -1009,8 +1009,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * if an error transition moves into another error transition. The flow still recovers from this state. 5 exceptions were thrown to verify
      * that 3 retries are attempted before recovering.
      */
-    @Test
-    fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and complete successfully`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
@@ -1104,8 +1104,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * able to recover when the node is restarted (by using the events). The initiating flow maintains the checkpoint as it is waiting for
      * the responding flow to recover and finish its flow.
      */
-    @Test
-    fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and be kept for observation if error persists`() {
+    @Test(timeout=300_000)
+	fun `responding flow - error during transition with CommitTransaction action that occurs during the beginning of execution will retry and be kept for observation if error persists`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
@@ -1192,8 +1192,8 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
      */
-    @Test
-    fun `responding flow - error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully`() {
+    @Test(timeout=300_000)
+	fun `responding flow - error during transition with CommitTransaction action that occurs when completing a flow and deleting its checkpoint will retry and complete successfully`() {
         startDriver {
             val charlie = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)

@@ -71,27 +71,43 @@ abstract class TestBase(type: SandboxType) {
         SandboxType.JAVA -> TESTING_LIBRARIES.filter { isDirectory(it) }
     }
 
-    fun sandbox(action: SandboxRuntimeContext.() -> Unit) {
-        return sandbox(WARNING, emptySet(), emptySet(), action)
+    inline fun sandbox(crossinline action: SandboxRuntimeContext.() -> Unit) {
+        sandbox(Consumer { ctx -> action(ctx) })
     }
 
-    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: SandboxRuntimeContext.() -> Unit) {
-        return sandbox(WARNING, visibleAnnotations, emptySet(), action)
+    fun sandbox(action: Consumer<SandboxRuntimeContext>) {
+        sandbox(WARNING, emptySet(), emptySet(), action)
+    }
+
+    inline fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, crossinline action: SandboxRuntimeContext.() -> Unit) {
+        sandbox(visibleAnnotations, Consumer { ctx -> action(ctx) })
+    }
+
+    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: Consumer<SandboxRuntimeContext>) {
+        sandbox(WARNING, visibleAnnotations, emptySet(), action)
+    }
+
+    inline fun sandbox(
+        visibleAnnotations: Set<Class<out Annotation>>,
+        sandboxOnlyAnnotations: Set<String>,
+        crossinline action: SandboxRuntimeContext.() -> Unit
+    ) {
+        sandbox(visibleAnnotations, sandboxOnlyAnnotations, Consumer { ctx -> action(ctx) })
     }
 
     fun sandbox(
         visibleAnnotations: Set<Class<out Annotation>>,
         sandboxOnlyAnnotations: Set<String>,
-        action: SandboxRuntimeContext.() -> Unit
+        action: Consumer<SandboxRuntimeContext>
     ) {
-        return sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
+        sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
     }
 
     fun sandbox(
         minimumSeverityLevel: Severity,
         visibleAnnotations: Set<Class<out Annotation>>,
         sandboxOnlyAnnotations: Set<String>,
-        action: SandboxRuntimeContext.() -> Unit
+        action: Consumer<SandboxRuntimeContext>
     ) {
         var thrownException: Throwable? = null
         thread(start = false) {
@@ -100,9 +116,7 @@ abstract class TestBase(type: SandboxType) {
                     it.setMinimumSeverityLevel(minimumSeverityLevel)
                     it.setSandboxOnlyAnnotations(sandboxOnlyAnnotations)
                     it.setVisibleAnnotations(visibleAnnotations)
-                })).use(Consumer { ctx ->
-                    ctx.action()
-                })
+                })).use(action)
             }
         }.apply {
             uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, ex ->

@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing character array`() {
+	fun `test deserializing character array`() {
         val charArray = PrimitiveCharArray(charArrayOf('H', 'e', 'l', 'l', 'o', '!'))
         val data = charArray.serialize()
         assertEquals("Hello!", ShowCharArray().apply(charArray))
@@ -39,7 +39,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing integer array`() {
+	fun `test deserializing integer array`() {
         val intArray = PrimitiveIntegerArray(intArrayOf(100, 200, 300, 400, 500))
         val data = intArray.serialize()
 
@@ -64,7 +64,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing long array`() {
+	fun `test deserializing long array`() {
         val longArray = PrimitiveLongArray(longArrayOf(1000, 2000, 3000, 4000, 5000))
         val data = longArray.serialize()
 
@@ -89,7 +89,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing short array`() {
+	fun `test deserializing short array`() {
         val shortArray = PrimitiveShortArray(shortArrayOf(100, 200, 300, 400, 500))
         val data = shortArray.serialize()
 
@@ -114,7 +114,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing byte array`() {
+	fun `test deserializing byte array`() {
         val byteArray = PrimitiveByteArray(byteArrayOf(10, 20, 30, 40, 50))
         val data = byteArray.serialize()
 
@@ -139,7 +139,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing boolean array`() {
+	fun `test deserializing boolean array`() {
         val booleanArray = PrimitiveBooleanArray(booleanArrayOf(true, true))
         val data = booleanArray.serialize()
 
@@ -164,7 +164,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing double array`() {
+	fun `test deserializing double array`() {
         val doubleArray = PrimitiveDoubleArray(doubleArrayOf(1000.0, 2000.0, 3000.0, 4000.0, 5000.0))
         val data = doubleArray.serialize()
 
@@ -189,7 +189,7 @@ class DeserializePrimitiveArraysTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing float array`() {
+	fun `test deserializing float array`() {
         val floatArray = PrimitiveFloatArray(floatArrayOf(100.0f, 200.0f, 300.0f, 400.0f, 500.0f))
         val data = floatArray.serialize()
 

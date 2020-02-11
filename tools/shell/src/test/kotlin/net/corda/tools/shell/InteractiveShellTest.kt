@@ -137,36 +137,36 @@ class InteractiveShellTest {
         return objectMapper
     }
 
-    @Test
-    fun flowStartSimple() {
+    @Test(timeout=300_000)
+	fun flowStartSimple() {
         check("a: Hi there", "Hi there")
         check("b: 12", "12")
         check("b: 12, c: Yo", "12Yo")
     }
 
-    @Test
-    fun flowStartWithComplexTypes() = check("amount: £10", "10.00 GBP")
+    @Test(timeout=300_000)
+	fun flowStartWithComplexTypes() = check("amount: £10", "10.00 GBP")
 
-    @Test
-    fun flowStartWithNestedTypes() = check(
+    @Test(timeout=300_000)
+	fun flowStartWithNestedTypes() = check(
             input = "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
             expected = "(100.12 USD, DF489807F81C8C8829E509E1BCB92E6692B9DD9D624B7456435CB2F51DC82587)"
     )
 
-    @Test
-    fun flowStartWithArrayType() = check(
+    @Test(timeout=300_000)
+	fun flowStartWithArrayType() = check(
             input = "c: [ One, Two, Three, Four ]",
             expected = "One+Two+Three+Four"
     )
 
-    @Test
-    fun flowStartWithUserAmount() = check(
+    @Test(timeout=300_000)
+	fun flowStartWithUserAmount() = check(
             input = """b: 500, amount: { "quantity": 10001, "token":{ "label": "of value" } }""",
             expected = "10501 of value"
     )
 
-    @Test
-    fun flowStartWithArrayOfNestedTypes() = check(
+    @Test(timeout=300_000)
+	fun flowStartWithArrayOfNestedTypes() = check(
             input = """amounts: [ { "quantity": 10, "token": { "label": "(1)" } }, { "quantity": 200, "token": { "label": "(2)" } } ]""",
             expected = "10 (1)++200 (2)"
     )
@@ -180,8 +180,8 @@ class InteractiveShellTest {
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
-    @Test
-    fun niceTypeNamesInErrors() {
+    @Test(timeout=300_000)
+	fun niceTypeNamesInErrors() {
         val e = assertFailsWith<InteractiveShell.NoApplicableConstructor> {
             check("", expected = "")
         }
@@ -201,11 +201,11 @@ class InteractiveShellTest {
         assert(errors.isEmpty()) { errors.joinToString(", ") }
     }
 
-    @Test
-    fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
+    @Test(timeout=300_000)
+	fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
 
-    @Test
-    fun runRpcFromStringWithCustomTypeResult() {
+    @Test(timeout=300_000)
+	fun runRpcFromStringWithCustomTypeResult() {
         val command = listOf("nodeInfo")
         whenever(cordaRpcOps.nodeInfo()).thenReturn(ALICE_NODE_INFO)
 
@@ -219,8 +219,8 @@ class InteractiveShellTest {
         verify(printWriter).println(NODE_INFO_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
-    @Test
-    fun runRpcFromStringWithCollectionsResult() {
+    @Test(timeout=300_000)
+	fun runRpcFromStringWithCollectionsResult() {
         val command = listOf("networkMapSnapshot")
         whenever(cordaRpcOps.networkMapSnapshot()).thenReturn(listOf(ALICE_NODE_INFO, BOB_NODE_INFO))
 
@@ -233,15 +233,15 @@ class InteractiveShellTest {
         verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
-    @Test
-    fun killFlowWithNonsenseID() {
+    @Test(timeout=300_000)
+	fun killFlowWithNonsenseID() {
         InteractiveShell.killFlowById("nonsense", printWriter, cordaRpcOps, om)
         verify(printWriter).println("Cannot parse flow ID of 'nonsense' - expecting a UUID.", Decoration.bold, Color.red)
         verify(printWriter).flush()
     }
 
-    @Test
-    fun killFlowFailure() {
+    @Test(timeout=300_000)
+	fun killFlowFailure() {
         val runId = StateMachineRunId.createRandom()
         whenever(cordaRpcOps.killFlow(any())).thenReturn(false)
 
@@ -251,8 +251,8 @@ class InteractiveShellTest {
         verify(printWriter).flush()
     }
 
-    @Test
-    fun killFlowSuccess() {
+    @Test(timeout=300_000)
+	fun killFlowSuccess() {
         val runId = StateMachineRunId.createRandom()
         whenever(cordaRpcOps.killFlow(any())).thenReturn(true)
 

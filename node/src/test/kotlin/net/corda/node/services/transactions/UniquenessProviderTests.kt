@@ -94,8 +94,8 @@ class UniquenessProviderTests(
 
     /* Group A: only time window */
 
-    @Test
-    fun `commits transaction with valid time window`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with valid time window`() {
         val inputState1 = generateStateRef()
         val firstTxId = SecureHash.randomSHA256()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
@@ -108,8 +108,8 @@ class UniquenessProviderTests(
         assert(result2 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with invalid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with invalid time window`() {
         val inputState1 = generateStateRef()
         val firstTxId = SecureHash.randomSHA256()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
@@ -120,8 +120,8 @@ class UniquenessProviderTests(
 
     /* Group B: only reference states */
 
-    @Test
-    fun `commits transaction with unused reference states`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with unused reference states`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
 
@@ -135,8 +135,8 @@ class UniquenessProviderTests(
         assert(result2 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with previously used reference states`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used reference states`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
 
@@ -156,8 +156,8 @@ class UniquenessProviderTests(
 
     /* Group C: reference states & time window */
 
-    @Test
-    fun `commits transaction with unused reference states and valid time window`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with unused reference states and valid time window`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
@@ -178,8 +178,8 @@ class UniquenessProviderTests(
         assert(result3 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with unused reference states and invalid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with unused reference states and invalid time window`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
@@ -190,8 +190,8 @@ class UniquenessProviderTests(
         assertEquals(invalidTimeWindow, error.txTimeWindow)
     }
 
-    @Test
-    fun `rejects transaction with previously used reference states and valid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used reference states and valid time window`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
 
@@ -210,8 +210,8 @@ class UniquenessProviderTests(
         assertEquals(StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE, conflictCause.type)
     }
 
-    @Test
-    fun `rejects transaction with previously used reference states and invalid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used reference states and invalid time window`() {
         val firstTxId = SecureHash.randomSHA256()
         val referenceState = generateStateRef()
 
@@ -232,8 +232,8 @@ class UniquenessProviderTests(
 
     /* Group D: only input states */
 
-    @Test
-    fun `commits transaction with unused inputs`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with unused inputs`() {
         val inputState = generateStateRef()
 
         val result = uniquenessProvider.commit(listOf(inputState), txID, identity, requestSignature).get()
@@ -244,8 +244,8 @@ class UniquenessProviderTests(
         assert(result2 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with previously used inputs`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used inputs`() {
         val inputState = generateStateRef()
 
         val inputs = listOf(inputState)
@@ -264,8 +264,8 @@ class UniquenessProviderTests(
 
     /* Group E: input states & time window */
 
-    @Test
-    fun `commits transaction with unused inputs and valid time window`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with unused inputs and valid time window`() {
         val inputState = generateStateRef()
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().plus(30.minutes))
 
@@ -278,8 +278,8 @@ class UniquenessProviderTests(
         assert(result2 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with unused inputs and invalid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with unused inputs and invalid time window`() {
         val inputState = generateStateRef()
         val invalidTimeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
 
@@ -288,8 +288,8 @@ class UniquenessProviderTests(
         assertEquals(invalidTimeWindow, error.txTimeWindow)
     }
 
-    @Test
-    fun `rejects transaction with previously used inputs and valid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used inputs and valid time window`() {
         val inputState = generateStateRef()
         val inputs = listOf(inputState)
         val firstTxId = txID
@@ -307,8 +307,8 @@ class UniquenessProviderTests(
         assertEquals(firstTxId.sha256(), conflictCause.hashOfTransactionId)
     }
 
-    @Test
-    fun `rejects transaction with previously used inputs and invalid time window`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with previously used inputs and invalid time window`() {
         val inputState = generateStateRef()
         val inputs = listOf(inputState)
         val firstTxId = txID
@@ -328,8 +328,8 @@ class UniquenessProviderTests(
 
     /* Group F: input & reference states */
 
-    @Test
-    fun `commits transaction with unused input & reference states`() {
+    @Test(timeout=300_000)
+	fun `commits transaction with unused input & reference states`() {
         val firstTxId = SecureHash.randomSHA256()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
@@ -346,8 +346,8 @@ class UniquenessProviderTests(
         assert(result2 is UniquenessProvider.Result.Success)
     }
 
-    @Test
-    fun `rejects transaction with unused reference states and used input states`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with unused reference states and used input states`() {
         val firstTxId = SecureHash.randomSHA256()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
@@ -366,8 +366,8 @@ class UniquenessProviderTests(
         assertEquals(StateConsumptionDetails.ConsumedStateType.INPUT_STATE, conflictCause.type)
     }
 
-    @Test
-    fun `rejects transaction with used reference states and unused input states`() {
+    @Test(timeout=300_000)
+	fun `rejects transaction with used reference states and unused input states`() {
         val firstTxId = SecureHash.randomSHA256()
         val inputState = generateStateRef()
         val referenceState = generateStateRef()
@@ -390,8 +390,8 @@ class UniquenessProviderTests(
     /* Group G: input, reference states and time window – covered by previous tests. */
 
     /* Transaction signing tests. */
-    @Test
-    fun `signs transactions correctly`() {
+    @Test(timeout=300_000)
+	fun `signs transactions correctly`() {
         (1..10).map {
             val inputState1 = generateStateRef()
             val firstTxId = SecureHash.randomSHA256()

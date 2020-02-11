@@ -30,8 +30,8 @@ private interface MySpectator {
 }
 
 class RigorousMockTest {
-    @Test
-    fun `toString has a reliable default answer in all cases`() {
+    @Test(timeout=300_000)
+	fun `toString has a reliable default answer in all cases`() {
         Stream.of<(Class<out Any>) -> Any>(::spectator, ::rigorousMock, ::participant).forEach { profile ->
             Stream.of(MyInterface::class, MyAbstract::class, MyImpl::class).forEach { type ->
                 val mock = profile(type.java)
@@ -40,8 +40,8 @@ class RigorousMockTest {
         }
     }
 
-    @Test
-    fun `callRealMethod is preferred by rigorousMock`() {
+    @Test(timeout=300_000)
+	fun `callRealMethod is preferred by rigorousMock`() {
         rigorousMock<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
@@ -58,8 +58,8 @@ class RigorousMockTest {
         }
     }
 
-    @Test
-    fun `throw exception is preferred by participant`() {
+    @Test(timeout=300_000)
+	fun `throw exception is preferred by participant`() {
         participant<MyInterface>().let { m ->
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.abstractFun() }.javaClass)
             assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.kotlinDefaultFun() }.javaClass)
@@ -76,8 +76,8 @@ class RigorousMockTest {
         }
     }
 
-    @Test
-    fun `doing nothing is preferred by spectator`() {
+    @Test(timeout=300_000)
+	fun `doing nothing is preferred by spectator`() {
         val mock: MySpectator = spectator()
         mock.sideEffect()
         assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { mock.noClearDefault() }.javaClass)
@@ -97,8 +97,8 @@ class RigorousMockTest {
     private open class CD<out C, out D> : AB<D, C>()
     private class CDImpl : CD<Runnable, String>()
 
-    @Test
-    fun `method return type resolution works`() {
+    @Test(timeout=300_000)
+	fun `method return type resolution works`() {
         val m = spectator<CDImpl>()
         assertThat(m.b, isA(Runnable::class.java))
         assertSame<Any>(UndefinedMockBehaviorException::class.java, catchThrowable { m.a }.javaClass) // Can't mock String.
@@ -110,8 +110,8 @@ class RigorousMockTest {
         fun <U : Closeable> u(): U = throw UnsupportedOperationException()
     }
 
-    @Test
-    fun `method return type erasure cases`() {
+    @Test(timeout=300_000)
+	fun `method return type erasure cases`() {
         val m = spectator<TU<RS>>()
         m.t().let { t: Any ->
             assertFalse(t is RS)

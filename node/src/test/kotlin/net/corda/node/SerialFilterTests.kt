@@ -8,16 +8,16 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class SerialFilterTests {
-    @Test
-    fun `null and primitives are accepted and arrays are unwrapped`() {
+    @Test(timeout=300_000)
+	fun `null and primitives are accepted and arrays are unwrapped`() {
         val acceptClass = { _: Class<*> -> fail("Should not be invoked.") }
         listOf(null, Byte::class.javaPrimitiveType, IntArray::class.java, Array<CharArray>::class.java).forEach {
             assertTrue(SerialFilter.applyPredicate(acceptClass, it))
         }
     }
 
-    @Test
-    fun `the predicate is applied to the componentType`() {
+    @Test(timeout=300_000)
+	fun `the predicate is applied to the componentType`() {
         val classes = mutableListOf<Class<*>>()
         val acceptClass = { clazz: Class<*> ->
             classes.add(clazz)

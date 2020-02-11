@@ -14,10 +14,10 @@ import java.util.*
 
 class OptionalSerializationTests {
 
-    @Test
-    fun setupEnclosedSerializationTest() {
-        @Test
-        fun `java optionals should serialize`() {
+    @Test(timeout=300_000)
+	fun setupEnclosedSerializationTest() {
+        @Test(timeout=300_000)
+	fun `java optionals should serialize`() {
             val factory = SerializerFactoryBuilder.build(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )

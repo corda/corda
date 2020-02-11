@@ -66,8 +66,8 @@ class AMQPExceptionsTests {
 
     // if the exception is a normal not serializable exception we'll have manipulated the
     // message
-    @Test
-    fun catchNotSerializable() {
+    @Test(timeout=300_000)
+	fun catchNotSerializable() {
         fun catchAssert(msg: String, f: () -> Unit) {
             Assertions.assertThatThrownBy { f() }
                     .isInstanceOf(NotSerializableException::class.java)
@@ -93,8 +93,8 @@ class AMQPExceptionsTests {
 
     // However, if its a shiny new AMQPNotSerializable one, we have cool new toys, so
     // lets make sure those are set
-    @Test
-    fun catchAMQPNotSerializable() {
+    @Test(timeout=300_000)
+	fun catchAMQPNotSerializable() {
         fun catchAssert(stack: List<String>, f: () -> Unit): AMQPNotSerializableException {
             try {
                 f()

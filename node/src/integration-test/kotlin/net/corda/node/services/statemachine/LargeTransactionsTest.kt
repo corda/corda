@@ -70,8 +70,8 @@ class LargeTransactionsTest {
         }
     }
 
-    @Test
-    fun checkCanSendLargeTransactions() {
+    @Test(timeout=300_000)
+	fun checkCanSendLargeTransactions() {
         // These 4 attachments yield a transaction that's got >10mb attached, so it'd push us over the Artemis
         // max message size.
         val bigFile1 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 0, "a")

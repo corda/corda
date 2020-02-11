@@ -40,8 +40,8 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         )
     }
 
-    @Test
-    fun `check function returns one value`() {
+    @Test(timeout=300_000)
+	fun `check function returns one value`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val returnedCommand = testFunction(commands)
         assertEquals(returnedCommand, validCommandOne, "they should be the same")
@@ -53,8 +53,8 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         testFunction(commands)
     }
 
-    @Test
-    fun `check error is thrown when command is of wrong type`() {
+    @Test(timeout=300_000)
+	fun `check error is thrown when command is of wrong type`() {
         val commands = listOf(invalidCommand)
         Assertions.assertThatThrownBy { testFunction(commands) }
                 .isInstanceOf(IllegalStateException::class.java)
@@ -74,8 +74,8 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
         )
     }
 
-    @Test
-    fun `check that function returns all values`() {
+    @Test(timeout=300_000)
+	fun `check that function returns all values`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands, null, null)
         assertEquals(2, commands.size)
@@ -83,8 +83,8 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
         assertTrue(commands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function does not return invalid command types`() {
+    @Test(timeout=300_000)
+	fun `check that function does not return invalid command types`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val filteredCommands = testFunction(commands, null, null).toList()
         assertEquals(1, filteredCommands.size)
@@ -92,8 +92,8 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
         assertFalse(filteredCommands.contains(invalidCommand))
     }
 
-    @Test
-    fun `check that function returns commands from valid signers`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, miniCorp.publicKey, null).toList()
         assertEquals(1, filteredCommands.size)
@@ -101,8 +101,8 @@ class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandW
         assertFalse(filteredCommands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function returns commands from valid parties`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, miniCorp.party).toList()
         assertEquals(1, filteredCommands.size)
@@ -123,8 +123,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         )
     }
 
-    @Test
-    fun `check that function returns all values`() {
+    @Test(timeout=300_000)
+	fun `check that function returns all values`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands, null, null)
         assertEquals(2, commands.size)
@@ -132,8 +132,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         assertTrue(commands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function does not return invalid command types`() {
+    @Test(timeout=300_000)
+	fun `check that function does not return invalid command types`() {
         val commands = listOf(validCommandOne, invalidCommand)
         val filteredCommands = testFunction(commands, null, null).toList()
         assertEquals(1, filteredCommands.size)
@@ -141,8 +141,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         assertFalse(filteredCommands.contains(invalidCommand))
     }
 
-    @Test
-    fun `check that function returns commands from valid signers`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, listOf(megaCorp.publicKey), null).toList()
         assertEquals(2, filteredCommands.size)
@@ -150,8 +150,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         assertTrue(filteredCommands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function returns commands from all valid signers`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from all valid signers`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, listOf(miniCorp.publicKey, megaCorp.publicKey), null).toList()
         assertEquals(1, filteredCommands.size)
@@ -159,8 +159,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         assertFalse(filteredCommands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function returns commands from valid parties`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, listOf(megaCorp.party)).toList()
         assertEquals(2, filteredCommands.size)
@@ -168,8 +168,8 @@ class SelectWithMultipleInputsTests(private val testFunction: (Collection<Comman
         assertTrue(filteredCommands.contains(validCommandTwo))
     }
 
-    @Test
-    fun `check that function returns commands from all valid parties`() {
+    @Test(timeout=300_000)
+	fun `check that function returns commands from all valid parties`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         val filteredCommands = testFunction(commands, null, listOf(miniCorp.party, megaCorp.party)).toList()
         assertEquals(1, filteredCommands.size)

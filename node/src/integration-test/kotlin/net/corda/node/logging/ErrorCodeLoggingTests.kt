@@ -16,8 +16,8 @@ import org.junit.Test
 import java.io.File
 
 class ErrorCodeLoggingTests {
-    @Test
-    fun `log entries with a throwable and ERROR or WARN get an error code appended`() {
+    @Test(timeout=300_000)
+	fun `log entries with a throwable and ERROR or WARN get an error code appended`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::MyFlow).waitForCompletion()
@@ -31,8 +31,8 @@ class ErrorCodeLoggingTests {
 
     // This is used to detect broken logging which can be caused by loggers being initialized
     // before the initLogging() call is made
-    @Test
-    fun `When logging is set to error level, there are no other levels logged after node startup`() {
+    @Test(timeout=300_000)
+	fun `When logging is set to error level, there are no other levels logged after node startup`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
             node.rpc.startFlow(::MyFlow).waitForCompletion()

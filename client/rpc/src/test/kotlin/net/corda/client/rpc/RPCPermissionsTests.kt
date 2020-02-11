@@ -46,8 +46,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
 
     private fun userOf(name: String, permissions: Set<String>) = User(name, "password", permissions)
 
-    @Test
-    fun `empty user cannot use any flows`() {
+    @Test(timeout=300_000)
+	fun `empty user cannot use any flows`() {
         rpcDriver {
             val emptyUser = userOf("empty", emptySet())
             val proxy = testProxyFor(emptyUser)
@@ -57,8 +57,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `admin user can use any flow`() {
+    @Test(timeout=300_000)
+	fun `admin user can use any flow`() {
         rpcDriver {
             val adminUser = userOf("admin", setOf(ALL_ALLOWED))
             val proxy = testProxyFor(adminUser)
@@ -67,8 +67,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `joe user is allowed to use DummyFlow`() {
+    @Test(timeout=300_000)
+	fun `joe user is allowed to use DummyFlow`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
@@ -77,8 +77,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `joe user is not allowed to use OtherFlow`() {
+    @Test(timeout=300_000)
+	fun `joe user is not allowed to use OtherFlow`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
@@ -91,8 +91,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `joe user is not allowed to call other RPC methods`() {
+    @Test(timeout=300_000)
+	fun `joe user is not allowed to call other RPC methods`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(DUMMY_FLOW))
             val proxy = testProxyFor(joeUser)
@@ -105,8 +105,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `joe user can call different methods matching to a wildcard`() {
+    @Test(timeout=300_000)
+	fun `joe user can call different methods matching to a wildcard`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf(WILDCARD_FLOW))
             val proxy = testProxyFor(joeUser)
@@ -128,8 +128,8 @@ class RPCPermissionsTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `checking invokeRpc permissions entitlements`() {
+    @Test(timeout=300_000)
+	fun `checking invokeRpc permissions entitlements`() {
         rpcDriver {
             val joeUser = userOf("joe", setOf("InvokeRpc.networkMapFeed"))
             val proxy = testProxyFor(joeUser)

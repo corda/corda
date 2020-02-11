@@ -40,8 +40,8 @@ class CarpenterExceptionTests {
         val VERBOSE: Boolean get() = false
     }
 
-    @Test
-    fun checkClassComparison() {
+    @Test(timeout=300_000)
+	fun checkClassComparison() {
         class CLA : ClassLoader() {
             override fun loadClass(name: String, resolve: Boolean): Class<*> {
                 println("CLA::loadClass $name")
@@ -71,8 +71,8 @@ class CarpenterExceptionTests {
         assertEquals(a2, a3)
     }
 
-    @Test
-    fun carpenterExceptionRethrownAsNotSerializableException() {
+    @Test(timeout=300_000)
+	fun carpenterExceptionRethrownAsNotSerializableException() {
         data class C2(val i: Int) : TestInterface {
             override fun runThing() = 1
         }

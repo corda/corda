@@ -15,8 +15,8 @@ class CustomCordappTest {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    @Test
-    fun `packageAsJar writes out the CorDapp info into the manifest`() {
+    @Test(timeout=300_000)
+	fun `packageAsJar writes out the CorDapp info into the manifest`() {
         val cordapp = cordappWithPackages("net.corda.testing.node.internal").copy(targetPlatformVersion = 123, name = "CustomCordappTest")
         val jarFile = packageAsJar(cordapp)
         JarInputStream(jarFile.inputStream()).use {
@@ -26,8 +26,8 @@ class CustomCordappTest {
         }
     }
 
-    @Test
-    fun `packageAsJar on leaf package`() {
+    @Test(timeout=300_000)
+	fun `packageAsJar on leaf package`() {
         val entries = packageAsJarThenReadBack(cordappWithPackages("net.corda.testing.node.internal"))
 
         assertThat(entries).contains(
@@ -41,8 +41,8 @@ class CustomCordappTest {
         assertThat(javaClass.classLoader.getResource("net/corda/testing/node/MockNetworkTest.class")).isNotNull()
     }
 
-    @Test
-    fun `packageAsJar on package with sub-packages`() {
+    @Test(timeout=300_000)
+	fun `packageAsJar on package with sub-packages`() {
         val entries = packageAsJarThenReadBack(cordappWithPackages("net.corda.testing.node"))
 
         assertThat(entries).contains(
@@ -52,8 +52,8 @@ class CustomCordappTest {
         )
     }
 
-    @Test
-    fun `packageAsJar on single class`() {
+    @Test(timeout=300_000)
+	fun `packageAsJar on single class`() {
         val entries = packageAsJarThenReadBack(cordappForClasses(InternalMockNetwork::class.java))
 
         assertThat(entries).containsOnly("${InternalMockNetwork::class.java.name.replace('.', '/')}.class")

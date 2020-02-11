@@ -50,8 +50,8 @@ class IRSDemoTest {
     private val futureDate: LocalDate = currentDate.plusMonths(6)
     private val maxWaitTime: Duration = 60.seconds
 
-    @Test
-    fun `runs IRS demo`() {
+    @Test(timeout=300_000)
+	fun `runs IRS demo`() {
         springDriver(DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),

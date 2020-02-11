@@ -28,8 +28,8 @@ import java.io.NotSerializableException
 
 class RpcCustomSerializersTest {
 
-    @Test
-    fun `when custom serializers are not provided, the classpath is scanned to identify any existing ones`() {
+    @Test(timeout=300_000)
+	fun `when custom serializers are not provided, the classpath is scanned to identify any existing ones`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val server = startNode(providedName = ALICE_NAME).get()
 
@@ -43,8 +43,8 @@ class RpcCustomSerializersTest {
         }
     }
 
-    @Test
-    fun `when an empty set of custom serializers is provided, no scanning is performed and this empty set is used instead`() {
+    @Test(timeout=300_000)
+	fun `when an empty set of custom serializers is provided, no scanning is performed and this empty set is used instead`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val server = startNode(providedName = ALICE_NAME).get()
 
@@ -57,8 +57,8 @@ class RpcCustomSerializersTest {
         }
     }
 
-    @Test
-    fun `when a set of custom serializers is explicitly provided, these are used instead of scanning the classpath`() {
+    @Test(timeout=300_000)
+	fun `when a set of custom serializers is explicitly provided, these are used instead of scanning the classpath`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptyList())) {
             val server = startNode(providedName = ALICE_NAME).get()
 

@@ -94,8 +94,8 @@ class NodeFlowManagerTest {
         Assert.assertThat(flow, `is`(instanceOf(RespSubSub::class.java)))
     }
 
-    @Test
-    fun `should allow an override to be specified`() {
+    @Test(timeout=300_000)
+	fun `should allow an override to be specified`() {
         val nodeFlowManager = NodeFlowManager(FlowOverrideConfig(listOf(FlowOverride(Init::class.qualifiedName!!, Resp::class.qualifiedName!!))))
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp::class.java)
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp2::class.java)

@@ -38,8 +38,8 @@ class FlowAsyncOperationTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `operation errors are propagated correctly`() {
+    @Test(timeout=300_000)
+	fun `operation errors are propagated correctly`() {
         val flow = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
@@ -56,8 +56,8 @@ class FlowAsyncOperationTests {
         }
     }
 
-    @Test
-    fun `operation result errors are propagated correctly`() {
+    @Test(timeout=300_000)
+	fun `operation result errors are propagated correctly`() {
         val flow = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
@@ -68,8 +68,8 @@ class FlowAsyncOperationTests {
         assertFailsWith<SpecialException> { aliceNode.services.startFlow(flow).resultFuture.getOrThrow() }
     }
 
-    @Test
-    fun `operation result errors are propagated correctly, and can be caught by the flow`() {
+    @Test(timeout=300_000)
+	fun `operation result errors are propagated correctly, and can be caught by the flow`() {
         val flow = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {

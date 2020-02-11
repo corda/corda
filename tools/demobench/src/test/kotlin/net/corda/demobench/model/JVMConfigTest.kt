@@ -10,30 +10,30 @@ import kotlin.test.assertEquals
 class JVMConfigTest {
     private val jvm = JVMConfig()
 
-    @Test
-    fun `test Java path`() {
+    @Test(timeout=300_000)
+	fun `test Java path`() {
         assertThat(jvm.javaPath.onFileSystem()).isExecutable()
     }
 
-    @Test
-    fun `test application directory`() {
+    @Test(timeout=300_000)
+	fun `test application directory`() {
         assertThat(jvm.applicationDir).isDirectory()
     }
 
-    @Test
-    fun `test user home`() {
+    @Test(timeout=300_000)
+	fun `test user home`() {
         assertThat(jvm.userHome).isDirectory()
     }
 
-    @Test
-    fun `test command for Jar`() {
+    @Test(timeout=300_000)
+	fun `test command for Jar`() {
         val command = jvm.commandFor(Paths.get("testapp.jar"), "arg1", "arg2")
         val java = jvm.javaPath
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2"), command)
     }
 
-    @Test
-    fun `test process for Jar`() {
+    @Test(timeout=300_000)
+	fun `test process for Jar`() {
         val process = jvm.processFor(Paths.get("testapp.jar"), "arg1", "arg2", "arg3")
         val java = jvm.javaPath
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2", "arg3"), process.command())

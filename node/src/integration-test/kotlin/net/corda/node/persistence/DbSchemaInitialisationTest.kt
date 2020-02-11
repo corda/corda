@@ -12,8 +12,8 @@ import kotlin.test.assertNotNull
 
 class DbSchemaInitialisationTest {
 
-    @Test
-    fun `database is initialised`() {
+    @Test(timeout=300_000)
+	fun `database is initialised`() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(), cordappsForAllNodes = emptyList())) {
             val nodeHandle = {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "true"))).getOrThrow()
@@ -22,8 +22,8 @@ class DbSchemaInitialisationTest {
         }
     }
 
-    @Test
-    fun `database is not initialised`() {
+    @Test(timeout=300_000)
+	fun `database is not initialised`() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(), cordappsForAllNodes = emptyList())) {
             assertFailsWith(DatabaseIncompatibleException::class) {
                 startNode(NodeParameters(customOverrides = mapOf("database.initialiseSchema" to "false"))).getOrThrow()

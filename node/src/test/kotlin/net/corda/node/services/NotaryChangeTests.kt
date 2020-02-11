@@ -62,16 +62,16 @@ class NotaryChangeTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `should change notary for a state with single participant`() {
+    @Test(timeout=300_000)
+	fun `should change notary for a state with single participant`() {
         val state = issueState(clientNodeA.services, clientA, oldNotaryParty)
         assertEquals(state.state.notary, oldNotaryParty)
         val newState = changeNotary(state, clientNodeA, newNotaryParty)
         assertEquals(newState.state.notary, newNotaryParty)
     }
 
-    @Test
-    fun `should change notary for a state with multiple participants`() {
+    @Test(timeout=300_000)
+	fun `should change notary for a state with multiple participants`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
         val newNotary = newNotaryParty
         val flow = NotaryChangeFlow(state, newNotary)
@@ -87,8 +87,8 @@ class NotaryChangeTests {
     }
 
     // TODO: Re-enable the test when parameter currentness checks are in place, ENT-2666.
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
 
@@ -102,8 +102,8 @@ class NotaryChangeTests {
         }
     }
 
-    @Test
-    fun `should not break encumbrance links`() {
+    @Test(timeout=300_000)
+	fun `should not break encumbrance links`() {
         val issueTx = issueEncumberedState(clientNodeA.services, clientA, oldNotaryParty)
 
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
@@ -131,8 +131,8 @@ class NotaryChangeTests {
         assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
     }
 
-    @Test
-    fun `notary change and regular transactions are properly handled during resolution in longer chains`() {
+    @Test(timeout=300_000)
+	fun `notary change and regular transactions are properly handled during resolution in longer chains`() {
         val issued = issueState(clientNodeA.services, clientA, oldNotaryParty)
         val moved = moveState(issued, clientNodeA, clientNodeB)
 

@@ -18,8 +18,8 @@ import kotlin.test.assertEquals
 
 class HTTPNetworkRegistrationServiceTest {
 
-    @Test
-    fun `post request properties`() {
+    @Test(timeout=300_000)
+	fun `post request properties`() {
         val versionInfo = VersionInfo.UNKNOWN
         val pnm = UUID.randomUUID();
         val config = rigorousMock<NetworkServicesConfig>().also {
@@ -34,8 +34,8 @@ class HTTPNetworkRegistrationServiceTest {
         assertEquals(listOf("application/octet-stream"), header["Content-Type"])
     }
 
-    @Test
-    fun `post request properties with CSR token`() {
+    @Test(timeout=300_000)
+	fun `post request properties with CSR token`() {
         val versionInfo = VersionInfo.UNKNOWN
         val config = rigorousMock<NetworkServicesConfig>().also {
             doReturn(null).whenever(it).pnm

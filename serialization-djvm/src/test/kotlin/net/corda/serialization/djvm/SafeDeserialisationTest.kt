@@ -30,7 +30,7 @@ class SafeDeserialisationTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialising an evil class`() {
+	fun `test deserialising an evil class`() {
         val context = (_contextSerializationEnv.get() ?: fail("No serialization environment!")).p2pContext
 
         val innocent = InnocentData(MESSAGE, NUMBER)

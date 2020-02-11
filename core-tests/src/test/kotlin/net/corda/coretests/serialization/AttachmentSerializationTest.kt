@@ -169,23 +169,23 @@ class AttachmentSerializationTest {
         return (client.smm.allStateMachines[0].stateMachine.resultFuture.apply { mockNet.runNetwork() }.getOrThrow() as ClientResult).attachmentContent
     }
 
-    @Test
-    fun `custom (and non-persisted) attachment should be saved in checkpoint`() {
+    @Test(timeout=300_000)
+	fun `custom (and non-persisted) attachment should be saved in checkpoint`() {
         val attachmentId = SecureHash.sha256("any old data")
         launchFlow(CustomAttachmentLogic(serverIdentity, attachmentId, "custom"), 1)
         assertEquals("custom", rebootClientAndGetAttachmentContent())
     }
 
-    @Test
-    fun `custom attachment should be saved in checkpoint even if its data was persisted`() {
+    @Test(timeout=300_000)
+	fun `custom attachment should be saved in checkpoint even if its data was persisted`() {
         val attachmentId = client.saveAttachment("genuine")
         launchFlow(CustomAttachmentLogic(serverIdentity, attachmentId, "custom"), 1)
         client.hackAttachment(attachmentId, "hacked") // Should not be reloaded, checkAttachmentsOnLoad may cause next line to blow up if client attempts it.
         assertEquals("custom", rebootClientAndGetAttachmentContent())
     }
 
-    @Test
-    fun `only the hash of a regular attachment should be saved in checkpoint`() {
+    @Test(timeout=300_000)
+	fun `only the hash of a regular attachment should be saved in checkpoint`() {
         val attachmentId = client.saveAttachment("genuine")
         client.attachments.checkAttachmentsOnLoad = false // Cached by AttachmentImpl.
         launchFlow(OpenAttachmentLogic(serverIdentity, attachmentId), 1)
@@ -193,8 +193,8 @@ class AttachmentSerializationTest {
         assertEquals("hacked", rebootClientAndGetAttachmentContent(false)) // Pass in false to allow non-genuine data to be loaded.
     }
 
-    @Test
-    fun `only the hash of a FetchAttachmentsFlow attachment should be saved in checkpoint`() {
+    @Test(timeout=300_000)
+	fun `only the hash of a FetchAttachmentsFlow attachment should be saved in checkpoint`() {
         val attachmentId = server.saveAttachment("genuine")
         launchFlow(FetchAttachmentLogic(serverIdentity, attachmentId), 2, sendData = true)
         client.hackAttachment(attachmentId, "hacked")

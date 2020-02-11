@@ -31,8 +31,8 @@ class PersistentMapTests {
         ).apply { preload() }
     }
 
-    @Test
-    fun `make sure persistence works`() {
+    @Test(timeout=300_000)
+	fun `make sure persistence works`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -47,8 +47,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure persistence works using assignment operator`() {
+    @Test(timeout=300_000)
+	fun `make sure persistence works using assignment operator`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -63,8 +63,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure updating works`() {
+    @Test(timeout=300_000)
+	fun `make sure updating works`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -81,8 +81,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure updating works using assignment operator`() {
+    @Test(timeout=300_000)
+	fun `make sure updating works using assignment operator`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -99,8 +99,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure removal works`() {
+    @Test(timeout=300_000)
+	fun `make sure removal works`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -125,8 +125,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure persistence works against base class`() {
+    @Test(timeout=300_000)
+	fun `make sure persistence works against base class`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {
@@ -141,8 +141,8 @@ class PersistentMapTests {
         }
     }
 
-    @Test
-    fun `make sure persistence works using assignment operator base class`() {
+    @Test(timeout=300_000)
+	fun `make sure persistence works using assignment operator base class`() {
         val testHash = SecureHash.randomSHA256().toString()
 
         database.transaction {

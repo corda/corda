@@ -17,8 +17,8 @@ import kotlin.test.fail
 
 class AttachmentTest {
 
-    @Test
-    fun `openAsJAR does not leak file handle if attachment has corrupted manifest`() {
+    @Test(timeout=300_000)
+	fun `openAsJAR does not leak file handle if attachment has corrupted manifest`() {
         var closeCalls = 0
         val inputStream = spy(ByteArrayOutputStream().apply {
             ZipOutputStream(this).use {
@@ -47,8 +47,8 @@ class AttachmentTest {
 
 class UniqueIdentifierTests {
 
-    @Test
-    fun `unique identifier comparison`() {
+    @Test(timeout=300_000)
+	fun `unique identifier comparison`() {
         val ids = listOf(UniqueIdentifier.fromString("e363f00e-4759-494d-a7ca-0dc966a92494"),
                 UniqueIdentifier.fromString("10ed0cc3-7bdf-4000-b610-595e36667d7d"),
                 UniqueIdentifier("Test", UUID.fromString("10ed0cc3-7bdf-4000-b610-595e36667d7d"))
@@ -60,8 +60,8 @@ class UniqueIdentifierTests {
         assertEquals(0, ids[1].compareTo(ids[2]))
     }
 
-    @Test
-    fun `unique identifier equality`() {
+    @Test(timeout=300_000)
+	fun `unique identifier equality`() {
         val ids = listOf(UniqueIdentifier.fromString("e363f00e-4759-494d-a7ca-0dc966a92494"),
                 UniqueIdentifier.fromString("10ed0cc3-7bdf-4000-b610-595e36667d7d"),
                 UniqueIdentifier("Test", UUID.fromString("10ed0cc3-7bdf-4000-b610-595e36667d7d"))

@@ -15,6 +15,7 @@ import net.corda.core.utilities.seconds
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
+import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
@@ -55,6 +56,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.collections.LinkedHashSet
+import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -75,6 +77,7 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
+operator fun Duration.times(multiplicand: Double): Duration = Duration.ofNanos((toNanos() * multiplicand).roundToLong())
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -170,8 +173,8 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 @DeleteForDJVM
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
-    subject.subscribe(this)
-    teeTo.forEach { subject.subscribe(it) }
+    subject.unsafeSubscribe(Subscribers.from(this))
+    teeTo.forEach { subject.unsafeSubscribe(Subscribers.from(it)) }
     return subject
 }
 

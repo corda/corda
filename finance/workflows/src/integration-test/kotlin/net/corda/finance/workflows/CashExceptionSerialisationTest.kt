@@ -15,8 +15,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
 class CashExceptionSerialisationTest {
-    @Test
-    fun `cash exception with a cause can be serialised with AMQP`() {
+    @Test(timeout=300_000)
+	fun `cash exception with a cause can be serialised with AMQP`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode(rpcUsers = listOf(User("mark", "dadada", setOf(all())))).getOrThrow()
             val action = { node.rpc.startFlow(CashExceptionSerialisationTest::CashExceptionThrowingFlow).returnValue.getOrThrow() }

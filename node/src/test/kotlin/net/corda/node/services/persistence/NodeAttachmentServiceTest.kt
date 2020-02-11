@@ -93,8 +93,8 @@ class NodeAttachmentServiceTest {
         database.close()
     }
 
-    @Test
-    fun `importing a signed jar saves the signers to the storage`() {
+    @Test(timeout=300_000)
+	fun `importing a signed jar saves the signers to the storage`() {
         SelfCleaningDir().use { file ->
             val jarAndSigner = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val signedJar = jarAndSigner.first
@@ -105,8 +105,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `importing a non-signed jar will save no signers`() {
+    @Test(timeout=300_000)
+	fun `importing a non-signed jar will save no signers`() {
         SelfCleaningDir().use {
             val jarName = makeTestContractJar(it.path, "com.example.MyContract")
             it.path.resolve(jarName).inputStream().use { jarStream ->
@@ -116,8 +116,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `insert and retrieve`() {
+    @Test(timeout=300_000)
+	fun `insert and retrieve`() {
         val (testJar, expectedHash) = makeTestJar()
 
         val id = testJar.read { storage.importAttachment(it, "test", null) }
@@ -140,8 +140,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `attachment can be overridden by trusted uploader`() {
+    @Test(timeout=300_000)
+	fun `attachment can be overridden by trusted uploader`() {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val attachment = file.path.resolve(contractJarName)
@@ -160,8 +160,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `attachment cannot be overridden by untrusted uploader`() {
+    @Test(timeout=300_000)
+	fun `attachment cannot be overridden by untrusted uploader`() {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val attachment = file.path.resolve(contractJarName)
@@ -177,8 +177,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `insert contract attachment as an untrusted uploader and then as trusted CorDapp uploader`() {
+    @Test(timeout=300_000)
+	fun `insert contract attachment as an untrusted uploader and then as trusted CorDapp uploader`() {
         SelfCleaningDir().use { file ->
             val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
             val testJar = file.path.resolve(contractJarName)
@@ -203,8 +203,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `missing is not cached`() {
+    @Test(timeout=300_000)
+	fun `missing is not cached`() {
         val (testJar, expectedHash) = makeTestJar()
         val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
 
@@ -237,8 +237,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `metadata can be used to search`() {
+    @Test(timeout=300_000)
+	fun `metadata can be used to search`() {
         val (jarA, _) = makeTestJar()
         val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
         val (jarC, hashC) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
@@ -259,8 +259,8 @@ class NodeAttachmentServiceTest {
         )
     }
 
-    @Test
-    fun `contract class, versioning and signing metadata can be used to search`() {
+    @Test(timeout=300_000)
+	fun `contract class, versioning and signing metadata can be used to search`() {
         SelfCleaningDir().use { file ->
             val (sampleJar, _) = makeTestJar()
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
@@ -341,8 +341,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import jar with duplicated contract class, version and signers for trusted uploader`() {
+    @Test(timeout=300_000)
+	fun `can import jar with duplicated contract class, version and signers for trusted uploader`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -351,8 +351,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import jar with duplicated contract class, version and signers - when one uploader is trusted and other isnt`() {
+    @Test(timeout=300_000)
+	fun `can import jar with duplicated contract class, version and signers - when one uploader is trusted and other isnt`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -362,8 +362,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can promote to trusted uploader for the same attachment`() {
+    @Test(timeout=300_000)
+	fun `can promote to trusted uploader for the same attachment`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val attachmentId = contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
@@ -372,8 +372,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can promote to trusted uploader if other trusted attachment already has duplicated contract class, version and signers`() {
+    @Test(timeout=300_000)
+	fun `can promote to trusted uploader if other trusted attachment already has duplicated contract class, version and signers`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
@@ -383,8 +383,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can promote to trusted uploader the same jar if other trusted uploader `() {
+    @Test(timeout=300_000)
+	fun `can promote to trusted uploader the same jar if other trusted uploader `() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -393,8 +393,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import duplicated contract class and signers if versions differ`() {
+    @Test(timeout=300_000)
+	fun `can import duplicated contract class and signers if versions differ`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract",  2)
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -409,8 +409,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import duplicated contract class and version from unsigned attachment if a signed attachment already exists`() {
+    @Test(timeout=300_000)
+	fun `can import duplicated contract class and version from unsigned attachment if a signed attachment already exists`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
@@ -427,8 +427,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import duplicated contract class and version from signed attachment if an unsigned attachment already exists`() {
+    @Test(timeout=300_000)
+	fun `can import duplicated contract class and version from signed attachment if an unsigned attachment already exists`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
@@ -445,8 +445,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `can import duplicated contract class and version for unsigned attachments`() {
+    @Test(timeout=300_000)
+	fun `can import duplicated contract class and version for unsigned attachments`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
@@ -463,8 +463,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `sorting and compound conditions work`() {
+    @Test(timeout=300_000)
+	fun `sorting and compound conditions work`() {
         val (jarA, hashA) = makeTestJar(listOf(Pair("a", "a")))
         val (jarB, hashB) = makeTestJar(listOf(Pair("b", "b")))
         val (jarC, hashC) = makeTestJar(listOf(Pair("c", "c")))
@@ -510,8 +510,8 @@ class NodeAttachmentServiceTest {
     }
 
     @Ignore("We need to be able to restart nodes - make importing attachments idempotent?")
-    @Test
-    fun `duplicates not allowed`() {
+    @Test(timeout=300_000)
+	fun `duplicates not allowed`() {
         val (testJar) = makeTestJar()
         testJar.read {
             storage.importAttachment(it, "test", null)
@@ -523,8 +523,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `corrupt entry throws exception`() {
+    @Test(timeout=300_000)
+	fun `corrupt entry throws exception`() {
         val (testJar) = makeTestJar()
         val id = database.transaction {
             val id = testJar.read { storage.importAttachment(it, "test", null) }
@@ -549,8 +549,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `non jar rejected`() {
+    @Test(timeout=300_000)
+	fun `non jar rejected`() {
         val path = fs.getPath("notajar")
         path.writeLines(listOf("Hey", "there!"))
         path.read {
@@ -560,8 +560,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `using reserved uploader tokens`() {
+    @Test(timeout=300_000)
+	fun `using reserved uploader tokens`() {
         val (testJar) = makeTestJar()
 
         fun assertImportFails(uploader: String) {
@@ -589,8 +589,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - both exist at same version`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - both exist at same version`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
@@ -611,8 +611,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - signed is later version than unsigned`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - signed is later version than unsigned`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
@@ -631,8 +631,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - unsigned is later version than signed`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - unsigned is later version than signed`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
@@ -651,8 +651,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - only signed contracts exist in store`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - only signed contracts exist in store`() {
         SelfCleaningDir().use { file ->
             val (signedContractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = 2)
@@ -667,8 +667,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - only unsigned contracts exist in store`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - only unsigned contracts exist in store`() {
         SelfCleaningDir().use { file ->
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
@@ -683,16 +683,16 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `retrieve latest versions of unsigned and signed contracts - none exist in store`() {
+    @Test(timeout=300_000)
+	fun `retrieve latest versions of unsigned and signed contracts - none exist in store`() {
         SelfCleaningDir().use { _ ->
             val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
             assertEquals(0, latestAttachments.size)
         }
     }
 
-    @Test
-    fun `development mode - retrieve latest versions of signed contracts - multiple versions of same version id exist in store`() {
+    @Test(timeout=300_000)
+	fun `development mode - retrieve latest versions of signed contracts - multiple versions of same version id exist in store`() {
         SelfCleaningDir().use { file ->
             val (signedContractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val (signedContractJarSameVersion, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", versionSeed = Random().nextInt())
@@ -717,8 +717,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `The strict JAR verification function fails signed JARs with removed or extra files that are valid according to the usual jarsigner`() {
+    @Test(timeout=300_000)
+	fun `The strict JAR verification function fails signed JARs with removed or extra files that are valid according to the usual jarsigner`() {
 
         // Signed jar that has a modified file.
         val changedFileJAR = this::class.java.getResource("/changed-file-signed-jar.jar")
@@ -763,8 +763,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing a single public key`() {
+    @Test(timeout=300_000)
+	fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing a single public key`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Luke Skywalker"
             val aliasB = "Han Solo"
@@ -837,8 +837,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing multiple public keys`() {
+    @Test(timeout=300_000)
+	fun `attachments can be queried by providing a intersection of signers using an EQUAL statement - EQUAL containing multiple public keys`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Ironman"
             val aliasB = "Captain America"
@@ -904,22 +904,22 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `getAllAttachmentsByCriteria returns no attachments if there are no stored attachments`() {
+    @Test(timeout=300_000)
+	fun `getAllAttachmentsByCriteria returns no attachments if there are no stored attachments`() {
         assertTrue(database.transaction {
             storage.getAllAttachmentsByCriteria().toList().isEmpty()
         })
     }
 
-    @Test
-    fun `getAllAttachmentsByCriteria fails if no database transaction is set`() {
+    @Test(timeout=300_000)
+	fun `getAllAttachmentsByCriteria fails if no database transaction is set`() {
         assertThatExceptionOfType(IllegalStateException::class.java).isThrownBy {
             storage.getAllAttachmentsByCriteria()
         }.withMessageContaining("Was expecting to find transaction set on current strand")
     }
 
-    @Test
-    fun `getAllAttachmentsByCriteria returns all stored attachments when no filtering is applied`() {
+    @Test(timeout=300_000)
+	fun `getAllAttachmentsByCriteria returns all stored attachments when no filtering is applied`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Spiderman"
             val password = "why is Sony taking me out of the MCU?!?!"
@@ -952,8 +952,8 @@ class NodeAttachmentServiceTest {
         }
     }
 
-    @Test
-    fun `getAllAttachmentsByCriteria returns attachments filtered by criteria`() {
+    @Test(timeout=300_000)
+	fun `getAllAttachmentsByCriteria returns attachments filtered by criteria`() {
         SelfCleaningDir().use { file ->
             val aliasA = "Dan"
             val password = "i am so tired with this work"

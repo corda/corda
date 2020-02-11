@@ -22,15 +22,15 @@ import kotlin.test.assertNull
 
 class RPCSecurityManagerTest {
 
-    @Test
-    fun `Artemis special characters not permitted in RPC usernames`() {
+    @Test(timeout=300_000)
+	fun `Artemis special characters not permitted in RPC usernames`() {
         assertThatThrownBy { configWithRPCUsername("user.1") }.hasMessageContaining(".")
         assertThatThrownBy { configWithRPCUsername("user*1") }.hasMessageContaining("*")
         assertThatThrownBy { configWithRPCUsername("user#1") }.hasMessageContaining("#")
     }
 
-    @Test
-    fun `Generic RPC call authorization`() {
+    @Test(timeout=300_000)
+	fun `Generic RPC call authorization`() {
         checkUserActions(
                 permitted = setOf(listOf("nodeInfo"), listOf("notaryIdentities")),
                 permissions = setOf(
@@ -38,8 +38,8 @@ class RPCSecurityManagerTest {
                         invokeRpc(CordaRPCOps::notaryIdentities)))
     }
 
-    @Test
-    fun `Flow invocation authorization`() {
+    @Test(timeout=300_000)
+	fun `Flow invocation authorization`() {
         checkUserActions(
             permissions = setOf(startFlow<DummyFlow>()),
             permitted = setOf(
@@ -47,37 +47,37 @@ class RPCSecurityManagerTest {
                 listOf("startFlowDynamic", DummyFlow::class.java.name)))
     }
 
-    @Test
-    fun `Check startFlow RPC permission implies startFlowDynamic`() {
+    @Test(timeout=300_000)
+	fun `Check startFlow RPC permission implies startFlowDynamic`() {
         checkUserActions(
                 permissions = setOf(invokeRpc("startFlow")),
                 permitted = setOf(listOf("startFlow"), listOf("startFlowDynamic")))
     }
 
-    @Test
-    fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
+    @Test(timeout=300_000)
+	fun `Check startTrackedFlow RPC permission implies startTrackedFlowDynamic`() {
         checkUserActions(
                 permitted = setOf(listOf("startTrackedFlow"), listOf("startTrackedFlowDynamic")),
                 permissions = setOf(invokeRpc("startTrackedFlow")))
     }
 
-    @Test
-    fun `check killFlow RPC permission accepted`() {
+    @Test(timeout=300_000)
+	fun `check killFlow RPC permission accepted`() {
         checkUserActions(
                 permitted = setOf(listOf("killFlow")),
                 permissions = setOf(invokeRpc(CordaRPCOps::killFlow))
         )
     }
 
-    @Test
-    fun `Admin authorization`() {
+    @Test(timeout=300_000)
+	fun `Admin authorization`() {
         checkUserActions(
             permissions = setOf("all"),
             permitted = allActions.map { listOf(it) }.toSet())
     }
 
-    @Test
-    fun `flows draining mode permissions`() {
+    @Test(timeout=300_000)
+	fun `flows draining mode permissions`() {
         checkUserActions(
                 permitted = setOf(listOf("setFlowsDrainingModeEnabled")),
                 permissions = setOf(invokeRpc(CordaRPCOps::setFlowsDrainingModeEnabled))
@@ -88,8 +88,8 @@ class RPCSecurityManagerTest {
         )
     }
 
-    @Test
-    fun `Malformed permission strings`() {
+    @Test(timeout=300_000)
+	fun `Malformed permission strings`() {
         assertMalformedPermission("bar")
         assertMalformedPermission("InvokeRpc.nodeInfo.XXX")
         assertMalformedPermission("")
@@ -99,8 +99,8 @@ class RPCSecurityManagerTest {
         assertMalformedPermission("startFlow.")
     }
 
-    @Test
-    fun `Login with unknown user`() {
+    @Test(timeout=300_000)
+	fun `Login with unknown user`() {
         val userRealm = RPCSecurityManagerImpl.fromUserList(
                 users = listOf(User("user", "xxxx", emptySet())),
                 id = AuthServiceId("TEST"))
@@ -112,8 +112,8 @@ class RPCSecurityManagerTest {
                 "Login with wrong password should fail")
     }
 
-    @Test
-    fun `Login with wrong credentials`() {
+    @Test(timeout=300_000)
+	fun `Login with wrong credentials`() {
         val userRealm = RPCSecurityManagerImpl.fromUserList(
                 users = listOf(User("user", "password", emptySet())),
                 id = AuthServiceId("TEST"))
@@ -125,8 +125,8 @@ class RPCSecurityManagerTest {
                 "Login with wrong password should fail")
     }
 
-    @Test
-    fun `Build invalid subject`() {
+    @Test(timeout=300_000)
+	fun `Build invalid subject`() {
         val userRealm = RPCSecurityManagerImpl.fromUserList(
                 users = listOf(User("user", "password", emptySet())),
                 id = AuthServiceId("TEST"))

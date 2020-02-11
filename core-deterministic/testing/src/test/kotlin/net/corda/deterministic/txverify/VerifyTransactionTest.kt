@@ -16,13 +16,13 @@ class VerifyTransactionTest {
         val serialization = LocalSerializationRule(VerifyTransactionTest::class)
     }
 
-    @Test
-    fun success() {
+    @Test(timeout=300_000)
+	fun success() {
         verifyTransaction(bytesOfResource("txverify/tx-success.bin"))
     }
 
-    @Test
-    fun failure() {
+    @Test(timeout=300_000)
+	fun failure() {
         val e = assertFailsWith<Exception> { verifyTransaction(bytesOfResource("txverify/tx-failure.bin")) }
         assertThat(e).hasMessageContaining("Required ${Move::class.java.canonicalName} command")
     }

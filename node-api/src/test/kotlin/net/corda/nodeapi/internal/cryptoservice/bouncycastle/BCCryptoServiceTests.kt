@@ -55,8 +55,8 @@ class BCCryptoServiceTests {
         wrappingKeyStorePath = certificatesDirectory / "wrappingkeystore.pkcs12"
     }
 
-    @Test
-    fun `BCCryptoService generate key pair and sign both data and cert`() {
+    @Test(timeout=300_000)
+	fun `BCCryptoService generate key pair and sign both data and cert`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
         Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY }.forEach { generateKeyAndSignForScheme(cryptoService, it) }
@@ -87,8 +87,8 @@ class BCCryptoServiceTests {
         certificate.verify(pubKey)
     }
 
-    @Test
-    fun `BCCryptoService generate key pair and sign with existing schemes`() {
+    @Test(timeout=300_000)
+	fun `BCCryptoService generate key pair and sign with existing schemes`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         // Testing every supported scheme.
         Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY
@@ -101,8 +101,8 @@ class BCCryptoServiceTests {
         }
     }
 
-    @Test
-    fun `BCCryptoService generate key pair and sign with passed signing algorithm`() {
+    @Test(timeout=300_000)
+	fun `BCCryptoService generate key pair and sign with passed signing algorithm`() {
 
         assertTrue{signAndVerify(signAlgo = "NONEwithRSA", alias = "myKeyAlias", keyTypeAlgo = "RSA")}
         assertTrue{signAndVerify(signAlgo = "MD2withRSA", alias = "myKeyAlias", keyTypeAlgo = "RSA")}
@@ -163,8 +163,8 @@ class BCCryptoServiceTests {
                 certificateStoreFileName = keyStoreFilename)
     }
 
-    @Test
-    fun `When key does not exist getPublicKey, sign and getSigner should throw`() {
+    @Test(timeout=300_000)
+	fun `When key does not exist getPublicKey, sign and getSigner should throw`() {
         val nonExistingAlias = "nonExistingAlias"
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         assertFalse { cryptoService.containsKey(nonExistingAlias) }
@@ -173,16 +173,16 @@ class BCCryptoServiceTests {
         assertFailsWith<CryptoServiceException> { cryptoService.getSigner(nonExistingAlias) }
     }
 
-    @Test
-    fun `cryptoService supports degraded mode of wrapping`() {
+    @Test(timeout=300_000)
+	fun `cryptoService supports degraded mode of wrapping`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
         val supportedMode = cryptoService.getWrappingMode()
 
         assertThat(supportedMode).isEqualTo(WrappingMode.DEGRADED_WRAPPED)
     }
 
-    @Test
-    fun `cryptoService does not fail when requested to create same wrapping key twice with failIfExists is false`() {
+    @Test(timeout=300_000)
+	fun `cryptoService does not fail when requested to create same wrapping key twice with failIfExists is false`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
 
         val keyAlias = UUID.randomUUID().toString()
@@ -190,8 +190,8 @@ class BCCryptoServiceTests {
         cryptoService.createWrappingKey(keyAlias, failIfExists = false)
     }
 
-    @Test
-    fun `cryptoService does fail when requested to create same wrapping key twice with failIfExists is true`() {
+    @Test(timeout=300_000)
+	fun `cryptoService does fail when requested to create same wrapping key twice with failIfExists is true`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
 
         val keyAlias = UUID.randomUUID().toString()
@@ -202,8 +202,8 @@ class BCCryptoServiceTests {
                 .hasMessage("There is an existing key with the alias: $keyAlias")
     }
 
-    @Test
-    fun `cryptoService fails when asked to generate wrapped key pair or sign, but the master key specified does not exist`() {
+    @Test(timeout=300_000)
+	fun `cryptoService fails when asked to generate wrapped key pair or sign, but the master key specified does not exist`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
 
         val wrappingKeyAlias = UUID.randomUUID().toString()
@@ -219,8 +219,8 @@ class BCCryptoServiceTests {
                 .hasMessage("There is no master key under the alias: $wrappingKeyAlias")
     }
 
-    @Test
-    fun `cryptoService can generate wrapped key pair and sign with the private key successfully, using default algorithm`() {
+    @Test(timeout=300_000)
+	fun `cryptoService can generate wrapped key pair and sign with the private key successfully, using default algorithm`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
 
         val wrappingKeyAlias = UUID.randomUUID().toString()
@@ -228,8 +228,8 @@ class BCCryptoServiceTests {
         generateWrappedKeyPairSignAndVerify(cryptoService, wrappingKeyAlias)
     }
 
-    @Test
-    fun `cryptoService can generate wrapped key pair and sign with the private key successfully`() {
+    @Test(timeout=300_000)
+	fun `cryptoService can generate wrapped key pair and sign with the private key successfully`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore, wrappingKeyStorePath)
 
         val wrappingKeyAlias = UUID.randomUUID().toString()

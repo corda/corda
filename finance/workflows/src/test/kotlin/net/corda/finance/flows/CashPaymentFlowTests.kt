@@ -45,8 +45,8 @@ class CashPaymentFlowTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `pay some cash`() {
+    @Test(timeout=300_000)
+	fun `pay some cash`() {
         val payTo = aliceNode.info.singleIdentity()
         val expectedPayment = 500.DOLLARS
         val expectedChange = 1500.DOLLARS
@@ -82,8 +82,8 @@ class CashPaymentFlowTests {
         }
     }
 
-    @Test
-    fun `pay more than we have`() {
+    @Test(timeout=300_000)
+	fun `pay more than we have`() {
         val payTo = aliceNode.info.singleIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.startFlow(CashPaymentFlow(expected,
@@ -94,8 +94,8 @@ class CashPaymentFlowTests {
         }
     }
 
-    @Test
-    fun `pay zero cash`() {
+    @Test(timeout=300_000)
+	fun `pay zero cash`() {
         val payTo = aliceNode.info.singleIdentity()
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.startFlow(CashPaymentFlow(expected,

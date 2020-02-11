@@ -100,8 +100,8 @@ class VaultWithCashTest {
         database.close()
     }
 
-    @Test
-    fun splits() {
+    @Test(timeout=300_000)
+	fun splits() {
         database.transaction {
             // Fix the PRNG so that we get the same splits every time.
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
@@ -124,8 +124,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `issue and spend total correctly and irrelevant ignored`() {
+    @Test(timeout=300_000)
+	fun `issue and spend total correctly and irrelevant ignored`() {
         val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, mock(), MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
@@ -172,8 +172,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `issue and attempt double spend`() {
+    @Test(timeout=300_000)
+	fun `issue and attempt double spend`() {
         val freshKey = services.keyManagementService.freshKey()
         val criteriaLocked = VaultQueryCriteria(softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.LOCKED_ONLY))
 
@@ -262,8 +262,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `branching LinearStates fails to verify`() {
+    @Test(timeout=300_000)
+	fun `branching LinearStates fails to verify`() {
         database.transaction {
             val freshKey = services.keyManagementService.freshKey()
             val freshIdentity = AnonymousParty(freshKey)
@@ -283,8 +283,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `sequencing LinearStates works`() {
+    @Test(timeout=300_000)
+	fun `sequencing LinearStates works`() {
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)
         val linearId = UniqueIdentifier()
@@ -324,8 +324,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `spending cash in vault of mixed state types works`() {
+    @Test(timeout=300_000)
+	fun `spending cash in vault of mixed state types works`() {
 
         val freshKey = services.keyManagementService.freshKey()
         database.transaction {
@@ -362,8 +362,8 @@ class VaultWithCashTest {
         }
     }
 
-    @Test
-    fun `consuming multiple contract state types`() {
+    @Test(timeout=300_000)
+	fun `consuming multiple contract state types`() {
 
         val freshKey = services.keyManagementService.freshKey()
         val freshIdentity = AnonymousParty(freshKey)

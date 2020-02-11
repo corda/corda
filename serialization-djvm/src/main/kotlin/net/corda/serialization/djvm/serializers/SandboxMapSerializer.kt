@@ -85,9 +85,9 @@ private class ConcreteMapSerializer(
     override val typeDescriptor: Symbol by lazy {
         factory.createDescriptor(
             LocalTypeInformation.AMap(
-                observedType = declaredType.rawType,
+                observedType = declaredType,
                 typeIdentifier = TypeIdentifier.forGenericType(declaredType),
-                keyType =factory.getTypeInformation(declaredType.actualTypeArguments[0]),
+                keyType = factory.getTypeInformation(declaredType.actualTypeArguments[0]),
                 valueType = factory.getTypeInformation(declaredType.actualTypeArguments[1])
             )
         )
@@ -101,7 +101,7 @@ private class ConcreteMapSerializer(
     ): Any {
         val inboundKeyType = type.actualTypeArguments[0]
         val inboundValueType = type.actualTypeArguments[1]
-        return ifThrowsAppend({ type.typeName }) {
+        return ifThrowsAppend(type::getTypeName) {
             val entries = (obj as Map<*, *>).map {
                 arrayOf(
                     input.readObjectOrNull(redescribe(it.key, inboundKeyType), schemas, inboundKeyType, context),

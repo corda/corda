@@ -20,8 +20,8 @@ class AggregatedListTest {
         replayedList = ReplayedList(aggregatedList)
     }
 
-    @Test
-    fun addWorks() {
+    @Test(timeout=300_000)
+	fun addWorks() {
         assertEquals(replayedList.size, 0)
 
         sourceList.add(9)
@@ -43,8 +43,8 @@ class AggregatedListTest {
         }
     }
 
-    @Test
-    fun removeWorks() {
+    @Test(timeout=300_000)
+	fun removeWorks() {
         sourceList.addAll(0, 1, 2, 3, 4)
 
         assertEquals(replayedList.size, 3)
@@ -82,8 +82,8 @@ class AggregatedListTest {
         assertEquals(replayedList.size, 0)
     }
 
-    @Test
-    fun multipleElementsWithSameHashWorks() {
+    @Test(timeout=300_000)
+	fun multipleElementsWithSameHashWorks() {
         sourceList.addAll(0, 0)
         assertEquals(replayedList.size, 1)
         replayedList.forEach {

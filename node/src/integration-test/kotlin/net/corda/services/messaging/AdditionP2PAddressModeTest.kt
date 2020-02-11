@@ -26,8 +26,8 @@ import java.util.*
 
 class AdditionP2PAddressModeTest {
     private val portAllocation = incrementalPortAllocation()
-    @Test
-    fun `runs nodes with one configured to use additionalP2PAddresses`() {
+    @Test(timeout=300_000)
+	fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))
         driver(DriverParameters(startNodesInProcess = true, inMemoryDB = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val mainAddress = portAllocation.nextHostAndPort().toString()

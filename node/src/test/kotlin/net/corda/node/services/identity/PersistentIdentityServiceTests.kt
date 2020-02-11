@@ -70,8 +70,8 @@ class PersistentIdentityServiceTests {
         database.close()
     }
 
-    @Test
-    fun `get all identities`() {
+    @Test(timeout=300_000)
+	fun `get all identities`() {
         // Nothing registered, so empty set
         assertNull(identityService.getAllIdentities().firstOrNull())
 
@@ -88,40 +88,40 @@ class PersistentIdentityServiceTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `get identity by key`() {
+    @Test(timeout=300_000)
+	fun `get identity by key`() {
         assertNull(identityService.partyFromKey(ALICE_PUBKEY))
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         assertEquals(ALICE, identityService.partyFromKey(ALICE_PUBKEY))
         assertNull(identityService.partyFromKey(BOB_PUBKEY))
     }
 
-    @Test
-    fun `get identity by name with no registered identities`() {
+    @Test(timeout=300_000)
+	fun `get identity by name with no registered identities`() {
         assertNull(identityService.wellKnownPartyFromX500Name(ALICE.name))
     }
 
-    @Test
-    fun `stripping others when none registered strips`() {
+    @Test(timeout=300_000)
+	fun `stripping others when none registered strips`() {
         assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
-    @Test
-    fun `stripping others when only us registered strips`() {
+    @Test(timeout=300_000)
+	fun `stripping others when only us registered strips`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
-    @Test
-    fun `stripping others when us and others registered does not strip us`() {
+    @Test(timeout=300_000)
+	fun `stripping others when us and others registered does not strip us`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         val stripped = identityService.stripNotOurKeys(listOf(ALICE_PUBKEY, BOB_PUBKEY))
         assertEquals(stripped.single(), ALICE_PUBKEY)
     }
 
-    @Test
-    fun `get identity by substring match`() {
+    @Test(timeout=300_000)
+	fun `get identity by substring match`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
@@ -131,8 +131,8 @@ class PersistentIdentityServiceTests {
         assertEquals(setOf(BOB), identityService.partiesFromName("Bob Plc", true))
     }
 
-    @Test
-    fun `get identity by name`() {
+    @Test(timeout=300_000)
+	fun `get identity by name`() {
         val identities = listOf("Organisation A", "Organisation B", "Organisation C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
@@ -147,8 +147,8 @@ class PersistentIdentityServiceTests {
     /**
      * Generate a certificate path from a root CA, down to a transaction key, store and verify the association.
      */
-    @Test
-    fun `assert unknown anonymous key is unrecognised`() {
+    @Test(timeout=300_000)
+	fun `assert unknown anonymous key is unrecognised`() {
         val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Principal, rootKey)
         val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)
@@ -164,8 +164,8 @@ class PersistentIdentityServiceTests {
      * Generate a pair of certificate paths from a root CA, down to a transaction key, store and verify the associations.
      * Also checks that incorrect associations are rejected.
      */
-    @Test
-    fun `get anonymous identity by key`() {
+    @Test(timeout=300_000)
+	fun `get anonymous identity by key`() {
         val (alice, aliceTxIdentity) = createConfidentialIdentity(ALICE.name)
         val (_, bobTxIdentity) = createConfidentialIdentity(ALICE.name)
 
@@ -186,8 +186,8 @@ class PersistentIdentityServiceTests {
      * Generate a pair of certificate paths from a root CA, down to a transaction key, store and verify the associations.
      * Also checks that incorrect associations are rejected.
      */
-    @Test
-    fun `assert ownership`() {
+    @Test(timeout=300_000)
+	fun `assert ownership`() {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
@@ -212,8 +212,8 @@ class PersistentIdentityServiceTests {
         }
     }
 
-    @Test
-    fun `Test Persistence`() {
+    @Test(timeout=300_000)
+	fun `Test Persistence`() {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
@@ -241,16 +241,16 @@ class PersistentIdentityServiceTests {
         assertEquals(anonymousBob, bobReload!!)
     }
 
-    @Test
-    fun `ensure no exception when looking up an unregistered confidential identity`() {
+    @Test(timeout=300_000)
+	fun `ensure no exception when looking up an unregistered confidential identity`() {
         val (_, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
         // Ensure no exceptions are thrown if we attempt to look up an unregistered CI
         assertNull(identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
     }
 
-    @Test
-    fun `register duplicate confidential identities`(){
+    @Test(timeout=300_000)
+	fun `register duplicate confidential identities`(){
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
 
         identityService.registerKey(anonymousAlice.owningKey, alice.party)
@@ -261,8 +261,8 @@ class PersistentIdentityServiceTests {
         }
     }
 
-    @Test
-    fun `resolve key to party for key without certificate`() {
+    @Test(timeout=300_000)
+	fun `resolve key to party for key without certificate`() {
         // Register Alice's PartyAndCert as if it was done so via the network map cache.
         identityService.verifyAndRegisterIdentity(alice.identity)
         // Use a key which is not tied to a cert.
@@ -272,8 +272,8 @@ class PersistentIdentityServiceTests {
         assertEquals(alice.party, identityService.partyFromKey(publicKey))
     }
 
-    @Test
-    fun `register incorrect party to public key `(){
+    @Test(timeout=300_000)
+	fun `register incorrect party to public key `(){
         database.transaction { identityService.verifyAndRegisterIdentity(ALICE_IDENTITY) }
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         identityService.registerKey(anonymousAlice.owningKey, alice.party)
@@ -282,8 +282,8 @@ class PersistentIdentityServiceTests {
         assertEquals(ALICE, identityService.wellKnownPartyFromAnonymous(AnonymousParty(anonymousAlice.owningKey)))
     }
 
-    @Test
-    fun `P&C size`() {
+    @Test(timeout=300_000)
+	fun `P&C size`() {
         val (_, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val serializedCert = anonymousAlice.serialize()
         println(serializedCert)
@@ -306,8 +306,8 @@ class PersistentIdentityServiceTests {
     /**
      * Ensure if we feed in a full identity, we get the same identity back.
      */
-    @Test
-    fun `deanonymising a well known identity should return the identity`() {
+    @Test(timeout=300_000)
+	fun `deanonymising a well known identity should return the identity`() {
         val service = makeTestIdentityService()
         val expected = ALICE
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)
@@ -318,8 +318,8 @@ class PersistentIdentityServiceTests {
     /**
      * Ensure we don't blindly trust what an anonymous identity claims to be.
      */
-    @Test
-    fun `deanonymising a false well known identity should return null`() {
+    @Test(timeout=300_000)
+	fun `deanonymising a false well known identity should return null`() {
         val service = makeTestIdentityService()
         val notAlice = Party(ALICE.name, generateKeyPair().public)
         service.verifyAndRegisterIdentity(ALICE_IDENTITY)

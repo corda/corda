@@ -44,8 +44,8 @@ class LocalTypeModelTests {
     @Suppress("unused")
     class NonComposableNested(val collectionHolder: StringKeyedCollectionHolder<out Int>?, @Suppress("UNUSED_PARAMETER") intArray: IntArray)
 
-    @Test
-    fun `Primitives and collections`() {
+    @Test(timeout=300_000)
+	fun `Primitives and collections`() {
         assertInformation<CollectionHolder<UUID, String>>("CollectionHolder<UUID, String>")
 
         assertInformation<StringKeyedCollectionHolder<Int>>("""
@@ -87,8 +87,8 @@ class LocalTypeModelTests {
 
     class Concrete(a: Array<Int>, b: Double, override val c: List<Array<Int>>, val d: Int) : Abstract<Int>(a, b)
 
-    @Test
-    fun `interfaces and superclasses`() {
+    @Test(timeout=300_000)
+	fun `interfaces and superclasses`() {
         assertInformation<SuperSuper<Int, Int>>("SuperSuper<Integer, Integer>")
         assertInformation<Super<UUID>>("Super<UUID>: SuperSuper<UUID, Double>")
         assertInformation<Abstract<String>>("""
@@ -118,8 +118,8 @@ class LocalTypeModelTests {
         override val c: String = a.toString() + b
     }
 
-    @Test
-    fun `getter setter and calculated properties`() {
+    @Test(timeout=300_000)
+	fun `getter setter and calculated properties`() {
         assertInformation<OldStylePojoImpl>("""
            OldStylePojoImpl(): OldStylePojo<int[]>
              a (optional): int[]
@@ -130,8 +130,8 @@ class LocalTypeModelTests {
 
     class AliasingOldStylePojoImpl(override var a: String?, override var b: String, override val c: String): OldStylePojo<String>
 
-    @Test
-    fun `calculated properties aliased by fields in implementing classes`() {
+    @Test(timeout=300_000)
+	fun `calculated properties aliased by fields in implementing classes`() {
         assertInformation<AliasingOldStylePojoImpl>("""
            AliasingOldStylePojoImpl(a: String?, b: String, c: String): OldStylePojo<String>
              a (optional): String
@@ -151,8 +151,8 @@ class LocalTypeModelTests {
     class OneMoreTransitivelyNonComposable(val h: String, val i: Exception)
     class MissingConstructorParameter(val a: String, @Suppress("UNUSED_PARAMETER") b: Exception)
 
-    @Test
-    fun `no unique deserialization constructor creates non-composable type`() {
+    @Test(timeout=300_000)
+	fun `no unique deserialization constructor creates non-composable type`() {
         modelWithoutOpacity.inspect(typeOf<Exception>()).let { typeInformation ->
             assertTrue(typeInformation is LocalTypeInformation.NonComposable)
             typeInformation as LocalTypeInformation.NonComposable
@@ -167,8 +167,8 @@ class LocalTypeModelTests {
         }
     }
 
-    @Test
-    fun `missing constructor parameters creates non-composable type`() {
+    @Test(timeout=300_000)
+	fun `missing constructor parameters creates non-composable type`() {
         modelWithoutOpacity.inspect(typeOf<MissingConstructorParameter>()).let { typeInformation ->
             assertTrue(typeInformation is LocalTypeInformation.NonComposable)
             typeInformation as LocalTypeInformation.NonComposable
@@ -183,8 +183,8 @@ class LocalTypeModelTests {
         }
     }
 
-    @Test
-    fun `transitive types are non-composable creates non-composable type`() {
+    @Test(timeout=300_000)
+	fun `transitive types are non-composable creates non-composable type`() {
         modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()).let { typeInformation ->
             assertTrue(typeInformation is LocalTypeInformation.NonComposable)
             typeInformation as LocalTypeInformation.NonComposable

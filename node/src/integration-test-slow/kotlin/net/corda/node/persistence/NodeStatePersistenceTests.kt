@@ -31,8 +31,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class NodeStatePersistenceTests {
-    @Test
-    fun `persistent state survives node restart`() {
+    @Test(timeout=300_000)
+	fun `persistent state survives node restart`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
@@ -63,8 +63,8 @@ class NodeStatePersistenceTests {
         assertEquals(message, retrievedMessage)
     }
 
-    @Test
-    fun `persistent state survives node restart without reinitialising database schema`() {
+    @Test(timeout=300_000)
+	fun `persistent state survives node restart without reinitialising database schema`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
         // More investigation is needed to establish why.
         Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))

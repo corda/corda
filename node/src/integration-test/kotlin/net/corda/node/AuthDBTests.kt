@@ -97,13 +97,13 @@ class AuthDBTests : NodeBasedTest() {
         client = CordaRPCClient(node.node.configuration.rpcOptions.address)
     }
 
-    @Test
-    fun `login with correct credentials`() {
+    @Test(timeout=300_000)
+	fun `login with correct credentials`() {
         client.start("user", "foo").close()
     }
 
-    @Test
-    fun `login with wrong credentials`() {
+    @Test(timeout=300_000)
+	fun `login with wrong credentials`() {
         client.start("user", "foo").close()
         assertFailsWith(
                 ActiveMQSecurityException::class,
@@ -117,8 +117,8 @@ class AuthDBTests : NodeBasedTest() {
         }
     }
 
-    @Test
-    fun `check flow permissions are respected`() {
+    @Test(timeout=300_000)
+	fun `check flow permissions are respected`() {
         client.start("user", "foo").use {
             val proxy = it.proxy
             proxy.startFlowDynamic(DummyFlow::class.java)
@@ -137,8 +137,8 @@ class AuthDBTests : NodeBasedTest() {
         }
     }
 
-    @Test
-    fun `check permissions on RPC calls are respected`() {
+    @Test(timeout=300_000)
+	fun `check permissions on RPC calls are respected`() {
         client.start("user", "foo").use {
             val proxy = it.proxy
             proxy.stateMachinesFeed()
@@ -150,8 +150,8 @@ class AuthDBTests : NodeBasedTest() {
         }
     }
 
-    @Test
-    fun `Add new users dynamically`() {
+    @Test(timeout=300_000)
+	fun `Add new users dynamically`() {
         assertFailsWith(
                 ActiveMQSecurityException::class,
                 "Login with incorrect password should fail") {
@@ -166,8 +166,8 @@ class AuthDBTests : NodeBasedTest() {
         client.start("user2", "bar").close()
     }
 
-    @Test
-    fun `Modify user permissions during RPC session`() {
+    @Test(timeout=300_000)
+	fun `Modify user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user3",
                 password = encodePassword("bar"),
@@ -186,8 +186,8 @@ class AuthDBTests : NodeBasedTest() {
         }
     }
 
-    @Test
-    fun `Revoke user permissions during RPC session`() {
+    @Test(timeout=300_000)
+	fun `Revoke user permissions during RPC session`() {
         db.insert(UserAndRoles(
                 username = "user4",
                 password = encodePassword("test"),

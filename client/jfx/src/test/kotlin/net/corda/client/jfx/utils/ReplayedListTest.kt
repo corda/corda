@@ -17,8 +17,8 @@ class ReplayedListTest {
         replayedList = ReplayedList(sourceList)
     }
 
-    @Test
-    fun addWorks() {
+    @Test(timeout=300_000)
+	fun addWorks() {
         assertEquals(replayedList.size, 1)
         assertEquals(replayedList[0], 1234)
 
@@ -50,8 +50,8 @@ class ReplayedListTest {
         assertEquals(replayedList[5], 34)
     }
 
-    @Test
-    fun removeWorks() {
+    @Test(timeout=300_000)
+	fun removeWorks() {
         val firstRemoved = sourceList.removeAt(0)
         assertEquals(firstRemoved, 1234)
         assertEquals(replayedList.size, 0)
@@ -70,8 +70,8 @@ class ReplayedListTest {
         assertEquals(replayedList.size, 0)
     }
 
-    @Test
-    fun updateWorks() {
+    @Test(timeout=300_000)
+	fun updateWorks() {
         assertEquals(replayedList[0], 1234)
         sourceList[0] = 4321
         assertEquals(replayedList[0], 4321)

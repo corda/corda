@@ -39,8 +39,8 @@ class FXSwap {
     val outStateBad3 = UniversalContract.State(listOf(DUMMY_NOTARY), transferBad3)
 
     val inState = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
-    @Test
-    fun `issue - signature`() {
+    @Test(timeout=300_000)
+	fun `issue - signature`() {
 
         transaction {
             output(UNIVERSAL_PROGRAM_ID, inState)
@@ -59,8 +59,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun execute() {
+    @Test(timeout=300_000)
+	fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -76,8 +76,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - reversed order`() {
+    @Test(timeout=300_000)
+	fun `execute - reversed order`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState2)
@@ -93,8 +93,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - not authorized`() {
+    @Test(timeout=300_000)
+	fun `execute - not authorized`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -105,8 +105,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - before maturity`() {
+    @Test(timeout=300_000)
+	fun `execute - before maturity`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -117,8 +117,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - outState mismatch 1`() {
+    @Test(timeout=300_000)
+	fun `execute - outState mismatch 1`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -128,8 +128,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - outState mismatch 2`() {
+    @Test(timeout=300_000)
+	fun `execute - outState mismatch 2`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)
@@ -140,8 +140,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - outState mismatch 3`() {
+    @Test(timeout=300_000)
+	fun `execute - outState mismatch 3`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outStateBad1)
@@ -152,8 +152,8 @@ class FXSwap {
         }
     }
 
-    @Test
-    fun `execute - outState mismatch 4`() {
+    @Test(timeout=300_000)
+	fun `execute - outState mismatch 4`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)

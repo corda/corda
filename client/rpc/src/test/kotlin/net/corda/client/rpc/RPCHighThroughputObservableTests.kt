@@ -29,8 +29,8 @@ class RPCHighThroughputObservableTests : AbstractRPCTest() {
         override fun makeObservable(): Observable<Int> = Observable.interval(0, TimeUnit.MICROSECONDS).map { it.toInt() + 1 }
     }
 
-    @Test
-    fun `simple observable`() {
+    @Test(timeout=300_000)
+	fun `simple observable`() {
         rpcDriver {
             val proxy = testProxy()
             // This tests that the observations are transmitted correctly, also check that server side doesn't try to serialize the whole lot

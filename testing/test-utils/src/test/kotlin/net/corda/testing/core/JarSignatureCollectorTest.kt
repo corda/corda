@@ -61,8 +61,8 @@ class JarSignatureCollectorTest {
         assertThat(dir.list()).hasSize(5)
     }
 
-    @Test
-    fun `empty jar has no signers`() {
+    @Test(timeout=300_000)
+	fun `empty jar has no signers`() {
         (dir / "META-INF").createDirectory() // At least one arg is required, and jar cvf conveniently ignores this.
         dir.createJar(FILENAME, "META-INF")
         assertEquals(emptyList(), dir.getJarSigners(FILENAME))
@@ -71,8 +71,8 @@ class JarSignatureCollectorTest {
         assertEquals(emptyList(), dir.getJarSigners(FILENAME)) // There needs to have been a file for ALICE to sign.
     }
 
-    @Test
-    fun `unsigned jar has no signers`() {
+    @Test(timeout=300_000)
+	fun `unsigned jar has no signers`() {
         dir.createJar(FILENAME, "_signable1")
         assertEquals(emptyList(), dir.getJarSigners(FILENAME))
 
@@ -80,8 +80,8 @@ class JarSignatureCollectorTest {
         assertEquals(emptyList(), dir.getJarSigners(FILENAME))
     }
 
-    @Test
-    fun `one signer`() {
+    @Test(timeout=300_000)
+	fun `one signer`() {
         dir.createJar(FILENAME, "_signable1", "_signable2")
         val key = signAsAlice()
         assertEquals(listOf(key), dir.getJarSigners(FILENAME))
@@ -91,8 +91,8 @@ class JarSignatureCollectorTest {
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // Unsigned directory is irrelevant.
     }
 
-    @Test
-    fun `two signers`() {
+    @Test(timeout=300_000)
+	fun `two signers`() {
         dir.createJar(FILENAME, "_signable1", "_signable2")
         val key1 = signAsAlice()
         val key2 = signAsBob()
@@ -100,8 +100,8 @@ class JarSignatureCollectorTest {
         assertEquals(setOf(key1, key2), dir.getJarSigners(FILENAME).toSet())
     }
 
-    @Test
-    fun `all files must be signed by the same set of signers`() {
+    @Test(timeout=300_000)
+	fun `all files must be signed by the same set of signers`() {
         dir.createJar(FILENAME, "_signable1")
         val key1 = signAsAlice()
         assertEquals(listOf(key1), dir.getJarSigners(FILENAME))
@@ -118,8 +118,8 @@ class JarSignatureCollectorTest {
         ) { dir.getJarSigners(FILENAME) }
     }
 
-    @Test
-    fun `bad signature is caught even if the party would not qualify as a signer`() {
+    @Test(timeout=300_000)
+	fun `bad signature is caught even if the party would not qualify as a signer`() {
         (dir / "volatile").writeLines(listOf("volatile"))
         dir.createJar(FILENAME, "volatile")
         val key1 = signAsAlice()
@@ -134,16 +134,16 @@ class JarSignatureCollectorTest {
 
     // Signing with EC algorithm produces META-INF/*.EC file name not compatible with JAR File Spec however it's compatible with java.util.JarVerifier
     // and our JarSignatureCollector
-    @Test
-    fun `one signer with EC algorithm`() {
+    @Test(timeout=300_000)
+	fun `one signer with EC algorithm`() {
         dir.createJar(FILENAME, "_signable1", "_signable2")
         // JDK11: Warning:  Different store and key passwords not supported for PKCS12 KeyStores. Ignoring user-specified -keypass value.
         val key = signAs(CHARLIE, CHARLIE_PASS)
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
-    @Test
-    fun `jar with jar index file`() {
+    @Test(timeout=300_000)
+	fun `jar with jar index file`() {
         dir.createJar(FILENAME, "_signable1")
         dir.addIndexList(FILENAME)
         val key = signAsAlice()

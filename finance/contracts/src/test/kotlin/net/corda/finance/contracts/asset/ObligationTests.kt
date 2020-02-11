@@ -111,8 +111,8 @@ class ObligationTests {
         ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
-    @Test
-    fun trivial() {
+    @Test(timeout=300_000)
+	fun trivial() {
         transaction {
             attachments(Obligation.PROGRAM_ID)
             input(Obligation.PROGRAM_ID, inState)
@@ -152,8 +152,8 @@ class ObligationTests {
         override val participants: List<AbstractParty> = emptyList()
     }
 
-    @Test
-    fun `issue debt`() {
+    @Test(timeout=300_000)
+	fun `issue debt`() {
         // Check we can't "move" debt into existence.
         transaction {
             attachments(DummyContract.PROGRAM_ID, Obligation.PROGRAM_ID)
@@ -270,8 +270,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
-    @Test
-    fun `generate close-out net transaction`() {
+    @Test(timeout=300_000)
+	fun `generate close-out net transaction`() {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -281,8 +281,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to net two obligations of the different sizes, and confirm the balance is correct. */
-    @Test
-    fun `generate close-out net transaction with remainder`() {
+    @Test(timeout=300_000)
+	fun `generate close-out net transaction with remainder`() {
         val obligationAliceToBob = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -295,8 +295,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
-    @Test
-    fun `generate payment net transaction`() {
+    @Test(timeout=300_000)
+	fun `generate payment net transaction`() {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationBobToAlice = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -306,8 +306,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to two obligations, where one is bigger than the other and therefore there is a remainder. */
-    @Test
-    fun `generate payment net transaction with remainder`() {
+    @Test(timeout=300_000)
+	fun `generate payment net transaction with remainder`() {
         val obligationAliceToBob = getStateAndRef(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB), Obligation.PROGRAM_ID)
         val obligationAliceToBobState = obligationAliceToBob.state.data
         val obligationBobToAlice = getStateAndRef((2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE), Obligation.PROGRAM_ID)
@@ -328,8 +328,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to mark outputs as having defaulted. */
-    @Test
-    fun `generate set lifecycle`() {
+    @Test(timeout=300_000)
+	fun `generate set lifecycle`() {
         // We don't actually verify the states, this is just here to make things look sensible
         val dueBefore = TEST_TX_TIME - 7.days
 
@@ -366,8 +366,8 @@ class ObligationTests {
     }
 
     /** Test generating a transaction to settle an obligation. */
-    @Test
-    fun `generate settlement transaction`() {
+    @Test(timeout=300_000)
+	fun `generate settlement transaction`() {
         val cashTx = TransactionBuilder(null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` defaultIssuer, MINI_CORP, DUMMY_NOTARY)
         }.toWireTransaction(miniCorpServices)
@@ -386,8 +386,8 @@ class ObligationTests {
         assertEquals(1, settleTx.outputs.size)
     }
 
-    @Test
-    fun `close-out netting`() {
+    @Test(timeout=300_000)
+	fun `close-out netting`() {
         // Try netting out two obligations
         mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
@@ -448,8 +448,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `payment netting`() {
+    @Test(timeout=300_000)
+	fun `payment netting`() {
         // Try netting out two obligations
         mockService.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
@@ -508,8 +508,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `cash settlement`() {
+    @Test(timeout=300_000)
+	fun `cash settlement`() {
         // Try settling an obligation
         ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
@@ -571,8 +571,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `commodity settlement`() {
+    @Test(timeout=300_000)
+	fun `commodity settlement`() {
         val commodityContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/commodity-claims.html")
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
@@ -599,8 +599,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `payment default`() {
+    @Test(timeout=300_000)
+	fun `payment default`() {
         // Try defaulting an obligation without a time-window.
         ledgerServices.ledger(DUMMY_NOTARY) {
             cashObligationTestRoots(this)
@@ -639,8 +639,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun testMergeSplit() {
+    @Test(timeout=300_000)
+	fun testMergeSplit() {
         // Splitting value works.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -667,8 +667,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun zeroSizedValues() {
+    @Test(timeout=300_000)
+	fun zeroSizedValues() {
         transaction {
             attachments(Obligation.PROGRAM_ID)
             command(CHARLIE.owningKey, Obligation.Commands.Move())
@@ -686,8 +686,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun trivialMismatches() {
+    @Test(timeout=300_000)
+	fun trivialMismatches() {
         // Can't change issuer.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -728,8 +728,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `exit single product obligation`() {
+    @Test(timeout=300_000)
+	fun `exit single product obligation`() {
         // Single input/output straightforward case.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -754,8 +754,8 @@ class ObligationTests {
 
     }
 
-    @Test
-    fun `exit multiple product obligations`() {
+    @Test(timeout=300_000)
+	fun `exit multiple product obligations`() {
         // Multi-product case.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -772,8 +772,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun multiIssuer() {
+    @Test(timeout=300_000)
+	fun multiIssuer() {
         transaction {
             attachments(Obligation.PROGRAM_ID)
 
@@ -802,8 +802,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun multiCurrency() {
+    @Test(timeout=300_000)
+	fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
             attachments(Obligation.PROGRAM_ID)
@@ -817,8 +817,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `nettability of settlement contracts`() {
+    @Test(timeout=300_000)
+	fun `nettability of settlement contracts`() {
         val fiveKDollarsFromMegaToMega = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MEGA_CORP)
         val twoKDollarsFromMegaToMini = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
@@ -862,8 +862,8 @@ class ObligationTests {
     /**
      * Confirm that extraction of issuance definition works correctly.
      */
-    @Test
-    fun `extraction of issuance defintion`() {
+    @Test(timeout=300_000)
+	fun `extraction of issuance defintion`() {
         val fiveKDollarsFromMegaToMega = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MEGA_CORP)
         val oneKDollarsFromMiniToMega = Obligation.State(Lifecycle.NORMAL, MINI_CORP, megaCorpDollarSettlement,
@@ -874,8 +874,8 @@ class ObligationTests {
         assertEquals(oneKDollarsFromMiniToMega.template, megaCorpDollarSettlement)
     }
 
-    @Test
-    fun `adding two settlement contracts nets them`() {
+    @Test(timeout=300_000)
+	fun `adding two settlement contracts nets them`() {
         val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
         val fiveKDollarsFromMegaToMini = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MINI_CORP)
@@ -900,8 +900,8 @@ class ObligationTests {
         }
     }
 
-    @Test
-    fun `extracting amounts due between parties from a list of states`() {
+    @Test(timeout=300_000)
+	fun `extracting amounts due between parties from a list of states`() {
         val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
         val fiveKDollarsFromMegaToMini = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MINI_CORP)
@@ -911,8 +911,8 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `netting equal balances due between parties`() {
+    @Test(timeout=300_000)
+	fun `netting equal balances due between parties`() {
         // Now try it with two balances, which cancel each other out
         val balanced: Map<Pair<AbstractParty, AbstractParty>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE, BOB), Amount(100000000, GBP)),
@@ -923,8 +923,8 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `netting difference balances due between parties`() {
+    @Test(timeout=300_000)
+	fun `netting difference balances due between parties`() {
         // Now try it with two balances, which cancel each other out
         val balanced: Map<Pair<AbstractParty, AbstractParty>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE, BOB), Amount(100000000, GBP)),
@@ -937,24 +937,24 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `summing empty balances due between parties`() {
+    @Test(timeout=300_000)
+	fun `summing empty balances due between parties`() {
         val empty = emptyMap<Pair<AbstractParty, AbstractParty>, Amount<Currency>>()
         val expected = emptyMap<AbstractParty, Long>()
         val actual = sumAmountsDue(empty)
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `summing balances due between parties`() {
+    @Test(timeout=300_000)
+	fun `summing balances due between parties`() {
         val simple: Map<Pair<AbstractParty, AbstractParty>, Amount<Currency>> = mapOf(Pair(Pair(ALICE, BOB), Amount(100000000, GBP)))
         val expected: Map<AbstractParty, Long> = mapOf(Pair(ALICE, -100000000L), Pair(BOB, 100000000L))
         val actual = sumAmountsDue(simple)
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `summing balances due between parties which net to zero`() {
+    @Test(timeout=300_000)
+	fun `summing balances due between parties which net to zero`() {
         // Now try it with two balances, which cancel each other out
         val balanced: Map<Pair<AbstractParty, AbstractParty>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE, BOB), Amount(100000000, GBP)),

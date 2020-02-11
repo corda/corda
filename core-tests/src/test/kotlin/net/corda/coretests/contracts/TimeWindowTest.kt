@@ -15,8 +15,8 @@ import java.time.ZoneOffset.UTC
 class TimeWindowTest {
     private val now = Instant.now()
 
-    @Test
-    fun fromOnly() {
+    @Test(timeout=300_000)
+	fun fromOnly() {
         val timeWindow = TimeWindow.fromOnly(now)
         assertThat(timeWindow.fromTime).isEqualTo(now)
         assertThat(timeWindow.untilTime).isNull()
@@ -27,8 +27,8 @@ class TimeWindowTest {
         assertThat(timeWindow.contains(now + 1.millis)).isTrue()
     }
 
-    @Test
-    fun untilOnly() {
+    @Test(timeout=300_000)
+	fun untilOnly() {
         val timeWindow = TimeWindow.untilOnly(now)
         assertThat(timeWindow.fromTime).isNull()
         assertThat(timeWindow.untilTime).isEqualTo(now)
@@ -39,8 +39,8 @@ class TimeWindowTest {
         assertThat(timeWindow.contains(now + 1.millis)).isFalse()
     }
 
-    @Test
-    fun between() {
+    @Test(timeout=300_000)
+	fun between() {
         val today = LocalDate.now()
         val fromTime = today.atTime(12, 0).toInstant(UTC)
         val untilTime = today.atTime(12, 30).toInstant(UTC)
@@ -56,8 +56,8 @@ class TimeWindowTest {
         assertThat(timeWindow.contains(untilTime + 1.millis)).isFalse()
     }
 
-    @Test
-    fun fromStartAndDuration() {
+    @Test(timeout=300_000)
+	fun fromStartAndDuration() {
         val duration = 10.minutes
         val timeWindow = TimeWindow.fromStartAndDuration(now, duration)
         assertThat(timeWindow.fromTime).isEqualTo(now)
@@ -66,8 +66,8 @@ class TimeWindowTest {
         assertThat(timeWindow.length).isEqualTo(duration)
     }
 
-    @Test
-    fun withTolerance() {
+    @Test(timeout=300_000)
+	fun withTolerance() {
         val tolerance = 10.minutes
         val timeWindow = TimeWindow.withTolerance(now, tolerance)
         assertThat(timeWindow.fromTime).isEqualTo(now - tolerance)

@@ -75,8 +75,8 @@ class ContractDefinition {
         }
     }
 
-    /*   @Test
-       fun `builder problem - should not compile`() {
+    /*   @Test(timeout=300_000)
+	fun `builder problem - should not compile`() {
            val arr = arrange {
                actions {
                    acmeCorp may {
@@ -98,8 +98,8 @@ class ContractDefinition {
            }
        }
    */
-    @Test
-    fun `builder problem - legal`() {
+    @Test(timeout=300_000)
+	fun `builder problem - legal`() {
         val arr = arrange {
             actions {
                 acmeCorp may {

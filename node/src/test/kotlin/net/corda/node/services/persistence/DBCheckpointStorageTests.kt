@@ -61,8 +61,8 @@ class DBCheckpointStorageTests {
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
-    @Test
-    fun `add new checkpoint`() {
+    @Test(timeout=300_000)
+	fun `add new checkpoint`() {
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
             checkpointStorage.addCheckpoint(id, checkpoint)
@@ -76,8 +76,8 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test
-    fun `remove checkpoint`() {
+    @Test(timeout=300_000)
+	fun `remove checkpoint`() {
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
             checkpointStorage.addCheckpoint(id, checkpoint)
@@ -94,8 +94,8 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test
-    fun `add and remove checkpoint in single commit operate`() {
+    @Test(timeout=300_000)
+	fun `add and remove checkpoint in single commit operate`() {
         val (id, checkpoint) = newCheckpoint()
         val (id2, checkpoint2) = newCheckpoint()
         database.transaction {
@@ -112,8 +112,8 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test
-    fun `add two checkpoints then remove first one`() {
+    @Test(timeout=300_000)
+	fun `add two checkpoints then remove first one`() {
         val (id, firstCheckpoint) = newCheckpoint()
         database.transaction {
             checkpointStorage.addCheckpoint(id, firstCheckpoint)
@@ -134,8 +134,8 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test
-    fun `add checkpoint and then remove after 'restart'`() {
+    @Test(timeout=300_000)
+	fun `add checkpoint and then remove after 'restart'`() {
         val (id, originalCheckpoint) = newCheckpoint()
         database.transaction {
             checkpointStorage.addCheckpoint(id, originalCheckpoint)
@@ -155,8 +155,8 @@ class DBCheckpointStorageTests {
         }
     }
 
-    @Test
-    fun `verify checkpoints compatible`() {
+    @Test(timeout=300_000)
+	fun `verify checkpoints compatible`() {
         val mockServices = MockServices(emptyList(), ALICE.name)
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)

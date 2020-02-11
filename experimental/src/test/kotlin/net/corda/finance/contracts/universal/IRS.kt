@@ -131,8 +131,8 @@ class IRS {
 
     private val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFirst)
 
-    @Test
-    fun issue() {
+    @Test(timeout=300_000)
+	fun issue() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, stateInitial)
             timeWindow(testTxTime1)
@@ -146,8 +146,8 @@ class IRS {
         }
     }
 
-    @Test
-    fun `first fixing`() {
+    @Test(timeout=300_000)
+	fun `first fixing`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateInitial)
             output(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
@@ -185,8 +185,8 @@ class IRS {
         }
     }
 
-    @Test
-    fun `first execute`() {
+    @Test(timeout=300_000)
+	fun `first execute`() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
             output(UNIVERSAL_PROGRAM_ID, stateAfterExecutionFirst)

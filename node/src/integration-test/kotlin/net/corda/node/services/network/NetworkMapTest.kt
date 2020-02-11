@@ -87,8 +87,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         networkMapServer.close()
     }
 
-    @Test
-    fun `parameters update test`() {
+    @Test(timeout=300_000)
+	fun `parameters update test`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -141,8 +141,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test
-    fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
+    @Test(timeout=300_000)
+	fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -169,8 +169,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test
-    fun `test node heartbeat`() {
+    @Test(timeout=300_000)
+	fun `test node heartbeat`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,

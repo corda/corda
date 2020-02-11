@@ -30,7 +30,7 @@ class DeserializeWithCustomSerializerTest: TestBase(KOTLIN) {
     val serialization = LocalSerialization(setOf(CustomSerializer()), emptySet())
 
     @Test
-    fun `test deserializing custom object`() {
+	fun `test deserializing custom object`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 
@@ -53,7 +53,7 @@ class DeserializeWithCustomSerializerTest: TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialization needs custom serializer`() {
+	fun `test deserialization needs custom serializer`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 

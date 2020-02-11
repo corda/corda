@@ -32,8 +32,8 @@ class ReceiveMultipleFlowTests : WithMockNet {
 
     private val nodes = (0..2).map { mockNet.createPartyNode() }
 
-    @Test
-    fun showcase_flows_as_closures() {
+    @Test(timeout=300_000)
+	fun showcase_flows_as_closures() {
         val answer = 10.0
         val message = "Hello Ivan"
 
@@ -66,8 +66,8 @@ class ReceiveMultipleFlowTests : WithMockNet {
                 willReturn(answer as Any))
     }
 
-    @Test
-    fun `receive all messages in parallel using map style`() {
+    @Test(timeout=300_000)
+	fun `receive all messages in parallel using map style`() {
         val doubleValue = 5.0
         nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
         val stringValue = "Thriller"
@@ -78,8 +78,8 @@ class ReceiveMultipleFlowTests : WithMockNet {
                 willReturn(doubleValue * stringValue.length))
     }
 
-    @Test
-    fun `receive all messages in parallel using list style`() {
+    @Test(timeout=300_000)
+	fun `receive all messages in parallel using list style`() {
         val value1 = 5.0
         nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
         val value2 = 6.0

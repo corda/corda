@@ -15,8 +15,8 @@ import org.junit.Test
 import javax.security.auth.x500.X500Principal
 
 class NodeKeystoreCheckTest {
-    @Test
-    fun `starting node in non-dev mode with no key store`() {
+    @Test(timeout=300_000)
+	fun `starting node in non-dev mode with no key store`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
@@ -24,8 +24,8 @@ class NodeKeystoreCheckTest {
         }
     }
 
-    @Test
-    fun `node should throw exception if cert path does not chain to the trust root`() {
+    @Test(timeout=300_000)
+	fun `node should throw exception if cert path does not chain to the trust root`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             // Create keystores.
             val keystorePassword = "password"

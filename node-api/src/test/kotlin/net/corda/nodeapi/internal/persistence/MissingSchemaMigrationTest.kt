@@ -43,24 +43,24 @@ class MissingSchemaMigrationTest {
                 TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }
 
-    @Test
-    fun `test that an error is thrown when forceThrowOnMissingMigration is set and a mapped schema is missing a migration`() {
+    @Test(timeout=300_000)
+	fun `test that an error is thrown when forceThrowOnMissingMigration is set and a mapped schema is missing a migration`() {
         assertThatThrownBy {
             createSchemaMigration(setOf(GoodSchema), true)
                 .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }.isInstanceOf(MissingMigrationException::class.java)
     }
 
-    @Test
-    fun `test that an error is not thrown when forceThrowOnMissingMigration is not set and a mapped schema is missing a migration`() {
+    @Test(timeout=300_000)
+	fun `test that an error is not thrown when forceThrowOnMissingMigration is not set and a mapped schema is missing a migration`() {
         assertDoesNotThrow {
             createSchemaMigration(setOf(GoodSchema), false)
                     .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }
     }
 
-    @Test
-    fun `test that there are no missing migrations for the node`() {
+    @Test(timeout=300_000)
+	fun `test that there are no missing migrations for the node`() {
         assertDoesNotThrow("This test failure indicates " +
                 "a new table has been added to the node without the appropriate migration scripts being present") {
             createSchemaMigration(NodeSchemaService().internalSchemas(), false)

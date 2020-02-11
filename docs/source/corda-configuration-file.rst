@@ -36,6 +36,10 @@ This prevents configuration errors when mixing keys containing ``.`` wrapped wit
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
 
+.. note:: As noted in the HOCON documentation, the default behaviour for resources referenced within a config file is to silently
+   ignore them if missing. Therefore it is strongly recommended to utilise the ``required`` syntax for includes. See HOCON documentation
+   for more information.
+
 Overriding configuration values
 -------------------------------
 

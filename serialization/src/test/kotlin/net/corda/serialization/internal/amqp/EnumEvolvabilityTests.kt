@@ -47,8 +47,8 @@ class EnumEvolvabilityTests {
         A, B, C, E
     }
 
-    @Test
-    fun noAnnotation() {
+    @Test(timeout=300_000)
+	fun noAnnotation() {
         data class C(val n: NotAnnotated)
 
         val sf = testDefaultFactory()
@@ -63,8 +63,8 @@ class EnumEvolvabilityTests {
         A, B, C, D
     }
 
-    @Test
-    fun missingDefaults() {
+    @Test(timeout=300_000)
+	fun missingDefaults() {
         data class C(val m: MissingDefaults)
 
         val sf = testDefaultFactory()
@@ -74,8 +74,8 @@ class EnumEvolvabilityTests {
         assertEquals(0, bAndS.transformsSchema.types.size)
     }
 
-    @Test
-    fun missingRenames() {
+    @Test(timeout=300_000)
+	fun missingRenames() {
         data class C(val m: MissingRenames)
 
         val sf = testDefaultFactory()
@@ -86,8 +86,8 @@ class EnumEvolvabilityTests {
 
     }
 
-    @Test
-    fun defaultAnnotationIsAddedToEnvelope() {
+    @Test(timeout=300_000)
+	fun defaultAnnotationIsAddedToEnvelope() {
         data class C(val annotatedEnum: AnnotatedEnumOnce)
 
         val sf = testDefaultFactory()
@@ -108,8 +108,8 @@ class EnumEvolvabilityTests {
         assertEquals("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
-    @Test
-    fun doubleDefaultAnnotationIsAddedToEnvelope() {
+    @Test(timeout=300_000)
+	fun doubleDefaultAnnotationIsAddedToEnvelope() {
         data class C(val annotatedEnum: AnnotatedEnumTwice)
 
         val sf = testDefaultFactory()
@@ -132,8 +132,8 @@ class EnumEvolvabilityTests {
         assertEquals("A", (schema[TransformTypes.EnumDefault]!![1] as EnumDefaultSchemaTransform).old)
     }
 
-    @Test
-    fun defaultAnnotationIsAddedToEnvelopeAndDeserialised() {
+    @Test(timeout=300_000)
+	fun defaultAnnotationIsAddedToEnvelopeAndDeserialised() {
         data class C(val annotatedEnum: AnnotatedEnumOnce)
 
         val sf = testDefaultFactory()
@@ -161,8 +161,8 @@ class EnumEvolvabilityTests {
         assertEquals("A", (schema[TransformTypes.EnumDefault]!![0] as EnumDefaultSchemaTransform).old)
     }
 
-    @Test
-    fun doubleDefaultAnnotationIsAddedToEnvelopeAndDeserialised() {
+    @Test(timeout=300_000)
+	fun doubleDefaultAnnotationIsAddedToEnvelopeAndDeserialised() {
         data class C(val annotatedEnum: AnnotatedEnumTwice)
 
         val sf = testDefaultFactory()
@@ -188,8 +188,8 @@ class EnumEvolvabilityTests {
         assertEquals("A", (enumDefaults[1] as EnumDefaultSchemaTransform).old)
     }
 
-    @Test
-    fun renameAnnotationIsAdded() {
+    @Test(timeout=300_000)
+	fun renameAnnotationIsAdded() {
         data class C(val annotatedEnum: RenameEnumOnce)
 
         val sf = testDefaultFactory()
@@ -232,8 +232,8 @@ class EnumEvolvabilityTests {
         A, B, E, F
     }
 
-    @Test
-    fun doubleRenameAnnotationIsAdded() {
+    @Test(timeout=300_000)
+	fun doubleRenameAnnotationIsAdded() {
         data class C(val annotatedEnum: RenameEnumTwice)
 
         val sf = testDefaultFactory()
@@ -279,8 +279,8 @@ class EnumEvolvabilityTests {
         X, B, C, D, E
     }
 
-    @Test
-    fun bothAnnotationTypes() {
+    @Test(timeout=300_000)
+	fun bothAnnotationTypes() {
         data class C(val annotatedEnum: RenameAndExtendEnum)
 
         val sf = testDefaultFactory()
@@ -316,8 +316,8 @@ class EnumEvolvabilityTests {
         A, B, C, D, E
     }
 
-    @Test
-    fun repeatedAnnotation() {
+    @Test(timeout=300_000)
+	fun repeatedAnnotation() {
         data class C(val a: RepeatedAnnotation)
 
         val sf = testDefaultFactory()
@@ -344,8 +344,8 @@ class EnumEvolvabilityTests {
         A, B, C, D
     }
 
-    @Test
-    fun multiEnums() {
+    @Test(timeout=300_000)
+	fun multiEnums() {
         data class A(val a: E1, val b: E2)
         data class B(val a: E3, val b: A, val c: E1)
         data class C(val a: B, val b: E2, val c: E3)
@@ -384,8 +384,8 @@ class EnumEvolvabilityTests {
         assertEquals(1, e3S[TransformTypes.EnumDefault]!!.size)
     }
 
-    @Test
-    fun testCache() {
+    @Test(timeout=300_000)
+	fun testCache() {
         data class C2(val annotatedEnum: AnnotatedEnumOnce)
         data class C1(val annotatedEnum: AnnotatedEnumOnce)
 
@@ -409,8 +409,8 @@ class EnumEvolvabilityTests {
     // To regenerate the types for this test uncomment UnknownTransformAnnotation from SupportedTransforms.kt and it's
     // entry in the supportedTransforms list and the UnknownTest enum value in TransformTypes.kt
     // ALSO: remember to re-annotate the enum WithUnkownTest above
-    @Test
-    fun testUnknownTransform() {
+    @Test(timeout=300_000)
+	fun testUnknownTransform() {
         val resource = "EnumEvolvabilityTests.testUnknownTransform"
         val sf = testDefaultFactory()
 
@@ -434,8 +434,8 @@ class EnumEvolvabilityTests {
     )
     enum class AcceptMultipleRename { C }
 
-    @Test
-    fun acceptMultipleRename() {
+    @Test(timeout=300_000)
+	fun acceptMultipleRename() {
         data class C(val e: AcceptMultipleRename)
 
         val sf = testDefaultFactory()
@@ -452,8 +452,8 @@ class EnumEvolvabilityTests {
     )
     enum class RejectMultipleRenameTo { A, B, C }
 
-    @Test
-    fun rejectMultipleRenameTo() {
+    @Test(timeout=300_000)
+	fun rejectMultipleRenameTo() {
         data class C(val e: RejectMultipleRenameTo)
 
         val sf = testDefaultFactory()
@@ -475,8 +475,8 @@ class EnumEvolvabilityTests {
     )
     enum class RejectMultipleRenameFrom { A, B, C }
 
-    @Test
-    fun rejectMultipleRenameFrom() {
+    @Test(timeout=300_000)
+	fun rejectMultipleRenameFrom() {
         data class C(val e: RejectMultipleRenameFrom)
 
         val sf = testDefaultFactory()
@@ -504,8 +504,8 @@ class EnumEvolvabilityTests {
     )
     enum class RejectCyclicRename { A, B, C }
 
-    @Test
-    fun rejectCyclicRename() {
+    @Test(timeout=300_000)
+	fun rejectCyclicRename() {
         data class C(val e: RejectCyclicRename)
 
         val sf = testDefaultFactory()
@@ -523,8 +523,8 @@ class EnumEvolvabilityTests {
     )
     enum class RejectCyclicRenameRedux { A, B, C }
 
-    @Test
-    fun rejectCyclicRenameRedux() {
+    @Test(timeout=300_000)
+	fun rejectCyclicRenameRedux() {
         data class C(val e: RejectCyclicRenameRedux)
 
         val sf = testDefaultFactory()
@@ -536,8 +536,8 @@ class EnumEvolvabilityTests {
     @CordaSerializationTransformEnumDefault(new = "D", old = "X")
     enum class RejectBadDefault { A, B, C, D }
 
-    @Test
-    fun rejectBadDefault() {
+    @Test(timeout=300_000)
+	fun rejectBadDefault() {
         data class C(val e: RejectBadDefault)
 
         val sf = testDefaultFactory()
@@ -549,8 +549,8 @@ class EnumEvolvabilityTests {
     @CordaSerializationTransformEnumDefault(new = "D", old = "D")
     enum class RejectBadDefaultToSelf { A, B, C, D }
 
-    @Test
-    fun rejectBadDefaultToSelf() {
+    @Test(timeout=300_000)
+	fun rejectBadDefaultToSelf() {
         data class C(val e: RejectBadDefaultToSelf)
 
         val sf = testDefaultFactory()

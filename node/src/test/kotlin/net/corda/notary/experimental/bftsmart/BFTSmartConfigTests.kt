@@ -11,8 +11,8 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class BFTSmartConfigTests {
-    @Test
-    fun `replica arithmetic`() {
+    @Test(timeout=300_000)
+	fun `replica arithmetic`() {
         (1..20).forEach { n ->
             assertEquals(n, maxFaultyReplicas(n) + minCorrectReplicas(n))
         }
@@ -22,16 +22,16 @@ class BFTSmartConfigTests {
         10.let { n -> assertEquals(3, maxFaultyReplicas(n)) }
     }
 
-    @Test
-    fun `min cluster size`() {
+    @Test(timeout=300_000)
+	fun `min cluster size`() {
         assertEquals(1, minClusterSize(0))
         assertEquals(4, minClusterSize(1))
         assertEquals(7, minClusterSize(2))
         assertEquals(10, minClusterSize(3))
     }
 
-    @Test
-    fun `overlapping port ranges are rejected`() {
+    @Test(timeout=300_000)
+	fun `overlapping port ranges are rejected`() {
         fun config(vararg ports: Int) = BFTSmartConfigInternal(ports.map { NetworkHostAndPort("localhost", it) }, false, false)
         assertThatThrownBy { config(11000, 11001).use {} }
                 .isInstanceOf(IllegalArgumentException::class.java)

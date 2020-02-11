@@ -27,8 +27,8 @@ class CashSelectionH2ImplTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `selecting pennies amount larger than max int, which is split across multiple cash states`() {
+    @Test(timeout=300_000)
+	fun `selecting pennies amount larger than max int, which is split across multiple cash states`() {
         val node = mockNet.createNode()
         // The amount has to split across at least two states, probably to trigger the H2 accumulator variable during the
         // spend operation below.
@@ -40,8 +40,8 @@ class CashSelectionH2ImplTest {
         node.startFlow(CashPaymentFlow((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0])).getOrThrow()
     }
 
-    @Test
-    fun `check does not hold connection over retries`() {
+    @Test(timeout=300_000)
+	fun `check does not hold connection over retries`() {
         val bankA = mockNet.createNode(MockNodeParameters(
             // Tweak connections to be minimal to make this easier (1 results in a hung node during start up, so use 2 connections).
                 configOverrides = MockNodeConfigOverrides(extraDataSourceProperties = mapOf("maximumPoolSize" to "2"))
@@ -58,8 +58,8 @@ class CashSelectionH2ImplTest {
         assertThatThrownBy { flow3.getOrThrow() }.isInstanceOf(CashException::class.java)
     }
 
-    @Test
-    fun `select pennies amount from cash states with more than two different issuers and expect change`() {
+    @Test(timeout=300_000)
+	fun `select pennies amount from cash states with more than two different issuers and expect change`() {
         val node = mockNet.createNode()
         val notary = mockNet.defaultNotaryIdentity
 
@@ -73,8 +73,8 @@ class CashSelectionH2ImplTest {
         assertNotNull(paymentResult.recipient)
     }
 
-    @Test
-    fun `multiple issuers in issuerConstraint condition`() {
+    @Test(timeout=300_000)
+	fun `multiple issuers in issuerConstraint condition`() {
         val node = mockNet.createNode()
         node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
         val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))

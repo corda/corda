@@ -29,8 +29,8 @@ import kotlin.test.assertFailsWith
 class RaftNotaryServiceTests {
     private val notaryName = CordaX500Name("RAFT Notary Service", "London", "GB")
 
-    @Test
-    fun `detect double spend`() {
+    @Test(timeout=300_000)
+	fun `detect double spend`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
@@ -62,8 +62,8 @@ class RaftNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `notarise issue tx with time-window`() {
+    @Test(timeout=300_000)
+	fun `notarise issue tx with time-window`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),

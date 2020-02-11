@@ -29,8 +29,8 @@ class NodeSchemaServiceTest {
     /**
      * Note: this test requires explicitly registering custom contract schemas with a StartedMockNode
      */
-    @Test
-    fun `registering custom schemas for testing with MockNode`() {
+    @Test(timeout=300_000)
+	fun `registering custom schemas for testing with MockNode`() {
         val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
@@ -38,8 +38,8 @@ class NodeSchemaServiceTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `check node runs with minimal core schema set`() {
+    @Test(timeout=300_000)
+	fun `check node runs with minimal core schema set`() {
         val mockNet = InternalMockNetwork()
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
@@ -49,8 +49,8 @@ class NodeSchemaServiceTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `check node runs inclusive of notary node schema set`() {
+    @Test(timeout=300_000)
+	fun `check node runs inclusive of notary node schema set`() {
         val mockNet = InternalMockNetwork()
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
@@ -63,8 +63,8 @@ class NodeSchemaServiceTest {
     /**
      * Note: this test verifies auto-scanning to register identified [MappedSchema] schemas.
      */
-    @Test
-    fun `auto scanning of custom schemas for testing with Driver`() {
+    @Test(timeout=300_000)
+	fun `auto scanning of custom schemas for testing with Driver`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
@@ -72,8 +72,8 @@ class NodeSchemaServiceTest {
         }
     }
 
-    @Test
-    fun `custom schemas are loaded eagerly`() {
+    @Test(timeout=300_000)
+	fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
         val tables = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             (defaultNotaryNode.getOrThrow() as InProcessImpl).database.transaction {
@@ -84,8 +84,8 @@ class NodeSchemaServiceTest {
     }
 
     @Ignore
-    @Test
-    fun `check node runs with minimal core schema set using driverDSL`() {
+    @Test(timeout=300_000)
+	fun `check node runs with minimal core schema set using driverDSL`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val node = startNode().getOrThrow()
             val result = node.rpc.startFlow(::MappedSchemasFlow)
@@ -96,8 +96,8 @@ class NodeSchemaServiceTest {
 
     }
 
-    @Test
-    fun `check node runs inclusive of notary node schema set using driverDSL`() {
+    @Test(timeout=300_000)
+	fun `check node runs inclusive of notary node schema set using driverDSL`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val notary = defaultNotaryNode.getOrThrow()
             val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()

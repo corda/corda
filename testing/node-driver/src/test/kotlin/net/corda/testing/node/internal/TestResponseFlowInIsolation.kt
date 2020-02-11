@@ -61,8 +61,8 @@ class TestResponseFlowInIsolation {
         }
     }
 
-    @Test
-    fun test() {
+    @Test(timeout=300_000)
+	fun test() {
         // This method returns the Responder flow object used by node B.
         // We tell node B to respond to BadInitiator with Responder.
         val initiatedResponderFlowFuture = b.registerInitiatedFlow(BadInitiator::class.java, Responder::class.java).toFuture()

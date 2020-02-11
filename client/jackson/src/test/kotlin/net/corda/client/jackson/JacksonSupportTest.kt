@@ -107,14 +107,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn(attachments).whenever(services).attachments
     }
 
-    @Test
-    fun `Amount(Currency) serialization`() {
+    @Test(timeout=300_000)
+	fun `Amount(Currency) serialization`() {
         assertThat(mapper.valueToTree<TextNode>(Amount.parseCurrency("£25000000")).textValue()).isEqualTo("25000000.00 GBP")
         assertThat(mapper.valueToTree<TextNode>(Amount.parseCurrency("$250000")).textValue()).isEqualTo("250000.00 USD")
     }
 
-    @Test
-    fun `Amount(Currency) deserialization`() {
+    @Test(timeout=300_000)
+	fun `Amount(Currency) deserialization`() {
         val old = mapOf(
             "quantity" to 2500000000,
             "token" to "USD"
@@ -122,13 +122,13 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<Amount<Currency>>(old)).isEqualTo(Amount(2_500_000_000, USD))
     }
 
-    @Test
-    fun `Amount(Currency) Text deserialization`() {
+    @Test(timeout=300_000)
+	fun `Amount(Currency) Text deserialization`() {
         assertThat(mapper.convertValue<Amount<Currency>>(TextNode("$25000000"))).isEqualTo(Amount(2_500_000_000, USD))
     }
 
-    @Test
-    fun ByteSequence() {
+    @Test(timeout=300_000)
+	fun ByteSequence() {
         val byteSequence: ByteSequence = OpaqueBytes.of(1, 2, 3, 4).subSequence(0, 2)
         val json = mapper.valueToTree<BinaryNode>(byteSequence)
         assertThat(json.binaryValue()).containsExactly(1, 2)
@@ -136,22 +136,22 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<ByteSequence>(json)).isEqualTo(byteSequence)
     }
 
-    @Test
-    fun `OpaqueBytes serialization`() {
+    @Test(timeout=300_000)
+	fun `OpaqueBytes serialization`() {
         val opaqueBytes = OpaqueBytes(secureRandomBytes(128))
         val json = mapper.valueToTree<BinaryNode>(opaqueBytes)
         assertThat(json.binaryValue()).isEqualTo(opaqueBytes.bytes)
         assertThat(json.asText()).isEqualTo(opaqueBytes.bytes.toBase64())
     }
 
-    @Test
-    fun `OpaqueBytes deserialization`() {
+    @Test(timeout=300_000)
+	fun `OpaqueBytes deserialization`() {
         assertThat(mapper.convertValue<OpaqueBytes>(TextNode("1234"))).isEqualTo(OpaqueBytes("1234".toByteArray(UTF_8)))
         assertThat(mapper.convertValue<OpaqueBytes>(BinaryNode(byteArrayOf(1, 2, 3, 4)))).isEqualTo(OpaqueBytes.of(1, 2, 3, 4))
     }
 
-    @Test
-    fun SerializedBytes() {
+    @Test(timeout=300_000)
+	fun SerializedBytes() {
         val data = TestData(BOB_NAME, "Summary", SubTestData(1234))
         val serializedBytes = data.serialize()
         val json = mapper.valueToTree<ObjectNode>(serializedBytes)
@@ -168,8 +168,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 //    @CordaSerializable
 //    data class ClassNotOnClasspath(val name: CordaX500Name, val value: Int)
 
-    @Test
-    fun `SerializedBytes of class not on classpath`() {
+    @Test(timeout=300_000)
+	fun `SerializedBytes of class not on classpath`() {
         // The contents of the file were written out as follows:
 //        ClassNotOnClasspath(BOB_NAME, 54321).serialize().open().copyTo("build" / "class-not-on-classpath-data")
 
@@ -184,8 +184,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<SerializedBytes<*>>(BinaryNode(serializedBytes.bytes))).isEqualTo(serializedBytes)
     }
 
-    @Test
-    fun DigitalSignature() {
+    @Test(timeout=300_000)
+	fun DigitalSignature() {
         val digitalSignature = DigitalSignature(secureRandomBytes(128))
         val json = mapper.valueToTree<BinaryNode>(digitalSignature)
         assertThat(json.binaryValue()).isEqualTo(digitalSignature.bytes)
@@ -193,8 +193,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<DigitalSignature>(json)).isEqualTo(digitalSignature)
     }
 
-    @Test
-    fun `DigitalSignature WithKey`() {
+    @Test(timeout=300_000)
+	fun `DigitalSignature WithKey`() {
         val digitalSignature = DigitalSignature.WithKey(BOB_PUBKEY, secureRandomBytes(128))
         val json = mapper.valueToTree<ObjectNode>(digitalSignature)
         val (by, bytes) = json.assertHasOnlyFields("by", "bytes")
@@ -203,8 +203,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<DigitalSignature.WithKey>(json)).isEqualTo(digitalSignature)
     }
 
-    @Test
-    fun DigitalSignatureWithCert() {
+    @Test(timeout=300_000)
+	fun DigitalSignatureWithCert() {
         val digitalSignature = DigitalSignatureWithCert(MINI_CORP.identity.certificate, secureRandomBytes(128))
         val json = mapper.valueToTree<ObjectNode>(digitalSignature)
         val (by, bytes) = json.assertHasOnlyFields("by", "bytes", "parentCertsChain")
@@ -213,8 +213,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<DigitalSignatureWithCert>(json)).isEqualTo(digitalSignature)
     }
 
-    @Test
-    fun TransactionSignature() {
+    @Test(timeout=300_000)
+	fun TransactionSignature() {
         val signatureMetadata = SignatureMetadata(1, 1)
         val partialMerkleTree = PartialMerkleTree(PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
@@ -235,8 +235,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<TransactionSignature>(json)).isEqualTo(transactionSignature)
     }
 
-    @Test
-    fun `SignedTransaction (WireTransaction)`() {
+    @Test(timeout=300_000)
+	fun `SignedTransaction (WireTransaction)`() {
         val attachmentId = SecureHash.randomSHA256()
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         val attachmentStorage = rigorousMock<AttachmentStorage>()
@@ -279,8 +279,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }
 
-    @Test
-    fun TransactionState() {
+    @Test(timeout=300_000)
+	fun TransactionState() {
         val txState = createTransactionState()
         val json = mapper.valueToTree<ObjectNode>(txState)
         println(mapper.writeValueAsString(json))
@@ -288,44 +288,44 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<TransactionState<*>>(json)).isEqualTo(txState)
     }
 
-    @Test
-    fun Command() {
+    @Test(timeout=300_000)
+	fun Command() {
         val command = Command(DummyCommandData, listOf(BOB_PUBKEY))
         val json = mapper.valueToTree<ObjectNode>(command)
         assertThat(mapper.convertValue<Command<*>>(json)).isEqualTo(command)
     }
 
-    @Test
-    fun `TimeWindow - fromOnly`() {
+    @Test(timeout=300_000)
+	fun `TimeWindow - fromOnly`() {
         val fromOnly = TimeWindow.fromOnly(Instant.now())
         val json = mapper.valueToTree<ObjectNode>(fromOnly)
         assertThat(mapper.convertValue<TimeWindow>(json)).isEqualTo(fromOnly)
     }
 
-    @Test
-    fun `TimeWindow - untilOnly`() {
+    @Test(timeout=300_000)
+	fun `TimeWindow - untilOnly`() {
         val untilOnly = TimeWindow.untilOnly(Instant.now())
         val json = mapper.valueToTree<ObjectNode>(untilOnly)
         assertThat(mapper.convertValue<TimeWindow>(json)).isEqualTo(untilOnly)
     }
 
-    @Test
-    fun `TimeWindow - between`() {
+    @Test(timeout=300_000)
+	fun `TimeWindow - between`() {
         val between = TimeWindow.between(Instant.now(), Instant.now() + 1.days)
         val json = mapper.valueToTree<ObjectNode>(between)
         assertThat(mapper.convertValue<TimeWindow>(json)).isEqualTo(between)
     }
 
-    @Test
-    fun PrivacySalt() {
+    @Test(timeout=300_000)
+	fun PrivacySalt() {
         val privacySalt = net.corda.core.contracts.PrivacySalt()
         val json = mapper.valueToTree<TextNode>(privacySalt)
         assertThat(json.textValue()).isEqualTo(privacySalt.bytes.toHexString())
         assertThat(mapper.convertValue<PrivacySalt>(json)).isEqualTo(privacySalt)
     }
 
-    @Test
-    fun SignatureMetadata() {
+    @Test(timeout=300_000)
+	fun SignatureMetadata() {
         val signatureMetadata = SignatureMetadata(2, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
         val json = mapper.valueToTree<ObjectNode>(signatureMetadata)
         val (platformVersion, scheme) = json.assertHasOnlyFields("platformVersion", "scheme")
@@ -334,44 +334,44 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<SignatureMetadata>(json)).isEqualTo(signatureMetadata)
     }
 
-    @Test
-    fun `SignatureMetadata on unknown schemeNumberID`() {
+    @Test(timeout=300_000)
+	fun `SignatureMetadata on unknown schemeNumberID`() {
         val signatureMetadata = SignatureMetadata(2, Int.MAX_VALUE)
         val json = mapper.valueToTree<ObjectNode>(signatureMetadata)
         assertThat(json["scheme"].intValue()).isEqualTo(Int.MAX_VALUE)
         assertThat(mapper.convertValue<SignatureMetadata>(json)).isEqualTo(signatureMetadata)
     }
 
-    @Test
-    fun `SignatureScheme serialization`() {
+    @Test(timeout=300_000)
+	fun `SignatureScheme serialization`() {
         val json = mapper.valueToTree<TextNode>(Crypto.ECDSA_SECP256R1_SHA256)
         assertThat(json.textValue()).isEqualTo("ECDSA_SECP256R1_SHA256")
     }
 
-    @Test
-    fun `SignatureScheme deserialization`() {
+    @Test(timeout=300_000)
+	fun `SignatureScheme deserialization`() {
         assertThat(mapper.convertValue<SignatureScheme>(TextNode("EDDSA_ED25519_SHA512"))).isSameAs(Crypto.EDDSA_ED25519_SHA512)
         assertThat(mapper.convertValue<SignatureScheme>(IntNode(4))).isSameAs(Crypto.EDDSA_ED25519_SHA512)
     }
 
-    @Test
-    fun `PartialTree IncludedLeaf`() {
+    @Test(timeout=300_000)
+	fun `PartialTree IncludedLeaf`() {
         val includedLeaf = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
         val json = mapper.valueToTree<ObjectNode>(includedLeaf)
         assertThat(json.assertHasOnlyFields("includedLeaf")[0].textValue()).isEqualTo(includedLeaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.IncludedLeaf>(json)).isEqualTo(includedLeaf)
     }
 
-    @Test
-    fun `PartialTree Leaf`() {
+    @Test(timeout=300_000)
+	fun `PartialTree Leaf`() {
         val leaf = PartialTree.Leaf(SecureHash.randomSHA256())
         val json = mapper.valueToTree<ObjectNode>(leaf)
         assertThat(json.assertHasOnlyFields("leaf")[0].textValue()).isEqualTo(leaf.hash.toString())
         assertThat(mapper.convertValue<PartialTree.Leaf>(json)).isEqualTo(leaf)
     }
 
-    @Test
-    fun `simple PartialTree Node`() {
+    @Test(timeout=300_000)
+	fun `simple PartialTree Node`() {
         val node = PartialTree.Node(
                 left = PartialTree.Leaf(SecureHash.randomSHA256()),
                 right = PartialTree.IncludedLeaf(SecureHash.randomSHA256())
@@ -384,8 +384,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<PartialTree.Node>(json)).isEqualTo(node)
     }
 
-    @Test
-    fun `complex PartialTree Node`() {
+    @Test(timeout=300_000)
+	fun `complex PartialTree Node`() {
         val node = PartialTree.Node(
                 left = PartialTree.IncludedLeaf(SecureHash.randomSHA256()),
                 right = PartialTree.Node(
@@ -401,8 +401,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     // TODO Issued
     // TODO PartyAndReference
 
-    @Test
-    fun CordaX500Name() {
+    @Test(timeout=300_000)
+	fun CordaX500Name() {
         testToStringSerialisation(CordaX500Name(
                 commonName = "COMMON",
                 organisationUnit = "ORG UNIT",
@@ -413,42 +413,42 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         ))
     }
 
-    @Test
-    fun `SecureHash SHA256`() {
+    @Test(timeout=300_000)
+	fun `SecureHash SHA256`() {
         testToStringSerialisation(SecureHash.randomSHA256())
     }
 
-    @Test
-    fun NetworkHostAndPort() {
+    @Test(timeout=300_000)
+	fun NetworkHostAndPort() {
         testToStringSerialisation(NetworkHostAndPort("localhost", 9090))
     }
 
-    @Test
-    fun UUID() {
+    @Test(timeout=300_000)
+	fun UUID() {
         testToStringSerialisation(UUID.randomUUID())
     }
 
-    @Test
-    fun Instant() {
+    @Test(timeout=300_000)
+	fun Instant() {
         testToStringSerialisation(Instant.now())
     }
 
-    @Test
-    fun `Date is treated as Instant`() {
+    @Test(timeout=300_000)
+	fun `Date is treated as Instant`() {
         val date = Date()
         val json = mapper.valueToTree<TextNode>(date)
         assertThat(json.textValue()).isEqualTo(date.toInstant().toString())
         assertThat(mapper.convertValue<Date>(json)).isEqualTo(date)
     }
 
-    @Test
-    fun `Party serialization`() {
+    @Test(timeout=300_000)
+	fun `Party serialization`() {
         val json = mapper.valueToTree<TextNode>(MINI_CORP.party)
         assertThat(json.textValue()).isEqualTo(MINI_CORP.name.toString())
     }
 
-    @Test
-    fun `Party serialization with isFullParty = true`() {
+    @Test(timeout=300_000)
+	fun `Party serialization with isFullParty = true`() {
         partyObjectMapper.isFullParties = true
         val json = mapper.valueToTree<ObjectNode>(MINI_CORP.party)
         val (name, owningKey) = json.assertHasOnlyFields("name", "owningKey")
@@ -456,8 +456,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(owningKey.valueAs<PublicKey>(mapper)).isEqualTo(MINI_CORP.publicKey)
     }
 
-    @Test
-    fun `Party deserialization on full name`() {
+    @Test(timeout=300_000)
+	fun `Party deserialization on full name`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.name.toString()))
 
         // Check that it fails if it can't find the party
@@ -467,8 +467,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(convertToParty()).isEqualTo(MINI_CORP.party)
     }
 
-    @Test
-    fun `Party deserialization on part of name`() {
+    @Test(timeout=300_000)
+	fun `Party deserialization on part of name`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.name.organisation))
 
         // Check that it fails if it can't find the party
@@ -478,8 +478,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(convertToParty()).isEqualTo(MINI_CORP.party)
     }
 
-    @Test
-    fun `Party deserialization on public key`() {
+    @Test(timeout=300_000)
+	fun `Party deserialization on public key`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.publicKey.toBase58String()))
 
         // Check that it fails if it can't find the party
@@ -489,8 +489,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(convertToParty()).isEqualTo(MINI_CORP.party)
     }
 
-    @Test
-    fun `Party deserialization on name and key`() {
+    @Test(timeout=300_000)
+	fun `Party deserialization on name and key`() {
         val party = mapper.convertValue<Party>(mapOf(
                 "name" to MINI_CORP.name,
                 "owningKey" to MINI_CORP.publicKey
@@ -500,23 +500,23 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(party.owningKey).isEqualTo(MINI_CORP.publicKey)
     }
 
-    @Test
-    fun PublicKey() {
+    @Test(timeout=300_000)
+	fun PublicKey() {
         val json = mapper.valueToTree<TextNode>(MINI_CORP.publicKey)
         assertThat(json.textValue()).isEqualTo(MINI_CORP.publicKey.toBase58String())
         assertThat(mapper.convertValue<PublicKey>(json)).isEqualTo(MINI_CORP.publicKey)
     }
 
-    @Test
-    fun `EdDSA public key`() {
+    @Test(timeout=300_000)
+	fun `EdDSA public key`() {
         val publicKey = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, SEED).public
         val json = mapper.valueToTree<TextNode>(publicKey)
         assertThat(json.textValue()).isEqualTo(publicKey.toBase58String())
         assertThat(mapper.convertValue<PublicKey>(json)).isEqualTo(publicKey)
     }
 
-    @Test
-    fun CompositeKey() {
+    @Test(timeout=300_000)
+	fun CompositeKey() {
         val innerKeys = (1..3).map { i ->
             Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, SEED + i.toBigInteger()).public
         }
@@ -530,22 +530,22 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<CompositeKey>(json)).isEqualTo(publicKey)
     }
 
-    @Test
-    fun AnonymousParty() {
+    @Test(timeout=300_000)
+	fun AnonymousParty() {
         val anonymousParty = AnonymousParty(ALICE_PUBKEY)
         val json = mapper.valueToTree<TextNode>(anonymousParty)
         assertThat(json.textValue()).isEqualTo(ALICE_PUBKEY.toBase58String())
         assertThat(mapper.convertValue<AnonymousParty>(json)).isEqualTo(anonymousParty)
     }
 
-    @Test
-    fun `PartyAndCertificate serialization`() {
+    @Test(timeout=300_000)
+	fun `PartyAndCertificate serialization`() {
         val json = mapper.valueToTree<TextNode>(MINI_CORP.identity)
         assertThat(json.textValue()).isEqualTo(MINI_CORP.name.toString())
     }
 
-    @Test
-    fun `PartyAndCertificate serialization with isFullParty = true`() {
+    @Test(timeout=300_000)
+	fun `PartyAndCertificate serialization with isFullParty = true`() {
         partyObjectMapper.isFullParties = true
         val json = mapper.valueToTree<ObjectNode>(MINI_CORP.identity)
         println(mapper.writeValueAsString(json))
@@ -554,16 +554,16 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(certPath.valueAs<CertPath>(mapper)).isEqualTo(MINI_CORP.identity.certPath)
     }
 
-    @Test
-    fun `PartyAndCertificate deserialization on cert path`() {
+    @Test(timeout=300_000)
+	fun `PartyAndCertificate deserialization on cert path`() {
         val certPathJson = mapper.valueToTree<JsonNode>(MINI_CORP.identity.certPath)
         val partyAndCert = mapper.convertValue<PartyAndCertificate>(mapOf("certPath" to certPathJson))
         // PartyAndCertificate.equals is defined on the Party so we must check the certPath directly
         assertThat(partyAndCert.certPath).isEqualTo(MINI_CORP.identity.certPath)
     }
 
-    @Test
-    fun `NodeInfo serialization`() {
+    @Test(timeout=300_000)
+	fun `NodeInfo serialization`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
         val json = mapper.valueToTree<ObjectNode>(nodeInfo)
         val (addresses, legalIdentitiesAndCerts, platformVersion, serial) = json.assertHasOnlyFields(
@@ -584,8 +584,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(serial.longValue()).isEqualTo(nodeInfo.serial)
     }
 
-    @Test
-    fun `NodeInfo deserialization on name`() {
+    @Test(timeout=300_000)
+	fun `NodeInfo deserialization on name`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(ALICE_NAME.toString()))
@@ -597,8 +597,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(convertToNodeInfo()).isEqualTo(nodeInfo)
     }
 
-    @Test
-    fun `NodeInfo deserialization on public key`() {
+    @Test(timeout=300_000)
+	fun `NodeInfo deserialization on public key`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(nodeInfo.legalIdentities[0].owningKey.toBase58String()))
@@ -610,8 +610,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(convertToNodeInfo()).isEqualTo(nodeInfo)
     }
 
-    @Test
-    fun CertPath() {
+    @Test(timeout=300_000)
+	fun CertPath() {
         val certPath = MINI_CORP.identity.certPath
         val json = mapper.valueToTree<ObjectNode>(certPath)
         println(mapper.writeValueAsString(json))
@@ -624,8 +624,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<CertPath>(json).encoded).isEqualTo(certPath.encoded)
     }
 
-    @Test
-    fun `X509Certificate serialization`() {
+    @Test(timeout=300_000)
+	fun `X509Certificate serialization`() {
         val cert: X509Certificate = MINI_CORP.identity.certificate
         val json = mapper.valueToTree<ObjectNode>(cert)
         println(mapper.writeValueAsString(json))
@@ -639,28 +639,28 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)
     }
 
-    @Test
-    fun `X509Certificate serialization when extendedKeyUsage is null`() {
+    @Test(timeout=300_000)
+	fun `X509Certificate serialization when extendedKeyUsage is null`() {
         val cert: X509Certificate = spy(MINI_CORP.identity.certificate)
         whenever(cert.extendedKeyUsage).thenReturn(null)
         // should work even if extendedKeyUsage is null
         mapper.valueToTree<ObjectNode>(cert)
     }
 
-    @Test
-    fun `X509Certificate deserialization`() {
+    @Test(timeout=300_000)
+	fun `X509Certificate deserialization`() {
         val cert: X509Certificate = MINI_CORP.identity.certificate
         assertThat(mapper.convertValue<X509Certificate>(mapOf("encoded" to cert.encoded))).isEqualTo(cert)
         assertThat(mapper.convertValue<X509Certificate>(BinaryNode(cert.encoded))).isEqualTo(cert)
     }
 
-    @Test
-    fun X500Principal() {
+    @Test(timeout=300_000)
+	fun X500Principal() {
         testToStringSerialisation(X500Principal("CN=Common,L=London,O=Org,C=UK"))
     }
 
-    @Test
-    fun `@CordaSerializable class which has non-c'tor properties`() {
+    @Test(timeout=300_000)
+	fun `@CordaSerializable class which has non-c'tor properties`() {
         val data = NonCtorPropertiesData(4434)
         val json = mapper.valueToTree<ObjectNode>(data)
         val (value) = json.assertHasOnlyFields("value")
@@ -668,8 +668,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<NonCtorPropertiesData>(json)).isEqualTo(data)
     }
 
-    @Test
-    fun `LinearState where the linearId property does not match the backing field`() {
+    @Test(timeout=300_000)
+	fun `LinearState where the linearId property does not match the backing field`() {
         val funkyLinearState = FunkyLinearState(UniqueIdentifier())
         // As a sanity check, show that this is a valid CordaSerializable class
         assertThat(funkyLinearState.serialize().deserialize()).isEqualTo(funkyLinearState)
@@ -677,14 +677,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(mapper.convertValue<FunkyLinearState>(json)).isEqualTo(funkyLinearState)
     }
 
-    @Test
-    fun `kotlin object`() {
+    @Test(timeout=300_000)
+	fun `kotlin object`() {
         val json = mapper.valueToTree<ObjectNode>(KotlinObject)
         assertThat(mapper.convertValue<KotlinObject>(json)).isSameAs(KotlinObject)
     }
 
-    @Test
-    fun `@CordaSerializable kotlin object`() {
+    @Test(timeout=300_000)
+	fun `@CordaSerializable kotlin object`() {
         val json = mapper.valueToTree<ObjectNode>(CordaSerializableKotlinObject)
         assertThat(mapper.convertValue<CordaSerializableKotlinObject>(json)).isSameAs(CordaSerializableKotlinObject)
     }

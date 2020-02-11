@@ -125,8 +125,8 @@ class ScheduledFlowTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `create and run scheduled flow then wait for result`() {
+    @Test(timeout=300_000)
+	fun `create and run scheduled flow then wait for result`() {
         var countScheduledFlows = 0
         aliceNode.smm.track().updates.subscribe {
             if (it is StateMachineManager.Change.Add) {
@@ -148,8 +148,8 @@ class ScheduledFlowTests {
         assertTrue("Must be processed", stateFromB.state.data.processed)
     }
 
-    @Test
-    fun `run a whole batch of scheduled flows`() {
+    @Test(timeout=300_000)
+	fun `run a whole batch of scheduled flows`() {
         val N = 99
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {

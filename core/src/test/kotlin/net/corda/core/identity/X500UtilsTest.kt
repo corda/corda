@@ -7,8 +7,8 @@ import kotlin.test.assertTrue
 
 class X500UtilsTest {
 
-    @Test
-    fun `X500Principal equalX500NameParts matches regardless the order`() {
+    @Test(timeout=300_000)
+	fun `X500Principal equalX500NameParts matches regardless the order`() {
         // given
         val orderingA = "O=Bank A, OU=Organisation Unit, L=New York, C=US"
         val orderingB = "OU=Organisation Unit, O=Bank A, L=New York, C=US"

@@ -13,7 +13,7 @@ class IrsDemoWebApplicationTests {
     @MockBean
     lateinit var rpc: CordaRPCOps
 
-    @Test
-    fun contextLoads() {
+    @Test(timeout=300_000)
+	fun contextLoads() {
     }
 }

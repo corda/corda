@@ -25,8 +25,8 @@ class ClassCarpenterTest {
     private val Class<*>.nonSyntheticFields: List<Field> get() = declaredFields.filterNot { it.isSynthetic }
     private val Class<*>.nonSyntheticMethods: List<Method> get() = declaredMethods.filterNot { it.isSynthetic }
 
-    @Test
-    fun empty() {
+    @Test(timeout=300_000)
+	fun empty() {
         val clazz = cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
         assertEquals(0, clazz.nonSyntheticFields.size)
         assertEquals(2, clazz.nonSyntheticMethods.size)   // get, toString
@@ -34,8 +34,8 @@ class ClassCarpenterTest {
         clazz.getDeclaredConstructor().newInstance()
     }
 
-    @Test
-    fun prims() {
+    @Test(timeout=300_000)
+	fun prims() {
         val clazz = cc.build(ClassSchema(
                 "gen.Prims",
                 mapOf(
@@ -82,15 +82,15 @@ class ClassCarpenterTest {
         return Pair(clazz, i)
     }
 
-    @Test
-    fun objs() {
+    @Test(timeout=300_000)
+	fun objs() {
         val (clazz, i) = genPerson()
         assertEquals("Mike", clazz.getMethod("getName").invoke(i))
         assertEquals("Mike", (i as SimpleFieldAccess)["name"])
     }
 
-    @Test
-    fun `generated toString`() {
+    @Test(timeout=300_000)
+	fun `generated toString`() {
         val (_, i) = genPerson()
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
@@ -101,8 +101,8 @@ class ClassCarpenterTest {
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
     }
 
-    @Test
-    fun `can refer to each other`() {
+    @Test(timeout=300_000)
+	fun `can refer to each other`() {
         val (clazz1, i) = genPerson()
         val clazz2 = cc.build(ClassSchema("gen.Referee", mapOf(
                 "ref" to NonNullableField(clazz1)
@@ -111,8 +111,8 @@ class ClassCarpenterTest {
         assertEquals(i, (i2 as SimpleFieldAccess)["ref"])
     }
 
-    @Test
-    fun superclasses() {
+    @Test(timeout=300_000)
+	fun superclasses() {
         val schema1 = ClassSchema(
                 "gen.A",
                 mapOf("a" to NonNullableField(String::class.java)))
@@ -132,8 +132,8 @@ class ClassCarpenterTest {
     /**
      * Tests the fix for [Corda-1945](https://r3-cev.atlassian.net/secure/RapidBoard.jspa?rapidView=83&modal=detail&selectedIssue=CORDA-1945)
      */
-    @Test
-    fun `superclasses with double-size primitive constructor parameters`() {
+    @Test(timeout=300_000)
+	fun `superclasses with double-size primitive constructor parameters`() {
         val schema1 = ClassSchema(
                 "gen.A",
                 mapOf("a" to NonNullableField(Long::class.javaPrimitiveType!!)))
@@ -150,8 +150,8 @@ class ClassCarpenterTest {
         assertEquals("B{a=1, b=xb}", i.toString())
     }
 
-    @Test
-    fun interfaces() {
+    @Test(timeout=300_000)
+	fun interfaces() {
         val schema1 = ClassSchema(
                 "gen.A",
                 mapOf("a" to NonNullableField(String::class.java)))
@@ -167,8 +167,8 @@ class ClassCarpenterTest {
         assertEquals(1, i.b)
     }
 
-    @Test
-    fun `unimplemented interface method with lenient = false`() {
+    @Test(timeout=300_000)
+	fun `unimplemented interface method with lenient = false`() {
         val schemaA = ClassSchema(
                 "gen.A",
                 mapOf("a" to NonNullableField(String::class.java)))
@@ -182,8 +182,8 @@ class ClassCarpenterTest {
         assertThatExceptionOfType(InterfaceMismatchException::class.java).isThrownBy { cc.build(schemaB) }
     }
 
-    @Test
-    fun `unimplemented interface method with lenient = true`() {
+    @Test(timeout=300_000)
+	fun `unimplemented interface method with lenient = true`() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist, lenient = true)
 
         val schemaA = ClassSchema(
@@ -203,8 +203,8 @@ class ClassCarpenterTest {
         assertThatExceptionOfType(AbstractMethodError::class.java).isThrownBy { b.b }
     }
 
-    @Test
-    fun `generate interface`() {
+    @Test(timeout=300_000)
+	fun `generate interface`() {
         val schema1 = InterfaceSchema(
                 "gen.Interface",
                 mapOf("a" to NonNullableField(Int::class.java)))
@@ -228,8 +228,8 @@ class ClassCarpenterTest {
         assertEquals(testA, i["a"])
     }
 
-    @Test
-    fun `generate multiple interfaces`() {
+    @Test(timeout=300_000)
+	fun `generate multiple interfaces`() {
         val iFace1 = InterfaceSchema(
                 "gen.Interface1",
                 mapOf(
@@ -264,8 +264,8 @@ class ClassCarpenterTest {
         assertEquals(testD, i["d"])
     }
 
-    @Test
-    fun `interface implementing interface`() {
+    @Test(timeout=300_000)
+	fun `interface implementing interface`() {
         val iFace1 = InterfaceSchema(
                 "gen.Interface1",
                 mapOf(
@@ -323,8 +323,8 @@ class ClassCarpenterTest {
         cc.build(schema)
     }
 
-    @Test
-    fun `nullable parameter integer`() {
+    @Test(timeout=300_000)
+	fun `nullable parameter integer`() {
         val className = "iEnjoyWibble"
         val schema = ClassSchema(
                 "gen.$className",
@@ -338,8 +338,8 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a2)
     }
 
-    @Test
-    fun `non nullable parameter integer with non null`() {
+    @Test(timeout=300_000)
+	fun `non nullable parameter integer with non null`() {
         val className = "iEnjoyWibble"
         val schema = ClassSchema(
                 "gen.$className",
@@ -364,8 +364,8 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test
-    fun `int array`() {
+    @Test(timeout=300_000)
+	fun `int array`() {
         val className = "iEnjoyPotato"
         val schema = ClassSchema(
                 "gen.$className",
@@ -396,8 +396,8 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test
-    fun `integer array`() {
+    @Test(timeout=300_000)
+	fun `integer array`() {
         val className = "iEnjoyFlan"
         val schema = ClassSchema(
                 "gen.$className",
@@ -414,8 +414,8 @@ class ClassCarpenterTest {
         assertEquals("$className{a=[1, 2, 3]}", i.toString())
     }
 
-    @Test
-    fun `int array with ints`() {
+    @Test(timeout=300_000)
+	fun `int array with ints`() {
         val className = "iEnjoyCrumble"
         val schema = ClassSchema(
                 "gen.$className", mapOf(
@@ -433,8 +433,8 @@ class ClassCarpenterTest {
         assertEquals("$className{a=2, b=[4, 8], c=16}", i.toString())
     }
 
-    @Test
-    fun `multiple int arrays`() {
+    @Test(timeout=300_000)
+	fun `multiple int arrays`() {
         val className = "iEnjoyJam"
         val schema = ClassSchema(
                 "gen.$className", mapOf(
@@ -454,8 +454,8 @@ class ClassCarpenterTest {
         assertEquals("$className{a=[1, 2], b=3, c=[4, 5, 6]}", i.toString())
     }
 
-    @Test
-    fun `string array`() {
+    @Test(timeout=300_000)
+	fun `string array`() {
         val className = "iEnjoyToast"
         val schema = ClassSchema(
                 "gen.$className",
@@ -471,8 +471,8 @@ class ClassCarpenterTest {
         assertEquals("jam", arr[2])
     }
 
-    @Test
-    fun `string arrays`() {
+    @Test(timeout=300_000)
+	fun `string arrays`() {
         val className = "iEnjoyToast"
         val schema = ClassSchema(
                 "gen.$className",
@@ -499,8 +499,8 @@ class ClassCarpenterTest {
         assertEquals("some fries", arr2[1])
     }
 
-    @Test
-    fun `nullable sets annotations`() {
+    @Test(timeout=300_000)
+	fun `nullable sets annotations`() {
         val className = "iEnjoyJam"
         val schema = ClassSchema(
                 "gen.$className",
@@ -520,8 +520,8 @@ class ClassCarpenterTest {
         assertEquals(Nonnull::class.java, clazz.getMethod("getB").annotations[0].annotationClass.java)
     }
 
-    @Test
-    fun beanTest() {
+    @Test(timeout=300_000)
+	fun beanTest() {
         val schema = ClassSchema(
                 "pantsPantsPants",
                 mapOf("a" to NonNullableField(Integer::class.java)))

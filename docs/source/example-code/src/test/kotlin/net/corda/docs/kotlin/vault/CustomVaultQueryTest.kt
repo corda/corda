@@ -43,8 +43,8 @@ class CustomVaultQueryTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `query by max recorded time`() {
+    @Test(timeout=300_000)
+	fun `query by max recorded time`() {
         nodeA.startFlow(IOUFlow(1000, nodeB.info.singleIdentity())).getOrThrow()
         nodeA.startFlow(IOUFlow(500, nodeB.info.singleIdentity())).getOrThrow()
 
@@ -58,8 +58,8 @@ class CustomVaultQueryTest {
         assertThatCode { results.otherResults.single() }.doesNotThrowAnyException()
     }
 
-    @Test
-    fun `test custom vault query`() {
+    @Test(timeout=300_000)
+	fun `test custom vault query`() {
         // issue some cash in several currencies
         issueCashForCurrency(POUNDS(1000))
         issueCashForCurrency(DOLLARS(900))

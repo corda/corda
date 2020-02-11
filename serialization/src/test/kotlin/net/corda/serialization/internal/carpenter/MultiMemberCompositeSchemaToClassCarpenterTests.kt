@@ -10,8 +10,8 @@ import kotlin.test.assertNotEquals
 
 class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
-    @Test
-    fun anIntAndALong() {
+    @Test(timeout=300_000)
+	fun anIntAndALong() {
         @CordaSerializable
         data class A(val a: Int, val b: Long)
 
@@ -22,8 +22,8 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         assertEquals(42L, carpentedInstance.get("b"))
     }
 
-    @Test
-    fun intAndStr() {
+    @Test(timeout=300_000)
+	fun intAndStr() {
         @CordaSerializable
         data class A(val a: Int, val b: String)
 
@@ -39,8 +39,8 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         val doubled: Int
     }
 
-    @Test
-    fun calculatedValues() {
+    @Test(timeout=300_000)
+	fun calculatedValues() {
         data class C(val i: Int): Parent {
             @get:SerializableCalculatedProperty
             val squared = (i * i).toString()
@@ -73,8 +73,8 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         assertEquals(upcast.doubled, amqpObj.doubled)
     }
 
-    @Test
-    fun implementingClassDoesNotCalculateValue() {
+    @Test(timeout=300_000)
+	fun implementingClassDoesNotCalculateValue() {
         class C(override val doubled: Int): Parent
 
         val (_, env) = C(5).roundTrip()

@@ -57,8 +57,8 @@ class Swaption {
     }
 
     val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
-    @Test
-    fun issue() {
+    @Test(timeout=300_000)
+	fun issue() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, stateInitial)
             timeWindow(TEST_TX_TIME_1)
@@ -72,8 +72,8 @@ class Swaption {
         }
     }
 
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `pretty print`() {
         println(prettyPrint(contractInitial))
     }

@@ -31,7 +31,7 @@ class DeserializeWithSerializationWhitelistTest: TestBase(KOTLIN) {
     val serialization = LocalSerialization(emptySet(), setOf(CustomWhitelist))
 
     @Test
-    fun `test deserializing custom object`() {
+	fun `test deserializing custom object`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 
@@ -54,7 +54,7 @@ class DeserializeWithSerializationWhitelistTest: TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialization needs whitelisting`() {
+	fun `test deserialization needs whitelisting`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 

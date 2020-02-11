@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeOffsetTimeTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing instant`() {
+	fun `test deserializing instant`() {
         val time = OffsetTime.now()
         val data = time.serialize()
 

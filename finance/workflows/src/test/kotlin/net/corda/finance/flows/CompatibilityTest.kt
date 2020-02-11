@@ -30,8 +30,8 @@ class CompatibilityTest {
         register(PublicKeySerializer)
     }
 
-    @Test
-    fun issueCashTansactionReadTest() {
+    @Test(timeout=300_000)
+	fun issueCashTansactionReadTest() {
         val inputStream = javaClass.classLoader.getResourceAsStream("compatibilityData/v3/node_transaction.dat")
         assertNotNull(inputStream)
 

@@ -37,8 +37,8 @@ class CustomSerializerRegistryTests {
         }
     }
 
-    @Test
-    fun `a custom serializer cannot register to serialize a type already annotated with CordaSerializable`() {
+    @Test(timeout=300_000)
+	fun `a custom serializer cannot register to serialize a type already annotated with CordaSerializable`() {
         val serializerForEverything = TestCustomSerializer("a") { true }
         unit.register(serializerForEverything)
 
@@ -55,8 +55,8 @@ class CustomSerializerRegistryTests {
         }
     }
 
-    @Test
-    fun `exception types can have custom serializers`() {
+    @Test(timeout=300_000)
+	fun `exception types can have custom serializers`() {
         @CordaSerializable
         class MyCustomException : CordaException("Custom exception annotated with @CordaSerializable")
 
@@ -68,8 +68,8 @@ class CustomSerializerRegistryTests {
                 unit.find(MyCustomException::class.java))
     }
 
-    @Test
-    fun `two custom serializers cannot register to serialize the same type`() {
+    @Test(timeout=300_000)
+	fun `two custom serializers cannot register to serialize the same type`() {
         val weSerializeCash = TestCustomSerializer("a") { type -> type == Cash::class.java }
         val weMaliciouslySerializeCash = TestCustomSerializer("b") { type -> type == Cash::class.java }
 
@@ -83,8 +83,8 @@ class CustomSerializerRegistryTests {
         }
     }
 
-    @Test
-    fun `primitive types cannot have custom serializers`() {
+    @Test(timeout=300_000)
+	fun `primitive types cannot have custom serializers`() {
         unit.register(TestCustomSerializer("a") { type -> type == Float::class.java })
 
         assertFailsWith<IllegalCustomSerializerException> {
