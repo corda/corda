@@ -36,7 +36,6 @@ fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Clas
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
-        .disableDirScanning()
         .enableClassInfo()
         .pooledScan()
         .use { result ->
