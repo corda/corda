@@ -7,33 +7,33 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
-import java.time.OffsetTime
+import java.time.Duration
 import java.util.function.Function
 
 @ExtendWith(LocalSerialization::class)
-class DeserializeOffsetTimeTest : TestBase(KOTLIN) {
+class DeserializeDurationTest : TestBase(KOTLIN) {
     @Test
-	fun `test deserializing offset time`() {
-        val time = OffsetTime.now()
-        val data = time.serialize()
+    fun `test deserializing duration`() {
+        val duration = Duration.ofSeconds(12345, 6789)
+        val data = duration.serialize()
 
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
 
-            val sandboxTime = data.deserializeFor(classLoader)
+            val sandboxDuration = data.deserializeFor(classLoader)
 
             val taskFactory = classLoader.createRawTaskFactory()
-            val showOffsetTime = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowOffsetTime::class.java)
-            val result = showOffsetTime.apply(sandboxTime) ?: fail("Result cannot be null")
+            val showDuration = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowDuration::class.java)
+            val result = showDuration.apply(sandboxDuration) ?: fail("Result cannot be null")
 
-            assertEquals(time.toString(), result.toString())
+            assertEquals(duration.toString(), result.toString())
             assertEquals(SANDBOX_STRING, result::class.java.name)
         }
     }
 
-    class ShowOffsetTime : Function<OffsetTime, String> {
-        override fun apply(time: OffsetTime): String {
-            return time.toString()
+    class ShowDuration : Function<Duration, String> {
+        override fun apply(duration: Duration): String {
+            return duration.toString()
         }
     }
 }
