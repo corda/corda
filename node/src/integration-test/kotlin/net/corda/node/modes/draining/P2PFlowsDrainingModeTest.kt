@@ -50,8 +50,8 @@ class P2PFlowsDrainingModeTest {
         executor!!.shutdown()
     }
 
-    @Test
-    fun `flows draining mode suspends consumption of initial session messages`() {
+    @Test(timeout=300_000)
+	fun `flows draining mode suspends consumption of initial session messages`() {
         driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
             val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
             val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
@@ -80,8 +80,8 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    @Test
-    fun `terminate node waiting for pending flows`() {
+    @Test(timeout=300_000)
+	fun `terminate node waiting for pending flows`() {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
@@ -104,8 +104,8 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    @Test
-    fun `terminate resets persistent draining mode property when waiting for pending flows`() {
+    @Test(timeout=300_000)
+	fun `terminate resets persistent draining mode property when waiting for pending flows`() {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
@@ -128,8 +128,8 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    @Test
-    fun `disabling draining mode cancels draining shutdown`() {
+    @Test(timeout=300_000)
+	fun `disabling draining mode cancels draining shutdown`() {
 
         driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 

@@ -36,8 +36,8 @@ class DumpCheckpointsTest {
         private val flowProceedLatch = CountUpDownLatch(1)
     }
 
-    @Test
-    fun `verify checkpoint dump via RPC`() {
+    @Test(timeout=300_000)
+	fun `verify checkpoint dump via RPC`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
 

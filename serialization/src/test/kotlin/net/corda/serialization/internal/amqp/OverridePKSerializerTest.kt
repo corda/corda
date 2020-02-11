@@ -56,8 +56,8 @@ class OverridePKSerializerTest {
         }
     }
 
-    @Test
-    fun `test publicKeySerializer is overridden`() {
+    @Test(timeout=300_000)
+	fun `test publicKeySerializer is overridden`() {
         val scheme = AMQPTestSerializationScheme()
         val key = TestPublicKey()
 

@@ -66,8 +66,8 @@ class ResolveStatePointersTest {
         services = databaseAndServices.second
     }
 
-    @Test
-    fun `resolve linear pointers and check reference state is not added to transaction when isResolved is false`() {
+    @Test(timeout=300_000)
+	fun `resolve linear pointers and check reference state is not added to transaction when isResolved is false`() {
         val stateAndRef = createPointedToState(barOne)
         val linearId = stateAndRef.state.data.linearId
 
@@ -86,8 +86,8 @@ class ResolveStatePointersTest {
         assertEquals(emptyList(), ltx.referenceStates)
     }
 
-    @Test
-    fun `resolve linear pointers and check reference state is added to transaction when isResolved is true`() {
+    @Test(timeout=300_000)
+	fun `resolve linear pointers and check reference state is added to transaction when isResolved is true`() {
         val stateAndRef = createPointedToState(barOne)
         val linearId = stateAndRef.state.data.linearId
 
@@ -106,8 +106,8 @@ class ResolveStatePointersTest {
         assertEquals(barOne, ltx.referenceStates.single())
     }
 
-    @Test
-    fun `resolve static pointers and check reference state is not added to transaction when isResolved is false`() {
+    @Test(timeout=300_000)
+	fun `resolve static pointers and check reference state is not added to transaction when isResolved is false`() {
         val stateAndRef = createPointedToState(barOne)
         val stateRef = stateAndRef.ref
 
@@ -126,8 +126,8 @@ class ResolveStatePointersTest {
         assertEquals(emptyList(), ltx.referenceStates)
     }
 
-    @Test
-    fun `resolve static pointers and check reference state is added to transaction when isResolved is true`() {
+    @Test(timeout=300_000)
+	fun `resolve static pointers and check reference state is added to transaction when isResolved is true`() {
         val stateAndRef = createPointedToState(barOne)
         val stateRef = stateAndRef.ref
 
@@ -146,8 +146,8 @@ class ResolveStatePointersTest {
         assertEquals(barOne, ltx.referenceStates.single())
     }
 
-    @Test
-    fun `resolving nested pointers is possible`() {
+    @Test(timeout=300_000)
+	fun `resolving nested pointers is possible`() {
         // Create barOne.
         val barOneStateAndRef = createPointedToState(barOne)
 
@@ -170,8 +170,8 @@ class ResolveStatePointersTest {
         assertEquals(setOf(barOneStateAndRef.ref, barTwoStateAndRef.ref), tx.referenceStates().toSet())
     }
 
-    @Test
-    fun `Resolving to an unknown state throws an exception`() {
+    @Test(timeout=300_000)
+	fun `Resolving to an unknown state throws an exception`() {
         // Don't create the pointed to state.
         // Resolve the pointer for barTwo.
         assertFailsWith(IllegalStateException::class) {
@@ -179,8 +179,8 @@ class ResolveStatePointersTest {
         }
     }
 
-    @Test
-    fun `resolving an exited state throws an exception`() {
+    @Test(timeout=300_000)
+	fun `resolving an exited state throws an exception`() {
         // Create barOne.
         val stateAndRef = createPointedToState(barOne)
 
@@ -198,16 +198,16 @@ class ResolveStatePointersTest {
         }
     }
 
-    @Test
-    fun `resolve linear pointer with correct type`() {
+    @Test(timeout=300_000)
+	fun `resolve linear pointer with correct type`() {
         val stateAndRef = createPointedToState(barOne)
         val linearPointer = LinearPointer(stateAndRef.state.data.linearId, barOne::class.java)
         val resolvedPointer = linearPointer.resolve(services)
         assertEquals(stateAndRef::class.java, resolvedPointer::class.java)
     }
 
-    @Test
-    fun `resolve state pointer in ledger transaction`() {
+    @Test(timeout=300_000)
+	fun `resolve state pointer in ledger transaction`() {
         val stateAndRef = createPointedToState(barOne)
         val linearId = stateAndRef.state.data.linearId
 

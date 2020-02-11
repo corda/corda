@@ -28,7 +28,7 @@ class DeserializeWithObjectCustomSerializerTest: TestBase(KOTLIN) {
     val serialization = LocalSerialization(setOf(ObjectCustomSerializer), emptySet())
 
     @Test
-    fun `test deserializing custom object with object serializer`() {
+	fun `test deserializing custom object with object serializer`() {
         val custom = CustomData(MESSAGE)
         val data = custom.serialize()
 

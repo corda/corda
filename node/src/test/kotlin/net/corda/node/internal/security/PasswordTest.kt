@@ -8,8 +8,8 @@ import org.junit.Test
 
 internal class PasswordTest {
 
-    @Test
-    fun immutability() {
+    @Test(timeout=300_000)
+	fun immutability() {
 
         val charArray = "dadada".toCharArray()
         val password = Password(charArray)
@@ -23,8 +23,8 @@ internal class PasswordTest {
         assertThat(password.value, not(equalTo(value)))
     }
 
-    @Test
-    fun constructor_and_getters() {
+    @Test(timeout=300_000)
+	fun constructor_and_getters() {
 
         val value = "dadada"
 
@@ -35,8 +35,8 @@ internal class PasswordTest {
         assertThat(Password(value).valueAsString, equalTo(value))
     }
 
-    @Test
-    fun equals() {
+    @Test(timeout=300_000)
+	fun equals() {
 
         val passwordValue1 = Password("value1")
         val passwordValue2 = Password("value2")
@@ -51,8 +51,8 @@ internal class PasswordTest {
         assertThat(passwordValue12, equalTo(passwordValue1))
     }
 
-    @Test
-    fun hashcode() {
+    @Test(timeout=300_000)
+	fun hashcode() {
 
         val passwordValue1 = Password("value1")
         val passwordValue2 = Password("value2")
@@ -68,8 +68,8 @@ internal class PasswordTest {
         assertThat(passwordValue12.hashCode(), equalTo(passwordValue1.hashCode()))
     }
 
-    @Test
-    fun close() {
+    @Test(timeout=300_000)
+	fun close() {
 
         val value = "ipjd1@pijmps112112"
         val password = Password(value)
@@ -83,8 +83,8 @@ internal class PasswordTest {
         assertThat(readValue, not(equalTo(value)))
     }
 
-    @Test
-    fun toString_is_masked() {
+    @Test(timeout=300_000)
+	fun toString_is_masked() {
 
         val value = "ipjd1@pijmps112112"
         val password = Password(value)

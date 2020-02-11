@@ -107,8 +107,8 @@ class TutorialTestDSL {
     // DOCEND 3
 
     // DOCSTART 4
-    @Test
-    fun simpleCPMoveFails() {
+    @Test(timeout=300_000)
+	fun simpleCPMoveFails() {
         val inState = getPaper()
         ledgerServices.ledger(dummyNotary.party) {
             transaction {
@@ -122,8 +122,8 @@ class TutorialTestDSL {
     // DOCEND 4
 
     // DOCSTART 5
-    @Test
-    fun simpleCPMoveFailureAndSuccess() {
+    @Test(timeout=300_000)
+	fun simpleCPMoveFailureAndSuccess() {
         val inState = getPaper()
         ledgerServices.ledger(dummyNotary.party) {
             transaction {
@@ -139,8 +139,8 @@ class TutorialTestDSL {
     // DOCEND 5
 
     // DOCSTART 13
-    @Test
-    fun simpleCPMoveSuccess() {
+    @Test(timeout=300_000)
+	fun simpleCPMoveSuccess() {
         val inState = getPaper()
         ledgerServices.ledger(dummyNotary.party) {
             transaction {
@@ -156,8 +156,8 @@ class TutorialTestDSL {
     // DOCEND 13
 
     // DOCSTART 6
-    @Test
-    fun `simple issuance with tweak`() {
+    @Test(timeout=300_000)
+	fun `simple issuance with tweak`() {
         ledgerServices.ledger(dummyNotary.party) {
             transaction {
                 output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
@@ -177,8 +177,8 @@ class TutorialTestDSL {
     // DOCEND 6
 
     // DOCSTART 7
-    @Test
-    fun `simple issuance with tweak and top level transaction`() {
+    @Test(timeout=300_000)
+	fun `simple issuance with tweak and top level transaction`() {
         ledgerServices.transaction(dummyNotary.party) {
             output(CP_PROGRAM_ID, "paper", getPaper()) // Some CP is issued onto the ledger by MegaCorp.
             attachments(CP_PROGRAM_ID)
@@ -196,8 +196,8 @@ class TutorialTestDSL {
     // DOCEND 7
 
     // DOCSTART 8
-    @Test
-    fun `chain commercial paper`() {
+    @Test(timeout=300_000)
+	fun `chain commercial paper`() {
         val issuer = megaCorp.party.ref(123)
         ledgerServices.ledger(dummyNotary.party) {
             unverifiedTransaction {
@@ -229,8 +229,8 @@ class TutorialTestDSL {
     // DOCEND 8
 
     // DOCSTART 9
-    @Test
-    fun `chain commercial paper double spend`() {
+    @Test(timeout=300_000)
+	fun `chain commercial paper double spend`() {
         val issuer = megaCorp.party.ref(123)
         ledgerServices.ledger(dummyNotary.party) {
             unverifiedTransaction {
@@ -271,8 +271,8 @@ class TutorialTestDSL {
     // DOCEND 9
 
     // DOCSTART 10
-    @Test
-    fun `chain commercial tweak`() {
+    @Test(timeout=300_000)
+	fun `chain commercial tweak`() {
         val issuer = megaCorp.party.ref(123)
         ledgerServices.ledger(dummyNotary.party) {
             unverifiedTransaction {

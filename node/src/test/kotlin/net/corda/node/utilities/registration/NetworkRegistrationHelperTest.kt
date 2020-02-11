@@ -77,8 +77,8 @@ class NetworkRegistrationHelperTest {
         fs.close()
     }
 
-    @Test
-    fun `successful registration`() {
+    @Test(timeout=300_000)
+	fun `successful registration`() {
         assertThat(config.signingCertificateStore.getOptional()).isNull()
         assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
         assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
@@ -116,16 +116,16 @@ class NetworkRegistrationHelperTest {
         }
     }
 
-    @Test
-    fun `missing truststore`() {
+    @Test(timeout=300_000)
+	fun `missing truststore`() {
         val nodeCaCertPath = createNodeCaCertPath()
         assertThatThrownBy {
             createFixedResponseRegistrationHelper(nodeCaCertPath)
         }.hasMessageContaining("This file must contain the root CA cert of your compatibility zone. Please contact your CZ operator.")
     }
 
-    @Test
-    fun `node CA with incorrect cert role`() {
+    @Test(timeout=300_000)
+	fun `node CA with incorrect cert role`() {
         val nodeCaCertPath = createNodeCaCertPath(type = CertificateType.TLS)
         saveNetworkTrustStore(CORDA_ROOT_CA to nodeCaCertPath.last())
         val registrationHelper = createFixedResponseRegistrationHelper(nodeCaCertPath)
@@ -134,8 +134,8 @@ class NetworkRegistrationHelperTest {
                 .withMessageContaining(CertificateType.TLS.toString())
     }
 
-    @Test
-    fun `node CA with incorrect subject`() {
+    @Test(timeout=300_000)
+	fun `node CA with incorrect subject`() {
         val invalidName = CordaX500Name("Foo", "MU", "GB")
         val nodeCaCertPath = createNodeCaCertPath(legalName = invalidName)
         saveNetworkTrustStore(CORDA_ROOT_CA to nodeCaCertPath.last())
@@ -145,8 +145,8 @@ class NetworkRegistrationHelperTest {
                 .withMessageContaining(invalidName.toString())
     }
 
-    @Test
-    fun `multiple certificates are copied to the node's trust store`() {
+    @Test(timeout=300_000)
+	fun `multiple certificates are copied to the node's trust store`() {
         val extraTrustedCertAlias = "trusted_test"
         val extraTrustedCert = createSelfSignedCACertificate(
                 X500Principal("O=Test Trusted CA,L=MU,C=GB"),
@@ -165,8 +165,8 @@ class NetworkRegistrationHelperTest {
         }
     }
 
-    @Test
-    fun `wrong root cert in truststore`() {
+    @Test(timeout=300_000)
+	fun `wrong root cert in truststore`() {
         val wrongRootCert = createSelfSignedCACertificate(
                 X500Principal("O=Foo,L=MU,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
@@ -178,8 +178,8 @@ class NetworkRegistrationHelperTest {
         }.isInstanceOf(CertPathValidatorException::class.java)
     }
 
-    @Test
-    fun `create service identity cert`() {
+    @Test(timeout=300_000)
+	fun `create service identity cert`() {
         assertThat(config.signingCertificateStore.getOptional()).isNull()
         assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
         assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()

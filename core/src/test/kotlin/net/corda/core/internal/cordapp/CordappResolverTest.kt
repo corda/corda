@@ -16,8 +16,8 @@ class CordappResolverTest {
         CordappResolver.clear()
     }
 
-    @Test
-    fun `the correct cordapp resolver is used after calling withCordappInfo`() {
+    @Test(timeout=300_000)
+	fun `the correct cordapp resolver is used after calling withCordappInfo`() {
         val defaultTargetVersion = 222
 
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
@@ -35,8 +35,8 @@ class CordappResolverTest {
         assertEquals(defaultTargetVersion, CordappResolver.currentTargetVersion)
     }
 
-    @Test
-    fun `when the same cordapp is registered for the same class multiple times, the resolver deduplicates and returns it as the current one`() {
+    @Test(timeout=300_000)
+	fun `when the same cordapp is registered for the same class multiple times, the resolver deduplicates and returns it as the current one`() {
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
@@ -50,8 +50,8 @@ class CordappResolverTest {
         assertThat(CordappResolver.currentCordapp).isNotNull()
     }
 
-    @Test
-    fun `when different cordapps are registered for the same (non-contract) class, the resolver returns null`() {
+    @Test(timeout=300_000)
+	fun `when different cordapps are registered for the same (non-contract) class, the resolver returns null`() {
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf("ContractClass1"),
                 minimumPlatformVersion = 3,
@@ -67,8 +67,8 @@ class CordappResolverTest {
         assertThat(CordappResolver.currentCordapp).isNull()
     }
 
-    @Test
-    fun `when different cordapps are registered for the same (contract) class, the resolver throws an exception`() {
+    @Test(timeout=300_000)
+	fun `when different cordapps are registered for the same (contract) class, the resolver throws an exception`() {
         val firstCordapp = CordappImpl.TEST_INSTANCE.copy(
             contractClassNames = listOf(javaClass.name),
             minimumPlatformVersion = 3,

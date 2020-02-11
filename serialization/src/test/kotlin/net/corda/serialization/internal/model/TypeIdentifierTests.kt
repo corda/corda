@@ -8,22 +8,22 @@ import kotlin.test.assertEquals
 
 class TypeIdentifierTests {
 
-    @Test
-    fun `primitive types and arrays`() {
+    @Test(timeout=300_000)
+	fun `primitive types and arrays`() {
         assertIdentified(Int::class.javaPrimitiveType!!, "int")
         assertIdentified<Int>("Integer")
         assertIdentified<IntArray>("int[]")
         assertIdentified<Array<Int>>("Integer[]")
     }
 
-    @Test
-    fun `erased and unerased`() {
+    @Test(timeout=300_000)
+	fun `erased and unerased`() {
         assertIdentified(List::class.java, "List (erased)")
         assertIdentified<List<Int>>("List<Integer>")
     }
 
-    @Test
-    fun `nested parameterised`() {
+    @Test(timeout=300_000)
+	fun `nested parameterised`() {
         assertIdentified<List<List<Int>>>("List<List<Integer>>")
     }
 
@@ -33,8 +33,8 @@ class TypeIdentifierTests {
 
     class HasStringArray(override val array: Array<out List<String>>): HasArray<String>
 
-    @Test
-    fun `resolved against an owning type`() {
+    @Test(timeout=300_000)
+	fun `resolved against an owning type`() {
         val fieldType = HasArray::class.java.getDeclaredMethod("getArray").genericReturnType
         assertIdentified(fieldType, "List<*>[]")
 
@@ -43,8 +43,8 @@ class TypeIdentifierTests {
                 TypeIdentifier.forGenericType(fieldType, HasStringArray::class.java).prettyPrint())
     }
 
-    @Test
-    fun `roundtrip`() {
+    @Test(timeout=300_000)
+	fun `roundtrip`() {
         assertRoundtrips(Int::class.javaPrimitiveType!!)
         assertRoundtrips<Int>()
         assertRoundtrips<IntArray>()

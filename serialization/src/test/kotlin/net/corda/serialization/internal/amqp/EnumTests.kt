@@ -73,8 +73,8 @@ class EnumTests {
 
     private val sf1 = testDefaultFactoryNoEvolution()
 
-    @Test
-    fun serialiseSimpleTest() {
+    @Test(timeout=300_000)
+	fun serialiseSimpleTest() {
         data class C(val c: Bras)
 
         val schema = TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(C(Bras.UNDERWIRE)).schema
@@ -97,8 +97,8 @@ class EnumTests {
         }
     }
 
-    @Test
-    fun deserialiseSimpleTest() {
+    @Test(timeout=300_000)
+	fun deserialiseSimpleTest() {
         data class C(val c: Bras)
 
         val objAndEnvelope = DeserializationInput(sf1).deserializeAndReturnEnvelope(
@@ -125,8 +125,8 @@ class EnumTests {
         assertEquals(obj.c, Bras.UNDERWIRE)
     }
 
-    @Test
-    fun multiEnum() {
+    @Test(timeout=300_000)
+	fun multiEnum() {
         data class Support(val top: Bras, val day: DayOfWeek)
         data class WeeklySupport(val tops: List<Support>)
 
@@ -145,8 +145,8 @@ class EnumTests {
         assertEquals(week.tops[2].day, obj.tops[2].day)
     }
 
-    @Test
-    fun enumWithInit() {
+    @Test(timeout=300_000)
+	fun enumWithInit() {
         data class C(val c: BrasWithInit)
 
         val c = C(BrasWithInit.PUSHUP)
@@ -196,8 +196,8 @@ class EnumTests {
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
     }
 
-    @Test
-    fun enumNotWhitelistedFails() {
+    @Test(timeout=300_000)
+	fun enumNotWhitelistedFails() {
         data class C(val c: Bras)
 
         class WL(val allowed: String) : ClassWhitelist {
@@ -216,8 +216,8 @@ class EnumTests {
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
-    @Test
-    fun enumWhitelisted() {
+    @Test(timeout=300_000)
+	fun enumWhitelisted() {
         data class C(val c: Bras)
 
         class WL : ClassWhitelist {
@@ -236,8 +236,8 @@ class EnumTests {
         TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
     }
 
-    @Test
-    fun enumAnnotated() {
+    @Test(timeout=300_000)
+	fun enumAnnotated() {
         @CordaSerializable data class C(val c: AnnotatedBras)
 
         class WL : ClassWhitelist {
@@ -253,8 +253,8 @@ class EnumTests {
         TestSerializationOutput(VERBOSE, factory).serialize(C(AnnotatedBras.UNDERWIRE))
     }
 
-    @Test
-    fun deserializeNonWhitlistedEnum() {
+    @Test(timeout=300_000)
+	fun deserializeNonWhitlistedEnum() {
         data class C(val c: Bras)
 
         class WL(val allowed: List<String>) : ClassWhitelist {

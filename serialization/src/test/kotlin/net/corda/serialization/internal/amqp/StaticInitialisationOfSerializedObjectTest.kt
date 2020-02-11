@@ -46,8 +46,8 @@ class StaticInitialisationOfSerializedObjectTest {
     }
 
     @Ignore("Suppressing this, as it depends on obtaining internal access to serialiser cache")
-    @Test
-    fun kotlinObjectWithCompanionObject() {
+    @Test(timeout=300_000)
+	fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)
 
         val sf = SerializerFactoryBuilder.build(AllWhitelist,
@@ -72,8 +72,8 @@ class StaticInitialisationOfSerializedObjectTest {
         assertEquals(2, serialisersByType.size)
     }
 
-    @Test
-    fun deserializeTest() {
+    @Test(timeout=300_000)
+	fun deserializeTest() {
         data class D(val c: C2)
 
         val url = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
@@ -108,8 +108,8 @@ class StaticInitialisationOfSerializedObjectTest {
             SerializerFactoryBuilder.build(wl1, ClassCarpenterImpl(wl2, ClassLoader.getSystemClassLoader()))
 
     // This time have the serialization factory and the carpenter use different whitelists
-    @Test
-    fun deserializeTest2() {
+    @Test(timeout=300_000)
+	fun deserializeTest2() {
         data class D(val c: C2)
 
         val url = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")

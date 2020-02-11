@@ -32,8 +32,8 @@ class RpcSslTest {
 
     private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
-    @Test
-    fun `RPC client using ssl is able to run a command`() {
+    @Test(timeout=300_000)
+	fun `RPC client using ssl is able to run a command`() {
         val user = User("mark", "dadada", setOf(all()))
         var successfulLogin = false
         var failedLogin = false
@@ -70,8 +70,8 @@ class RpcSslTest {
         assertThat(failedLogin).isFalse()
     }
 
-    @Test
-    fun `RPC client using ssl will fail if connecting to a node that cannot present a matching certificate`() {
+    @Test(timeout=300_000)
+	fun `RPC client using ssl will fail if connecting to a node that cannot present a matching certificate`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
 
@@ -99,8 +99,8 @@ class RpcSslTest {
         assertThat(successful).isFalse()
     }
 
-    @Test
-    fun `RPC client not using ssl can run commands`() {
+    @Test(timeout=300_000)
+	fun `RPC client not using ssl can run commands`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
@@ -115,8 +115,8 @@ class RpcSslTest {
         assertThat(successful).isTrue()
     }
 
-    @Test
-    fun `The system RPC user can not connect to the rpc broker without the node's key`() {
+    @Test(timeout=300_000)
+	fun `The system RPC user can not connect to the rpc broker without the node's key`() {
         val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")

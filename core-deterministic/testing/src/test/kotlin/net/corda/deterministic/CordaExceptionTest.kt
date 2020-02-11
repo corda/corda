@@ -35,33 +35,33 @@ class CordaExceptionTest {
         val BOB = Party(BOB_NAME, BOB_KEY)
     }
 
-    @Test
-    fun testCordaException() {
+    @Test(timeout=300_000)
+	fun testCordaException() {
         val ex = assertFailsWith<CordaException> { throw CordaException("BAD THING") }
         assertEquals("BAD THING", ex.message)
     }
 
-    @Test
-    fun testAttachmentResolutionException() {
+    @Test(timeout=300_000)
+	fun testAttachmentResolutionException() {
         val ex = assertFailsWith<AttachmentResolutionException> { throw AttachmentResolutionException(TEST_HASH) }
         assertEquals(TEST_HASH, ex.hash)
     }
 
-    @Test
-    fun testTransactionResolutionException() {
+    @Test(timeout=300_000)
+	fun testTransactionResolutionException() {
         val ex = assertFailsWith<TransactionResolutionException> { throw TransactionResolutionException(TEST_HASH) }
         assertEquals(TEST_HASH, ex.hash)
     }
 
-    @Test
-    fun testConflictingAttachmentsRejection() {
+    @Test(timeout=300_000)
+	fun testConflictingAttachmentsRejection() {
         val ex = assertFailsWith<ConflictingAttachmentsRejection> { throw ConflictingAttachmentsRejection(TX_ID, CONTRACT_CLASS) }
         assertEquals(TX_ID, ex.txId)
         assertEquals(CONTRACT_CLASS, ex.contractClass)
     }
 
-    @Test
-    fun testNotaryChangeInWrongTransactionType() {
+    @Test(timeout=300_000)
+	fun testNotaryChangeInWrongTransactionType() {
         val ex = assertFailsWith<NotaryChangeInWrongTransactionType> { throw NotaryChangeInWrongTransactionType(TX_ID, ALICE, BOB) }
         assertEquals(TX_ID, ex.txId)
         assertEquals(ALICE, ex.txNotary)

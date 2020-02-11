@@ -19,8 +19,8 @@ internal class NodeLifecycleEventsDistributorMultiThreadedTest {
 
     private val eventsDeliveredCounter = AtomicLong()
 
-    @Test
-    fun addAndDistributeConcurrently() {
+    @Test(timeout=300_000)
+	fun addAndDistributeConcurrently() {
 
         NodeLifecycleEventsDistributor().use { instance ->
 

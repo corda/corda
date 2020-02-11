@@ -92,8 +92,8 @@ class StandaloneCordaRPClientTest {
     }
 
 
-    @Test
-    fun `test attachments`() {
+    @Test(timeout=300_000)
+	fun `test attachments`() {
         val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = attachment.inputStream.use { rpcProxy.uploadAttachment(it) }
@@ -107,8 +107,8 @@ class StandaloneCordaRPClientTest {
     }
 
     @Ignore("CORDA-1520 - After switching from Kryo to AMQP this test won't work")
-    @Test
-    fun `test wrapped attachments`() {
+    @Test(timeout=300_000)
+	fun `test wrapped attachments`() {
         val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
@@ -121,14 +121,14 @@ class StandaloneCordaRPClientTest {
         assertEquals(attachment.sha256, hash)
     }
 
-    @Test
-    fun `test starting flow`() {
+    @Test(timeout=300_000)
+	fun `test starting flow`() {
         rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
                 .returnValue.getOrThrow(timeout)
     }
 
-    @Test
-    fun `test starting tracked flow`() {
+    @Test(timeout=300_000)
+	fun `test starting tracked flow`() {
         var trackCount = 0
         val handle = rpcProxy.startTrackedFlow(
                 ::CashIssueFlow, 429.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity
@@ -144,13 +144,13 @@ class StandaloneCordaRPClientTest {
         assertNotEquals(0, trackCount)
     }
 
-    @Test
-    fun `test network map`() {
+    @Test(timeout=300_000)
+	fun `test network map`() {
         assertEquals(notaryConfig.legalName, notaryNodeIdentity.name)
     }
 
-    @Test
-    fun `test state machines`() {
+    @Test(timeout=300_000)
+	fun `test state machines`() {
         val (stateMachines, updates) = rpcProxy.stateMachinesFeed()
         assertEquals(0, stateMachines.size)
 
@@ -171,8 +171,8 @@ class StandaloneCordaRPClientTest {
         assertEquals(1, updateCount.get())
     }
 
-    @Test
-    fun `test vault track by`() {
+    @Test(timeout=300_000)
+	fun `test vault track by`() {
         val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>(paging = PageSpecification(DEFAULT_PAGE_NUM))
         assertEquals(0, vault.totalStatesAvailable)
 
@@ -194,8 +194,8 @@ class StandaloneCordaRPClientTest {
         assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
     }
 
-    @Test
-    fun `test vault query by`() {
+    @Test(timeout=300_000)
+	fun `test vault query by`() {
         // Now issue some cash
         rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNodeIdentity)
                 .returnValue.getOrThrow(timeout)
@@ -220,8 +220,8 @@ class StandaloneCordaRPClientTest {
         assertEquals(629.POUNDS, cashBalances[Currency.getInstance("GBP")])
     }
 
-    @Test
-    fun `test cash balances`() {
+    @Test(timeout=300_000)
+	fun `test cash balances`() {
         val startCash = rpcProxy.getCashBalances()
         println(startCash)
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
@@ -235,8 +235,8 @@ class StandaloneCordaRPClientTest {
         assertEquals(629.DOLLARS, balance)
     }
 
-    @Test
-    fun `test kill flow without killFlow permission`() {
+    @Test(timeout=300_000)
+	fun `test kill flow without killFlow permission`() {
         exception.expect(PermissionException::class.java)
         exception.expectMessage("User not authorized to perform RPC call killFlow")
 
@@ -247,8 +247,8 @@ class StandaloneCordaRPClientTest {
         }
     }
 
-    @Test
-    fun `test kill flow with killFlow permission`() {
+    @Test(timeout=300_000)
+	fun `test kill flow with killFlow permission`() {
         val flowHandle = rpcProxy.startFlow(::CashIssueFlow, 83.DOLLARS, OpaqueBytes.of(0), notaryNodeIdentity)
         notary.connect(rpcUser).use { connection ->
             val rpcProxy = connection.proxy

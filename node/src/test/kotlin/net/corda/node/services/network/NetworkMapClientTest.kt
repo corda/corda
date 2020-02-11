@@ -51,8 +51,8 @@ class NetworkMapClientTest {
         server.close()
     }
 
-    @Test
-    fun `registered node is added to the network map`() {
+    @Test(timeout=300_000)
+	fun `registered node is added to the network map`() {
         val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         networkMapClient.publish(signedNodeInfo)
@@ -72,8 +72,8 @@ class NetworkMapClientTest {
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
     }
 
-    @Test
-    fun `negative test - registered invalid node is added to the network map`() {
+    @Test(timeout=300_000)
+	fun `negative test - registered invalid node is added to the network map`() {
         val invalidLongNodeName = CordaX500Name(
                 commonName = "AB123456789012345678901234567890123456789012345678901234567890",
                 organisationUnit = "AB123456789012345678901234567890123456789012345678901234567890",
@@ -92,8 +92,8 @@ class NetworkMapClientTest {
         assertEquals(nodeInfo, networkMapClient.getNodeInfo(nodeInfoHash))
     }
 
-    @Test
-    fun `errors return a meaningful error message`() {
+    @Test(timeout=300_000)
+	fun `errors return a meaningful error message`() {
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         nodeInfoBuilder.addLegalIdentity(BOB_NAME)
@@ -105,21 +105,21 @@ class NetworkMapClientTest {
                 .hasMessage("Response Code 403: Missing signatures. Found 1 expected 2")
     }
 
-    @Test
-    fun `download NetworkParameters correctly`() {
+    @Test(timeout=300_000)
+	fun `download NetworkParameters correctly`() {
         // The test server returns same network parameter for any hash.
         val parametersHash = server.networkParameters.serialize().hash
         val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
         assertEquals(server.networkParameters, networkParameters)
     }
 
-    @Test
-    fun `get hostname string from http response correctly`() {
+    @Test(timeout=300_000)
+	fun `get hostname string from http response correctly`() {
         assertEquals("test.host.name", networkMapClient.myPublicHostname())
     }
 
-    @Test
-    fun `handle parameters update`() {
+    @Test(timeout=300_000)
+	fun `handle parameters update`() {
         val nextParameters = testNetworkParameters(epoch = 2)
         val originalNetworkParameterHash = server.networkParameters.serialize().hash
         val nextNetworkParameterHash = nextParameters.serialize().hash

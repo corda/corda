@@ -101,16 +101,16 @@ class ArtemisMessagingTest {
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
-    @Test
-    fun `server starting with the port already bound should throw`() {
+    @Test(timeout=300_000)
+	fun `server starting with the port already bound should throw`() {
         ServerSocket(serverPort).use {
             val messagingServer = createMessagingServer()
             assertThatThrownBy { messagingServer.start() }
         }
     }
 
-    @Test
-    fun `client should connect to remote server`() {
+    @Test(timeout=300_000)
+	fun `client should connect to remote server`() {
         val remoteServerAddress = portAllocation.nextHostAndPort()
 
         createMessagingServer(remoteServerAddress.port).start()
@@ -118,8 +118,8 @@ class ArtemisMessagingTest {
         startNodeMessagingClient()
     }
 
-    @Test
-    fun `client should throw if remote server not found`() {
+    @Test(timeout=300_000)
+	fun `client should throw if remote server not found`() {
         val serverAddress = portAllocation.nextHostAndPort()
         val invalidServerAddress = portAllocation.nextHostAndPort()
 
@@ -130,15 +130,15 @@ class ArtemisMessagingTest {
         messagingClient = null
     }
 
-    @Test
-    fun `client should connect to local server`() {
+    @Test(timeout=300_000)
+	fun `client should connect to local server`() {
         createMessagingServer().start()
         createMessagingClient()
         startNodeMessagingClient()
     }
 
-    @Test
-    fun `client should be able to send message to itself`() {
+    @Test(timeout=300_000)
+	fun `client should be able to send message to itself`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
@@ -148,8 +148,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test
-    fun `client should fail if message exceed maxMessageSize limit`() {
+    @Test(timeout=300_000)
+	fun `client should fail if message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
         messagingClient.send(message, messagingClient.myAddress)
@@ -167,8 +167,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test
-    fun `server should not process if incoming message exceed maxMessageSize limit`() {
+    @Test(timeout=300_000)
+	fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
         messagingClient.send(message, messagingClient.myAddress)
@@ -184,8 +184,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test
-    fun `platform version is included in the message`() {
+    @Test(timeout=300_000)
+	fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)

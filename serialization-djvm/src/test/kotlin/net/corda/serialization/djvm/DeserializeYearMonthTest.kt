@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeYearMonthTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing year-month`() {
+	fun `test deserializing year-month`() {
         val yearMonth = YearMonth.now()
         val data = yearMonth.serialize()
 

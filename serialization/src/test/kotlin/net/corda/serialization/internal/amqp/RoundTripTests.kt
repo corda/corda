@@ -23,8 +23,8 @@ import kotlin.test.assertEquals
 
 class RoundTripTests {
 
-    @Test
-    fun mutableBecomesImmutable() {
+    @Test(timeout=300_000)
+	fun mutableBecomesImmutable() {
         data class C(val l: MutableList<String>)
 
         val factory = testDefaultFactoryNoEvolution()
@@ -36,8 +36,8 @@ class RoundTripTests {
         }.isInstanceOf(UnsupportedOperationException::class.java)
     }
 
-    @Test
-    fun mutableStillMutable() {
+    @Test(timeout=300_000)
+	fun mutableStillMutable() {
         class C(l: MutableList<String>) {
             val l: MutableList<String> = l.toMutableList()
         }
@@ -50,8 +50,8 @@ class RoundTripTests {
         assertThat(newC.l).containsExactly("a", "b", "c", "d")
     }
 
-    @Test
-    fun mutableStillMutable2() {
+    @Test(timeout=300_000)
+	fun mutableStillMutable2() {
         data class C(val l: MutableList<String>) {
             @ConstructorForDeserialization
             @Suppress("Unused")
@@ -66,8 +66,8 @@ class RoundTripTests {
         assertThat(newC.l).containsExactly("a", "b", "c", "d")
     }
 
-    @Test
-    fun mutableBecomesImmutable4() {
+    @Test(timeout=300_000)
+	fun mutableBecomesImmutable4() {
         data class C(val l: List<String>)
 
         val factory = testDefaultFactoryNoEvolution()
@@ -76,8 +76,8 @@ class RoundTripTests {
         newC.copy(l = (newC.l + "d"))
     }
 
-    @Test
-    fun calculatedValues() {
+    @Test(timeout=300_000)
+	fun calculatedValues() {
         data class C(val i: Int) {
             @get:SerializableCalculatedProperty
             val squared = i * i
@@ -89,8 +89,8 @@ class RoundTripTests {
         assertThat(deserialized.squared).isEqualTo(4)
     }
 
-    @Test
-    fun calculatedFunction() {
+    @Test(timeout=300_000)
+	fun calculatedFunction() {
         class C {
             var i: Int = 0
             @SerializableCalculatedProperty
@@ -109,8 +109,8 @@ class RoundTripTests {
         val squared: Int
     }
 
-    @Test
-    fun inheritedCalculatedFunction() {
+    @Test(timeout=300_000)
+	fun inheritedCalculatedFunction() {
         class C: I {
             var i: Int = 0
             override val squared get() = i * i
@@ -123,8 +123,8 @@ class RoundTripTests {
         assertThat(deserialized.squared).isEqualTo(4)
     }
 
-    @Test
-    fun inheritedCalculatedFunctionIsNotCalculated() {
+    @Test(timeout=300_000)
+	fun inheritedCalculatedFunctionIsNotCalculated() {
         class C(override val squared: Int): I
 
         val instance = C(2)
@@ -141,8 +141,8 @@ class RoundTripTests {
 
     data class OnMembershipChanged(val changedMembership : StateAndRef<MembershipState<Any>>)
 
-    @Test
-    fun canSerializeClassesWithUntypedProperties() {
+    @Test(timeout=300_000)
+	fun canSerializeClassesWithUntypedProperties() {
         val data = MembershipState<Any>(mapOf("foo" to "bar"))
         val party = Party(
                 CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
@@ -170,8 +170,8 @@ class RoundTripTests {
 
     data class C<A, B : A>(override val t: B) : I2<B>
 
-    @Test
-    fun recursiveTypeVariableResolution() {
+    @Test(timeout=300_000)
+	fun recursiveTypeVariableResolution() {
         val factory = testDefaultFactoryNoEvolution()
         val instance = C<Collection<String>, List<String>>(emptyList())
 

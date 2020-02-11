@@ -18,8 +18,8 @@ class InternalMockNetworkIntegrationTests {
         }
     }
 
-    @Test
-    fun `does not leak non-daemon threads`() {
+    @Test(timeout=300_000)
+	fun `does not leak non-daemon threads`() {
         val quasar = projectRootDir / "lib" / "quasar.jar"
         assertEquals(0, startJavaProcess<InternalMockNetworkIntegrationTests>(emptyList(), extraJvmArguments = listOf("-javaagent:$quasar")).waitFor())
     }

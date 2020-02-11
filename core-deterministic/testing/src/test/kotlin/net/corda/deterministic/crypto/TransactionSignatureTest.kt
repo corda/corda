@@ -30,8 +30,8 @@ class TransactionSignatureTest {
     }
 
     /** Valid sign and verify. */
-    @Test
-    fun `Signature metadata full sign and verify`() {
+    @Test(timeout=300_000)
+	fun `Signature metadata full sign and verify`() {
         // Create a SignableData object.
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
 
@@ -57,8 +57,8 @@ class TransactionSignatureTest {
         Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
     }
 
-    @Test
-    fun `Verify multi-tx signature`() {
+    @Test(timeout=300_000)
+	fun `Verify multi-tx signature`() {
         // Deterministically create 5 txIds.
         val txIds: List<SecureHash> = IntRange(0, 4).map { byteArrayOf(it.toByte()).sha256() }
         // Multi-tx signature.
@@ -103,8 +103,8 @@ class TransactionSignatureTest {
         }
     }
 
-    @Test
-    fun `Verify one-tx signature`() {
+    @Test(timeout=300_000)
+	fun `Verify one-tx signature`() {
         val txId = "aTransaction".toByteArray().sha256()
         // One-tx signature.
         val txSignature = try {

@@ -63,8 +63,8 @@ class TransactionBuilderTest {
                 .getLatestContractAttachments("net.corda.testing.contracts.DummyContract")
     }
 
-    @Test
-    fun `bare minimum issuance tx`() {
+    @Test(timeout=300_000)
+	fun `bare minimum issuance tx`() {
         val outputState = TransactionState(
                 data = DummyState(),
                 contract = DummyContract.PROGRAM_ID,
@@ -80,8 +80,8 @@ class TransactionBuilderTest {
         assertThat(wtx.networkParametersHash).isEqualTo(networkParametersService.currentHash)
     }
 
-    @Test
-    fun `automatic hash constraint`() {
+    @Test(timeout=300_000)
+	fun `automatic hash constraint`() {
         doReturn(unsignedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
@@ -92,8 +92,8 @@ class TransactionBuilderTest {
         assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = HashAttachmentConstraint(contractAttachmentId)))
     }
 
-    @Test
-    fun `reference states`() {
+    @Test(timeout=300_000)
+	fun `reference states`() {
         doReturn(unsignedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
         val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
@@ -114,8 +114,8 @@ class TransactionBuilderTest {
         assertThat(wtx.references).containsOnly(referenceStateRef)
     }
 
-    @Test
-    fun `automatic signature constraint`() {
+    @Test(timeout=300_000)
+	fun `automatic signature constraint`() {
         val aliceParty = TestIdentity(ALICE_NAME).party
         val bobParty = TestIdentity(BOB_NAME).party
         val compositeKey = CompositeKey.Builder().addKeys(aliceParty.owningKey, bobParty.owningKey).build()

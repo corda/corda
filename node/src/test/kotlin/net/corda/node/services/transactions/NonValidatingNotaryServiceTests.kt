@@ -61,8 +61,8 @@ class NonValidatingNotaryServiceTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `should sign a unique transaction with a valid time-window`() {
+    @Test(timeout=300_000)
+	fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
             val input = issueState(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
@@ -77,8 +77,8 @@ class NonValidatingNotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test
-    fun `should sign a unique transaction without a time-window`() {
+    @Test(timeout=300_000)
+	fun `should sign a unique transaction without a time-window`() {
         val stx = run {
             val inputStates = issueStates(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
@@ -93,8 +93,8 @@ class NonValidatingNotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test
-    fun `should re-sign a transaction with an expired time-window`() {
+    @Test(timeout=300_000)
+	fun `should re-sign a transaction with an expired time-window`() {
         val stx = run {
             val inputState = issueState(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
@@ -117,8 +117,8 @@ class NonValidatingNotaryServiceTests {
         assertEquals(sig2.by, notary.owningKey)
     }
 
-    @Test
-    fun `should report error for transaction with an invalid time-window`() {
+    @Test(timeout=300_000)
+	fun `should report error for transaction with an invalid time-window`() {
         val stx = run {
             val inputState = issueState(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
@@ -134,8 +134,8 @@ class NonValidatingNotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
-    @Test
-    fun `notarise issue tx with time-window`() {
+    @Test(timeout=300_000)
+	fun `notarise issue tx with time-window`() {
         val stx = run {
             val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
                         .setTimeWindow(Instant.now(), 30.seconds)
@@ -146,8 +146,8 @@ class NonValidatingNotaryServiceTests {
         assertEquals(sig.by, notary.owningKey)
     }
 
-    @Test
-    fun `should sign identical transaction multiple times (notarisation is idempotent)`() {
+    @Test(timeout=300_000)
+	fun `should sign identical transaction multiple times (notarisation is idempotent)`() {
         val stx = run {
             val inputState = issueState(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
@@ -175,8 +175,8 @@ class NonValidatingNotaryServiceTests {
         assertTrue(sig2.isValid(stx.id))
     }
 
-    @Test
-    fun `should report conflict when inputs are reused across transactions`() {
+    @Test(timeout=300_000)
+	fun `should report conflict when inputs are reused across transactions`() {
         val firstState = issueState(aliceNode.services, alice)
         val secondState = issueState(aliceNode.services, alice)
 
@@ -218,8 +218,8 @@ class NonValidatingNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `should reject when notarisation request not signed by the requesting party`() {
+    @Test(timeout=300_000)
+	fun `should reject when notarisation request not signed by the requesting party`() {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.coreTransaction
             val randomKeyPair = Crypto.generateKeyPair()
@@ -229,8 +229,8 @@ class NonValidatingNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `should reject when incorrect notarisation request signed - inputs don't match`() {
+    @Test(timeout=300_000)
+	fun `should reject when incorrect notarisation request signed - inputs don't match`() {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.coreTransaction
             val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
@@ -240,8 +240,8 @@ class NonValidatingNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `should reject when incorrect notarisation request signed - transaction id doesn't match`() {
+    @Test(timeout=300_000)
+	fun `should reject when incorrect notarisation request signed - transaction id doesn't match`() {
         runNotarisationAndInterceptClientPayload { originalPayload ->
             val transaction = originalPayload.coreTransaction
             val wrongTransactionId = SecureHash.randomSHA256()
@@ -251,8 +251,8 @@ class NonValidatingNotaryServiceTests {
         }
     }
 
-    @Test
-    fun `should reject a transaction with too many inputs`() {
+    @Test(timeout=300_000)
+	fun `should reject a transaction with too many inputs`() {
         NotaryServiceTests.notariseWithTooManyInputs(aliceNode, alice, notary, mockNet)
     }
 

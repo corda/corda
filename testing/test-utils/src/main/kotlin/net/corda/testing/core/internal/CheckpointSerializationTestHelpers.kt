@@ -59,7 +59,7 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
 
     private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
         try {
-            return env.asContextEnv(inheritable, task)
+            return env.asContextEnv(task)
         } finally {
             inVMExecutors.remove(env)
         }

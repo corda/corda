@@ -93,8 +93,8 @@ class AttachmentsClassLoaderStaticContractTests {
                 .getLatestContractAttachments(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)
     }
 
-    @Test
-    fun `test serialization of WireTransaction with statically loaded contract`() {
+    @Test(timeout=300_000)
+	fun `test serialization of WireTransaction with statically loaded contract`() {
         val tx = AttachmentDummyContract().generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val wireTransaction = tx.toWireTransaction(serviceHub)
         val bytes = wireTransaction.serialize()
@@ -104,8 +104,8 @@ class AttachmentsClassLoaderStaticContractTests {
         assertEquals(42, (copiedWireTransaction.outputs[0].data as AttachmentDummyContract.State).magicNumber)
     }
 
-    @Test
-    fun `verify that contract DummyContract is in classPath`() {
+    @Test(timeout=300_000)
+	fun `verify that contract DummyContract is in classPath`() {
         val contractClass = Class.forName(ATTACHMENT_PROGRAM_ID)
         assertThat(contractClass.getDeclaredConstructor().newInstance()).isInstanceOf(Contract::class.java)
     }

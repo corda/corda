@@ -65,8 +65,8 @@ class TransactionGraphSearchTests {
         return GraphTransactionStorage(originTx, inputTx)
     }
 
-    @Test
-    fun `return empty from empty`() {
+    @Test(timeout=300_000)
+	fun `return empty from empty`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
         val search = TransactionGraphSearch(storage, emptyList(), TransactionGraphSearch.Query())
         val expected = emptyList<WireTransaction>()
@@ -75,8 +75,8 @@ class TransactionGraphSearchTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `return empty from no match`() {
+    @Test(timeout=300_000)
+	fun `return empty from no match`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
         val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx), TransactionGraphSearch.Query())
         val expected = emptyList<WireTransaction>()
@@ -85,8 +85,8 @@ class TransactionGraphSearchTests {
         assertEquals(expected, actual)
     }
 
-    @Test
-    fun `return origin on match`() {
+    @Test(timeout=300_000)
+	fun `return origin on match`() {
         val storage = buildTransactions(DummyContract.Commands.Create())
         val search = TransactionGraphSearch(storage, listOf(storage.inputTx.tx), TransactionGraphSearch.Query(DummyContract.Commands.Create::class.java))
         val expected = listOf(storage.originTx.tx)

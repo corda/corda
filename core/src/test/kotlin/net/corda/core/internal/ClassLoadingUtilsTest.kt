@@ -58,8 +58,8 @@ class ClassLoadingUtilsTest {
     @Suppress("unused")
     class ConcreteClassWithNonEmptyConstructor(private val someData: Int): BaseInterface2
 
-    @Test
-    fun predicateClassAreLoadedSuccessfully() {
+    @Test(timeout=300_000)
+	fun predicateClassAreLoadedSuccessfully() {
         val classes = createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface::class.java)
 
         val classNames = classes.map { it.javaClass.name }
@@ -74,8 +74,8 @@ class ClassLoadingUtilsTest {
         createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
     }
 
-    @Test
-    fun `thread context class loader is adjusted, during the function execution`() {
+    @Test(timeout=300_000)
+	fun `thread context class loader is adjusted, during the function execution`() {
         val result = executeWithThreadContextClassLoader(temporaryClassLoader) {
             assertThat(Thread.currentThread().contextClassLoader).isEqualTo(temporaryClassLoader)
             true
@@ -85,8 +85,8 @@ class ClassLoadingUtilsTest {
         assertThat(Thread.currentThread().contextClassLoader).isNotEqualTo(temporaryClassLoader)
     }
 
-    @Test
-    fun `thread context class loader is set to the initial, even in case of a failure`() {
+    @Test(timeout=300_000)
+	fun `thread context class loader is set to the initial, even in case of a failure`() {
         assertThatThrownBy { executeWithThreadContextClassLoader(temporaryClassLoader) {
             throw RuntimeException()
         } }.isInstanceOf(RuntimeException::class.java)
@@ -94,8 +94,8 @@ class ClassLoadingUtilsTest {
         assertThat(Thread.currentThread().contextClassLoader).isNotEqualTo(temporaryClassLoader)
     }
 
-    @Test
-    fun `test locating classes inside attachment`() {
+    @Test(timeout=300_000)
+	fun `test locating classes inside attachment`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
             JarOutputStream(this, Manifest()).use {

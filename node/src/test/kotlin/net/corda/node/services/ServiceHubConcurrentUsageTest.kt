@@ -30,8 +30,8 @@ class ServiceHubConcurrentUsageTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `operations requiring a transaction work from another thread`() {
+    @Test(timeout=300_000)
+	fun `operations requiring a transaction work from another thread`() {
         val latch = CountDownLatch(1)
         var successful = false
         val initiatingFlow = TestFlow(mockNet.defaultNotaryIdentity)

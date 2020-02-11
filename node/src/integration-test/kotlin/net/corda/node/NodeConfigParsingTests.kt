@@ -13,8 +13,8 @@ import org.junit.Assert.assertTrue
 
 class NodeConfigParsingTests {
 
-    @Test
-    fun `config is overriden by underscore variable`() {
+    @Test(timeout=300_000)
+	fun `config is overriden by underscore variable`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
 
@@ -31,8 +31,8 @@ class NodeConfigParsingTests {
         }
     }
 
-    @Test
-    fun `config is overriden by case insensitive underscore variable`() {
+    @Test(timeout=300_000)
+	fun `config is overriden by case insensitive underscore variable`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
 
@@ -49,8 +49,8 @@ class NodeConfigParsingTests {
         }
     }
 
-    @Test
-    fun `config is overriden by case insensitive dot variable`() {
+    @Test(timeout=300_000)
+	fun `config is overriden by case insensitive dot variable`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
 
@@ -68,8 +68,8 @@ class NodeConfigParsingTests {
         }
     }
 
-    @Test
-    fun `shadowing is forbidden`() {
+    @Test(timeout=300_000)
+	fun `shadowing is forbidden`() {
         val portAllocator = incrementalPortAllocation()
         val sshPort = portAllocator.nextPort()
 
@@ -87,8 +87,8 @@ class NodeConfigParsingTests {
         }
     }
 
-    @Test
-    fun `bad keys are ignored and warned for`() {
+    @Test(timeout=300_000)
+	fun `bad keys are ignored and warned for`() {
         val portAllocator = incrementalPortAllocation()
         driver(DriverParameters(
                 environmentVariables = mapOf(

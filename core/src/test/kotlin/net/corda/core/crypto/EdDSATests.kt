@@ -16,8 +16,8 @@ import kotlin.test.assertNotEquals
  * Testing PureEdDSA Ed25519 using test vectors from https://tools.ietf.org/html/rfc8032#section-7.1
  */
 class EdDSATests {
-    @Test
-    fun `PureEdDSA Ed25519 test vectors`() {
+    @Test(timeout=300_000)
+	fun `PureEdDSA Ed25519 test vectors`() {
         val edParams = Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
 
         // MESSAGE (length 0 bytes).

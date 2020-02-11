@@ -81,8 +81,8 @@ class NotaryWhitelistTests(
      * the network operator, the old notary service can temporarily operate on the new zone to facilitate notary change requests (even though
      * it's not whitelisted for regular use).
      */
-    @Test
-    fun `can perform notary change on a de-listed notary`() {
+    @Test(timeout=300_000)
+	fun `can perform notary change on a de-listed notary`() {
         // Issue a state using the old notary. It is currently whitelisted.
         val stateFakeNotary = issueStateOnOldNotary(oldNotary)
 
@@ -115,8 +115,8 @@ class NotaryWhitelistTests(
     /**
      * Following on from the previous one, this test verifies that a non-whitelisted notary cannot be used for regular transactions.
      */
-    @Test
-    fun `can't perform a regular transaction on a de-listed notary`() {
+    @Test(timeout=300_000)
+	fun `can't perform a regular transaction on a de-listed notary`() {
         // Issue a state using the old notary. It is currently whitelisted.
         val state = issueStateOnOldNotary(oldNotary)
 
@@ -173,8 +173,8 @@ class NotaryWhitelistTests(
         return future
     }
 
-    @Test
-    fun `should reject transaction when a dependency does not contain notary in whitelist`() {
+    @Test(timeout=300_000)
+	fun `should reject transaction when a dependency does not contain notary in whitelist`() {
         Assume.assumeTrue(isValidating) // Skip the test for non-validating notaries
 
         val fakeNotaryKeyPair = generateKeyPair()

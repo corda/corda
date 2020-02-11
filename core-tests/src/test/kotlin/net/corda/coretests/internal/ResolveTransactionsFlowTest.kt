@@ -84,8 +84,8 @@ class ResolveTransactionsFlowTest {
     // DOCEND 3
 
     // DOCSTART 1
-    @Test
-    fun `resolve from two hashes`() {
+    @Test(timeout=300_000)
+	fun `resolve from two hashes`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(setOf(stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
@@ -98,8 +98,8 @@ class ResolveTransactionsFlowTest {
     }
     // DOCEND 1
 
-    @Test
-    fun `dependency with an error`() {
+    @Test(timeout=300_000)
+	fun `dependency with an error`() {
         val stx = makeTransactions(signFirstTX = false).second
         val p = TestFlow(setOf(stx.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
@@ -107,8 +107,8 @@ class ResolveTransactionsFlowTest {
         assertFailsWith(SignedTransaction.SignaturesMissingException::class) { future.getOrThrow() }
     }
 
-    @Test
-    fun `resolve from a signed transaction`() {
+    @Test(timeout=300_000)
+	fun `resolve from a signed transaction`() {
         val (stx1, stx2) = makeTransactions()
         val p = TestFlow(stx2, megaCorp)
         val future = miniCorpNode.startFlow(p)
@@ -121,8 +121,8 @@ class ResolveTransactionsFlowTest {
         }
     }
 
-    @Test
-    fun `triangle of transactions resolves fine`() {
+    @Test(timeout=300_000)
+	fun `triangle of transactions resolves fine`() {
         val stx1 = makeTransactions().first
 
         val stx2 = DummyContract.move(stx1.tx.outRef(0), miniCorp).let { builder ->
@@ -149,8 +149,8 @@ class ResolveTransactionsFlowTest {
         future.getOrThrow()
     }
 
-    @Test
-    fun attachment() {
+    @Test(timeout=300_000)
+	fun attachment() {
         fun makeJar(): InputStream {
             val bs = ByteArrayOutputStream()
             val jar = JarOutputStream(bs)
@@ -176,8 +176,8 @@ class ResolveTransactionsFlowTest {
         }
     }
 
-    @Test
-    fun `Requesting a transaction while having the right to see it succeeds`() {
+    @Test(timeout=300_000)
+	fun `Requesting a transaction while having the right to see it succeeds`() {
         val (_, stx2) = makeTransactions()
         val p = TestNoRightsVendingFlow(miniCorp, toVend = stx2, toRequest = stx2)
         val future = megaCorpNode.startFlow(p)
@@ -185,8 +185,8 @@ class ResolveTransactionsFlowTest {
         future.getOrThrow()
     }
 
-    @Test
-    fun `Requesting a transaction without having the right to see it results in exception`() {
+    @Test(timeout=300_000)
+	fun `Requesting a transaction without having the right to see it results in exception`() {
         val (_, stx2) = makeTransactions()
         val (_, stx3) = makeTransactions()
         val p = TestNoRightsVendingFlow(miniCorp, toVend = stx2, toRequest = stx3)
@@ -195,8 +195,8 @@ class ResolveTransactionsFlowTest {
         assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
     }
 
-    @Test
-    fun `Requesting a transaction twice results in exception`() {
+    @Test(timeout=300_000)
+	fun `Requesting a transaction twice results in exception`() {
         val (_, stx2) = makeTransactions()
         val p = TestResolveTwiceVendingFlow(miniCorp, stx2)
         val future = megaCorpNode.startFlow(p)
@@ -204,8 +204,8 @@ class ResolveTransactionsFlowTest {
         assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
     }
 
-    @Test
-    fun `resolution works when transaction in chain is already resolved`() {
+    @Test(timeout=300_000)
+	fun `resolution works when transaction in chain is already resolved`() {
         val (tx1, tx2) = makeTransactions()
         miniCorpNode.transaction {
             miniCorpNode.services.recordTransactions(tx1)
@@ -217,8 +217,8 @@ class ResolveTransactionsFlowTest {
         future.getOrThrow()
     }
 
-    @Test
-    fun `can resolve a chain of transactions containing a notary change transaction`() {
+    @Test(timeout=300_000)
+	fun `can resolve a chain of transactions containing a notary change transaction`() {
         val tx = notaryChangeChain()
         var numUpdates = 0
         var notaryChangeTxSeen = false
@@ -234,8 +234,8 @@ class ResolveTransactionsFlowTest {
         assertTrue(notaryChangeTxSeen)
     }
 
-    @Test
-    fun `can resolve a chain of transactions containing a contract upgrade transaction`() {
+    @Test(timeout=300_000)
+	fun `can resolve a chain of transactions containing a contract upgrade transaction`() {
         val tx = contractUpgradeChain()
         var numUpdates = 0
         var upgradeTxSeen = false
@@ -252,8 +252,8 @@ class ResolveTransactionsFlowTest {
     }
 
     // Used for checking larger chains resolve correctly. Note that this takes a long time to run, and so is not suitable for a CI gate.
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `Can resolve large chain of transactions`() {
         val txToResolve = makeLargeTransactionChain(2500)
         val p = TestFlow(txToResolve, megaCorp)

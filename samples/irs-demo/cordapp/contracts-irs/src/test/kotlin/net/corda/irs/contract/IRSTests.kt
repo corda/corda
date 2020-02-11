@@ -242,13 +242,13 @@ class IRSTests {
             networkParameters
     )
 
-    @Test
-    fun ok() {
+    @Test(timeout=300_000)
+	fun ok() {
         trade().verifies()
     }
 
-    @Test
-    fun `ok with groups`() {
+    @Test(timeout=300_000)
+	fun `ok with groups`() {
         tradegroups().verifies()
     }
 
@@ -276,8 +276,8 @@ class IRSTests {
     /**
      * Just make sure it's sane.
      */
-    @Test
-    fun pprintIRS() {
+    @Test(timeout=300_000)
+	fun pprintIRS() {
         val irs = singleIRS()
         println(irs.prettyPrint())
     }
@@ -292,8 +292,8 @@ class IRSTests {
     /**
      * Test the generate. No explicit exception as if something goes wrong, we'll find out anyway.
      */
-    @Test
-    fun generateIRS() {
+    @Test(timeout=300_000)
+	fun generateIRS() {
         // Tests aren't allowed to return things
         generateIRSTxn(1)
     }
@@ -301,8 +301,8 @@ class IRSTests {
     /**
      * Testing a simple IRS, add a few fixings and then display as CSV.
      */
-    @Test
-    fun `IRS Export test`() {
+    @Test(timeout=300_000)
+	fun `IRS Export test`() {
         // No transactions etc required - we're just checking simple maths and export functionallity
         val irs = singleIRS(2)
 
@@ -325,8 +325,8 @@ class IRSTests {
     /**
      * Make sure it has a schedule and the schedule has some unfixed rates.
      */
-    @Test
-    fun `next fixing date`() {
+    @Test(timeout=300_000)
+	fun `next fixing date`() {
         val irs = singleIRS(1)
         println(irs.calculation.nextFixingDate())
     }
@@ -334,8 +334,8 @@ class IRSTests {
     /**
      * Iterate through all the fix dates and add something.
      */
-    @Test
-    fun generateIRSandFixSome() {
+    @Test(timeout=300_000)
+	fun generateIRSandFixSome() {
         val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name,
                 mock<IdentityService>().also {
                     listOf(MEGA_CORP, MINI_CORP).forEach { party ->
@@ -366,14 +366,14 @@ class IRSTests {
     }
 
     // Move these later as they aren't IRS specific.
-    @Test
-    fun `test some rate objects 100 * FixedRate(5%)`() {
+    @Test(timeout=300_000)
+	fun `test some rate objects 100 * FixedRate(5%)`() {
         val r1 = FixedRate(PercentageRatioUnit("5"))
         assertEquals(5, 100 * r1)
     }
 
-    @Test
-    fun `expression calculation testing`() {
+    @Test(timeout=300_000)
+	fun `expression calculation testing`() {
         val dummyIRS = singleIRS()
         val stuffToPrint: ArrayList<String> = arrayListOf(
                 "fixedLeg.notional.quantity",
@@ -442,8 +442,8 @@ class IRSTests {
         ledgerServices.transaction(DUMMY_NOTARY, script)
     }
 
-    @Test
-    fun `ensure failure occurs when there are inbound states for an agreement command`() {
+    @Test(timeout=300_000)
+	fun `ensure failure occurs when there are inbound states for an agreement command`() {
         val irs = singleIRS()
         transaction {
             attachments(IRS_PROGRAM_ID)
@@ -455,8 +455,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure failure occurs when no events in fix schedule`() {
+    @Test(timeout=300_000)
+	fun `ensure failure occurs when no events in fix schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FixedRatePaymentEvent>()
         transaction {
@@ -468,8 +468,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure failure occurs when no events in floating schedule`() {
+    @Test(timeout=300_000)
+	fun `ensure failure occurs when no events in floating schedule`() {
         val irs = singleIRS()
         val emptySchedule = mutableMapOf<LocalDate, FloatingRatePaymentEvent>()
         transaction {
@@ -481,8 +481,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure notionals are non zero`() {
+    @Test(timeout=300_000)
+	fun `ensure notionals are non zero`() {
         val irs = singleIRS()
         transaction {
             attachments(IRS_PROGRAM_ID)
@@ -501,8 +501,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure positive rate on fixed leg`() {
+    @Test(timeout=300_000)
+	fun `ensure positive rate on fixed leg`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
         transaction {
@@ -517,8 +517,8 @@ class IRSTests {
     /**
      * This will be modified once we adapt the IRS to be cross currency.
      */
-    @Test
-    fun `ensure same currency notionals`() {
+    @Test(timeout=300_000)
+	fun `ensure same currency notionals`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
         transaction {
@@ -530,8 +530,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure notional amounts are equal`() {
+    @Test(timeout=300_000)
+	fun `ensure notional amounts are equal`() {
         val irs = singleIRS()
         val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
         transaction {
@@ -543,8 +543,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure trade date and termination date checks are done pt1`() {
+    @Test(timeout=300_000)
+	fun `ensure trade date and termination date checks are done pt1`() {
         val irs = singleIRS()
         val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
         transaction {
@@ -565,8 +565,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `ensure trade date and termination date checks are done pt2`() {
+    @Test(timeout=300_000)
+	fun `ensure trade date and termination date checks are done pt2`() {
         val irs = singleIRS()
 
         val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
@@ -588,8 +588,8 @@ class IRSTests {
         }
     }
 
-    @Test
-    fun `various fixing tests`() {
+    @Test(timeout=300_000)
+	fun `various fixing tests`() {
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 

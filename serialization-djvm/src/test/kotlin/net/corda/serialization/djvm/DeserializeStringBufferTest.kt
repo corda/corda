@@ -12,7 +12,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeStringBufferTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing string buffer`() {
+	fun `test deserializing string buffer`() {
         val buffer = StringBuffer("Hello World!")
         val data = buffer.serialize()
 

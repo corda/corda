@@ -76,8 +76,8 @@ class IdentityServiceToStringShortMigrationTest {
         }
     }
 
-    @Test
-    fun `it should be possible to migrate all existing identities to new hash function`() {
+    @Test(timeout=300_000)
+	fun `it should be possible to migrate all existing identities to new hash function`() {
         val identities = listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity, BOB2_IDENTITY)
         val groupedByNameIdentities = identities.groupBy { it.name }
         saveAllIdentitiesWithOldHashString(identities)

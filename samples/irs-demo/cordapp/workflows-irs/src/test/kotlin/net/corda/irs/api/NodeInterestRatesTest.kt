@@ -80,8 +80,8 @@ class NodeInterestRatesTest {
         database.close()
     }
 
-    @Test
-    fun `query successfully`() {
+    @Test(timeout=300_000)
+	fun `query successfully`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val res = oracle.query(listOf(q))
@@ -91,8 +91,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `query with one success and one missing`() {
+    @Test(timeout=300_000)
+	fun `query with one success and one missing`() {
         database.transaction {
             val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
@@ -101,8 +101,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `query successfully with interpolated rate`() {
+    @Test(timeout=300_000)
+	fun `query successfully with interpolated rate`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
             val res = oracle.query(listOf(q))
@@ -112,23 +112,23 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `rate missing and unable to interpolate`() {
+    @Test(timeout=300_000)
+	fun `rate missing and unable to interpolate`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
             assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q)) }
         }
     }
 
-    @Test
-    fun `empty query`() {
+    @Test(timeout=300_000)
+	fun `empty query`() {
         database.transaction {
             assertFailsWith<IllegalArgumentException> { oracle.query(emptyList()) }
         }
     }
 
-    @Test
-    fun `refuse to sign with no relevant commands`() {
+    @Test(timeout=300_000)
+	fun `refuse to sign with no relevant commands`() {
         database.transaction {
             val tx = makeFullTx()
             val wtx1 = tx.toWireTransaction(services)
@@ -149,8 +149,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `sign successfully`() {
+    @Test(timeout=300_000)
+	fun `sign successfully`() {
         database.transaction {
             val tx = makePartialTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
@@ -163,8 +163,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `do not sign with unknown fix`() {
+    @Test(timeout=300_000)
+	fun `do not sign with unknown fix`() {
         database.transaction {
             val tx = makePartialTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
@@ -177,8 +177,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `do not sign too many leaves`() {
+    @Test(timeout=300_000)
+	fun `do not sign too many leaves`() {
         database.transaction {
             val tx = makePartialTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
@@ -196,8 +196,8 @@ class NodeInterestRatesTest {
         }
     }
 
-    @Test
-    fun `empty partial transaction to sign`() {
+    @Test(timeout=300_000)
+	fun `empty partial transaction to sign`() {
         val tx = makeFullTx()
         val wtx = tx.toWireTransaction(services)
         val ftx = wtx.buildFilteredTransaction(Predicate { false })

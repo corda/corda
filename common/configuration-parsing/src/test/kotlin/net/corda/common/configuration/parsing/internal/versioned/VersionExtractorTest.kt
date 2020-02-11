@@ -12,8 +12,8 @@ class VersionExtractorTest {
     private val versionExtractor = Configuration.Version.Extractor.fromPath("configuration.metadata.version")
     private val extractVersion: (Config) -> Valid<Int> = { config -> versionExtractor.parse(config) }
 
-    @Test
-    fun version_header_extraction_present() {
+    @Test(timeout=300_000)
+	fun version_header_extraction_present() {
 
         val versionValue = Configuration.Version.Extractor.DEFAULT_VERSION_VALUE + 1
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject("version" to versionValue), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
@@ -22,8 +22,8 @@ class VersionExtractorTest {
         assertThat(version).isEqualTo(versionValue)
     }
 
-    @Test
-    fun version_header_extraction_no_metadata() {
+    @Test(timeout=300_000)
+	fun version_header_extraction_no_metadata() {
 
         val rawConfiguration = configObject("configuration" to configObject("node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
@@ -31,8 +31,8 @@ class VersionExtractorTest {
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
-    @Test
-    fun version_header_extraction_no_key() {
+    @Test(timeout=300_000)
+	fun version_header_extraction_no_key() {
 
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject(), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
@@ -41,8 +41,8 @@ class VersionExtractorTest {
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
-    @Test
-    fun version_header_extraction_no_value() {
+    @Test(timeout=300_000)
+	fun version_header_extraction_no_value() {
 
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject("version" to null), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
@@ -51,8 +51,8 @@ class VersionExtractorTest {
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
-    @Test
-    fun version_header_extraction_no_configuration() {
+    @Test(timeout=300_000)
+	fun version_header_extraction_no_configuration() {
 
         val rawConfiguration = configObject().toConfig()
 

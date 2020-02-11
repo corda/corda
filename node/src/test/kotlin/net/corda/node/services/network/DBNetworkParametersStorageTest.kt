@@ -71,20 +71,20 @@ class DBNetworkParametersStorageTest {
         database.close()
     }
 
-    @Test
-    fun `set current parameters`() {
+    @Test(timeout=300_000)
+	fun `set current parameters`() {
         assertThat(networkParametersService.currentHash).isEqualTo(hash1)
         assertThat(networkParametersService.lookup(hash1)).isEqualTo(netParams1.verified())
     }
 
-    @Test
-    fun `get default parameters`() {
+    @Test(timeout=300_000)
+	fun `get default parameters`() {
         // TODO After implementing default endpoint on network map check it is correct, for now we set it to current.
         assertThat(networkParametersService.defaultHash).isEqualTo(hash1)
     }
 
-    @Test
-    fun `download parameters from network map server`() {
+    @Test(timeout=300_000)
+	fun `download parameters from network map server`() {
         database.transaction {
             val netParams = networkParametersService.lookup(hash2)
             assertThat(networkParametersService.lookup(hash2)).isEqualTo(netParams)
@@ -93,8 +93,8 @@ class DBNetworkParametersStorageTest {
         }
     }
 
-    @Test
-    fun `try save parameters with incorrect signature`() {
+    @Test(timeout=300_000)
+	fun `try save parameters with incorrect signature`() {
         database.transaction {
             // logs a warning (java.security.cert.CertPathValidatorException: Cert path failed to validate)
             assertNull(networkParametersService.lookup(hash3))

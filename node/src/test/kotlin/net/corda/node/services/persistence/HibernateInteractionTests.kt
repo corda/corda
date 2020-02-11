@@ -74,8 +74,8 @@ class HibernateInteractionTests {
 
     // AbstractPartyToX500NameAsStringConverter could cause circular flush of Hibernate session because it is invoked during flush, and a
     // cache miss was doing a flush.  This also checks that loading during flush does actually work.
-    @Test
-    fun `issue some cash on a notary that exists only in the database to check cache loading works in our identity column converters during flush of vault update`() {
+    @Test(timeout=300_000)
+	fun `issue some cash on a notary that exists only in the database to check cache loading works in our identity column converters during flush of vault update`() {
         val expected = 500.DOLLARS
         val ref = OpaqueBytes.of(0x01)
 
@@ -90,8 +90,8 @@ class HibernateInteractionTests {
         assertEquals(expected.`issued by`(ourIdentity.ref(ref)), output.amount)
     }
 
-    @Test
-    fun `when a cascade is in progress (because of nested entities), the node avoids to flush & detach entities, since it's not allowed by Hibernate`() {
+    @Test(timeout=300_000)
+	fun `when a cascade is in progress (because of nested entities), the node avoids to flush & detach entities, since it's not allowed by Hibernate`() {
         val ourIdentity = services.myInfo.legalIdentities.first()
 
         val childEntities = listOf(SimpleContract.ChildState(ourIdentity))

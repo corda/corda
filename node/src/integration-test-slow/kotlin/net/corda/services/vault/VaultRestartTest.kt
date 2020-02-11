@@ -18,8 +18,8 @@ import org.junit.Test
 
 class VaultRestartTest {
 
-    @Test
-    fun `restart and query vault after adding some cash states`() {
+    @Test(timeout=300_000)
+	fun `restart and query vault after adding some cash states`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, isDebug = true,
                                 extraCordappPackagesToScan = listOf("net.corda.finance", "migration"))) {
             val node = startNode(providedName = DUMMY_BANK_A_NAME, customOverrides = mapOf("p2pAddress" to "localhost:30000")).getOrThrow()

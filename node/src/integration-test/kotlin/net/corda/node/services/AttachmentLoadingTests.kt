@@ -44,8 +44,8 @@ class AttachmentLoadingTests {
         fun loadFromIsolated(className: String): Class<*> = Class.forName(className, false, isolatedClassLoader)
     }
 
-    @Test
-    fun `contracts downloaded from the network are not executed without the DJVM`() {
+    @Test(timeout=300_000)
+	fun `contracts downloaded from the network are not executed without the DJVM`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
@@ -67,8 +67,8 @@ class AttachmentLoadingTests {
         }
     }
 
-    @Test
-    fun `contract is executed if installed locally`() {
+    @Test(timeout=300_000)
+	fun `contract is executed if installed locally`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),

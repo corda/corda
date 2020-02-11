@@ -60,8 +60,8 @@ class FlowRetryTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
-    @Test
-    fun `flows continue despite errors`() {
+    @Test(timeout=300_000)
+	fun `flows continue despite errors`() {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
@@ -81,8 +81,8 @@ class FlowRetryTest {
         assertEquals("$numSessions:$numIterations", result)
     }
 
-    @Test
-    fun `async operation deduplication id is stable accross retries`() {
+    @Test(timeout=300_000)
+	fun `async operation deduplication id is stable accross retries`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<AsyncRetryFlow>()))
         driver(DriverParameters(
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -96,8 +96,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
+    @Test(timeout=300_000)
+	fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<RetryFlow>()))
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
@@ -114,8 +114,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
+    @Test(timeout=300_000)
+	fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<ThrowingFlow>()))
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
@@ -132,8 +132,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
+    @Test(timeout=300_000)
+	fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -151,8 +151,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `Specific exception still detected even if it is nested inside another exception`() {
+    @Test(timeout=300_000)
+	fun `Specific exception still detected even if it is nested inside another exception`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -170,8 +170,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `General external exceptions are not retried and propagate`() {
+    @Test(timeout=300_000)
+	fun `General external exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -189,8 +189,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test
-    fun `Permission exceptions are not retried and propagate`() {
+    @Test(timeout=300_000)
+	fun `Permission exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf())
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 

@@ -4,8 +4,8 @@ import org.assertj.core.api.Assertions
 import org.junit.Test
 
 class VaultEnumTypesTest {
-    @Test
-    fun vaultStatusReflectsOrdinalValues() {
+    @Test(timeout=300_000)
+	fun vaultStatusReflectsOrdinalValues() {
         /**
          * Warning!!! Do not change the order of this Enum as ordinal values are stored in the database
          */

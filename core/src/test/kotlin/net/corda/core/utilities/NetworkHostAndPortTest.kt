@@ -8,8 +8,8 @@ class NetworkHostAndPortTest {
     /**
      * If a host isn't known-good it should go via the parser, which does some validation.
      */
-    @Test
-    fun `constructor is not fussy about host`() {
+    @Test(timeout=300_000)
+	fun `constructor is not fussy about host`() {
         assertEquals("", NetworkHostAndPort("", 1234).host)
         assertEquals("x", NetworkHostAndPort("x", 1234).host)
         assertEquals("500", NetworkHostAndPort("500", 1234).host)
@@ -17,8 +17,8 @@ class NetworkHostAndPortTest {
         assertEquals("[::1]", NetworkHostAndPort("[::1]", 1234).host) // Don't do this.
     }
 
-    @Test
-    fun `constructor requires a valid port`() {
+    @Test(timeout=300_000)
+	fun `constructor requires a valid port`() {
         assertEquals(0, NetworkHostAndPort("example.com", 0).port)
         assertEquals(65535, NetworkHostAndPort("example.com", 65535).port)
         listOf(65536, -1).forEach {
@@ -28,8 +28,8 @@ class NetworkHostAndPortTest {
         }
     }
 
-    @Test
-    fun `toString works`() {
+    @Test(timeout=300_000)
+	fun `toString works`() {
         assertEquals("example.com:1234", NetworkHostAndPort("example.com", 1234).toString())
         assertEquals("example.com:65535", NetworkHostAndPort("example.com", 65535).toString())
         assertEquals("1.2.3.4:1234", NetworkHostAndPort("1.2.3.4", 1234).toString())
@@ -39,8 +39,8 @@ class NetworkHostAndPortTest {
         assertEquals(":1234", NetworkHostAndPort("", 1234).toString()) // URI won't parse this.
     }
 
-    @Test
-    fun `parseNetworkHostAndPort works`() {
+    @Test(timeout=300_000)
+	fun `parseNetworkHostAndPort works`() {
         assertEquals(NetworkHostAndPort("example.com", 1234), NetworkHostAndPort.parse("example.com:1234"))
         assertEquals(NetworkHostAndPort("example.com", 65535), NetworkHostAndPort.parse("example.com:65535"))
         assertEquals(NetworkHostAndPort("1.2.3.4", 1234), NetworkHostAndPort.parse("1.2.3.4:1234"))

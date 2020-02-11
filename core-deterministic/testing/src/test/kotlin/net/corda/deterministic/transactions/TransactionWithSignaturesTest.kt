@@ -7,8 +7,8 @@ import org.junit.Test
 import java.security.PublicKey
 
 class TransactionWithSignaturesTest {
-    @Test
-    fun txWithSigs() {
+    @Test(timeout=300_000)
+	fun txWithSigs() {
         val tx = object : TransactionWithSignatures {
             override val id: SecureHash
                 get() = SecureHash.zeroHash

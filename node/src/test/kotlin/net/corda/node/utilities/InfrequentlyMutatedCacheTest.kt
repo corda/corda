@@ -25,8 +25,8 @@ class InfrequentlyMutatedCacheTest {
         database.close()
     }
 
-    @Test
-    fun `get from empty cache returns result of loader`() {
+    @Test(timeout=300_000)
+	fun `get from empty cache returns result of loader`() {
         database.transaction {
             // This will cache "1"
             val result = cache.get("foo") {
@@ -36,16 +36,16 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `getIfPresent from empty cache returns null`() {
+    @Test(timeout=300_000)
+	fun `getIfPresent from empty cache returns null`() {
         database.transaction {
             val result = cache.getIfPresent("foo")
             assertNull(result)
         }
     }
 
-    @Test
-    fun `other thread get returns result of local thread loader`() {
+    @Test(timeout=300_000)
+	fun `other thread get returns result of local thread loader`() {
         database.transaction {
             // This will cache "1"
             val result = cache.get("foo") {
@@ -58,8 +58,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `second get from empty cache returns result of first loader`() {
+    @Test(timeout=300_000)
+	fun `second get from empty cache returns result of first loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -72,8 +72,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `getIfPresent after get from empty cache returns result of first loader`() {
+    @Test(timeout=300_000)
+	fun `getIfPresent after get from empty cache returns result of first loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -84,8 +84,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `second get from empty cache with invalidate in the middle returns result of second loader`() {
+    @Test(timeout=300_000)
+	fun `second get from empty cache with invalidate in the middle returns result of second loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -99,8 +99,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `getIfPresent after get from empty cache with invalidate in the middle returns null`() {
+    @Test(timeout=300_000)
+	fun `getIfPresent after get from empty cache with invalidate in the middle returns null`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -112,8 +112,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `second get from empty cache with invalidate and flush in the middle returns result of third loader`() {
+    @Test(timeout=300_000)
+	fun `second get from empty cache with invalidate and flush in the middle returns result of third loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -131,8 +131,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `other thread get with invalidate in the middle returns result of second loader`() {
+    @Test(timeout=300_000)
+	fun `other thread get with invalidate in the middle returns result of second loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -149,8 +149,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `third get outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
+    @Test(timeout=300_000)
+	fun `third get outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -171,8 +171,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `getIfPresent outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
+    @Test(timeout=300_000)
+	fun `getIfPresent outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -191,8 +191,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `other thread get outside first transaction with invalidate in the middle returns result of other thread`() {
+    @Test(timeout=300_000)
+	fun `other thread get outside first transaction with invalidate in the middle returns result of other thread`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -216,8 +216,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `fourth get outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
+    @Test(timeout=300_000)
+	fun `fourth get outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -245,8 +245,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `fourth get outside first transaction from empty cache with nested invalidate in the middle returns result of third loader`() {
+    @Test(timeout=300_000)
+	fun `fourth get outside first transaction from empty cache with nested invalidate in the middle returns result of third loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -275,8 +275,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `fourth get outside first transaction from empty cache with invalidate in other thread in the middle returns result of second loader`() {
+    @Test(timeout=300_000)
+	fun `fourth get outside first transaction from empty cache with invalidate in other thread in the middle returns result of second loader`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {
@@ -299,8 +299,8 @@ class InfrequentlyMutatedCacheTest {
         }
     }
 
-    @Test
-    fun `transaction started before invalidating thread commits does not cache until after the other thread commits`() {
+    @Test(timeout=300_000)
+	fun `transaction started before invalidating thread commits does not cache until after the other thread commits`() {
         database.transaction {
             // This will cache "2"
             cache.get("foo") {

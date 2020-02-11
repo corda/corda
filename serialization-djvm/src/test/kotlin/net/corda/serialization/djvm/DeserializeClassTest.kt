@@ -17,7 +17,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeClassTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing existing class`() {
+	fun `test deserializing existing class`() {
         val myClass = ExternalData::class.java
         val data = myClass.serialize()
 
@@ -36,7 +36,7 @@ class DeserializeClassTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing missing class`() {
+	fun `test deserializing missing class`() {
         // The DJVM will refuse to find this class because it belongs to net.corda.djvm.**.
         val myClass = Severity::class.java
         val data = myClass.serialize()

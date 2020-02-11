@@ -55,8 +55,8 @@ class NodeInfoWatcherTest {
         nodeInfoPath = tempFolder.root.toPath() / NODE_INFO_DIRECTORY
     }
 
-    @Test
-    fun `save a NodeInfo`() {
+    @Test(timeout=300_000)
+	fun `save a NodeInfo`() {
         assertEquals(0,
                 tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
         NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), nodeInfoAndSigned)
@@ -70,15 +70,15 @@ class NodeInfoWatcherTest {
         assertThat(file.size).isGreaterThan(0)
     }
 
-    @Test
-    fun `save a NodeInfo to JimFs`() {
+    @Test(timeout=300_000)
+	fun `save a NodeInfo to JimFs`() {
         val jimFs = Jimfs.newFileSystem(Configuration.unix())
         val jimFolder = jimFs.getPath("/nodeInfo").createDirectories()
         NodeInfoWatcher.saveToFile(jimFolder, nodeInfoAndSigned)
     }
 
-    @Test
-    fun `load an empty Directory`() {
+    @Test(timeout=300_000)
+	fun `load an empty Directory`() {
         nodeInfoPath.createDirectories()
 
         val subscription = nodeInfoWatcher.nodeInfoUpdates().subscribe(testSubscriber)
@@ -91,8 +91,8 @@ class NodeInfoWatcherTest {
         }
     }
 
-    @Test
-    fun `load a non empty Directory`() {
+    @Test(timeout=300_000)
+	fun `load a non empty Directory`() {
         createNodeInfoFileInPath()
 
         val subscription = nodeInfoWatcher.nodeInfoUpdates().subscribe(testSubscriber)
@@ -107,8 +107,8 @@ class NodeInfoWatcherTest {
         }
     }
 
-    @Test
-    fun `polling folder`() {
+    @Test(timeout=300_000)
+	fun `polling folder`() {
         nodeInfoPath.createDirectories()
 
         // Start polling with an empty folder.

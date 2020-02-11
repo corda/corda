@@ -54,8 +54,8 @@ class VaultFlowTest {
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
 
-    @Test
-    fun `Unique column constraint failing causes states to not persist to vaults`() {
+    @Test(timeout=300_000)
+	fun `Unique column constraint failing causes states to not persist to vaults`() {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.add( { t: Throwable -> t is javax.persistence.PersistenceException })
         partyA.startFlow(Initiator(listOf(partyA.info.singleIdentity(), partyB.info.singleIdentity()))).get()
         val hospitalLatch = CountDownLatch(1)

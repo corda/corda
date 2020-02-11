@@ -33,7 +33,7 @@ class DeserializeComposedCustomDataTest: TestBase(KOTLIN) {
     val serialization = LocalSerialization(setOf(StringAtomSerializer(), LongAtomSerializer()), emptySet())
 
     @Test
-    fun `test deserializing composed object`() {
+	fun `test deserializing composed object`() {
         val composed = ComposedData(StringAtom(MESSAGE), LongAtom(BIG_NUMBER))
         val data = composed.serialize()
 
@@ -59,7 +59,7 @@ class DeserializeComposedCustomDataTest: TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialization needs custom serializer`() {
+	fun `test deserialization needs custom serializer`() {
         val composed = ComposedData(StringAtom(MESSAGE), LongAtom(BIG_NUMBER))
         val data = composed.serialize()
 

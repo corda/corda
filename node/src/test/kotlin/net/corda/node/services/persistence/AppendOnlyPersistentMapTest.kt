@@ -64,8 +64,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         database.close()
     }
 
-    @Test
-    fun `concurrent test no purge between A and B`() {
+    @Test(timeout=300_000)
+	fun `concurrent test no purge between A and B`() {
         prepopulateIfRequired()
         val map = createMap()
         val a = TestThread("A", map).apply { start() }
@@ -93,8 +93,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         assertTrue(map.pendingKeysIsEmpty())
     }
 
-    @Test
-    fun `test no purge with only a single transaction`() {
+    @Test(timeout=300_000)
+	fun `test no purge with only a single transaction`() {
         prepopulateIfRequired()
         val map = createMap()
         val a = TestThread("A", map, true).apply {
@@ -120,8 +120,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     }
 
 
-    @Test
-    fun `concurrent test purge between A and B`() {
+    @Test(timeout=300_000)
+	fun `concurrent test purge between A and B`() {
         // Writes intentionally do not check the database first, so purging between read and write changes behaviour
         val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit))
         scenario = remapped[scenario] ?: scenario
@@ -154,8 +154,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         assertTrue(map.pendingKeysIsEmpty())
     }
 
-    @Test
-    fun `test purge mid-way in a single transaction`() {
+    @Test(timeout=300_000)
+	fun `test purge mid-way in a single transaction`() {
         // Writes intentionally do not check the database first, so purging between read and write changes behaviour
         // Also, a purge after write causes the subsequent read to flush to the database, causing the read to generate a constraint violation when single threaded (in same database transaction).
         val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit),

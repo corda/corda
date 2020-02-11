@@ -23,8 +23,8 @@ class EnumTransformationTests {
     enum class MultiOperations { A, B, C, D, BOB }
 
     // See https://r3-cev.atlassian.net/browse/CORDA-1497
-    @Test
-    fun defaultAndRename() {
+    @Test(timeout=300_000)
+	fun defaultAndRename() {
         val transforms = EnumTransforms.build(
                 TransformsAnnotationProcessor.getTransformsSchema(MultiOperations::class.java),
                 MultiOperations::class.java.constants)
@@ -42,8 +42,8 @@ class EnumTransformationTests {
     )
     enum class RenameCycle { A, B, C, D, E}
 
-    @Test
-    fun cycleDetection() {
+    @Test(timeout=300_000)
+	fun cycleDetection() {
         assertFailsWith<InvalidEnumTransformsException> {
             EnumTransforms.build(
                     TransformsAnnotationProcessor.getTransformsSchema(RenameCycle::class.java),
@@ -57,8 +57,8 @@ class EnumTransformationTests {
     )
     enum class DanglingRenames { A, B, C }
 
-    @Test
-    fun renameCycleDoesNotTerminateInConstant() {
+    @Test(timeout=300_000)
+	fun renameCycleDoesNotTerminateInConstant() {
         assertFailsWith<InvalidEnumTransformsException> {
             EnumTransforms.build(
                     TransformsAnnotationProcessor.getTransformsSchema(DanglingRenames::class.java),
@@ -72,8 +72,8 @@ class EnumTransformationTests {
     )
     enum class RenamesExisting { Q, R, S }
 
-    @Test
-    fun renamesRenameExistingConstant() {
+    @Test(timeout=300_000)
+	fun renamesRenameExistingConstant() {
         assertFailsWith<InvalidEnumTransformsException> {
             EnumTransforms.build(
                     TransformsAnnotationProcessor.getTransformsSchema(RenamesExisting::class.java),

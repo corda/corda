@@ -30,8 +30,8 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
      *
      * No pass through the hospital is recorded. As the flow is marked as `isRemoved`.
      */
-    @Test
-    fun `error during transition due to an InterruptedException (killFlow) will terminate the flow`() {
+    @Test(timeout=300_000)
+	fun `error during transition due to an InterruptedException (killFlow) will terminate the flow`() {
         startDriver {
             val alice = createBytemanNode(ALICE_NAME)
 
@@ -116,8 +116,8 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
      *
      * No pass through the hospital is recorded. As the flow is marked as `isRemoved`.
      */
-    @Test
-    fun `flow killed during user code execution stops and removes the flow correctly`() {
+    @Test(timeout=300_000)
+	fun `flow killed during user code execution stops and removes the flow correctly`() {
         startDriver {
             val alice = createBytemanNode(ALICE_NAME)
 
@@ -199,8 +199,8 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
      * Killing the flow does not lead to any passes through the hospital. All the recorded passes through the hospital are
      * from the original flow that was put in for observation.
      */
-    @Test
-    fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
+    @Test(timeout=300_000)
+	fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
         startDriver {
             val alice = createBytemanNode(ALICE_NAME)
             val charlie = createNode(CHARLIE_NAME)

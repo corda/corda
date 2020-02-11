@@ -111,8 +111,8 @@ class NetworkParametersResolutionTest {
         return Pair(dummy1, dummy2)
     }
 
-    @Test
-    fun `parameters all null`() {
+    @Test(timeout=300_000)
+	fun `parameters all null`() {
         val (stx1, stx2) = makeTransactions(null, null)
         assertThat(stx1.networkParametersHash).isNull()
         assertThat(stx2.networkParametersHash).isNull()
@@ -126,8 +126,8 @@ class NetworkParametersResolutionTest {
         }
     }
 
-    @Test
-    fun `transaction chain out of order parameters`() {
+    @Test(timeout=300_000)
+	fun `transaction chain out of order parameters`() {
         val hash2 = params2.serialize().hash
         val hash3 = params3.serialize().hash
         val (stx1, stx2) = makeTransactions(params3, params2)
@@ -151,8 +151,8 @@ class NetworkParametersResolutionTest {
         }
     }
 
-    @Test
-    fun `request parameters that are not in the storage`() {
+    @Test(timeout=300_000)
+	fun `request parameters that are not in the storage`() {
         val hash1 = defaultParams.serialize().hash
         val hash2 = params2.serialize().hash
         // Create two transactions on megaCorpNode
@@ -175,8 +175,8 @@ class NetworkParametersResolutionTest {
         }
     }
 
-    @Test
-    fun `transaction chain out of order parameters with default`() {
+    @Test(timeout=300_000)
+	fun `transaction chain out of order parameters with default`() {
         val hash3 = params3.serialize().hash
         // stx1 with epoch 3 -> stx2 with default epoch, which is 1
         val (stx1, stx2) = makeTransactions(params3, null)
@@ -196,8 +196,8 @@ class NetworkParametersResolutionTest {
         }
     }
 
-    @Test
-    fun `incorrect triangle of transactions`() {
+    @Test(timeout=300_000)
+	fun `incorrect triangle of transactions`() {
         // stx1 with epoch 2, stx2 with epoch 1, stx3 with epoch 3
         // stx1 -> stx2, stx1 -> stx3, stx2 -> stx3
         val stx1 = makeTransactions(params2, null).first

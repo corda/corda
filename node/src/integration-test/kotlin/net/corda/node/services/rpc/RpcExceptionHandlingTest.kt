@@ -25,8 +25,8 @@ class RpcExceptionHandlingTest {
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
-    @Test
-    fun `rpc client receives relevant exceptions`() {
+    @Test(timeout=300_000)
+	fun `rpc client receives relevant exceptions`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -43,8 +43,8 @@ class RpcExceptionHandlingTest {
         }
     }
 
-    @Test
-    fun `rpc client receives client-relevant message`() {
+    @Test(timeout=300_000)
+	fun `rpc client receives client-relevant message`() {
         val params = NodeParameters(rpcUsers = users)
         val clientRelevantMessage = "This is for the players!"
 
@@ -67,8 +67,8 @@ class RpcExceptionHandlingTest {
         }
     }
 
-    @Test
-    fun `FlowException is received by the RPC client`() {
+    @Test(timeout=300_000)
+	fun `FlowException is received by the RPC client`() {
         val params = NodeParameters(rpcUsers = users)
         val expectedMessage = "Flow error!"
         val expectedErrorId = 123L
@@ -97,8 +97,8 @@ class RpcExceptionHandlingTest {
         }
     }
 
-    @Test
-    fun `rpc client handles exceptions thrown on counter-party side`() {
+    @Test(timeout=300_000)
+	fun `rpc client handles exceptions thrown on counter-party side`() {
         val params = NodeParameters(rpcUsers = users)
 
         fun DriverDSL.scenario(nameA: CordaX500Name, nameB: CordaX500Name, devMode: Boolean) {

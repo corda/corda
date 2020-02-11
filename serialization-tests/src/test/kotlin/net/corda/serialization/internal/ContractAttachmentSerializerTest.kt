@@ -38,8 +38,8 @@ class ContractAttachmentSerializerTest {
                         mockServices))
     }
 
-    @Test
-    fun `write contract attachment and read it back`() {
+    @Test(timeout=300_000)
+	fun `write contract attachment and read it back`() {
         val contractAttachment = ContractAttachment(GeneratedAttachment(EMPTY_BYTE_ARRAY, "test"), DummyContract.PROGRAM_ID)
         // no token context so will serialize the whole attachment
         val serialized = contractAttachment.checkpointSerialize()
@@ -51,8 +51,8 @@ class ContractAttachmentSerializerTest {
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 
-    @Test
-    fun `write contract attachment and read it back using token context`() {
+    @Test(timeout=300_000)
+	fun `write contract attachment and read it back using token context`() {
         val attachment = GeneratedAttachment("test".toByteArray(), "test")
 
         mockServices.attachments.importAttachment(attachment.open(), "test", null)
@@ -67,8 +67,8 @@ class ContractAttachmentSerializerTest {
         assertArrayEquals(contractAttachment.open().readBytes(), deserialized.open().readBytes())
     }
 
-    @Test
-    fun `check only serialize attachment id and contract class name when using token context`() {
+    @Test(timeout=300_000)
+	fun `check only serialize attachment id and contract class name when using token context`() {
         val largeAttachmentSize = 1024 * 1024
         val attachment = GeneratedAttachment(ByteArray(largeAttachmentSize), "test")
 
@@ -80,8 +80,8 @@ class ContractAttachmentSerializerTest {
         assertThat(serialized.size).isLessThan(largeAttachmentSize)
     }
 
-    @Test
-    fun `throws when missing attachment when using token context`() {
+    @Test(timeout=300_000)
+	fun `throws when missing attachment when using token context`() {
         val attachment = GeneratedAttachment("test".toByteArray(), "test")
 
         // don't importAttachment in mockService
@@ -93,8 +93,8 @@ class ContractAttachmentSerializerTest {
         assertThatThrownBy { deserialized.attachment.open() }.isInstanceOf(MissingAttachmentsException::class.java)
     }
 
-    @Test
-    fun `check attachment in deserialize is lazy loaded when using token context`() {
+    @Test(timeout=300_000)
+	fun `check attachment in deserialize is lazy loaded when using token context`() {
         val attachment = GeneratedAttachment(EMPTY_BYTE_ARRAY, "test")
         // don't importAttachment in mockService
 

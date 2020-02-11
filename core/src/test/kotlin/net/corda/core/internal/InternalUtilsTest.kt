@@ -17,23 +17,23 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 open class InternalUtilsTest {
-    @Test
-    fun `noneOrSingle on an empty collection`() {
+    @Test(timeout=300_000)
+	fun `noneOrSingle on an empty collection`() {
         val collection = emptyList<Int>()
         assertThat(collection.noneOrSingle()).isNull()
         assertThat(collection.noneOrSingle { it == 1 }).isNull()
     }
 
-    @Test
-    fun `noneOrSingle on a singleton collection`() {
+    @Test(timeout=300_000)
+	fun `noneOrSingle on a singleton collection`() {
         val collection = listOf(1)
         assertThat(collection.noneOrSingle()).isEqualTo(1)
         assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
         assertThat(collection.noneOrSingle { it == 2 }).isNull()
     }
 
-    @Test
-    fun `noneOrSingle on a collection with two items`() {
+    @Test(timeout=300_000)
+	fun `noneOrSingle on a collection with two items`() {
         val collection = listOf(1, 2)
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle() }
         assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
@@ -42,29 +42,29 @@ open class InternalUtilsTest {
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle { it > 0 } }
     }
 
-    @Test
-    fun `noneOrSingle on a collection with items 1, 2, 1`() {
+    @Test(timeout=300_000)
+	fun `noneOrSingle on a collection with items 1, 2, 1`() {
         val collection = listOf(1, 2, 1)
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle() }
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle { it == 1 } }
         assertThat(collection.noneOrSingle { it == 2 }).isEqualTo(2)
     }
 
-    @Test
-    fun `indexOfOrThrow returns index of the given item`() {
+    @Test(timeout=300_000)
+	fun `indexOfOrThrow returns index of the given item`() {
         val collection = listOf(1, 2)
         assertEquals(collection.indexOfOrThrow(1), 0)
         assertEquals(collection.indexOfOrThrow(2), 1)
     }
 
-    @Test
-    fun `indexOfOrThrow throws if the given item is not found`() {
+    @Test(timeout=300_000)
+	fun `indexOfOrThrow throws if the given item is not found`() {
         val collection = listOf(1)
         assertFailsWith<IllegalArgumentException> { collection.indexOfOrThrow(2) }
     }
 
-    @Test
-    fun `IntProgression stream works`() {
+    @Test(timeout=300_000)
+	fun `IntProgression stream works`() {
         assertArrayEquals(intArrayOf(1, 2, 3, 4), (1..4).stream().toArray())
         assertArrayEquals(intArrayOf(1, 2, 3, 4), (1 until 5).stream().toArray())
         assertArrayEquals(intArrayOf(1, 3), (1..4 step 2).stream().toArray())
@@ -76,8 +76,8 @@ open class InternalUtilsTest {
         assertArrayEquals(intArrayOf(3, 1), (3 downTo 1 step 2).stream().toArray())
     }
 
-    @Test
-    fun `IntProgression spliterator characteristics and comparator`() {
+    @Test(timeout=300_000)
+	fun `IntProgression spliterator characteristics and comparator`() {
         val rangeCharacteristics = IntStream.range(0, 2).spliterator().characteristics()
         val forward = (0..9 step 3).stream().spliterator()
         assertEquals(rangeCharacteristics, forward.characteristics())
@@ -87,8 +87,8 @@ open class InternalUtilsTest {
         assertEquals(Comparator.reverseOrder(), reverse.comparator)
     }
 
-    @Test
-    fun `Stream toTypedArray works`() {
+    @Test(timeout=300_000)
+	fun `Stream toTypedArray works`() {
         val a: Array<String> = Stream.of("one", "two").toTypedArray()
         assertEquals(Array<String>::class.java, a.javaClass)
         assertArrayEquals(arrayOf("one", "two"), a)
@@ -97,8 +97,8 @@ open class InternalUtilsTest {
         assertArrayEquals(arrayOf("one", "two", null), b)
     }
 
-    @Test
-    fun kotlinObjectInstance() {
+    @Test(timeout=300_000)
+	fun kotlinObjectInstance() {
         assertThat(PublicObject::class.java.kotlinObjectInstance).isSameAs(PublicObject)
         assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
         assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
@@ -106,8 +106,8 @@ open class InternalUtilsTest {
         assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
     }
 
-    @Test
-    fun `bufferUntilSubscribed delays emission until the first subscription`() {
+    @Test(timeout=300_000)
+	fun `bufferUntilSubscribed delays emission until the first subscription`() {
         val sourceSubject: PublishSubject<Int> = PublishSubject.create<Int>()
         val bufferedObservable: rx.Observable<Int> = uncheckedCast(sourceSubject.bufferUntilSubscribed())
 
@@ -123,15 +123,15 @@ open class InternalUtilsTest {
         assertThat(itemsFromNonBufferedObservable).doesNotContain(1)
     }
 
-    @Test
-    fun `test SHA-256 hash for InputStream`() {
+    @Test(timeout=300_000)
+	fun `test SHA-256 hash for InputStream`() {
         val contents = arrayOfJunk(DEFAULT_BUFFER_SIZE * 2 + DEFAULT_BUFFER_SIZE / 2)
         assertThat(contents.inputStream().hash())
             .isEqualTo(SecureHash.parse("A4759E7AA20338328866A2EA17EAF8C7FE4EC6BBE3BB71CEE7DF7C0461B3C22F"))
     }
 
-    @Test
-    fun `warnOnce works, but the backing cache grows only to a maximum size`() {
+    @Test(timeout=300_000)
+	fun `warnOnce works, but the backing cache grows only to a maximum size`() {
         val MAX_SIZE = 100
 
         val logger = mock<Logger>()

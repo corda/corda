@@ -14,8 +14,8 @@ class SecureRandomTest {
         }
     }
 
-    @Test
-    fun testNoCordaPRNG() {
+    @Test(timeout=300_000)
+	fun testNoCordaPRNG() {
         val error = assertFailsWith<NoSuchAlgorithmException> { SecureRandom.getInstance("CordaPRNG") }
         assertThat(error).hasMessage("CordaPRNG SecureRandom not available")
     }

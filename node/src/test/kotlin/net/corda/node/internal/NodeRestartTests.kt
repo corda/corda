@@ -26,8 +26,8 @@ class NodeRestartTests {
         mockNet.close()
     }
 
-    @Test
-    fun `restart with no network map cache update`() {
+    @Test(timeout=300_000)
+	fun `restart with no network map cache update`() {
         val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         val bob = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         bob.registerInitiatedFlow(Responder::class.java)

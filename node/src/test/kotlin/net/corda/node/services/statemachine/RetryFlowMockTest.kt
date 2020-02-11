@@ -70,14 +70,14 @@ class RetryFlowMockTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
-    @Test
-    fun `Single retry`() {
+    @Test(timeout=300_000)
+	fun `Single retry`() {
         assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
         assertEquals(2, RetryFlow.count)
     }
 
-    @Test
-    fun `Retry does not set senderUUID`() {
+    @Test(timeout=300_000)
+	fun `Retry does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
@@ -92,8 +92,8 @@ class RetryFlowMockTest {
         assertEquals(2, SendAndRetryFlow.count)
     }
 
-    @Test
-    fun `Restart does not set senderUUID`() {
+    @Test(timeout=300_000)
+	fun `Restart does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
@@ -124,14 +124,14 @@ class RetryFlowMockTest {
         assertNull(messagesSent.last().senderUUID)
     }
 
-    @Test
-    fun `Retry duplicate insert`() {
+    @Test(timeout=300_000)
+	fun `Retry duplicate insert`() {
         assertEquals(Unit, nodeA.startFlow(RetryInsertFlow(1)).get())
         assertEquals(2, RetryInsertFlow.count)
     }
 
-    @Test
-    fun `Patient records do not leak in hospital`() {
+    @Test(timeout=300_000)
+	fun `Patient records do not leak in hospital`() {
         assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
         // Need to make sure the state machine has finished.  Otherwise this test is flakey.
         mockNet.waitQuiescent()
@@ -139,8 +139,8 @@ class RetryFlowMockTest {
         assertEquals(2, RetryFlow.count)
     }
 
-    @Test
-    fun `Patient records do not leak in hospital when using killFlow`() {
+    @Test(timeout=300_000)
+	fun `Patient records do not leak in hospital when using killFlow`() {
         // Make sure we have seen an update from the hospital, and thus the flow went there.
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()

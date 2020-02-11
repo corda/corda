@@ -76,8 +76,8 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val Mbps: Double
     )
 
-    @Test
-    fun `measure Megabytes per second for simple RPCs`() {
+    @Test(timeout=300_000)
+	fun `measure Megabytes per second for simple RPCs`() {
         warmup()
         val inputOutputSizes = listOf(1024, 4096, 100 * 1024)
         val overallTraffic = 512 * 1024 * 1024L
@@ -118,8 +118,8 @@ class RPCPerformanceTests : AbstractRPCTest() {
     /**
      * Runs 20k RPCs per second for two minutes and publishes relevant stats to JMX.
      */
-    @Test
-    fun `consumption rate`() {
+    @Test(timeout=300_000)
+	fun `consumption rate`() {
         rpcDriver {
             val metricRegistry = startReporter(shutdownManager)
             val proxy = testProxy(
@@ -148,8 +148,8 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val Mbps: Double
     )
 
-    @Test
-    fun `big messages`() {
+    @Test(timeout=300_000)
+	fun `big messages`() {
         warmup()
         measure(listOf(1)) { clientParallelism ->
             // TODO this hangs with more parallelism

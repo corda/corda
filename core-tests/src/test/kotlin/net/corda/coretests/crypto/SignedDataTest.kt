@@ -25,8 +25,8 @@ class SignedDataTest {
     val data = "Just a simple test string"
     lateinit var serialized: SerializedBytes<String>
 
-    @Test
-    fun `make sure correctly signed data is released`() {
+    @Test(timeout=300_000)
+	fun `make sure correctly signed data is released`() {
         val keyPair = generateKeyPair()
         val sig = keyPair.private.sign(serialized.bytes, keyPair.public)
         val wrappedData = SignedData(serialized, sig)

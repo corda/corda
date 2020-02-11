@@ -114,8 +114,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `cash issue accepted`() {
+    @Test(timeout=300_000)
+	fun `cash issue accepted`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 invokeRpc("vaultTrackBy"),
                 invokeRpc("vaultQueryBy"),
@@ -170,9 +171,10 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
+    @Suppress("DEPRECATION")
     fun `issue and move`() {
-        @Suppress("DEPRECATION")
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
@@ -264,8 +266,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `cash command by user not permissioned for cash`() {
+    @Test(timeout=300_000)
+	fun `cash command by user not permissioned for cash`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withoutAnyPermissions {
             assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
                 rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
@@ -273,8 +276,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `can upload an attachment`() {
+    @Test(timeout=300_000)
+	fun `can upload an attachment`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val secureHash = rpc.uploadAttachment(inputJar)
@@ -282,8 +286,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `cannot upload the same attachment`() {
+    @Test(timeout=300_000)
+	fun `cannot upload the same attachment`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
@@ -294,8 +299,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `can download an uploaded attachment`() {
+    @Test(timeout=300_000)
+	fun `can download an uploaded attachment`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::openAttachment)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val secureHash = rpc.uploadAttachment(inputJar)
@@ -309,8 +315,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `can upload attachment with metadata`() {
+    @Test(timeout=300_000)
+	fun `can upload attachment with metadata`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val secureHash = rpc.uploadAttachmentWithMetadata(inputJar, "Iron Fist", "Season 2")
@@ -318,8 +325,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `attachment uploaded with metadata has specified filename`() {
+    @Test(timeout=300_000)
+	fun `attachment uploaded with metadata has specified filename`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::queryAttachments)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "The Punisher", "Season 1")
@@ -336,8 +344,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `attachment uploaded with metadata can be from a privileged user`() {
+    @Test(timeout=300_000)
+	fun `attachment uploaded with metadata can be from a privileged user`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val secureHash = rpc.uploadAttachmentWithMetadata(inputJar, RPC_UPLOADER, "Season 1")
@@ -345,8 +354,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `attachment uploaded with metadata has specified uploader`() {
+    @Test(timeout=300_000)
+	fun `attachment uploaded with metadata has specified uploader`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::queryAttachments)) {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "Daredevil", "Season 3")
@@ -363,8 +373,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `attempt to start non-RPC flow`() {
+    @Test(timeout=300_000)
+	fun `attempt to start non-RPC flow`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(startFlow<NonRPCFlow>()) {
             assertThatExceptionOfType(NonRpcFlowException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
@@ -372,8 +383,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `kill a stuck flow through RPC`() {
+    @Test(timeout=300_000)
+	fun `kill a stuck flow through RPC`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 startFlow<NewJoinerFlow>(),
                 invokeRpc(CordaRPCOps::killFlow),
@@ -387,8 +399,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `kill a waiting flow through RPC`() {
+    @Test(timeout=300_000)
+	fun `kill a waiting flow through RPC`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 startFlow<HopefulFlow>(),
                 invokeRpc(CordaRPCOps::killFlow),
@@ -402,8 +415,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `killing a flow releases soft lock`() {
+    @Test(timeout=300_000)
+	fun `killing a flow releases soft lock`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(all()) {
             val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
             val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
@@ -435,8 +449,9 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `kill a nonexistent flow through RPC`() {
+    @Test(timeout=300_000)
+	fun `kill a nonexistent flow through RPC`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::killFlow)) {
             val nonexistentFlowId = StateMachineRunId.createRandom()
             val killed = rpc.killFlow(nonexistentFlowId)
@@ -444,12 +459,23 @@ class CordaRPCOpsImplTest {
         }
     }
 
-    @Test
-    fun `non-ContractState class for the contractStateType param in vault queries`() {
+    @Test(timeout=300_000)
+	fun `non-ContractState class for the contractStateType param in vault queries`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         val nonContractStateClass: Class<out ContractState> = uncheckedCast(Cash::class.java)
         withPermissions(invokeRpc("vaultTrack"), invokeRpc("vaultQuery")) {
             assertThatThrownBy { rpc.vaultQuery(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
             assertThatThrownBy { rpc.vaultTrack(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `attempt to start RPC flow with void return`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(startFlow<VoidRPCFlow>()) {
+            val result = rpc.startFlow(::VoidRPCFlow)
+            mockNet.runNetwork()
+            assertNull(result.returnValue.getOrThrow())
         }
     }
 
@@ -477,14 +503,7 @@ class CordaRPCOpsImplTest {
         override fun call() = Unit
     }
 
-    @Test
-    fun `attempt to start RPC flow with void return`() {
-        withPermissions(startFlow<VoidRPCFlow>()) {
-            val result = rpc.startFlow(::VoidRPCFlow)
-            mockNet.runNetwork()
-            assertNull(result.returnValue.getOrThrow())
-        }
-    }
+
 
     @StartableByRPC
     class VoidRPCFlow : FlowLogic<Void?>() {

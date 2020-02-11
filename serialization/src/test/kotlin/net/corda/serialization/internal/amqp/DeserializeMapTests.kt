@@ -18,8 +18,8 @@ class DeserializeMapTests {
 
     private val sf = testDefaultFactoryNoEvolution()
 
-    @Test
-    fun mapTest() {
+    @Test(timeout=300_000)
+	fun mapTest() {
         data class C(val c: Map<String, Int>)
 
         val c = C(mapOf("A" to 1, "B" to 2))
@@ -48,8 +48,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
-    fun sortedMapTest() {
+    @Test(timeout=300_000)
+	fun sortedMapTest() {
         data class C(val c: SortedMap<String, Int>)
 
         val c = C(sortedMapOf("A" to 1, "B" to 2))
@@ -57,8 +57,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
-    fun navigableMapTest() {
+    @Test(timeout=300_000)
+	fun navigableMapTest() {
         data class C(val c: NavigableMap<String, Int>)
 
         val c = C(TreeMap(mapOf("A" to 1, "B" to 2)).descendingMap())
@@ -67,8 +67,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
-    fun dictionaryTest() {
+    @Test(timeout=300_000)
+	fun dictionaryTest() {
         data class C(val c: Dictionary<String, Int>)
 
         val v: Hashtable<String, Int> = Hashtable()
@@ -81,8 +81,8 @@ class DeserializeMapTests {
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Dictionary.")
     }
 
-    @Test
-    fun hashtableTest() {
+    @Test(timeout=300_000)
+	fun hashtableTest() {
         data class C(val c: Hashtable<String, Int>)
 
         val v: Hashtable<String, Int> = Hashtable()
@@ -95,8 +95,8 @@ class DeserializeMapTests {
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Unable to serialise deprecated type class java.util.Hashtable. Suggested fix: prefer java.util.map implementations")
     }
 
-    @Test
-    fun hashMapTest() {
+    @Test(timeout=300_000)
+	fun hashMapTest() {
         data class C(val c: HashMap<String, Int>)
 
         val c = C(HashMap(mapOf("A" to 1, "B" to 2)))
@@ -106,8 +106,8 @@ class DeserializeMapTests {
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
-    @Test
-    fun weakHashMapTest() {
+    @Test(timeout=300_000)
+	fun weakHashMapTest() {
         data class C(val c: WeakHashMap<String, Int>)
 
         val c = C(WeakHashMap(mapOf("A" to 1, "B" to 2)))
@@ -116,8 +116,8 @@ class DeserializeMapTests {
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Weak references with map types not supported. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
-    @Test
-    fun concreteTreeMapTest() {
+    @Test(timeout=300_000)
+	fun concreteTreeMapTest() {
         data class C(val c: TreeMap<String, Int>)
 
         val c = C(TreeMap(mapOf("A" to 1, "B" to 3)))
@@ -126,8 +126,8 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test
-    fun concreteLinkedHashMapTest() {
+    @Test(timeout=300_000)
+	fun concreteLinkedHashMapTest() {
         data class C(val c: LinkedHashMap<String, Int>)
 
         val c = C(LinkedHashMap(mapOf("A" to 1, "B" to 2)))
