@@ -54,8 +54,8 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         database.close()
     }
 
-    @Test
-    fun `map prevents duplicates, when key has been evicted from cache, but present in database`() {
+    @Test(timeout=300_000)
+	fun `map prevents duplicates, when key has been evicted from cache, but present in database`() {
         val map = createMap(1)
 
         database.transaction {
@@ -86,8 +86,8 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         return rowsUpdated != 0
     }
 
-    @Test
-    fun `can update entry in map`() {
+    @Test(timeout=300_000)
+	fun `can update entry in map`() {
         val map = createMap(1)
 
         database.transaction {
@@ -102,8 +102,8 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         assertThat(result).isEqualTo("updated")
     }
 
-    @Test
-    fun `update succeeds if value not in cache but in database`() {
+    @Test(timeout=300_000)
+	fun `update succeeds if value not in cache but in database`() {
         val map = createMap(1)
         database.transaction {
             map[1] = "1"
@@ -119,8 +119,8 @@ class AppendOnlyPersistentMapNonConcurrentTest {
         assertThat(result).isEqualTo("updated")
     }
 
-    @Test
-    fun `update succeeds if in same transaction as create`() {
+    @Test(timeout=300_000)
+	fun `update succeeds if in same transaction as create`() {
         val map = createMap(1)
         database.transaction {
             map[1] = "1"

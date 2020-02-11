@@ -9,8 +9,8 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class FilterMyKeysTests {
-    @Test
-    fun test() {
+    @Test(timeout=300_000)
+	fun test() {
         val name = CordaX500Name("Roger", "Office", "GB")
         val (_, services) = MockServices.makeTestDatabaseAndPersistentServices(
                 cordappPackages = emptyList(),

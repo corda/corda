@@ -7,29 +7,29 @@ import kotlin.test.assertFailsWith
 
 class InterpolatorsTest {
 
-    @Test
-    fun `linear interpolator throws when key to interpolate is outside the data set`() {
+    @Test(timeout=300_000)
+	fun `linear interpolator throws when key to interpolate is outside the data set`() {
         val xs = doubleArrayOf(1.0, 2.0, 4.0, 5.0)
         val interpolator = LinearInterpolator(xs, ys = xs)
         assertFailsWith<IllegalArgumentException> { interpolator.interpolate(0.0) }
         assertFailsWith<IllegalArgumentException> { interpolator.interpolate(6.0) }
     }
 
-    @Test
-    fun `linear interpolator throws when data set is less than 2 points`() {
+    @Test(timeout=300_000)
+	fun `linear interpolator throws when data set is less than 2 points`() {
         val xs = doubleArrayOf(1.0)
         assertFailsWith<IllegalArgumentException> { LinearInterpolator(xs, ys = xs) }
     }
 
-    @Test
-    fun `linear interpolator returns existing value when key is in data set`() {
+    @Test(timeout=300_000)
+	fun `linear interpolator returns existing value when key is in data set`() {
         val xs = doubleArrayOf(1.0, 2.0, 4.0, 5.0)
         val interpolatedValue = LinearInterpolator(xs, ys = xs).interpolate(2.0)
         assertEquals(2.0, interpolatedValue)
     }
 
-    @Test
-    fun `linear interpolator interpolates missing values correctly`() {
+    @Test(timeout=300_000)
+	fun `linear interpolator interpolates missing values correctly`() {
         val xs = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0)
         val toInterpolate = doubleArrayOf(1.5, 2.5, 2.8, 3.3, 3.7, 4.3, 4.7)
 
@@ -38,29 +38,29 @@ class InterpolatorsTest {
         Assert.assertArrayEquals(toInterpolate, actual, 0.01)
     }
 
-    @Test
-    fun `cubic interpolator throws when key to interpolate is outside the data set`() {
+    @Test(timeout=300_000)
+	fun `cubic interpolator throws when key to interpolate is outside the data set`() {
         val xs = doubleArrayOf(1.0, 2.0, 4.0, 5.0)
         val interpolator = CubicSplineInterpolator(xs, ys = xs)
         assertFailsWith<IllegalArgumentException> { interpolator.interpolate(0.0) }
         assertFailsWith<IllegalArgumentException> { interpolator.interpolate(6.0) }
     }
 
-    @Test
-    fun `cubic interpolator throws when data set is less than 3 points`() {
+    @Test(timeout=300_000)
+	fun `cubic interpolator throws when data set is less than 3 points`() {
         val xs = doubleArrayOf(1.0, 2.0)
         assertFailsWith<IllegalArgumentException> { CubicSplineInterpolator(xs, ys = xs) }
     }
 
-    @Test
-    fun `cubic interpolator returns existing value when key is in data set`() {
+    @Test(timeout=300_000)
+	fun `cubic interpolator returns existing value when key is in data set`() {
         val xs = doubleArrayOf(1.0, 2.0, 4.0, 5.0)
         val interpolatedValue = CubicSplineInterpolator(xs, ys = xs).interpolate(2.0)
         assertEquals(2.0, interpolatedValue)
     }
 
-    @Test
-    fun `cubic interpolator interpolates missing values correctly`() {
+    @Test(timeout=300_000)
+	fun `cubic interpolator interpolates missing values correctly`() {
         val xs = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0)
         val ys = doubleArrayOf(2.0, 4.0, 5.0, 11.0, 10.0)
         val toInterpolate = doubleArrayOf(1.5, 2.5, 2.8, 3.3, 3.7, 4.3, 4.7)

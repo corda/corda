@@ -44,8 +44,8 @@ class CordaServiceTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `Can find distinct services on node`() {
+    @Test(timeout=300_000)
+	fun `Can find distinct services on node`() {
         val service = nodeA.services.cordaService(TestCordaService::class.java)
         val service2 = nodeA.services.cordaService(TestCordaService2::class.java)
         val legacyService = nodeA.services.cordaService(LegacyCordaService::class.java)
@@ -55,27 +55,27 @@ class CordaServiceTest {
         assertEquals(LegacyCordaService::class.java, legacyService.javaClass)
     }
 
-    @Test
-    fun `Can start StartableByService flows`() {
+    @Test(timeout=300_000)
+	fun `Can start StartableByService flows`() {
         val service = nodeA.services.cordaService(TestCordaService::class.java)
         service.startServiceFlow()
     }
 
-    @Test
-    fun `Can't start StartableByRPC flows`() {
+    @Test(timeout=300_000)
+	fun `Can't start StartableByRPC flows`() {
         val service = nodeA.services.cordaService(TestCordaService2::class.java)
         assertFailsWith<IllegalArgumentException> { service.startInvalidRPCFlow() }
     }
 
 
-    @Test
-    fun `Test flow with progress tracking`() {
+    @Test(timeout=300_000)
+	fun `Test flow with progress tracking`() {
         val service = nodeA.services.cordaService(TestCordaService::class.java)
         service.startServiceFlowAndTrack()
     }
 
-    @Test
-    fun `Corda service can access a non-null thread context classloader`() {
+    @Test(timeout=300_000)
+	fun `Corda service can access a non-null thread context classloader`() {
         val service = nodeA.services.cordaService(CordaServiceThatRequiresThreadContextClassLoader::class.java)
         service.thatWeCanAccessClassLoader()
     }
@@ -85,18 +85,18 @@ class CordaServiceTest {
      * Querying the vault from a services constructor failed because the criteriaBuilder
      * had not been initialized.
      */
-    @Test
-    fun `Can query vault service in constructor`() {
+    @Test(timeout=300_000)
+	fun `Can query vault service in constructor`() {
         nodeA.services.cordaService(VaultQueryService::class.java)
     }
 
-    @Test
-    fun `Can query using jdbc session in constructor`() {
+    @Test(timeout=300_000)
+	fun `Can query using jdbc session in constructor`() {
         nodeA.services.cordaService(JdbcSessionQueryService::class.java)
     }
 
-    @Test
-    fun `Can use entity manager in constructor`() {
+    @Test(timeout=300_000)
+	fun `Can use entity manager in constructor`() {
         nodeA.services.cordaService(EntityManagerService::class.java)
     }
 

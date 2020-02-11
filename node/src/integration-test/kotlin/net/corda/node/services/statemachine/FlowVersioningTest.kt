@@ -17,8 +17,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class FlowVersioningTest : NodeBasedTest() {
-    @Test
-    fun `getFlowContext returns the platform version for core flows`() {
+    @Test(timeout=300_000)
+	fun `getFlowContext returns the platform version for core flows`() {
         val bobFlowManager = NodeFlowManager()
         val alice = startNode(ALICE_NAME, platformVersion = 2)
         val bob = startNode(BOB_NAME, platformVersion = 3, flowManager = bobFlowManager)

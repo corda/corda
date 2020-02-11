@@ -25,15 +25,15 @@ class SetsSerializationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun `check set can be serialized as root of serialization graph`() {
+    @Test(timeout=300_000)
+	fun `check set can be serialized as root of serialization graph`() {
         assertEqualAfterRoundTripSerialization(emptySet<Int>())
         assertEqualAfterRoundTripSerialization(setOf(1))
         assertEqualAfterRoundTripSerialization(setOf(1, 2))
     }
 
-    @Test
-    fun `check set can be serialized as part of DataSessionMessage`() {
+    @Test(timeout=300_000)
+	fun `check set can be serialized as part of DataSessionMessage`() {
         run {
             val sessionData = DataSessionMessage(setOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
@@ -51,8 +51,8 @@ class SetsSerializationTest {
         }
     }
 
-    @Test
-    fun `check empty set serialises as Java emptySet`() = kryoSpecific("Checks Kryo header properties") {
+    @Test(timeout=300_000)
+	fun `check empty set serialises as Java emptySet`() = kryoSpecific("Checks Kryo header properties") {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
@@ -83,8 +83,8 @@ class SetsSerializationTest {
     We now check only for compatibility of the erased classes, so the call to propertyDescriptors() below should now succeed, returning the
     property descriptor for "p".
      */
-    @Test
-    fun `type variance on setter getter pair does not fail validation`() {
+    @Test(timeout=300_000)
+	fun `type variance on setter getter pair does not fail validation`() {
         assertThat(VarOfP::class.java.accessPropertyDescriptors()).containsKey("p")
     }
 

@@ -18,8 +18,8 @@ class PrivatePropertyTests {
     private val factory = testDefaultFactoryNoEvolution(registry)
     val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, factory))
 
-    @Test
-    fun testWithOnePrivateProperty() {
+    @Test(timeout=300_000)
+	fun testWithOnePrivateProperty() {
         data class C(private val b: String)
 
         val c1 = C("Pants are comfortable sometimes")
@@ -27,8 +27,8 @@ class PrivatePropertyTests {
         assertEquals(c1, c2)
     }
 
-    @Test
-    fun testWithOnePrivatePropertyBoolean() {
+    @Test(timeout=300_000)
+	fun testWithOnePrivatePropertyBoolean() {
         data class C(private val b: Boolean)
 
         C(false).apply {
@@ -36,8 +36,8 @@ class PrivatePropertyTests {
         }
     }
 
-    @Test
-    fun testWithOnePrivatePropertyNullableNotNull() {
+    @Test(timeout=300_000)
+	fun testWithOnePrivatePropertyNullableNotNull() {
         data class C(private val b: String?)
 
         val c1 = C("Pants are comfortable sometimes")
@@ -45,8 +45,8 @@ class PrivatePropertyTests {
         assertEquals(c1, c2)
     }
 
-    @Test
-    fun testWithOnePrivatePropertyNullableNull() {
+    @Test(timeout=300_000)
+	fun testWithOnePrivatePropertyNullableNull() {
         data class C(private val b: String?)
 
         val c1 = C(null)
@@ -54,8 +54,8 @@ class PrivatePropertyTests {
         assertEquals(c1, c2)
     }
 
-    @Test
-    fun testWithOnePublicOnePrivateProperty() {
+    @Test(timeout=300_000)
+	fun testWithOnePublicOnePrivateProperty() {
         data class C(val a: Int, private val b: Int)
 
         val c1 = C(1, 2)
@@ -63,8 +63,8 @@ class PrivatePropertyTests {
         assertEquals(c1, c2)
     }
 
-    @Test
-    fun testWithInheritance() {
+    @Test(timeout=300_000)
+	fun testWithInheritance() {
         open class B(val a: String, protected val b: String)
         class D (a: String, b: String) : B (a, b) {
             override fun equals(other: Any?): Boolean = when (other) {
@@ -80,8 +80,8 @@ class PrivatePropertyTests {
         assertEquals(d1, d2)
     }
 
-    @Test
-    fun testMultiArgSetter() {
+    @Test(timeout=300_000)
+	fun testMultiArgSetter() {
         @Suppress("UNUSED")
         data class C(private var a: Int, var b: Int) {
             // This will force the serialization engine to use getter / setter
@@ -99,8 +99,8 @@ class PrivatePropertyTests {
         assertEquals(44, c2.b)
     }
 
-    @Test
-    fun testBadTypeArgSetter() {
+    @Test(timeout=300_000)
+	fun testBadTypeArgSetter() {
         @Suppress("UNUSED")
         data class C(private var a: Int, val b: Int) {
             @ConstructorForDeserialization
@@ -118,8 +118,8 @@ class PrivatePropertyTests {
                         "yet underlying type is int")
     }
 
-    @Test
-    fun testWithOnePublicOnePrivateProperty2() {
+    @Test(timeout=300_000)
+	fun testWithOnePublicOnePrivateProperty2() {
         data class C(val a: Int, private val b: Int)
 
         val c1 = C(1, 2)
@@ -135,8 +135,8 @@ class PrivatePropertyTests {
         assertTrue(typeInformation.properties["b"] is LocalPropertyInformation.PrivateConstructorPairedProperty)
     }
 
-    @Test
-    fun testGetterMakesAPublicReader() {
+    @Test(timeout=300_000)
+	fun testGetterMakesAPublicReader() {
         data class C(val a: Int, private val b: Int) {
             @Suppress("UNUSED")
             fun getB() = b
@@ -157,8 +157,8 @@ class PrivatePropertyTests {
     }
 
     @Suppress("UNCHECKED_CAST")
-    @Test
-    fun testNested() {
+    @Test(timeout=300_000)
+	fun testNested() {
         data class Inner(private val a: Int)
         data class Outer(private val i: Inner)
 
@@ -179,8 +179,8 @@ class PrivatePropertyTests {
     // Reproduces CORDA-1134
     //
     @Suppress("UNCHECKED_CAST")
-    @Test
-    fun allCapsProprtyNotPrivate() {
+    @Test(timeout=300_000)
+	fun allCapsProprtyNotPrivate() {
         data class C (val CCC: String)
         val typeInformation = typeModel.inspect(C::class.java)
 

@@ -26,8 +26,8 @@ class NamedCacheTest : NamedCacheFactory {
         assertEquals(throws, exceptionThrown)
     }
 
-    @Test
-    fun TestCheckCacheName() {
+    @Test(timeout=300_000)
+	fun TestCheckCacheName() {
         checkNameHelper("abc_123.234", false)
         checkNameHelper("", true)
         checkNameHelper("abc 123", true)

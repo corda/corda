@@ -5,7 +5,7 @@ import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal._driverSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
 import org.junit.rules.TestRule
@@ -48,11 +48,11 @@ class LocalSerializationRule(private val label: String) : TestRule {
     }
 
     private fun init() {
-        _contextSerializationEnv.set(createTestSerializationEnv())
+        _driverSerializationEnv.set(createTestSerializationEnv())
     }
 
     private fun clear() {
-        _contextSerializationEnv.set(null)
+        _driverSerializationEnv.set(null)
     }
 
     private fun createTestSerializationEnv(): SerializationEnvironment {

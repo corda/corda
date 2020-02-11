@@ -45,8 +45,8 @@ class CordappConstraintsTests {
         val SIGNED_FINANCE_CORDAPP = UNSIGNED_FINANCE_CORDAPP.signed()
     }
 
-    @Test
-    fun `issue cash using signature constraints`() {
+    @Test(timeout=300_000)
+	fun `issue cash using signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 cordappsForAllNodes = emptyList(),
@@ -72,8 +72,8 @@ class CordappConstraintsTests {
         }
     }
 
-    @Test
-    fun `issue cash using hash and signature constraints`() {
+    @Test(timeout=300_000)
+	fun `issue cash using hash and signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 cordappsForAllNodes = emptyList(),
@@ -129,8 +129,8 @@ class CordappConstraintsTests {
         }
     }
 
-    @Test
-    fun `issue and consume cash using hash constraints`() {
+    @Test(timeout=300_000)
+	fun `issue and consume cash using hash constraints`() {
         driver(DriverParameters(
                 cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
@@ -189,8 +189,8 @@ class CordappConstraintsTests {
         }
     }
 
-    @Test
-    fun `issue and consume cash using signature constraints`() {
+    @Test(timeout=300_000)
+	fun `issue and consume cash using signature constraints`() {
         driver(DriverParameters(
                 cordappsForAllNodes = listOf(SIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
@@ -249,8 +249,8 @@ class CordappConstraintsTests {
         }
     }
 
-    @Test
-    @Ignore    // TODO(mike): rework
+    @Test(timeout=300_000)
+@Ignore    // TODO(mike): rework
     fun `issue cash and transfer using hash to signature constraints migration`() {
         // signing key setup
         val keyStoreDir = SelfCleaningDir()

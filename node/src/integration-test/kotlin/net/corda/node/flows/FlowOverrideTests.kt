@@ -65,8 +65,8 @@ class FlowOverrideTests {
     private val nodeAClasses = setOf(Ping::class.java, Pong::class.java, Pongiest::class.java)
     private val nodeBClasses = setOf(Ping::class.java, Pong::class.java)
 
-    @Test
-    fun `should use the most specific implementation of a responding flow`() {
+    @Test(timeout=300_000)
+	fun `should use the most specific implementation of a responding flow`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(NodeParameters(
                     providedName = ALICE_NAME,
@@ -80,8 +80,8 @@ class FlowOverrideTests {
         }
     }
 
-    @Test
-    fun `should use the overriden implementation of a responding flow`() {
+    @Test(timeout=300_000)
+	fun `should use the overriden implementation of a responding flow`() {
         val flowOverrides = mapOf(Ping::class.java to Pong::class.java)
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(NodeParameters(

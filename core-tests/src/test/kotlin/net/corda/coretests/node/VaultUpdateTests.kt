@@ -41,54 +41,54 @@ class VaultUpdateTests {
     private val stateAndRef3 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), stateRef3)
     private val stateAndRef4 = StateAndRef(TransactionState(DummyState(), DUMMY_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), stateRef4)
 
-    @Test
-    fun `nothing plus nothing is nothing`() {
+    @Test(timeout=300_000)
+	fun `nothing plus nothing is nothing`() {
         val before = emptyUpdate
         val after = before + emptyUpdate
         assertEquals(before, after)
     }
 
-    @Test
-    fun `something plus nothing is something`() {
+    @Test(timeout=300_000)
+	fun `something plus nothing is something`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         val after = before + emptyUpdate
         assertEquals(before, after)
     }
 
-    @Test
-    fun `nothing plus something is something`() {
+    @Test(timeout=300_000)
+	fun `nothing plus something is something`() {
         val before = emptyUpdate
         val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         assertEquals(expected, after)
     }
 
-    @Test
-    fun `something plus consume state 0 is something without state 0 output`() {
+    @Test(timeout=300_000)
+	fun `something plus consume state 0 is something without state 0 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
         val after = before + Vault.Update(setOf(stateAndRef0), setOf())
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef1))
         assertEquals(expected, after)
     }
 
-    @Test
-    fun `something plus produce state 4 is something with additional state 4 output`() {
+    @Test(timeout=300_000)
+	fun `something plus produce state 4 is something with additional state 4 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
         val after = before + Vault.Update(setOf(), setOf(stateAndRef4))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
         assertEquals(expected, after)
     }
 
-    @Test
-    fun `something plus consume states 0 and 1, and produce state 4, is something without state 0 and 1 outputs and only state 4 output`() {
+    @Test(timeout=300_000)
+	fun `something plus consume states 0 and 1, and produce state 4, is something without state 0 and 1 outputs and only state 4 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
         val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef4))
         assertEquals(expected, after)
     }
 
-    @Test
-    fun `can't combine updates of different types`() {
+    @Test(timeout=300_000)
+	fun `can't combine updates of different types`() {
         val regularUpdate = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
         val notaryChangeUpdate = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1), type = Vault.UpdateType.NOTARY_CHANGE)
         assertFailsWith<IllegalArgumentException> { regularUpdate + notaryChangeUpdate }

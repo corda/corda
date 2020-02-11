@@ -53,8 +53,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM rejects contract that uses Instant now`() {
+    @Test(timeout=300_000)
+	fun `test DJVM rejects contract that uses Instant now`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
@@ -66,8 +66,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM rejects contract that uses System currentTimeMillis`() {
+    @Test(timeout=300_000)
+	fun `test DJVM rejects contract that uses System currentTimeMillis`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
@@ -79,8 +79,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM rejects contract that uses System nanoTime`() {
+    @Test(timeout=300_000)
+	fun `test DJVM rejects contract that uses System nanoTime`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
@@ -92,8 +92,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM rejects contract that uses UUID randomUUID`() {
+    @Test(timeout=300_000)
+	fun `test DJVM rejects contract that uses UUID randomUUID`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
@@ -105,8 +105,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM rejects contract that uses reflection`() {
+    @Test(timeout=300_000)
+	fun `test DJVM rejects contract that uses reflection`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
@@ -119,8 +119,8 @@ class NonDeterministicContractVerifyTest {
         }
     }
 
-    @Test
-    fun `test DJVM can succeed`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can succeed`() {
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {

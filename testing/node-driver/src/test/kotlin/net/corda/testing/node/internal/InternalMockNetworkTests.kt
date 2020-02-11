@@ -21,8 +21,8 @@ class InternalMockNetworkTests {
         }
     }
 
-    @Test
-    fun basics() {
+    @Test(timeout=300_000)
+	fun basics() {
         mockNet = InternalMockNetwork()
 
         val node1 = mockNet.createNode()
@@ -46,8 +46,8 @@ class InternalMockNetworkTests {
         assertTrue(Arrays.equals(finalDelivery!!.data.bytes, bits))
     }
 
-    @Test
-    fun broadcast() {
+    @Test(timeout=300_000)
+	fun broadcast() {
         mockNet = InternalMockNetwork()
 
         val node1 = mockNet.createNode()
@@ -67,8 +67,8 @@ class InternalMockNetworkTests {
      * Tests that unhandled messages in the received queue are skipped and the next message processed, rather than
      * causing processing to return null as if there was no message.
      */
-    @Test
-    fun `skip unhandled messages`() {
+    @Test(timeout=300_000)
+	fun `skip unhandled messages`() {
         mockNet = InternalMockNetwork()
 
         val node1 = mockNet.createNode()
@@ -99,8 +99,8 @@ class InternalMockNetworkTests {
         assertEquals(2, received)
     }
 
-    @Test
-    fun `does not leak serialization env if init fails`() {
+    @Test(timeout=300_000)
+	fun `does not leak serialization env if init fails`() {
         val e = Exception("didn't work")
         assertThatThrownBy {
             object : InternalMockNetwork(cordappsForAllNodes = emptySet()) {

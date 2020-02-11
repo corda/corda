@@ -43,9 +43,9 @@ fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironm
     )
 }
 
-fun <T> SerializationEnvironment.asTestContextEnv(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
+fun <T> SerializationEnvironment.asTestContextEnv(callable: (SerializationEnvironment) -> T): T {
     try {
-        return asContextEnv(inheritable, callable)
+        return asContextEnv(callable)
     } finally {
         inVMExecutors.remove(this)
     }

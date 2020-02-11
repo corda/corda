@@ -50,8 +50,8 @@ class SandboxAttachmentsTest {
         }
     }
 
-    @Test
-    fun `test attachment accessible within sandbox`() {
+    @Test(timeout=300_000)
+	fun `test attachment accessible within sandbox`() {
         val extractFile = ExtractFile(SandboxAttachmentContract::class.java.name.asResourcePath + ".class")
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
@@ -63,8 +63,8 @@ class SandboxAttachmentsTest {
         }
     }
 
-    @Test
-    fun `test attachment file not found within sandbox`() {
+    @Test(timeout=300_000)
+	fun `test attachment file not found within sandbox`() {
         val extractFile = ExtractFile("does/not/Exist.class")
         driver(parametersFor(djvmSources)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()

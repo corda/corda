@@ -13,37 +13,37 @@ class PathUtilsTest {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    @Test
-    fun `deleteRecursively - non-existent path`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - non-existent path`() {
         val path = tempFolder.root.toPath() / "non-existent"
         path.deleteRecursively()
         assertThat(path).doesNotExist()
     }
 
-    @Test
-    fun `deleteRecursively - file`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - file`() {
         val file = (tempFolder.root.toPath() / "file").createFile()
         file.deleteRecursively()
         assertThat(file).doesNotExist()
     }
 
-    @Test
-    fun `deleteRecursively - empty folder`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - empty folder`() {
         val emptyDir = (tempFolder.root.toPath() / "empty").createDirectories()
         emptyDir.deleteRecursively()
         assertThat(emptyDir).doesNotExist()
     }
 
-    @Test
-    fun `deleteRecursively - dir with single file`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - dir with single file`() {
         val dir = (tempFolder.root.toPath() / "dir").createDirectories()
         (dir / "file").createFile()
         dir.deleteRecursively()
         assertThat(dir).doesNotExist()
     }
 
-    @Test
-    fun `deleteRecursively - nested single file`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - nested single file`() {
         val dir = (tempFolder.root.toPath() / "dir").createDirectories()
         val dir2 = (dir / "dir2").createDirectories()
         (dir2 / "file").createFile()
@@ -51,8 +51,8 @@ class PathUtilsTest {
         assertThat(dir).doesNotExist()
     }
 
-    @Test
-    fun `deleteRecursively - complex`() {
+    @Test(timeout=300_000)
+	fun `deleteRecursively - complex`() {
         val dir = (tempFolder.root.toPath() / "dir").createDirectories()
         (dir / "file1").createFile()
         val dir2 = (dir / "dir2").createDirectories()
@@ -63,8 +63,8 @@ class PathUtilsTest {
         assertThat(dir).doesNotExist()
     }
 
-    @Test
-    fun `copyToDirectory - copy into zip directory`() {
+    @Test(timeout=300_000)
+	fun `copyToDirectory - copy into zip directory`() {
         val source: Path = tempFolder.newFile("source.txt").let {
             it.writeText("Example Text")
             it.toPath()

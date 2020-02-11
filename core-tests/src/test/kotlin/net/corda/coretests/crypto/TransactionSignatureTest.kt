@@ -21,8 +21,8 @@ class TransactionSignatureTest {
     private val testBytes = "12345678901234567890123456789012".toByteArray()
 
     /** Valid sign and verify. */
-    @Test
-    fun `Signature metadata full sign and verify`() {
+    @Test(timeout=300_000)
+	fun `Signature metadata full sign and verify`() {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
 
         // Create a SignableData object.
@@ -47,8 +47,8 @@ class TransactionSignatureTest {
         Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
     }
 
-    @Test
-    fun `Verify multi-tx signature`() {
+    @Test(timeout=300_000)
+	fun `Verify multi-tx signature`() {
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
         // Deterministically create 5 txIds.
         val txIds: List<SecureHash> = IntRange(0, 4).map { byteArrayOf(it.toByte()).sha256() }
@@ -94,8 +94,8 @@ class TransactionSignatureTest {
         }
     }
 
-    @Test
-    fun `Verify one-tx signature`() {
+    @Test(timeout=300_000)
+	fun `Verify one-tx signature`() {
         val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger.valueOf(1234567890L))
         val txId = "aTransaction".toByteArray().sha256()
         // One-tx signature.

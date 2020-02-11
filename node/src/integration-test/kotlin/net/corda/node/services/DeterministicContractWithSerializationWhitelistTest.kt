@@ -59,8 +59,8 @@ class DeterministicContractWithSerializationWhitelistTest {
         }
     }
 
-    @Test
-    fun `test DJVM can verify using whitelist`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can verify using whitelist`() {
         driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
@@ -71,8 +71,8 @@ class DeterministicContractWithSerializationWhitelistTest {
         }
     }
 
-    @Test
-    fun `test DJVM can fail verify using whitelist`() {
+    @Test(timeout=300_000)
+	fun `test DJVM can fail verify using whitelist`() {
         driver(parametersFor(djvmSources, flowCordapp, contractCordapp)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val badData = WhitelistData(BAD_VALUE)

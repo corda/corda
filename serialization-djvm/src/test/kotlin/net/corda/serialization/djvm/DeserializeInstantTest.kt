@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeInstantTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing instant`() {
+	fun `test deserializing instant`() {
         val instant = Instant.now()
         val data = instant.serialize()
 

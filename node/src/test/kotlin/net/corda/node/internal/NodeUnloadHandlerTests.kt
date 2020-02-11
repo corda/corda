@@ -25,8 +25,8 @@ class NodeUnloadHandlerTests {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `should be able to register run on stop lambda`() {
+    @Test(timeout=300_000)
+	fun `should be able to register run on stop lambda`() {
         val node = mockNet.createNode()
         registerLatch.await()  // Make sure the handler is registered on node start up
         node.dispose()

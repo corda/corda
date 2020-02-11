@@ -117,8 +117,8 @@ class CommercialPaperTestsGeneric {
         override fun loadState(stateRef: StateRef): TransactionState<*> = TransactionState(thisTest.getPaper(), thisTest.getContract(), dummyNotary.party) // Simulates the state is recorded in the node service
     }
 
-    @Test
-    fun `trade lifecycle test`() {
+    @Test(timeout=300_000)
+	fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` megaCorpRef
         ledgerServices.ledger(dummyNotary.party) {
             unverifiedTransaction {
@@ -190,8 +190,8 @@ class CommercialPaperTestsGeneric {
         ledgerServices.transaction(dummyNotary.party, script)
     }
 
-    @Test
-    fun `key mismatch at issue`() {
+    @Test(timeout=300_000)
+	fun `key mismatch at issue`() {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
@@ -202,8 +202,8 @@ class CommercialPaperTestsGeneric {
         }
     }
 
-    @Test
-    fun `face value is not zero`() {
+    @Test(timeout=300_000)
+	fun `face value is not zero`() {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
@@ -214,8 +214,8 @@ class CommercialPaperTestsGeneric {
         }
     }
 
-    @Test
-    fun `maturity date not in the past`() {
+    @Test(timeout=300_000)
+	fun `maturity date not in the past`() {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
@@ -226,8 +226,8 @@ class CommercialPaperTestsGeneric {
         }
     }
 
-    @Test
-    fun `issue cannot replace an existing state`() {
+    @Test(timeout=300_000)
+	fun `issue cannot replace an existing state`() {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
@@ -239,8 +239,8 @@ class CommercialPaperTestsGeneric {
         }
     }
 
-    @Test
-    fun `issue move and then redeem`() {
+    @Test(timeout=300_000)
+	fun `issue move and then redeem`() {
         // Set up a test environment with 4 parties:
         // 1. The notary
         // 2. A dummy cash issuer e.g. central bank

@@ -10,8 +10,8 @@ import kotlin.test.assertEquals
 class StandaloneShellArgsParserTest {
     private val CONFIG_FILE = StandaloneShellArgsParserTest::class.java.getResource("/config.conf").toPath()
 
-    @Test
-    fun empty_args_to_cmd_options() {
+    @Test(timeout=300_000)
+	fun empty_args_to_cmd_options() {
         val expectedOptions = ShellCmdLineOptions()
 
         assertEquals(expectedOptions.configFile, null)
@@ -23,8 +23,8 @@ class StandaloneShellArgsParserTest {
         assertEquals(expectedOptions.password, null)
     }
 
-    @Test
-    fun args_to_config() {
+    @Test(timeout=300_000)
+	fun args_to_config() {
         val options = ShellCmdLineOptions()
         options.configFile = null
         options.commandsDirectory = Paths.get("/x/y/commands")
@@ -56,8 +56,8 @@ class StandaloneShellArgsParserTest {
         assertEquals(expectedConfig, config)
     }
 
-    @Test
-    fun cmd_options_to_config_from_file() {
+    @Test(timeout=300_000)
+	fun cmd_options_to_config_from_file() {
         val options = ShellCmdLineOptions()
         options.configFile = CONFIG_FILE
         options.commandsDirectory = null
@@ -86,8 +86,8 @@ class StandaloneShellArgsParserTest {
         assertEquals(expectedConfig, config)
     }
 
-    @Test
-    fun cmd_options_override_config_from_file() {
+    @Test(timeout=300_000)
+	fun cmd_options_override_config_from_file() {
         val options = ShellCmdLineOptions()
         options.configFile = CONFIG_FILE
         options.commandsDirectory = null

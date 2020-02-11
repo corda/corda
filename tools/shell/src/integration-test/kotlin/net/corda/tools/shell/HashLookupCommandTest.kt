@@ -27,8 +27,8 @@ import kotlin.test.assertTrue
 
 class HashLookupCommandTest {
     @Ignore
-    @Test
-    fun `hash lookup command returns correct response`() {
+    @Test(timeout=300_000)
+	fun `hash lookup command returns correct response`() {
         val user = User("u", "p", setOf(Permissions.all()))
 
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP))) {

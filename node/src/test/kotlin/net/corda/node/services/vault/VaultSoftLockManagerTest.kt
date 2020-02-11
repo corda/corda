@@ -162,15 +162,15 @@ class VaultSoftLockManagerTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `plain old state is not soft locked`() = run(false, PlainOldState(nodePair), false)
+    @Test(timeout=300_000)
+	fun `plain old state is not soft locked`() = run(false, PlainOldState(nodePair), false)
 
-    @Test
-    fun `plain old state is not soft locked with checkpoint`() = run(false, PlainOldState(nodePair), true)
+    @Test(timeout=300_000)
+	fun `plain old state is not soft locked with checkpoint`() = run(false, PlainOldState(nodePair), true)
 
-    @Test
-    fun `fungible asset is soft locked`() = run(true, FungibleAssetImpl(nodePair), false)
+    @Test(timeout=300_000)
+	fun `fungible asset is soft locked`() = run(true, FungibleAssetImpl(nodePair), false)
 
-    @Test
-    fun `fungible asset is soft locked with checkpoint`() = run(true, FungibleAssetImpl(nodePair), true)
+    @Test(timeout=300_000)
+	fun `fungible asset is soft locked with checkpoint`() = run(true, FungibleAssetImpl(nodePair), true)
 }

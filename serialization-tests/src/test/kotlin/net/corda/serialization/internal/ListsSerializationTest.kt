@@ -37,15 +37,15 @@ class ListsSerializationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    @Test
-    fun `check list can be serialized as root of serialization graph`() {
+    @Test(timeout=300_000)
+	fun `check list can be serialized as root of serialization graph`() {
         assertEqualAfterRoundTripSerialization(emptyList<Int>())
         assertEqualAfterRoundTripSerialization(listOf(1))
         assertEqualAfterRoundTripSerialization(listOf(1, 2))
     }
 
-    @Test
-    fun `check list can be serialized as part of SessionData`() {
+    @Test(timeout=300_000)
+	fun `check list can be serialized as part of SessionData`() {
         run {
             val sessionData = DataSessionMessage(listOf(1).serialize())
             assertEqualAfterRoundTripSerialization(sessionData)
@@ -63,8 +63,8 @@ class ListsSerializationTest {
         }
     }
 
-    @Test
-    fun `check empty list serialises as Java emptyList`() = kryoSpecific("Kryo specific test") {
+    @Test(timeout=300_000)
+	fun `check empty list serialises as Java emptyList`() = kryoSpecific("Kryo specific test") {
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
@@ -81,8 +81,8 @@ class ListsSerializationTest {
     @CordaSerializable
     data class WrongPayloadType(val payload: ArrayList<Int>)
 
-    @Test
-    fun `check throws for forbidden declared type`() = amqpSpecific("Such exceptions are not expected in Kryo mode.") {
+    @Test(timeout=300_000)
+	fun `check throws for forbidden declared type`() = amqpSpecific("Such exceptions are not expected in Kryo mode.") {
         val payload = ArrayList<Int>()
         payload.add(1)
         payload.add(2)
@@ -99,8 +99,8 @@ class ListsSerializationTest {
     @CordaSerializable
     data class CovariantContainer<out T : Parent>(val payload: List<T>)
 
-    @Test
-    fun `check covariance`() {
+    @Test(timeout=300_000)
+	fun `check covariance`() {
         val payload = ArrayList<Child>()
         payload.add(Child(1))
         payload.add(Child(2))

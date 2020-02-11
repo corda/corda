@@ -83,8 +83,8 @@ class RPCStabilityTests {
         }.get()
     }
 
-    @Test
-    fun `client and server dont leak threads`() {
+    @Test(timeout=300_000)
+	fun `client and server dont leak threads`() {
         fun startAndStop() {
             rpcDriver {
                 val server = startRpcServer<RPCOps>(ops = DummyOps).get()
@@ -115,8 +115,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `client doesnt leak threads when it fails to start`() {
+    @Test(timeout=300_000)
+	fun `client doesnt leak threads when it fails to start`() {
         fun startAndStop() {
             rpcDriver {
                 Try.on { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() }
@@ -142,8 +142,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `rpc server close doesnt leak broker resources`() {
+    @Test(timeout=300_000)
+	fun `rpc server close doesnt leak broker resources`() {
         rpcDriver {
             fun startAndCloseServer(broker: RpcBrokerHandle) {
                 startRpcServerWithBrokerRunning(
@@ -165,8 +165,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `rpc client close doesnt leak broker resources`() {
+    @Test(timeout=300_000)
+	fun `rpc client close doesnt leak broker resources`() {
         rpcDriver {
             val server = startRpcServer(configuration = RPCServerConfiguration.DEFAULT, ops = DummyOps).get()
             RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password).close()
@@ -181,8 +181,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `rpc server close is idempotent`() {
+    @Test(timeout=300_000)
+	fun `rpc server close is idempotent`() {
         rpcDriver {
             val server = startRpcServer(ops = DummyOps).get()
             repeat(10) {
@@ -191,8 +191,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `rpc client close is idempotent`() {
+    @Test(timeout=300_000)
+	fun `rpc client close is idempotent`() {
         rpcDriver {
             val serverShutdown = shutdownManager.follower()
             val server = startRpcServer(ops = DummyOps).get()
@@ -215,8 +215,8 @@ class RPCStabilityTests {
         fun leakObservable(): Observable<Nothing>
     }
 
-    @Test
-    fun `client cleans up leaked observables`() {
+    @Test(timeout=300_000)
+	fun `client cleans up leaked observables`() {
         rpcDriver {
             val leakObservableOpsImpl = object : LeakObservableOps {
                 val leakedUnsubscribedCount = AtomicInteger(0)
@@ -247,8 +247,8 @@ class RPCStabilityTests {
         fun ping(): String
     }
 
-    @Test
-    fun `client reconnects to rebooted server`() {
+    @Test(timeout=300_000)
+	fun `client reconnects to rebooted server`() {
         rpcDriver {
             val ops = object : ReconnectOps {
                 override val protocolVersion = 1000
@@ -274,8 +274,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `connection failover fails, rpc calls throw`() {
+    @Test(timeout=300_000)
+	fun `connection failover fails, rpc calls throw`() {
         rpcDriver {
             val ops = object : ReconnectOps {
                 override val protocolVersion = 1000
@@ -301,8 +301,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `connection exits when bad config means the exception is unrecoverable`() {
+    @Test(timeout=300_000)
+	fun `connection exits when bad config means the exception is unrecoverable`() {
         rpcDriver {
             val ops = object : ReconnectOps {
                 override val protocolVersion = 1000
@@ -330,8 +330,8 @@ class RPCStabilityTests {
         fun subscribe(): Observable<Nothing>
     }
 
-    @Test
-    fun `observables error when connection breaks`() {
+    @Test(timeout=300_000)
+	fun `observables error when connection breaks`() {
         rpcDriver {
             val ops = object : NoOps {
                 override val protocolVersion = 1000
@@ -371,8 +371,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `client throws RPCException after initial connection attempt fails`() {
+    @Test(timeout=300_000)
+	fun `client throws RPCException after initial connection attempt fails`() {
         val client = CordaRPCClient(portAllocation.nextHostAndPort())
         var exceptionMessage: String? = null
         try {
@@ -390,8 +390,8 @@ class RPCStabilityTests {
         fun serverId(): String
     }
 
-    @Test
-    fun `client connects to first available server`() {
+    @Test(timeout=300_000)
+	fun `client connects to first available server`() {
         rpcDriver {
             val ops = object : ServerOps {
                 override val protocolVersion = 1000
@@ -411,8 +411,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `3 server failover`() {
+    @Test(timeout=300_000)
+	fun `3 server failover`() {
         rpcDriver {
             val ops1 = object : ServerOps {
                 override val protocolVersion = 1000
@@ -483,8 +483,8 @@ class RPCStabilityTests {
     /**
      * In this test we create a number of out of process RPC clients that call [TrackSubscriberOps.subscribe] in a loop.
      */
-    @Test
-    fun `server cleans up queues after disconnected clients`() {
+    @Test(timeout=300_000)
+	fun `server cleans up queues after disconnected clients`() {
         rpcDriver {
             val trackSubscriberOpsImpl = object : TrackSubscriberOps {
                 override val protocolVersion = 1000
@@ -538,8 +538,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    @Ignore // TODO: This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
+    @Test(timeout=300_000)
+@Ignore // TODO: This is ignored because Artemis slow consumers are broken.  I'm not deleting it in case we can get the feature fixed.
     fun `slow consumers are kicked`() {
         rpcDriver {
             val server = startRpcServer(maxBufferedBytesPerClient = 10 * 1024 * 1024, ops = SlowConsumerRPCOpsImpl()).get()
@@ -576,8 +576,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `deduplication in the server`() {
+    @Test(timeout=300_000)
+	fun `deduplication in the server`() {
         rpcDriver {
             val server = startRpcServer(ops = SlowConsumerRPCOpsImpl()).getOrThrow()
 
@@ -617,8 +617,8 @@ class RPCStabilityTests {
         }
     }
 
-    @Test
-    fun `deduplication in the client`() {
+    @Test(timeout=300_000)
+	fun `deduplication in the client`() {
         rpcDriver {
             val broker = startRpcBroker().getOrThrow()
 

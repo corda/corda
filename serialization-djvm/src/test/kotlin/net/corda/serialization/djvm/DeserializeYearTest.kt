@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeYearTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing year`() {
+	fun `test deserializing year`() {
         val year = Year.now()
         val data = year.serialize()
 

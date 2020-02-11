@@ -67,23 +67,23 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
                 })
     }
 
-    @Test
-    fun `simple data class`() {
+    @Test(timeout=300_000)
+	fun `simple data class`() {
         val birthday = Instant.parse("1984-04-17T00:30:00.00Z")
         val mike = Person("mike", birthday)
         val bits = mike.checkpointSerialize(context)
         assertThat(bits.checkpointDeserialize(context)).isEqualTo(Person("mike", birthday))
     }
 
-    @Test
-    fun `null values`() {
+    @Test(timeout=300_000)
+	fun `null values`() {
         val bob = Person("bob", null)
         val bits = bob.checkpointSerialize(context)
         assertThat(bits.checkpointDeserialize(context)).isEqualTo(Person("bob", null))
     }
 
-    @Test
-    fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
+    @Test(timeout=300_000)
+	fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
         val noReferencesContext = context.withoutReferences()
         val obj : ByteSequence = Ints.toByteArray(0x01234567).sequence()
         val originalList : ArrayList<ByteSequence> = ArrayList<ByteSequence>().apply { this += obj }
@@ -93,8 +93,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertThat(deserialisedList.checkpointSerialize(noReferencesContext)).isEqualTo(originalList.checkpointSerialize(noReferencesContext))
     }
 
-    @Test
-    fun `serialised form is stable when the same object instance occurs more than once, and using java serialisation`() {
+    @Test(timeout=300_000)
+	fun `serialised form is stable when the same object instance occurs more than once, and using java serialisation`() {
         val noReferencesContext = context.withoutReferences()
         val instant = Instant.ofEpochMilli(123)
         val instantCopy = Instant.ofEpochMilli(123)
@@ -110,15 +110,15 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertThat(listWithSameInstances.checkpointSerialize(noReferencesContext)).isEqualTo(listWithCopies.checkpointSerialize(noReferencesContext))
     }
 
-    @Test
-    fun `cyclic object graph`() {
+    @Test(timeout=300_000)
+	fun `cyclic object graph`() {
         val cyclic = Cyclic(3)
         val bits = cyclic.checkpointSerialize(context)
         assertThat(bits.checkpointDeserialize(context)).isEqualTo(cyclic)
     }
 
-    @Test
-    fun `deserialised key pair functions the same as serialised one`() {
+    @Test(timeout=300_000)
+	fun `deserialised key pair functions the same as serialised one`() {
         val keyPair = generateKeyPair()
         val bitsToSign: ByteArray = Ints.toByteArray(0x01234567)
         val wrongBits: ByteArray = Ints.toByteArray(0x76543210)
@@ -132,36 +132,36 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertThatThrownBy { deserialisedSignature.verify(wrongBits) }
     }
 
-    @Test
-    fun `write and read Kotlin object singleton`() {
+    @Test(timeout=300_000)
+	fun `write and read Kotlin object singleton`() {
         val serialised = TestSingleton.checkpointSerialize(context)
         val deserialised = serialised.checkpointDeserialize(context)
         assertThat(deserialised).isSameAs(TestSingleton)
     }
 
-    @Test
-    fun `check Kotlin EmptyList can be serialised`() {
+    @Test(timeout=300_000)
+	fun `check Kotlin EmptyList can be serialised`() {
         val deserialisedList: List<Int> = emptyList<Int>().checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(0, deserialisedList.size)
         assertEquals<Any>(Collections.emptyList<Int>().javaClass, deserialisedList.javaClass)
     }
 
-    @Test
-    fun `check Kotlin EmptySet can be serialised`() {
+    @Test(timeout=300_000)
+	fun `check Kotlin EmptySet can be serialised`() {
         val deserialisedSet: Set<Int> = emptySet<Int>().checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(0, deserialisedSet.size)
         assertEquals<Any>(Collections.emptySet<Int>().javaClass, deserialisedSet.javaClass)
     }
 
-    @Test
-    fun `check Kotlin EmptyMap can be serialised`() {
+    @Test(timeout=300_000)
+	fun `check Kotlin EmptyMap can be serialised`() {
         val deserialisedMap: Map<Int, Int> = emptyMap<Int, Int>().checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(0, deserialisedMap.size)
         assertEquals<Any>(Collections.emptyMap<Int, Int>().javaClass, deserialisedMap.javaClass)
     }
 
-    @Test
-    fun `InputStream serialisation`() {
+    @Test(timeout=300_000)
+	fun `InputStream serialisation`() {
         val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
         val readRubbishStream: InputStream = rubbish.inputStream().checkpointSerialize(context).checkpointDeserialize(context)
         for (i in 0..12344) {
@@ -170,16 +170,16 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertEquals(-1, readRubbishStream.read())
     }
 
-    @Test
-    fun `InputStream serialisation does not write trailing garbage`() {
+    @Test(timeout=300_000)
+	fun `InputStream serialisation does not write trailing garbage`() {
         val byteArrays = listOf("123", "456").map { it.toByteArray() }
         val streams = byteArrays.map { it.inputStream() }.checkpointSerialize(context).checkpointDeserialize(context).iterator()
         byteArrays.forEach { assertArrayEquals(it, streams.next().readBytes()) }
         assertFalse(streams.hasNext())
     }
 
-    @Test
-    fun `serialize - deserialize SignableData`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize SignableData`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
 
@@ -189,8 +189,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertEquals(meta2, meta)
     }
 
-    @Test
-    fun `serialize - deserialize Logger`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize Logger`() {
         val storageContext: CheckpointSerializationContext = context
         val logger = LoggerFactory.getLogger("aName")
         val logger2 = logger.checkpointSerialize(storageContext).checkpointDeserialize(storageContext)
@@ -198,8 +198,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertTrue(logger === logger2)
     }
 
-    @Test
-    fun `HashCheckingStream (de)serialize`() {
+    @Test(timeout=300_000)
+	fun `HashCheckingStream (de)serialize`() {
         val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
         val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(
                 SecureHash.sha256(rubbish),
@@ -224,8 +224,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         override fun toString(): String = "Cyclic($value)"
     }
 
-    @Test
-    fun `serialize - deserialize PrivacySalt`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize PrivacySalt`() {
         val expected = PrivacySalt(byteArrayOf(
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -257,8 +257,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         fun tracker() = ProgressTracker(AYY, BEE, SEA)
     }
 
-    @Test
-    fun rxSubscriptionsAreNotSerialized() {
+    @Test(timeout=300_000)
+	fun rxSubscriptionsAreNotSerialized() {
         val pt: ProgressTracker = SimpleSteps.tracker()
         val pt2: ProgressTracker = ChildSteps.tracker()
 
@@ -289,8 +289,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         pt.checkpointSerialize(context)
     }
 
-    @Test
-    fun `serialize - deserialize Exception with suppressed`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize Exception with suppressed`() {
         val exception = IllegalArgumentException("fooBar")
         val toBeSuppressedOnSenderSide = IllegalStateException("bazz1")
         exception.addSuppressed(toBeSuppressedOnSenderSide)
@@ -306,8 +306,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertEquals(2, exception2.suppressed.size)
     }
 
-    @Test
-    fun `serialize - deserialize Exception no suppressed`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize Exception no suppressed`() {
         val exception = IllegalArgumentException("fooBar")
         val exception2 = exception.checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(exception.message, exception2.message)
@@ -319,16 +319,16 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertTrue { exception2.suppressed.contains(toBeSuppressedOnReceiverSide) }
     }
 
-    @Test
-    fun `serialize - deserialize HashNotFound`() {
+    @Test(timeout=300_000)
+	fun `serialize - deserialize HashNotFound`() {
         val randomHash = SecureHash.randomSHA256()
         val exception = FetchDataFlow.HashNotFound(randomHash)
         val exception2 = exception.checkpointSerialize(context).checkpointDeserialize(context)
         assertEquals(randomHash, exception2.requested)
     }
 
-    @Test
-    fun `compression has the desired effect`() {
+    @Test(timeout=300_000)
+	fun `compression has the desired effect`() {
         compression ?: return
         val data = ByteArray(12345).also { Random(0).nextBytes(it) }.let { it + it }
         val compressed = data.checkpointSerialize(context)
@@ -336,8 +336,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertArrayEquals(data, compressed.checkpointDeserialize(context))
     }
 
-    @Test
-    fun `a particular encoding can be banned for deserialization`() {
+    @Test(timeout=300_000)
+	fun `a particular encoding can be banned for deserialization`() {
         compression ?: return
         doReturn(false).whenever(context.encodingWhitelist).acceptEncoding(compression)
         val compressed = "whatever".checkpointSerialize(context)
@@ -347,8 +347,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         }
     }
 
-    @Test
-    fun `compression reduces number of bytes significantly`() {
+    @Test(timeout=300_000)
+	fun `compression reduces number of bytes significantly`() {
         class Holder(val holder: ByteArray)
 
         val obj = Holder(ByteArray(20000))

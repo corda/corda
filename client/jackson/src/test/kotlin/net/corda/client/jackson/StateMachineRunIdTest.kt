@@ -13,15 +13,15 @@ class StateMachineRunIdTest {
         private val jsonMapper: ObjectMapper = ObjectMapper().registerModule(CordaModule())
     }
 
-    @Test
-    fun `state machine run ID deserialise`() {
+    @Test(timeout=300_000)
+	fun `state machine run ID deserialise`() {
         val str = """"$ID""""
         val runID = jsonMapper.readValue(str, StateMachineRunId::class.java)
         assertEquals(StateMachineRunId(UUID.fromString(ID)), runID)
     }
 
-    @Test
-    fun `state machine run ID serialise`() {
+    @Test(timeout=300_000)
+	fun `state machine run ID serialise`() {
         val runId = StateMachineRunId(UUID.fromString(ID))
         val str = jsonMapper.writeValueAsString(runId)
         assertEquals(""""$ID"""", str)

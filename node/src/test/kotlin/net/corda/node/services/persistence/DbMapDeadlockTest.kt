@@ -84,8 +84,8 @@ class DbMapDeadlockTest {
             }
         }
 
-    @Test
-    fun checkAppendOnlyPersistentMapForDeadlockH2() {
+    @Test(timeout=300_000)
+	fun checkAppendOnlyPersistentMapForDeadlockH2() {
         recreateDeadlock(h2Properties)
     }
 

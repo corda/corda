@@ -50,7 +50,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialize certificate path`() {
+	fun `test deserialize certificate path`() {
         val certPath = factory.generateCertPath(listOf(certificate))
         val data = certPath.serialize()
 
@@ -75,7 +75,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserialize X509 certificate`() {
+	fun `test deserialize X509 certificate`() {
         val data = certificate.serialize()
 
         sandbox {
@@ -99,7 +99,7 @@ class DeserializeCertificatesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test X509 CRL`() {
+	fun `test X509 CRL`() {
         val caKeyPair = KeyPairGenerator.getInstance("RSA")
             .generateKeyPair()
         val signer = JcaContentSignerBuilder("SHA256WithRSAEncryption")

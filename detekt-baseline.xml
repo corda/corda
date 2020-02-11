@@ -90,7 +90,7 @@
     <ID>ComplexCondition:TopLevelTransition.kt$TopLevelTransition$currentState.isTransactionTracked &amp;&amp; checkpoint.flowState is FlowState.Started &amp;&amp; checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &amp;&amp; checkpoint.flowState.flowIORequest.hash == event.transaction.id</ID>
     <ID>ComplexCondition:WireTransaction.kt$WireTransaction$notary != null &amp;&amp; (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)</ID>
     <ID>ComplexMethod:AMQPBridgeManager.kt$AMQPBridgeManager.AMQPBridge$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
-    <ID>ComplexMethod:AMQPBridgeTest.kt$AMQPBridgeTest$@Test fun `test acked and nacked messages`()</ID>
+    <ID>ComplexMethod:AMQPBridgeTest.kt$AMQPBridgeTest$@Test(timeout=300_000) fun `test acked and nacked messages`()</ID>
     <ID>ComplexMethod:AMQPChannelHandler.kt$AMQPChannelHandler$override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any)</ID>
     <ID>ComplexMethod:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser$// Make sure our inputs aren't designed to blow things up. private fun validate(typeString: String)</ID>
     <ID>ComplexMethod:ANSIProgressRenderer.kt$ANSIProgressRenderer$// Returns number of lines rendered. private fun renderLevel(ansi: Ansi, error: Boolean): Int</ID>
@@ -102,7 +102,7 @@
     <ID>ComplexMethod:AbstractNode.kt$AbstractNode$private fun installCordaServices()</ID>
     <ID>ComplexMethod:AbstractReplayedList.kt$AbstractReplayedList$override fun sourceChanged(c: ListChangeListener.Change&lt;out A&gt;)</ID>
     <ID>ComplexMethod:ActionExecutorImpl.kt$ActionExecutorImpl$@Suspendable override fun executeAction(fiber: FlowFiber, action: Action)</ID>
-    <ID>ComplexMethod:AggregatedListTest.kt$AggregatedListTest$@Test fun removeWorks()</ID>
+    <ID>ComplexMethod:AggregatedListTest.kt$AggregatedListTest$@Test(timeout=300_000) fun removeWorks()</ID>
     <ID>ComplexMethod:Amount.kt$AmountTransfer$ fun apply(balances: List&lt;SourceAndAmount&lt;T, P&gt;&gt;, newRef: Any? = null): List&lt;SourceAndAmount&lt;T, P&gt;&gt;</ID>
     <ID>ComplexMethod:Amount.kt$AmountTransfer$ override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:AppendOnlyPersistentMap.kt$AppendOnlyPersistentMapBase$private fun set(key: K, value: V, logWarning: Boolean, store: (K, V) -&gt; V?): Boolean</ID>
@@ -120,7 +120,7 @@
     <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$fun dumpCheckpoints()</ID>
     <ID>ComplexMethod:CheckpointDumperImpl.kt$CheckpointDumperImpl$private fun FlowIORequest&lt;*&gt;.toSuspendedOn(suspendedTimestamp: Instant, now: Instant): SuspendedOn</ID>
     <ID>ComplexMethod:ClassCarpenter.kt$ClassCarpenterImpl$ private fun validateSchema(schema: Schema)</ID>
-    <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test fun `Command visibility tests`()</ID>
+    <ID>ComplexMethod:CompatibleTransactionTests.kt$CompatibleTransactionTests$@Test(timeout=300_000) fun `Command visibility tests`()</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// For Iterables figure out the type parameter and apply the same logic as above on the individual elements. private fun Iterable&lt;*&gt;.toConfigIterable(field: Field): Iterable&lt;Any?&gt;</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// TODO Move this to KeyStoreConfigHelpers. fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null)</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") // Reflect over the fields of the receiver and generate a value Map that can use to create Config object. private fun Any.toConfigMap(): Map&lt;String, Any&gt;</ID>
@@ -133,7 +133,7 @@
     <ID>ComplexMethod:CordaCliWrapper.kt$fun CordaCliWrapper.start(args: Array&lt;String&gt;)</ID>
     <ID>ComplexMethod:CordaPersistence.kt$CordaPersistence$private fun &lt;T&gt; inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -&gt; T): T</ID>
     <ID>ComplexMethod:CordaRPCClient.kt$CordaRPCClientConfiguration$override fun equals(other: Any?): Boolean</ID>
-    <ID>ComplexMethod:CordaRPCClientTest.kt$CordaRPCClientTest$@Test fun `shutdown command stops the node`()</ID>
+    <ID>ComplexMethod:CordaRPCClientTest.kt$CordaRPCClientTest$@Test(timeout=300_000) fun `shutdown command stops the node`()</ID>
     <ID>ComplexMethod:CustomSerializerRegistry.kt$CachingCustomSerializerRegistry$private fun doFindCustomSerializer(clazz: Class&lt;*&gt;, declaredType: Type): AMQPSerializer&lt;Any&gt;?</ID>
     <ID>ComplexMethod:DeserializationInput.kt$DeserializationInput$fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any</ID>
     <ID>ComplexMethod:DriverDSLImpl.kt$DriverDSLImpl$override fun start()</ID>
@@ -142,7 +142,7 @@
     <ID>ComplexMethod:FlowMonitor.kt$FlowMonitor$private fun warningMessageForFlowWaitingOnIo(request: FlowIORequest&lt;*&gt;, flow: FlowStateMachineImpl&lt;*&gt;, suspensionDuration: Duration): String</ID>
     <ID>ComplexMethod:FlowStateMachineImpl.kt$FlowStateMachineImpl$ @Suspendable private fun processEventsUntilFlowIsResumed(isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): Any?</ID>
     <ID>ComplexMethod:GenerateRpcSslCertsCli.kt$GenerateRpcSslCerts$private fun generateRpcSslCertificates(conf: NodeConfiguration)</ID>
-    <ID>ComplexMethod:GenericsTests.kt$GenericsTests$@Test fun nestedSerializationInMultipleContextsDoesntColideGenericTypes()</ID>
+    <ID>ComplexMethod:GenericsTests.kt$GenericsTests$@Test(timeout=300_000) fun nestedSerializationInMultipleContextsDoesntColideGenericTypes()</ID>
     <ID>ComplexMethod:HTTPNetworkRegistrationService.kt$HTTPNetworkRegistrationService$@Throws(CertificateRequestException::class) override fun retrieveCertificates(requestId: String): CertificateResponse</ID>
     <ID>ComplexMethod:HibernateQueryCriteriaParser.kt$HibernateAttachmentQueryCriteriaParser$override fun parseCriteria(criteria: AttachmentQueryCriteria.AttachmentsQueryCriteria): Collection&lt;Predicate&gt;</ID>
     <ID>ComplexMethod:HibernateQueryCriteriaParser.kt$HibernateQueryCriteriaParser$override fun parseCriteria(criteria: CommonQueryCriteria): Collection&lt;Predicate&gt;</ID>
@@ -185,7 +185,7 @@
     <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$ private fun doInvoke(method: Method, args: Array&lt;out Any&gt;?, maxNumberOfAttempts: Int): Any?</ID>
     <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ private tailrec fun establishConnectionWithRetry( retryInterval: Duration, roundRobinIndex: Int = 0, retries: Int = -1 ): CordaRPCConnection?</ID>
     <ID>ComplexMethod:RemoteTypeCarpenter.kt$SchemaBuildingRemoteTypeCarpenter$override fun carpent(typeInformation: RemoteTypeInformation): Type</ID>
-    <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
+    <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test(timeout=300_000) fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
     <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$ private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean</ID>
     <ID>ComplexMethod:SchemaMigration.kt$SchemaMigration$private fun doRunMigration( run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null )</ID>
     <ID>ComplexMethod:SendTransactionFlow.kt$DataVendingFlow$@Suspendable override fun call(): Void?</ID>
@@ -193,8 +193,8 @@
     <ID>ComplexMethod:StartedFlowTransition.kt$StartedFlowTransition$override fun transition(): TransitionResult</ID>
     <ID>ComplexMethod:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>ComplexMethod:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parse(target: T?, command: String): ParsedMethodCall</ID>
-    <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test fun testClientServerTlsExchange()</ID>
-    <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test fun testClientServerTlsExchange()</ID>
+    <ID>ComplexMethod:TlsDiffAlgorithmsTest.kt$TlsDiffAlgorithmsTest$@Test(timeout=300_000) fun testClientServerTlsExchange()</ID>
+    <ID>ComplexMethod:TlsDiffProtocolsTest.kt$TlsDiffProtocolsTest$@Test(timeout=300_000) fun testClientServerTlsExchange()</ID>
     <ID>ComplexMethod:TransactionUtils.kt$ fun createComponentGroups(inputs: List&lt;StateRef&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;Command&lt;*&gt;&gt;, attachments: List&lt;SecureHash&gt;, notary: Party?, timeWindow: TimeWindow?, references: List&lt;StateRef&gt;, networkParametersHash: SecureHash?): List&lt;ComponentGroup&gt;</ID>
     <ID>ComplexMethod:TransitionExecutorImpl.kt$TransitionExecutorImpl$@Suppress("NestedBlockDepth", "ReturnCount") @Suspendable override fun executeTransition( fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor ): Pair&lt;FlowContinuation, StateMachineState&gt;</ID>
     <ID>ComplexMethod:TypeModellingFingerPrinter.kt$FingerPrintingState$// For a type we haven't seen before, determine the correct path depending on the type of type it is. private fun fingerprintNewType(type: LocalTypeInformation)</ID>
@@ -504,25 +504,25 @@
     <ID>ForbiddenComment:WireTransaction.kt$WireTransaction$// TODO: prevent notary field from being set if there are no inputs and no time-window.</ID>
     <ID>ForbiddenComment:WireTransaction.kt$WireTransaction$// TODO: revisit once Deterministic JVM code updated</ID>
     <ID>ForbiddenComment:X509Utilities.kt$CertificateType.LEGAL_IDENTITY$// TODO: Identity certs should have tight name constraints on child certificates</ID>
-    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test fun rpc_client_certificate_untrusted_to_server()</ID>
-    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test fun rpc_with_no_ssl_on_client_side_and_ssl_on_server_side()</ID>
-    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test fun rpc_with_ssl_disabled()</ID>
-    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test fun rpc_with_ssl_enabled()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Boolean()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun CordaX500Name()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Double()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Enum()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Instant()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Int()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun LocalDate()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Long()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun NetworkHostAndPort()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Path()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun Set()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun String()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun URL()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun UUID()</ID>
-    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test fun X500Principal()</ID>
+    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_client_certificate_untrusted_to_server()</ID>
+    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_with_no_ssl_on_client_side_and_ssl_on_server_side()</ID>
+    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_with_ssl_disabled()</ID>
+    <ID>FunctionNaming:ArtemisRpcTests.kt$ArtemisRpcTests$@Test(timeout=300_000) fun rpc_with_ssl_enabled()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Boolean()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun CordaX500Name()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Double()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Enum()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Instant()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Int()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun LocalDate()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Long()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun NetworkHostAndPort()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Path()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun Set()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun String()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun URL()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun UUID()</ID>
+    <ID>FunctionNaming:ConfigParsingTest.kt$ConfigParsingTest$@Test(timeout=300_000) fun X500Principal()</ID>
     <ID>FunctionNaming:ContractFunctions.kt$// building an fx swap using abstract swap fun fx_swap2(expiry: String, notional: Long, strike: Double, foreignCurrency: Currency, domesticCurrency: Currency, partyA: Party, partyB: Party)</ID>
     <ID>FunctionNaming:ContractFunctions.kt$fun fx_swap(expiry: String, notional: BigDecimal, strike: BigDecimal, foreignCurrency: Currency, domesticCurrency: Currency, partyA: Party, partyB: Party)</ID>
     <ID>FunctionNaming:Currencies.kt$fun &lt;T : Any&gt; AMOUNT(amount: Double, token: T): Amount&lt;T&gt;</ID>
@@ -537,101 +537,101 @@
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Double): Amount&lt;Currency&gt;</ID>
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Int): Amount&lt;Currency&gt;</ID>
     <ID>FunctionNaming:Currencies.kt$fun SWISS_FRANCS(amount: Long): Amount&lt;Currency&gt;</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun AnonymousParty()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun ByteSequence()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun CertPath()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun Command()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun CompositeKey()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun CordaX500Name()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun DigitalSignature()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun DigitalSignatureWithCert()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun Instant()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun NetworkHostAndPort()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun PrivacySalt()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun PublicKey()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun SerializedBytes()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun SignatureMetadata()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun TransactionSignature()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun TransactionState()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun UUID()</ID>
-    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test fun X500Principal()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun AnonymousParty()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun ByteSequence()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun CertPath()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun Command()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun CompositeKey()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun CordaX500Name()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun DigitalSignature()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun DigitalSignatureWithCert()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun Instant()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun NetworkHostAndPort()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun PrivacySalt()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun PublicKey()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun SerializedBytes()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun SignatureMetadata()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun TransactionSignature()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun TransactionState()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun UUID()</ID>
+    <ID>FunctionNaming:JacksonSupportTest.kt$JacksonSupportTest$@Test(timeout=300_000) fun X500Principal()</ID>
     <ID>FunctionNaming:LedgerDSLInterpreter.kt$LedgerDSLInterpreter$ fun _transaction(transactionLabel: String?, transactionBuilder: TransactionBuilder, dsl: T.() -&gt; EnforceVerifyOrFail): WireTransaction</ID>
     <ID>FunctionNaming:LedgerDSLInterpreter.kt$LedgerDSLInterpreter$ fun _tweak(dsl: LedgerDSLInterpreter&lt;T&gt;.() -&gt; Unit)</ID>
     <ID>FunctionNaming:LedgerDSLInterpreter.kt$LedgerDSLInterpreter$ fun _unverifiedTransaction(transactionLabel: String?, transactionBuilder: TransactionBuilder, dsl: T.() -&gt; Unit): WireTransaction</ID>
-    <ID>FunctionNaming:NamedCacheTest.kt$NamedCacheTest$@Test fun TestCheckCacheName()</ID>
-    <ID>FunctionNaming:NodeHandleTests.kt$NodeHandleTests$@Test fun object_defined_functions_are_static_for_node_rpc_ops()</ID>
+    <ID>FunctionNaming:NamedCacheTest.kt$NamedCacheTest$@Test(timeout=300_000) fun TestCheckCacheName()</ID>
+    <ID>FunctionNaming:NodeHandleTests.kt$NodeHandleTests$@Test(timeout=300_000) fun object_defined_functions_are_static_for_node_rpc_ops()</ID>
     <ID>FunctionNaming:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
-    <ID>FunctionNaming:PasswordTest.kt$PasswordTest$@Test fun constructor_and_getters()</ID>
-    <ID>FunctionNaming:PasswordTest.kt$PasswordTest$@Test fun toString_is_masked()</ID>
+    <ID>FunctionNaming:PasswordTest.kt$PasswordTest$@Test(timeout=300_000) fun constructor_and_getters()</ID>
+    <ID>FunctionNaming:PasswordTest.kt$PasswordTest$@Test(timeout=300_000) fun toString_is_masked()</ID>
     <ID>FunctionNaming:ProgressTracker.kt$ProgressTracker$private fun _allSteps(level: Int = 0): List&lt;Pair&lt;Int, Step&gt;&gt;</ID>
     <ID>FunctionNaming:ProgressTracker.kt$ProgressTracker$private fun _allStepsLabels(level: Int = 0): List&lt;Pair&lt;Int, String&gt;&gt;</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun absent_value()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun absent_value_of_list_type_with_single_element_and_whole_list_mapping()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun absent_value_of_list_type_with_whole_list_mapping()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_absent_value()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_absent_value_of_list_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_absent_value_of_list_type_with_default_value()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_absent_with_default_value()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_present_value_of_list_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_present_value_with_correct_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun optional_present_value_with_wrong_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun present_value_of_list_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun present_value_of_list_type_with_single_element_and_whole_list_mapping()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun present_value_of_list_type_with_whole_list_mapping()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun present_value_with_correct_type()</ID>
-    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test fun present_value_with_wrong_type()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun absent_list_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun absent_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun absent_value_in_nested_property()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun integer_numeric_type_when_floating_expected_works()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun invalid_mapped_property()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun list_type_when_declared_single()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun missing_list_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun missing_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun missing_value_in_nested_property()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun nested_property_without_schema_does_not_validate()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun single_type_when_declared_list()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun valid_mapped_property()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun whole_list_validation_invalid_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun whole_list_validation_valid_value()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun wrong_element_type_for_list()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun wrong_floating_numeric_type_when_integer_expected()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun wrong_type()</ID>
-    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test fun wrong_type_in_nested_property()</ID>
-    <ID>FunctionNaming:ReceiveAllFlowTests.kt$ReceiveMultipleFlowTests$@Test fun showcase_flows_as_closures()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun describe_with_nested_properties_does_not_show_sensitive_values()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun describe_with_nested_properties_list_does_not_show_sensitive_values()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun validation_with_nested_properties()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun validation_with_unknown_properties()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun validation_with_unknown_properties_non_strict()</ID>
-    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test fun validation_with_wrong_nested_properties()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun absent_value()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun absent_value_of_list_type_with_single_element_and_whole_list_mapping()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun absent_value_of_list_type_with_whole_list_mapping()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_absent_value()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_absent_value_of_list_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_absent_value_of_list_type_with_default_value()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_absent_with_default_value()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_present_value_of_list_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_present_value_with_correct_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun optional_present_value_with_wrong_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun present_value_of_list_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun present_value_of_list_type_with_single_element_and_whole_list_mapping()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun present_value_of_list_type_with_whole_list_mapping()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun present_value_with_correct_type()</ID>
+    <ID>FunctionNaming:PropertyTest.kt$PropertyTest$@Test(timeout=300_000) fun present_value_with_wrong_type()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun absent_list_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun absent_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun absent_value_in_nested_property()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun integer_numeric_type_when_floating_expected_works()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun invalid_mapped_property()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun list_type_when_declared_single()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun missing_list_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun missing_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun missing_value_in_nested_property()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun nested_property_without_schema_does_not_validate()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun single_type_when_declared_list()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun valid_mapped_property()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun whole_list_validation_invalid_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun whole_list_validation_valid_value()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun wrong_element_type_for_list()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun wrong_floating_numeric_type_when_integer_expected()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun wrong_type()</ID>
+    <ID>FunctionNaming:PropertyValidationTest.kt$PropertyValidationTest$@Test(timeout=300_000) fun wrong_type_in_nested_property()</ID>
+    <ID>FunctionNaming:ReceiveAllFlowTests.kt$ReceiveMultipleFlowTests$@Test(timeout=300_000) fun showcase_flows_as_closures()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun describe_with_nested_properties_does_not_show_sensitive_values()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun describe_with_nested_properties_list_does_not_show_sensitive_values()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun validation_with_nested_properties()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun validation_with_unknown_properties()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun validation_with_unknown_properties_non_strict()</ID>
+    <ID>FunctionNaming:SchemaTest.kt$SchemaTest$@Test(timeout=300_000) fun validation_with_wrong_nested_properties()</ID>
     <ID>FunctionNaming:SerializationOutput.kt$SerializationOutput$internal fun &lt;T : Any&gt; _serialize(obj: T, context: SerializationContext): SerializedBytes&lt;T&gt;</ID>
-    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test fun chained_delegated_properties_are_not_added_multiple_times()</ID>
-    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test fun parse_list_aggregation()</ID>
-    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test fun validate_list_aggregation()</ID>
-    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test fun validate_with_domain_specific_errors()</ID>
-    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test fun args_to_config()</ID>
-    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test fun cmd_options_override_config_from_file()</ID>
-    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test fun cmd_options_to_config_from_file()</ID>
-    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test fun empty_args_to_cmd_options()</ID>
+    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test(timeout=300_000) fun chained_delegated_properties_are_not_added_multiple_times()</ID>
+    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test(timeout=300_000) fun parse_list_aggregation()</ID>
+    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test(timeout=300_000) fun validate_list_aggregation()</ID>
+    <ID>FunctionNaming:SpecificationTest.kt$SpecificationTest$@Test(timeout=300_000) fun validate_with_domain_specific_errors()</ID>
+    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test(timeout=300_000) fun args_to_config()</ID>
+    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test(timeout=300_000) fun cmd_options_override_config_from_file()</ID>
+    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test(timeout=300_000) fun cmd_options_to_config_from_file()</ID>
+    <ID>FunctionNaming:StandaloneShellArgsParserTest.kt$StandaloneShellArgsParserTest$@Test(timeout=300_000) fun empty_args_to_cmd_options()</ID>
     <ID>FunctionNaming:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$ fun _attachment(contractClassName: ContractClassName)</ID>
     <ID>FunctionNaming:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$ fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List&lt;PublicKey&gt;)</ID>
     <ID>FunctionNaming:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$ fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List&lt;PublicKey&gt;, jarManifestAttributes: Map&lt;String,String&gt;)</ID>
     <ID>FunctionNaming:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$ fun _tweak(dsl: TransactionDSLInterpreter.() -&gt; EnforceVerifyOrFail): EnforceVerifyOrFail</ID>
-    <ID>FunctionNaming:UtilsTest.kt$UtilsTest$@Test fun serialize_deserialize_configuration()</ID>
-    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$ @Test fun trackCashStates_unconsumed()</ID>
-    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$@Test fun trackCashStates_all()</ID>
-    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$@Test fun trackCashStates_consumed()</ID>
-    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTestsBase$@Test fun unconsumedCashStatesForSpending_single_issuer_reference()</ID>
+    <ID>FunctionNaming:UtilsTest.kt$UtilsTest$@Test(timeout=300_000) fun serialize_deserialize_configuration()</ID>
+    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$ @Test(timeout=300_000) fun trackCashStates_unconsumed()</ID>
+    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$@Test(timeout=300_000) fun trackCashStates_all()</ID>
+    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTests$@Test(timeout=300_000) fun trackCashStates_consumed()</ID>
+    <ID>FunctionNaming:VaultQueryTests.kt$VaultQueryTestsBase$@Test(timeout=300_000) fun unconsumedCashStatesForSpending_single_issuer_reference()</ID>
     <ID>FunctionNaming:VaultService.kt$VaultService$ @Throws(VaultQueryException::class) fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;): Vault.Page&lt;T&gt;</ID>
     <ID>FunctionNaming:VaultService.kt$VaultService$ @Throws(VaultQueryException::class) fun &lt;T : ContractState&gt; _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;): DataFeed&lt;Vault.Page&lt;T&gt;, Vault.Update&lt;T&gt;&gt;</ID>
-    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test fun version_header_extraction_no_configuration()</ID>
-    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test fun version_header_extraction_no_key()</ID>
-    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test fun version_header_extraction_no_metadata()</ID>
-    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test fun version_header_extraction_no_value()</ID>
-    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test fun version_header_extraction_present()</ID>
-    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test fun correct_parsing_function_is_used_for_present_version()</ID>
-    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test fun default_value_is_used_for_absent_version()</ID>
+    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_configuration()</ID>
+    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_key()</ID>
+    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_metadata()</ID>
+    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_value()</ID>
+    <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_present()</ID>
+    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test(timeout=300_000) fun correct_parsing_function_is_used_for_present_version()</ID>
+    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test(timeout=300_000) fun default_value_is_used_for_absent_version()</ID>
     <ID>LargeClass:AbstractNode.kt$AbstractNode&lt;S&gt; : SingletonSerializeAsToken</ID>
     <ID>LargeClass:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager : StateMachineManagerStateMachineManagerInternal</ID>
     <ID>LongMethod:FlowCookbook.kt$InitiatorFlow$@Suppress("RemoveExplicitTypeArguments") @Suspendable override fun call()</ID>
@@ -1470,7 +1470,7 @@
     <ID>ThrowsCount:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$private fun getInitiatedFlowFactory(message: InitialSessionMessage): InitiatedFlowFactory&lt;*&gt;</ID>
     <ID>ThrowsCount:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parse(target: T?, command: String): ParsedMethodCall</ID>
     <ID>ThrowsCount:StringToMethodCallParser.kt$StringToMethodCallParser$ @Throws(UnparseableCallException::class) fun parseArguments(methodNameHint: String, parameters: List&lt;Pair&lt;String, Type&gt;&gt;, args: String): Array&lt;Any?&gt;</ID>
-    <ID>ThrowsCount:StructuresTests.kt$AttachmentTest$@Test fun `openAsJAR does not leak file handle if attachment has corrupted manifest`()</ID>
+    <ID>ThrowsCount:StructuresTests.kt$AttachmentTest$@Test(timeout=300_000) fun `openAsJAR does not leak file handle if attachment has corrupted manifest`()</ID>
     <ID>ThrowsCount:TransactionVerifierServiceInternal.kt$Verifier$ private fun getUniqueContractAttachmentsByContract(): Map&lt;ContractClassName, ContractAttachment&gt;</ID>
     <ID>ThrowsCount:TransactionVerifierServiceInternal.kt$Verifier$// Using basic graph theory, a full cycle of encumbered (co-dependent) states should exist to achieve bi-directional // encumbrances. This property is important to ensure that no states involved in an encumbrance-relationship // can be spent on their own. Briefly, if any of the states is having more than one encumbrance references by // other states, a full cycle detection will fail. As a result, all of the encumbered states must be present // as "from" and "to" only once (or zero times if no encumbrance takes place). For instance, // a -&gt; b // c -&gt; b and a -&gt; b // b -&gt; a b -&gt; c // do not satisfy the bi-directionality (full cycle) property. // // In the first example "b" appears twice in encumbrance ("to") list and "c" exists in the encumbered ("from") list only. // Due the above, one could consume "a" and "b" in the same transaction and then, because "b" is already consumed, "c" cannot be spent. // // Similarly, the second example does not form a full cycle because "a" and "c" exist in one of the lists only. // As a result, one can consume "b" and "c" in the same transactions, which will make "a" impossible to be spent. // // On other hand the following are valid constructions: // a -&gt; b a -&gt; c // b -&gt; c and c -&gt; b // c -&gt; a b -&gt; a // and form a full cycle, meaning that the bi-directionality property is satisfied. private fun checkBidirectionalOutputEncumbrances(statesAndEncumbrance: List&lt;Pair&lt;Int, Int&gt;&gt;)</ID>
     <ID>ThrowsCount:WireTransaction.kt$WireTransaction$private fun toLedgerTransactionInternal( resolveIdentity: (PublicKey) -&gt; Party?, resolveAttachment: (SecureHash) -&gt; Attachment?, resolveStateRefAsSerialized: (StateRef) -&gt; SerializedBytes&lt;TransactionState&lt;ContractState&gt;&gt;?, resolveParameters: (SecureHash?) -&gt; NetworkParameters?, isAttachmentTrusted: (Attachment) -&gt; Boolean ): LedgerTransaction</ID>

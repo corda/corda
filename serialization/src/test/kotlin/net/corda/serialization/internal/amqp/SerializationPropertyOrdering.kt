@@ -21,8 +21,8 @@ class SerializationPropertyOrdering {
     // this test shows (not now it's fixed) a bug whereby deserializing objects
     // would break where refferenced objects were accessed before they'd been
     // processed thanks to the way the blob was deserialized
-    @Test
-    fun refferenceOrdering() {
+    @Test(timeout=300_000)
+	fun refferenceOrdering() {
         data class Reffed(val c: String, val b: String, val a: String)
         data class User(val b: List<Reffed>, val a: List<Reffed>)
 
@@ -35,8 +35,8 @@ class SerializationPropertyOrdering {
         DeserializationInput(sf).deserialize(output.obj)
     }
 
-    @Test
-    fun randomOrder() {
+    @Test(timeout=300_000)
+	fun randomOrder() {
         data class C(val c: Int, val d: Int, val b: Int, val e: Int, val a: Int)
 
         val c = C(3,4,2,5,1)
@@ -65,8 +65,8 @@ class SerializationPropertyOrdering {
     }
 
     @Suppress("UNCHECKED_CAST")
-    @Test
-    fun randomOrderSetter() {
+    @Test(timeout=300_000)
+	fun randomOrderSetter() {
         data class C(var c: Int, var d: Int, var b: Int, var e: Int, var a: Int) {
             // This will force the serialization engine to use getter / setter
             // instantiation for the object rather than construction

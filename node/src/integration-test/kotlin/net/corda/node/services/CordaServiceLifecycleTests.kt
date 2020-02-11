@@ -25,8 +25,8 @@ class CordaServiceLifecycleTests {
         private val eventsCaptured: MutableList<ServiceLifecycleEvent> = mutableListOf()
     }
 
-    @Test
-    fun `corda service receives events`() {
+    @Test(timeout=300_000)
+	fun `corda service receives events`() {
         eventsCaptured.clear()
         val result = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()),
                 notarySpecs = emptyList())) {

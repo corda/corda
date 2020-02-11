@@ -73,27 +73,27 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         connection?.close()
     }
 
-    @Test
-    fun `log in with valid username and password`() {
+    @Test(timeout=300_000)
+	fun `log in with valid username and password`() {
         login(rpcUser.username, rpcUser.password)
     }
 
-    @Test
-    fun `log in with unknown user`() {
+    @Test(timeout=300_000)
+	fun `log in with unknown user`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             login(random63BitValue().toString(), rpcUser.password)
         }
     }
 
-    @Test
-    fun `log in with incorrect password`() {
+    @Test(timeout=300_000)
+	fun `log in with incorrect password`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             login(rpcUser.username, random63BitValue().toString())
         }
     }
 
-    @Test
-    fun `shutdown command stops the node`() {
+    @Test(timeout=300_000)
+	fun `shutdown command stops the node`() {
         val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
         val latch = CountDownLatch(1)
         var successful = false
@@ -149,8 +149,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         }
     }
 
-    @Test
-    fun `close-send deadlock and premature shutdown on empty observable`() {
+    @Test(timeout=300_000)
+	fun `close-send deadlock and premature shutdown on empty observable`() {
         println("Starting client")
         login(rpcUser.username, rpcUser.password)
         println("Creating proxy")
@@ -165,16 +165,16 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         println("Result: ${flowHandle.returnValue.getOrThrow()}")
     }
 
-    @Test
-    fun `check basic flow has no progress`() {
+    @Test(timeout=300_000)
+	fun `check basic flow has no progress`() {
         login(rpcUser.username, rpcUser.password)
         connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, identity).use {
             assertFalse(it is FlowProgressHandle<*>)
         }
     }
 
-    @Test
-    fun `get cash balances`() {
+    @Test(timeout=300_000)
+	fun `get cash balances`() {
         login(rpcUser.username, rpcUser.password)
         val proxy = connection!!.proxy
         val startCash = proxy.getCashBalances()
@@ -191,8 +191,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         assertEquals(123.DOLLARS, cashDollars)
     }
 
-    @Test
-    fun `flow initiator via RPC`() {
+    @Test(timeout=300_000)
+	fun `flow initiator via RPC`() {
         val externalTrace = Trace.newInstance()
         val impersonatedActor = Actor(Actor.Id("Mark Dadada"), AuthServiceId("Test"), owningLegalIdentity = BOB_NAME)
         login(rpcUser.username, rpcUser.password, externalTrace, impersonatedActor)
@@ -230,8 +230,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
     // We run the client in a separate process, without the finance module on its system classpath to ensure that the
     // additional class loader that we give it is used. Cash.State objects are used as they can't be synthesised fully
     // by the carpenter, and thus avoiding any false-positive results.
-    @Test
-    fun `additional class loader used by WireTransaction when it deserialises its components`() {
+    @Test(timeout=300_000)
+	fun `additional class loader used by WireTransaction when it deserialises its components`() {
         val financeLocation = Cash::class.java.location.toPath().toString()
         val classPathWithoutFinance = ProcessUtilities.defaultClassPath.filter { financeLocation !in it }
 

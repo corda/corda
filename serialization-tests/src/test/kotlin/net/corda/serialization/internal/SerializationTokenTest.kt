@@ -46,8 +46,8 @@ class SerializationTokenTest {
     }
 
     private fun serializeAsTokenContext(toBeTokenized: Any) = CheckpointSerializeAsTokenContextImpl(toBeTokenized, testCheckpointSerialization.checkpointSerializer, context, rigorousMock())
-    @Test
-    fun `write token and read tokenizable`() {
+    @Test(timeout=300_000)
+	fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
@@ -60,8 +60,8 @@ class SerializationTokenTest {
 
     private class UnitSerializeAsToken : SingletonSerializeAsToken()
 
-    @Test
-    fun `write and read singleton`() {
+    @Test(timeout=300_000)
+	fun `write and read singleton`() {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)

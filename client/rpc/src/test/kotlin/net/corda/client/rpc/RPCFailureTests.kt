@@ -46,28 +46,28 @@ class RPCFailureTests {
         proc(startRpcClient<Ops>(server.broker.hostAndPort!!).getOrThrow())
     }
 
-    @Test
-    fun `kotlin NPE`() = rpc {
+    @Test(timeout=300_000)
+	fun `kotlin NPE`() = rpc {
         assertThatThrownBy { it.kotlinNPE() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("kotlin.KotlinNullPointerException")
     }
 
-    @Test
-    fun `kotlin NPE async`() = rpc {
+    @Test(timeout=300_000)
+	fun `kotlin NPE async`() = rpc {
         val future = it.kotlinNPEAsync()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("kotlin.KotlinNullPointerException")
     }
 
-    @Test
-    fun unserializable() = rpc {
+    @Test(timeout=300_000)
+	fun unserializable() = rpc {
         assertThatThrownBy { it.getUnserializable() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("java.io.NotSerializableException:")
                 .hasMessageContaining("Unserializable\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 
-    @Test
-    fun `unserializable async`() = rpc {
+    @Test(timeout=300_000)
+	fun `unserializable async`() = rpc {
         val future = it.getUnserializableAsync()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("java.io.NotSerializableException:")

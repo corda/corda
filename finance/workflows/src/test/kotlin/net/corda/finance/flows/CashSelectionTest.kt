@@ -27,8 +27,8 @@ class CashSelectionTest {
         mockNet.stopNodes()
     }
 
-    @Test
-    fun `unconsumed cash states`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash states`() {
         val issuerRef = OpaqueBytes.of(0)
         val issuedAmount = 1000.DOLLARS
 
@@ -47,8 +47,8 @@ class CashSelectionTest {
         assertThat(availableBalanceAfterExit).isEqualTo(issuedAmount - exitedAmount)
     }
 
-    @Test
-    fun `cash selection sees states added in the same transaction`() {
+    @Test(timeout=300_000)
+	fun `cash selection sees states added in the same transaction`() {
         val node = mockNet.createNode()
         val nodeIdentity = node.services.myInfo.singleIdentity()
         val issuer = nodeIdentity.ref(1)
@@ -72,8 +72,8 @@ class CashSelectionTest {
         assertThat(exitStates.size).isEqualTo(returnedCoinsNumber)
     }
 
-    @Test
-    fun `don't return extra coins if the selected amount has been reached`() {
+    @Test(timeout=300_000)
+	fun `don't return extra coins if the selected amount has been reached`() {
         val node = mockNet.createNode()
         val nodeIdentity = node.services.myInfo.singleIdentity()
 
@@ -102,8 +102,8 @@ class CashSelectionTest {
         assertThat(exitStates.size).isEqualTo(returnedCoinsNumber)
     }
 
-    @Test
-    fun `select cash states issued by single transaction and give change`() {
+    @Test(timeout=300_000)
+	fun `select cash states issued by single transaction and give change`() {
         val node = mockNet.createNode()
         val nodeIdentity = node.services.myInfo.singleIdentity()
 

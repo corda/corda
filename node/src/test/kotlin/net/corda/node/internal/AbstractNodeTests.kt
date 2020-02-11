@@ -29,8 +29,8 @@ class AbstractNodeTests {
         return "jdbc:h2:file:$baseDir/persistence;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100;AUTO_SERVER_PORT=0"
     }
 
-    @Test
-    fun `logVendorString does not leak connection`() {
+    @Test(timeout=300_000)
+	fun `logVendorString does not leak connection`() {
         // Note this test also covers a transaction that CordaPersistence does while it's instantiating:
         val database = configureDatabase(hikariProperties(freshURL()), DatabaseConfig(), { null }, { null })
         val log = mock<Logger>() // Don't care what happens here.
@@ -40,8 +40,8 @@ class AbstractNodeTests {
         }
     }
 
-    @Test
-    fun `H2 fix is applied`() {
+    @Test(timeout=300_000)
+	fun `H2 fix is applied`() {
         val pool = Executors.newFixedThreadPool(5)
         val runs = if (relaxedThoroughness) 1 else 100
         (0 until runs).map {

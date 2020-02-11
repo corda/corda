@@ -32,8 +32,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BootTests {
-    @Test
-    fun `java deserialization is disabled`() {
+    @Test(timeout=300_000)
+	fun `java deserialization is disabled`() {
         val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
         val devParams = NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user))
         val params = NodeParameters(rpcUsers = listOf(user))
@@ -53,8 +53,8 @@ class BootTests {
         }
     }
 
-    @Test
-    fun `double node start doesn't write into log file`() {
+    @Test(timeout=300_000)
+	fun `double node start doesn't write into log file`() {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
@@ -69,8 +69,8 @@ class BootTests {
         }
     }
 
-    @Test
-    fun `node fails to start if legal identity is lost`() {
+    @Test(timeout=300_000)
+	fun `node fails to start if legal identity is lost`() {
         driver(DriverParameters(
                 notarySpecs = emptyList(),
                 inMemoryDB = false,

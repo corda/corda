@@ -23,8 +23,8 @@ class DeserializeSimpleTypesTests {
     val sf1 = testDefaultFactoryNoEvolution()
     val sf2 = testDefaultFactoryNoEvolution()
 
-    @Test
-    fun testChar() {
+    @Test(timeout=300_000)
+	fun testChar() {
         data class C(val c: Char)
 
         var deserializedC = DeserializationInput(sf1).deserialize(SerializationOutput(sf1).serialize(C('c')))
@@ -48,8 +48,8 @@ class DeserializeSimpleTypesTests {
     }
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    @Test
-    fun testCharacter() {
+    @Test(timeout=300_000)
+	fun testCharacter() {
         data class C(val c: Char)
 
         val c = C(valueOf('c'))
@@ -59,8 +59,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c, deserializedC.c)
     }
 
-    @Test
-    fun testNullCharacter() {
+    @Test(timeout=300_000)
+	fun testNullCharacter() {
         data class C(val c: Char?)
 
         val c = C(null)
@@ -70,8 +70,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c, deserializedC.c)
     }
 
-    @Test
-    fun testArrayOfInt() {
+    @Test(timeout=300_000)
+	fun testArrayOfInt() {
         class IA(val ia: Array<Int>)
 
         val ia = IA(arrayOf(1, 2, 3))
@@ -89,8 +89,8 @@ class DeserializeSimpleTypesTests {
     }
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    @Test
-    fun testArrayOfInteger() {
+    @Test(timeout=300_000)
+	fun testArrayOfInteger() {
         class IA(val ia: Array<Int>)
 
         val ia = IA(arrayOf(Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3)))
@@ -110,8 +110,8 @@ class DeserializeSimpleTypesTests {
     /**
      * Test unboxed primitives
      */
-    @Test
-    fun testIntArray() {
+    @Test(timeout=300_000)
+	fun testIntArray() {
         class IA(val ia: IntArray)
 
         val v = IntArray(3)
@@ -130,8 +130,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(ia.ia[2], deserializedIA.ia[2])
     }
 
-    @Test
-    fun testArrayOfChars() {
+    @Test(timeout=300_000)
+	fun testArrayOfChars() {
         class C(val c: Array<Char>)
 
         val c = C(arrayOf('a', 'b', 'c'))
@@ -148,8 +148,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testCharArray() {
+    @Test(timeout=300_000)
+	fun testCharArray() {
         class C(val c: CharArray)
 
         val v = CharArray(3)
@@ -179,8 +179,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c2.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testArrayOfBoolean() {
+    @Test(timeout=300_000)
+	fun testArrayOfBoolean() {
         class C(val c: Array<Boolean>)
 
         val c = C(arrayOf(true, false, false, true))
@@ -198,8 +198,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[3], deserializedC.c[3])
     }
 
-    @Test
-    fun testBooleanArray() {
+    @Test(timeout=300_000)
+	fun testBooleanArray() {
         class C(val c: BooleanArray)
 
         val c = C(BooleanArray(4))
@@ -218,8 +218,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[3], deserializedC.c[3])
     }
 
-    @Test
-    fun testArrayOfByte() {
+    @Test(timeout=300_000)
+	fun testArrayOfByte() {
         class C(val c: Array<Byte>)
 
         val c = C(arrayOf(0b0001, 0b0101, 0b1111))
@@ -236,8 +236,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testByteArray() {
+    @Test(timeout=300_000)
+	fun testByteArray() {
         class C(val c: ByteArray)
 
         val c = C(ByteArray(3))
@@ -263,8 +263,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC2.c[2])
     }
 
-    @Test
-    fun testArrayOfShort() {
+    @Test(timeout=300_000)
+	fun testArrayOfShort() {
         class C(val c: Array<Short>)
 
         val c = C(arrayOf(1, 2, 3))
@@ -281,8 +281,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testShortArray() {
+    @Test(timeout=300_000)
+	fun testShortArray() {
         class C(val c: ShortArray)
 
         val c = C(ShortArray(3))
@@ -300,8 +300,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testArrayOfLong() {
+    @Test(timeout=300_000)
+	fun testArrayOfLong() {
         class C(val c: Array<Long>)
 
         val c = C(arrayOf(2147483650, -2147483800, 10))
@@ -318,8 +318,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testLongArray() {
+    @Test(timeout=300_000)
+	fun testLongArray() {
         class C(val c: LongArray)
 
         val c = C(LongArray(3))
@@ -337,8 +337,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testArrayOfFloat() {
+    @Test(timeout=300_000)
+	fun testArrayOfFloat() {
         class C(val c: Array<Float>)
 
         val c = C(arrayOf(10F, 100.023232F, -1455.433400F))
@@ -355,8 +355,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testFloatArray() {
+    @Test(timeout=300_000)
+	fun testFloatArray() {
         class C(val c: FloatArray)
 
         val c = C(FloatArray(3))
@@ -374,8 +374,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testArrayOfDouble() {
+    @Test(timeout=300_000)
+	fun testArrayOfDouble() {
         class C(val c: Array<Double>)
 
         val c = C(arrayOf(10.0, 100.2, -1455.2))
@@ -392,8 +392,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun testDoubleArray() {
+    @Test(timeout=300_000)
+	fun testDoubleArray() {
         class C(val c: DoubleArray)
 
         val c = C(DoubleArray(3))
@@ -411,8 +411,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[2], deserializedC.c[2])
     }
 
-    @Test
-    fun arrayOfArrayOfInt() {
+    @Test(timeout=300_000)
+	fun arrayOfArrayOfInt() {
         class C(val c: Array<Array<Int>>)
 
         val c = C(arrayOf(arrayOf(1, 2, 3), arrayOf(4, 5, 6)))
@@ -431,8 +431,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[1][2], deserializedC.c[1][2])
     }
 
-    @Test
-    fun arrayOfIntArray() {
+    @Test(timeout=300_000)
+	fun arrayOfIntArray() {
         class C(val c: Array<IntArray>)
 
         val c = C(arrayOf(IntArray(3), IntArray(3)))
@@ -453,8 +453,8 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[1][2], deserializedC.c[1][2])
     }
 
-    @Test
-    fun arrayOfArrayOfIntArray() {
+    @Test(timeout=300_000)
+	fun arrayOfArrayOfIntArray() {
         class C(val c: Array<Array<IntArray>>)
 
         val c = C(arrayOf(arrayOf(IntArray(3), IntArray(3), IntArray(3)),
@@ -481,8 +481,8 @@ class DeserializeSimpleTypesTests {
         }
     }
 
-    @Test
-    fun nestedRepeatedTypes() {
+    @Test(timeout=300_000)
+	fun nestedRepeatedTypes() {
         class A(val a: A?, val b: Int)
 
         var a = A(A(A(A(A(null, 1), 2), 3), 4), 5)
@@ -505,8 +505,8 @@ class DeserializeSimpleTypesTests {
     }
 
     // Replicates CORDA-1545
-    @Test
-    fun arrayOfByteArray() {
+    @Test(timeout=300_000)
+	fun arrayOfByteArray() {
         class A(val a : Array<ByteArray>)
 
         val ba1 = ByteArray(3)
@@ -545,8 +545,8 @@ class DeserializeSimpleTypesTests {
 
     class PropertyWithoutCordaSerializable(val value: Int)
 
-    @Test
-    fun classHasNoPublicConstructor() {
+    @Test(timeout=300_000)
+	fun classHasNoPublicConstructor() {
         assertFailsWithMessage(
             """Unable to create an object serializer for type class ${Garbo::class.java.name}:
 Mandatory constructor parameters [value] are missing from the readable properties []
@@ -560,8 +560,8 @@ No custom serializers registered.
         }
     }
 
-    @Test
-    fun propertyClassHasNoPublicConstructor() {
+    @Test(timeout=300_000)
+	fun propertyClassHasNoPublicConstructor() {
         assertFailsWithMessage(
             """Unable to create an object serializer for type class ${Greta::class.java.name}:
 Has properties [garbo] of types that are not serializable:
@@ -576,8 +576,8 @@ No custom serializers registered.
         }
     }
 
-    @Test
-    fun notWhitelistedError() {
+    @Test(timeout=300_000)
+	fun notWhitelistedError() {
         val factory = testDefaultFactoryWithWhitelist()
         assertFailsWithMessage(
                 "Class \"class ${PropertyWithoutCordaSerializable::class.java.name}\" " +
@@ -586,8 +586,8 @@ No custom serializers registered.
         }
     }
 
-    @Test
-    fun propertyClassNotWhitelistedError() {
+    @Test(timeout=300_000)
+	fun propertyClassNotWhitelistedError() {
         val factory = testDefaultFactoryWithWhitelist()
         assertFailsWithMessage(
                 "Class \"class ${PropertyWithoutCordaSerializable::class.java.name}\" " +
@@ -597,8 +597,8 @@ No custom serializers registered.
     }
 
     // See CORDA-2782
-    @Test
-    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    @Test(timeout=300_000)
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun comparableNotWhitelistedOk() {
         @CordaSerializable
         class Ok(val value: String) : java.lang.Comparable<Ok> {

@@ -9,25 +9,25 @@ class PrivacySaltTest {
         private const val SALT_SIZE = 32
     }
 
-    @Test
-    fun testValidSalt() {
+    @Test(timeout=300_000)
+	fun testValidSalt() {
         PrivacySalt(ByteArray(SALT_SIZE) { 0x14 })
     }
 
-    @Test
-    fun testInvalidSaltWithAllZeros() {
+    @Test(timeout=300_000)
+	fun testInvalidSaltWithAllZeros() {
         val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE)) }
         assertEquals("Privacy salt should not be all zeros.", ex.message)
     }
 
-    @Test
-    fun testTooShortPrivacySalt() {
+    @Test(timeout=300_000)
+	fun testTooShortPrivacySalt() {
         val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1) { 0x7f }) }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }
 
-    @Test
-    fun testTooLongPrivacySalt() {
+    @Test(timeout=300_000)
+	fun testTooLongPrivacySalt() {
         val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1) { 0x7f }) }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }

@@ -27,8 +27,8 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class KotlinIntegrationTestingTutorial {
-    @Test
-    fun `alice bob cash exchange example`() {
+    @Test(timeout=300_000)
+	fun `alice bob cash exchange example`() {
         // START 1
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(

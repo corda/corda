@@ -13,7 +13,7 @@ import java.util.UUID
 @ExtendWith(LocalSerialization::class)
 class DeserializePrimitivesTest : TestBase(KOTLIN) {
     @Test
-    fun `test naked uuid`() {
+	fun `test naked uuid`() {
         val uuid = UUID.randomUUID()
         val data = uuid.serialize()
 
@@ -27,7 +27,7 @@ class DeserializePrimitivesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test wrapped uuid`() {
+	fun `test wrapped uuid`() {
         val uuid = WrappedUUID(UUID.randomUUID())
         val data = uuid.serialize()
 
@@ -41,7 +41,7 @@ class DeserializePrimitivesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test naked date`() {
+	fun `test naked date`() {
         val now = Date()
         val data = now.serialize()
 
@@ -55,7 +55,7 @@ class DeserializePrimitivesTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test wrapped date`() {
+	fun `test wrapped date`() {
         val now = WrappedDate(Date())
         val data = now.serialize()
 

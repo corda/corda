@@ -72,7 +72,7 @@ class GenerateData {
     }
 
     @Test
-    fun verifyTransactions() {
+	fun verifyTransactions() {
         URLClassLoader(arrayOf(TEST_DATA.toUri().toURL())).use { cl ->
             cl.loadResource("txverify/tx-success.bin")
                 .deserialize<TransactionVerificationRequest>()

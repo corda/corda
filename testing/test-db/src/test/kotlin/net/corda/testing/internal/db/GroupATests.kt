@@ -7,13 +7,13 @@ import org.junit.jupiter.api.Test
 class GroupATests {
 
     @Test
-    fun setExpectations() {
+	fun setExpectations() {
         AssertingTestDatabaseContext.addExpectations("groupA",
                 "forClassGroupATests-setup", "specialSql1-setup", "specialSql1-teardown", "forClassGroupATests-teardown")
     }
 
     @Test
-    fun noSpecialSqlRequired() {
+	fun noSpecialSqlRequired() {
     }
 
     @Test

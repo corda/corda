@@ -56,8 +56,8 @@ class RoundTripObservableSerializerTests {
         return Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).build()
     }
 
-    @Test
-    fun roundTripTest1() {
+    @Test(timeout=300_000)
+	fun roundTripTest1() {
         val serializationScheme = AMQPRoundTripRPCSerializationScheme(
                 serializationContext, emptySet(), emptySet(), AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
 

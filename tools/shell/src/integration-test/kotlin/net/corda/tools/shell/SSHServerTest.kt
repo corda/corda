@@ -28,8 +28,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class SSHServerTest {
-    @Test
-    fun `ssh server does not start be default`() {
+    @Test(timeout=300_000)
+	fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
@@ -49,8 +49,8 @@ class SSHServerTest {
         }
     }
 
-    @Test
-    fun `ssh server starts when configured`() {
+    @Test(timeout=300_000)
+	fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
@@ -68,8 +68,8 @@ class SSHServerTest {
         }
     }
 
-    @Test
-    fun `ssh server verify credentials`() {
+    @Test(timeout=300_000)
+	fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {
@@ -91,8 +91,8 @@ class SSHServerTest {
         }
     }
 
-    @Test
-    fun `ssh respects permissions`() {
+    @Test(timeout=300_000)
+	fun `ssh respects permissions`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>(),
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name)))
         // The driver will automatically pick up the annotated flows below
@@ -121,8 +121,8 @@ class SSHServerTest {
     }
 
     @Ignore
-    @Test
-    fun `ssh runs flows`() {
+    @Test(timeout=300_000)
+	fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {

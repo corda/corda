@@ -130,8 +130,8 @@ class CertificateRevocationListNodeTests {
         revokedNodeCerts.clear()
     }
 
-    @Test
-    fun `Simple AMPQ Client to Server connection works and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `Simple AMPQ Client to Server connection works and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -162,8 +162,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `Simple AMPQ Client to Server connection works and soft fail is disabled`() {
+    @Test(timeout=300_000)
+	fun `Simple AMPQ Client to Server connection works and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -194,8 +194,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -215,8 +215,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -236,8 +236,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client to Server connection fails when servers's certificate is revoked`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection fails when servers's certificate is revoked`() {
         val crlCheckSoftFail = true
         val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
@@ -257,8 +257,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
@@ -278,8 +278,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -304,8 +304,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
+    @Test(timeout=300_000)
+	fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -330,8 +330,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -570,8 +570,8 @@ class CertificateRevocationListNodeTests {
         }
     }
 
-    @Test
-    fun `verify CRL algorithms`() {
+    @Test(timeout=300_000)
+	fun `verify CRL algorithms`() {
         val ECDSA_ALGORITHM = "SHA256withECDSA"
         val EC_ALGORITHM = "EC"
         val EMPTY_CRL = "empty.crl"
@@ -599,8 +599,8 @@ class CertificateRevocationListNodeTests {
         }.withMessage("Unknown signature type requested: EC")
     }
 
-    @Test
-    fun `AMPQ Client to Server connection succeeds when CRL retrieval is forbidden and soft fail is enabled`() {
+    @Test(timeout=300_000)
+	fun `AMPQ Client to Server connection succeeds when CRL retrieval is forbidden and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val forbiddenUrl = "http://${server.hostAndPort}/crl/$FORBIDDEN_CRL"
         val (amqpServer, _) = createServer(

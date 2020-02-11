@@ -30,8 +30,8 @@ class H2SecurityTests {
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"
     }
 
-    @Test
-    fun `h2 server starts when h2Settings are set`() {
+    @Test(timeout=300_000)
+	fun `h2 server starts when h2Settings are set`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -46,8 +46,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server on the host name requires non-default database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server on the host name requires non-default database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -60,8 +60,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server on the external host IP requires non-default database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server on the external host IP requires non-default database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -74,8 +74,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server on host name requires non-blank database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server on host name requires non-blank database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -89,8 +89,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server on external host IP requires non-blank database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server on external host IP requires non-blank database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -104,8 +104,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server on localhost runs with the default database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server on localhost runs with the default database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = false,
@@ -116,8 +116,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server to loopback IP runs with the default database password`() {
+    @Test(timeout=300_000)
+	fun `h2 server to loopback IP runs with the default database password`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -128,8 +128,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `remote code execution via h2 server is disabled`() {
+    @Test(timeout=300_000)
+	fun `remote code execution via h2 server is disabled`() {
         driver(DriverParameters(
                 inMemoryDB = false,
                 startNodesInProcess = false,
@@ -148,8 +148,8 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `malicious flow tries to enable remote code execution via h2 server`() {
+    @Test(timeout=300_000)
+	fun `malicious flow tries to enable remote code execution via h2 server`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<MaliciousFlow>()))
         driver(DriverParameters(
                 inMemoryDB = false,

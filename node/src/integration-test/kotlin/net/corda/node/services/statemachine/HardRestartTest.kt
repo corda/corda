@@ -60,8 +60,8 @@ class HardRestartTest {
         }
     }
 
-    @Test
-    fun restartShortPingPongFlowRandomly() {
+    @Test(timeout=300_000)
+	fun restartShortPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
                 portAllocation = incrementalPortAllocation(),
@@ -99,8 +99,8 @@ class HardRestartTest {
         }
     }
 
-    @Test
-    fun restartLongPingPongFlowRandomly() {
+    @Test(timeout=300_000)
+	fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
                 portAllocation = incrementalPortAllocation(),
@@ -138,8 +138,8 @@ class HardRestartTest {
         }
     }
 
-    @Test
-    fun softRestartLongPingPongFlowRandomly() {
+    @Test(timeout=300_000)
+	fun softRestartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
         driver(DriverParameters(
                 portAllocation = incrementalPortAllocation(),
@@ -221,8 +221,8 @@ class HardRestartTest {
         }
     }
 
-    @Test
-    fun restartRecursiveFlowRandomly() {
+    @Test(timeout=300_000)
+	fun restartRecursiveFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<RecursiveA>(), Permissions.all()))
         driver(DriverParameters(
                 portAllocation = incrementalPortAllocation(),

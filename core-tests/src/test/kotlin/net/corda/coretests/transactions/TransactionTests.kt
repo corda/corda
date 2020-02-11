@@ -53,8 +53,8 @@ class TransactionTests {
         return SignedTransaction(wtx, sigs)
     }
 
-    @Test
-    fun `signed transaction missing signatures - CompositeKey`() {
+    @Test(timeout=300_000)
+	fun `signed transaction missing signatures - CompositeKey`() {
         val ak = generateKeyPair()
         val bk = generateKeyPair()
         val ck = generateKeyPair()
@@ -87,8 +87,8 @@ class TransactionTests {
         makeSigned(wtx, DUMMY_KEY_1, ak).verifySignaturesExcept(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
     }
 
-    @Test
-    fun `signed transaction missing signatures`() {
+    @Test(timeout=300_000)
+	fun `signed transaction missing signatures`() {
         val wtx = createWireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
@@ -118,8 +118,8 @@ class TransactionTests {
         makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifyRequiredSignatures()
     }
 
-    @Test
-    fun `transactions with no inputs can have any notary`() {
+    @Test(timeout=300_000)
+	fun `transactions with no inputs can have any notary`() {
         val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
@@ -148,8 +148,8 @@ class TransactionTests {
         transaction.verify()
     }
 
-    @Test
-    fun `transaction cannot have duplicate inputs`() {
+    @Test(timeout=300_000)
+	fun `transaction cannot have duplicate inputs`() {
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         fun buildTransaction() = createWireTransaction(
                 inputs = listOf(stateRef, stateRef),
@@ -163,8 +163,8 @@ class TransactionTests {
         assertFailsWith<IllegalStateException> { buildTransaction() }
     }
 
-    @Test
-    fun `general transactions cannot change notary`() {
+    @Test(timeout=300_000)
+	fun `general transactions cannot change notary`() {
         val notary: Party = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
         val outState = inState.copy(notary = ALICE)
@@ -201,8 +201,8 @@ class TransactionTests {
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }
     }
 
-    @Test
-    fun `transactions with identical contents must have different ids`() {
+    @Test(timeout=300_000)
+	fun `transactions with identical contents must have different ids`() {
         val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
         fun buildTransaction() = createWireTransaction(
                 inputs = emptyList(),

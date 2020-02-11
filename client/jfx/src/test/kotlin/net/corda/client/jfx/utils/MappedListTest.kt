@@ -19,8 +19,8 @@ class MappedListTest {
         replayedList = ReplayedList(mappedList)
     }
 
-    @Test
-    fun addWorks() {
+    @Test(timeout=300_000)
+	fun addWorks() {
         assertEquals(replayedList.size, 1)
         assertEquals(replayedList[0], 5)
 
@@ -36,8 +36,8 @@ class MappedListTest {
         assertEquals(replayedList[2], 3)
     }
 
-    @Test
-    fun removeWorks() {
+    @Test(timeout=300_000)
+	fun removeWorks() {
         sourceList.add("Bob")
         sourceList.add(0, "Charlie")
         assertEquals(replayedList.size, 3)
@@ -48,8 +48,8 @@ class MappedListTest {
         assertEquals(replayedList[1], 3)
     }
 
-    @Test
-    fun permuteWorks() {
+    @Test(timeout=300_000)
+	fun permuteWorks() {
         sourceList.add("Bob")
         sourceList.add(0, "Charlie")
 

@@ -49,8 +49,8 @@ class FlowsDrainingModeContentionTest {
         executor!!.shutdown()
     }
 
-    @Test
-    fun `draining mode does not deadlock with acks between 2 nodes`() {
+    @Test(timeout=300_000)
+	fun `draining mode does not deadlock with acks between 2 nodes`() {
         val message = "Ground control to Major Tom"
         driver(DriverParameters(
                 startNodesInProcess = true,

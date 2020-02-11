@@ -57,8 +57,8 @@ class X509NameConstraintsTest {
         return Pair(keyStore, trustStore)
     }
 
-    @Test
-    fun `illegal common name`() {
+    @Test(timeout=300_000)
+	fun `illegal common name`() {
         val acceptableNames = listOf("CN=Bank A TLS, O=Bank A", "CN=Bank A")
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 
@@ -92,8 +92,8 @@ class X509NameConstraintsTest {
         }
     }
 
-    @Test
-    fun `x500 name with correct cn and extra attribute`() {
+    @Test(timeout=300_000)
+	fun `x500 name with correct cn and extra attribute`() {
         val acceptableNames = listOf("CN=Bank A TLS, UID=", "O=Bank A")
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 
@@ -135,8 +135,8 @@ class X509NameConstraintsTest {
         }
     }
 
-    @Test
-    fun `test private key retrieval`() {
+    @Test(timeout=300_000)
+	fun `test private key retrieval`() {
         val acceptableNames = listOf("CN=Bank A TLS, UID=", "O=Bank A")
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 

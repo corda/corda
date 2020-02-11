@@ -186,8 +186,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
      * Helper method for generating a Persistent H2 test database
      */
     @Ignore
-    @Test
-    fun createPersistentTestDb() {
+    @Test(timeout=300_000)
+	fun createPersistentTestDb() {
         val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc::wellKnownPartyFromX500Name, identitySvc::wellKnownPartyFromAnonymous)
         setUpDb(database, 5000)
 
@@ -231,8 +231,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     /** Generic Query tests: using CommonQueryCriteria */
 
-    @Test
-    fun `unconsumed base contract states for single participant`() {
+    @Test(timeout=300_000)
+	fun `unconsumed base contract states for single participant`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP))
@@ -249,8 +249,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed base contract states for two participants`() {
+    @Test(timeout=300_000)
+	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP)) // true
@@ -270,8 +270,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     /** Generic Query tests
     (combining both FungibleState and LinearState contract types) */
 
-    @Test
-    fun `criteria with field from mapped superclass`() {
+    @Test(timeout=300_000)
+	fun `criteria with field from mapped superclass`() {
         database.transaction {
             val expression = builder {
                 SampleCashSchemaV2.PersistentCashState::quantity.sum(
@@ -284,8 +284,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `criteria with field from mapped superclass of superclass`() {
+    @Test(timeout=300_000)
+	fun `criteria with field from mapped superclass of superclass`() {
         database.transaction {
             val expression = builder {
                 SampleCashSchemaV2.PersistentCashState::quantity.sum(
@@ -298,8 +298,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `query by interface for a contract class extending a parent contract class`() {
+    @Test(timeout=300_000)
+	fun `query by interface for a contract class extending a parent contract class`() {
         database.transaction {
 
             // build custom contract and store in vault
@@ -335,8 +335,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     open class BaseState(override val participants: List<AbstractParty> = emptyList()) : MyContractInterface
     data class MyState(val name: String, override val participants: List<AbstractParty> = emptyList()) : BaseState(participants)
 
-    @Test
-    fun `unconsumed states simple`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states simple`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -360,8 +360,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states verbose`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states verbose`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -374,8 +374,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `query with sort criteria works even when multiple pages have the same value for the sort criteria field`() {
+    @Test(timeout=300_000)
+	fun `query with sort criteria works even when multiple pages have the same value for the sort criteria field`() {
         val numberOfStates = 59
         val pageSize = 13
 
@@ -415,8 +415,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `query with sort criteria works with pagination`() {
+    @Test(timeout=300_000)
+	fun `query with sort criteria works with pagination`() {
         val numberOfStates = 59
         val pageSize = 13
 
@@ -456,8 +456,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states with count`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states with count`() {
         database.transaction {
             repeat(4) {
                 vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -475,8 +475,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash states simple`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash states simple`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -488,8 +488,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash states verbose`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash states verbose`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -502,8 +502,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash states sorted by state ref`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash states sorted by state ref`() {
         val stateRefs: MutableList<StateRef> = mutableListOf()
         database.transaction {
             val issuedStates = vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
@@ -533,8 +533,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash states sorted by state ref txnId and index`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash states sorted by state ref txnId and index`() {
         val consumed = mutableSetOf<SecureHash>()
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
@@ -559,8 +559,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states for state refs`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states for state refs`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(8)
             val issuedStates = vaultFiller.fillWithSomeTestLinearStates(2)
@@ -580,8 +580,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states for contract state types`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states for contract state types`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -595,8 +595,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `query by contract states constraint type`() {
+    @Test(timeout=300_000)
+	fun `query by contract states constraint type`() {
         database.transaction {
             // insert states with different constraint types
             vaultFiller.fillWithSomeTestLinearStates(1).states.first().state.constraint
@@ -650,8 +650,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `query by contract states constraint type and data`() {
+    @Test(timeout=300_000)
+	fun `query by contract states constraint type and data`() {
         database.transaction {
             // insert states with different constraint types
             vaultFiller.fillWithSomeTestLinearStates(1).states.first().state.constraint
@@ -714,8 +714,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `consumed states`() {
+    @Test(timeout=300_000)
+	fun `consumed states`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             val linearStates = vaultFiller.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
@@ -730,8 +730,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `consumed states with count`() {
+    @Test(timeout=300_000)
+	fun `consumed states with count`() {
         database.transaction {
             repeat(4) {
                 vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -749,8 +749,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `all states`() {
+    @Test(timeout=300_000)
+	fun `all states`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             val linearStates = vaultFiller.fillWithSomeTestLinearStates(2, "TEST") // create 2 results with same UID
@@ -768,8 +768,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `all states with count`() {
+    @Test(timeout=300_000)
+	fun `all states with count`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
@@ -785,8 +785,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states by notary`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states by notary`() {
         database.transaction {
             vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -799,8 +799,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear states for single participant`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear states for single participant`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
@@ -818,8 +818,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed dummy states for exact single participant`() {
+    @Test(timeout=300_000)
+	fun `unconsumed dummy states for exact single participant`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP))
@@ -831,8 +831,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed dummy states for exact two participants`() {
+    @Test(timeout=300_000)
+	fun `unconsumed dummy states for exact two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, MINI_CORP))
@@ -850,8 +850,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear states for two participants`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
             vaultFiller.fillWithSomeTestLinearStates(2, "TEST", participants = listOf(MEGA_CORP, MINI_CORP))
@@ -877,8 +877,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed states with soft locking`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states with soft locking`() {
         database.transaction {
             val issuedStates = vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER).states.toList()
             vaultService.softLockReserve(UUID.randomUUID(), NonEmptySet.of(issuedStates[1].ref, issuedStates[2].ref, issuedStates[3].ref))
@@ -920,8 +920,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `state relevancy queries`() {
+    @Test(timeout=300_000)
+	fun `state relevancy queries`() {
         database.transaction {
             vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"), includeMe = true)
             vaultFiller.fillWithSomeTestDeals(listOf("ABC", "DEF", "GHI"), includeMe = false)
@@ -959,8 +959,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator EQUAL`() {
+    @Test(timeout=300_000)
+	fun `logical operator EQUAL`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -972,8 +972,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator NOT EQUAL`() {
+    @Test(timeout=300_000)
+	fun `logical operator NOT EQUAL`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -985,8 +985,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator GREATER_THAN`() {
+    @Test(timeout=300_000)
+	fun `logical operator GREATER_THAN`() {
         database.transaction {
             listOf(1.DOLLARS, 10.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -998,8 +998,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator GREATER_THAN_OR_EQUAL`() {
+    @Test(timeout=300_000)
+	fun `logical operator GREATER_THAN_OR_EQUAL`() {
         database.transaction {
             listOf(1.DOLLARS, 10.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1011,8 +1011,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator LESS_THAN`() {
+    @Test(timeout=300_000)
+	fun `logical operator LESS_THAN`() {
         database.transaction {
             listOf(1.DOLLARS, 10.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1024,8 +1024,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator LESS_THAN_OR_EQUAL`() {
+    @Test(timeout=300_000)
+	fun `logical operator LESS_THAN_OR_EQUAL`() {
         database.transaction {
             listOf(1.DOLLARS, 10.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1037,8 +1037,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator BETWEEN`() {
+    @Test(timeout=300_000)
+	fun `logical operator BETWEEN`() {
         database.transaction {
             listOf(1.DOLLARS, 10.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1050,8 +1050,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator IN`() {
+    @Test(timeout=300_000)
+	fun `logical operator IN`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1064,8 +1064,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator NOT IN`() {
+    @Test(timeout=300_000)
+	fun `logical operator NOT IN`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1078,8 +1078,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator LIKE`() {
+    @Test(timeout=300_000)
+	fun `logical operator LIKE`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1091,8 +1091,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator NOT LIKE`() {
+    @Test(timeout=300_000)
+	fun `logical operator NOT LIKE`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1104,8 +1104,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator IS_NULL`() {
+    @Test(timeout=300_000)
+	fun `logical operator IS_NULL`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1117,8 +1117,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator NOT_NULL`() {
+    @Test(timeout=300_000)
+	fun `logical operator NOT_NULL`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1130,8 +1130,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive EQUAL`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive EQUAL`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1143,8 +1143,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive EQUAL does not affect numbers`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive EQUAL does not affect numbers`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1156,8 +1156,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive NOT_EQUAL does not return results containing the same characters as the case insensitive string`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive NOT_EQUAL does not return results containing the same characters as the case insensitive string`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1169,8 +1169,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive NOT_EQUAL does not affect numbers`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive NOT_EQUAL does not affect numbers`() {
         database.transaction {
             listOf(USD, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1183,8 +1183,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive IN`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive IN`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1197,8 +1197,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive IN does not affect numbers`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive IN does not affect numbers`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1210,8 +1210,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive NOT IN does not return results containing the same characters as the case insensitive strings`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive NOT IN does not return results containing the same characters as the case insensitive strings`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1224,8 +1224,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive NOT_IN does not affect numbers`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive NOT_IN does not affect numbers`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1237,8 +1237,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator case insensitive LIKE`() {
+    @Test(timeout=300_000)
+	fun `logical operator case insensitive LIKE`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1250,8 +1250,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `logical operator NOT LIKE does not return results containing the same characters as the case insensitive string`() {
+    @Test(timeout=300_000)
+	fun `logical operator NOT LIKE does not return results containing the same characters as the case insensitive string`() {
         database.transaction {
             listOf(USD, GBP, CHF).forEach {
                 vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1263,8 +1263,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions without group clause`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions without group clause`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -1301,8 +1301,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions with single group clause`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions with single group clause`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -1342,8 +1342,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions with single group clause desc first column`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions with single group clause desc first column`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -1364,8 +1364,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions with single group clause desc mid column`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions with single group clause desc mid column`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -1386,8 +1386,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions with single group clause desc last column`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions with single group clause desc last column`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -1408,8 +1408,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -1443,8 +1443,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions count by contract type`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions count by contract type`() {
         database.transaction {
             // create new states
             vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
@@ -1468,8 +1468,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `aggregate functions count by contract type and state status`() {
+    @Test(timeout=300_000)
+	fun `aggregate functions count by contract type and state status`() {
         database.transaction {
             // create new states
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
@@ -1531,8 +1531,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     private val TODAY = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC)
 
-    @Test
-    fun `unconsumed states recorded between two time intervals`() {
+    @Test(timeout=300_000)
+	fun `unconsumed states recorded between two time intervals`() {
         database.transaction {
             vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             // DOCSTART VaultQueryExample6
@@ -1555,8 +1555,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `states consumed after time`() {
+    @Test(timeout=300_000)
+	fun `states consumed after time`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -1575,8 +1575,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // pagination: first page
-    @Test
-    fun `all states with paging specification - first page`() {
+    @Test(timeout=300_000)
+	fun `all states with paging specification - first page`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 100, DUMMY_CASH_ISSUER)
             // DOCSTART VaultQueryExample7
@@ -1590,8 +1590,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // pagination: last page
-    @Test
-    fun `all states with paging specification  - last`() {
+    @Test(timeout=300_000)
+	fun `all states with paging specification  - last`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(95.DOLLARS, notaryServices, 95, DUMMY_CASH_ISSUER)
             // Last page implies we need to perform a row count for the Query first,
@@ -1606,8 +1606,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // pagination: invalid page number
-    @Test
-    fun `invalid page number`() {
+    @Test(timeout=300_000)
+	fun `invalid page number`() {
         expectedEx.expect(VaultQueryException::class.java)
         expectedEx.expectMessage("Page specification: invalid page number")
 
@@ -1621,8 +1621,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // pagination: invalid page size
-    @Test
-    fun `invalid page size`() {
+    @Test(timeout=300_000)
+	fun `invalid page size`() {
         expectedEx.expect(VaultQueryException::class.java)
         expectedEx.expectMessage("Page specification: invalid page size")
 
@@ -1636,8 +1636,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // pagination not specified but more than DEFAULT_PAGE_SIZE results available (fail-fast test)
-    @Test
-    fun `pagination not specified but more than default results available`() {
+    @Test(timeout=300_000)
+	fun `pagination not specified but more than default results available`() {
         expectedEx.expect(VaultQueryException::class.java)
         expectedEx.expectMessage("provide a `PageSpecification(pageNumber, pageSize)`")
 
@@ -1664,8 +1664,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // test paging query example works
-    @Test
-    fun `test example of querying states with paging works correctly`() {
+    @Test(timeout=300_000)
+	fun `test example of querying states with paging works correctly`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 4, DUMMY_CASH_ISSUER)
             assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(4)
@@ -1677,8 +1677,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // test paging with aggregate function and group by clause
-    @Test
-    fun `test paging with aggregate function and group by clause`() {
+    @Test(timeout=300_000)
+	fun `test paging with aggregate function and group by clause`() {
         database.transaction {
             (0..200).forEach {
                 vaultFiller.fillWithSomeTestLinearStates(1, linearNumber = it.toLong(), linearString = it.toString())
@@ -1707,8 +1707,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // sorting
-    @Test
-    fun `sorting - all states sorted by contract type, state status, consumed time`() {
+    @Test(timeout=300_000)
+	fun `sorting - all states sorted by contract type, state status, consumed time`() {
         database.transaction {
             setUpDb(database)
             val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_STATE_TYPE), Sort.Direction.DESC)
@@ -1728,8 +1728,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
@@ -1740,8 +1740,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `consumed fungible assets`() {
+    @Test(timeout=300_000)
+	fun `consumed fungible assets`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             this.session.flush()
@@ -1755,8 +1755,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash fungible assets`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash fungible assets`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -1765,8 +1765,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash fungible assets after spending`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash fungible assets after spending`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             this.session.flush()
@@ -1779,8 +1779,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `consumed cash fungible assets`() {
+    @Test(timeout=300_000)
+	fun `consumed cash fungible assets`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             this.session.flush()
@@ -1794,8 +1794,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestLinearStates(10)
@@ -1805,8 +1805,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `consumed linear heads`() {
+    @Test(timeout=300_000)
+	fun `consumed linear heads`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             val linearStates = vaultFiller.fillWithSomeTestLinearStates(2, "TEST") // create 2 states with same externalId
@@ -1823,8 +1823,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     /** LinearState tests */
 
-    @Test
-    fun `unconsumed linear heads for linearId without external Id`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for linearId without external Id`() {
         database.transaction {
             val issuedStates = vaultFiller.fillWithSomeTestLinearStates(10)
             // DOCSTART VaultQueryExample8
@@ -1836,8 +1836,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads by linearId`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads by linearId`() {
         database.transaction {
             val linearState1 = vaultFiller.fillWithSomeTestLinearStates(1, "ID1")
             vaultFiller.fillWithSomeTestLinearStates(1, "ID2")
@@ -1849,8 +1849,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads for linearId by external Id`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for linearId by external Id`() {
         database.transaction {
             val linearState1 = vaultFiller.fillWithSomeTestLinearStates(1, "ID1")
             vaultFiller.fillWithSomeTestLinearStates(1, "ID2")
@@ -1862,8 +1862,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `all linear states for a given linear id`() {
+    @Test(timeout=300_000)
+	fun `all linear states for a given linear id`() {
         database.transaction {
             val txns = vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
@@ -1882,8 +1882,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `all linear states for a given id sorted by uuid`() {
+    @Test(timeout=300_000)
+	fun `all linear states for a given id sorted by uuid`() {
         database.transaction {
             val txns = vaultFiller.fillWithSomeTestLinearStates(2, "TEST")
             val linearStates = txns.states.toList()
@@ -1901,8 +1901,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear states sorted by external id`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear states sorted by external id`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, externalId = "111")
             vaultFiller.fillWithSomeTestLinearStates(2, externalId = "222")
@@ -1915,8 +1915,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed deal states sorted`() {
+    @Test(timeout=300_000)
+	fun `unconsumed deal states sorted`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(10)
             val uid = UniqueIdentifier("999")
@@ -1935,8 +1935,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear states sorted by custom attribute`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear states sorted by custom attribute`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, linearString = "111")
             vaultFiller.fillWithSomeTestLinearStates(2, linearString = "222")
@@ -1950,8 +1950,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `return consumed linear states for a given linear id`() {
+    @Test(timeout=300_000)
+	fun `return consumed linear states for a given linear id`() {
         database.transaction {
             val txns = vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
             val linearState = txns.states.first()
@@ -1970,8 +1970,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     /**
      *  Deal Contract state to be removed as is duplicate of LinearState
      */
-    @Test
-    fun `unconsumed deals`() {
+    @Test(timeout=300_000)
+	fun `unconsumed deals`() {
         database.transaction {
             vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val results = vaultService.queryBy<DealState>()
@@ -1979,8 +1979,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed deals for ref`() {
+    @Test(timeout=300_000)
+	fun `unconsumed deals for ref`() {
         database.transaction {
             vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
             // DOCSTART VaultQueryExample10
@@ -1992,8 +1992,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `latest unconsumed deals for ref`() {
+    @Test(timeout=300_000)
+	fun `latest unconsumed deals for ref`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(2, "TEST")
             vaultFiller.fillWithSomeTestDeals(listOf("456"))
@@ -2005,8 +2005,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `latest unconsumed deals with party`() {
+    @Test(timeout=300_000)
+	fun `latest unconsumed deals with party`() {
         val parties = listOf(MINI_CORP)
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(2, "TEST")
@@ -2030,8 +2030,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     /** FungibleAsset tests */
 
-    @Test
-    fun `unconsumed fungible assets for specific issuer party and refs`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for specific issuer party and refs`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
             listOf(DUMMY_CASH_ISSUER, BOC.ref(1), BOC.ref(2), BOC.ref(3)).forEach {
@@ -2044,8 +2044,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets for selected issuer parties`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
         val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
         val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, mock(), generateKeyPair())
@@ -2073,8 +2073,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets by owner`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets by owner`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, BOC.ref(1))
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, MEGA_CORP.ref(0), MINI_CORP)
@@ -2085,8 +2085,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible states for owners`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible states for owners`() {
         database.transaction {
             vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, MEGA_CORP.ref(0), MEGA_CORP)
@@ -2102,8 +2102,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     /** Cash Fungible State specific */
-    @Test
-    fun `unconsumed fungible assets for single currency`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for single currency`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(10)
             listOf(USD, GBP, CHF).forEach {
@@ -2119,8 +2119,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash balance for single currency`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash balance for single currency`() {
         database.transaction {
             listOf(100, 200).zip(1..2).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch.DOLLARS, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -2139,8 +2139,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed cash balances for all currencies`() {
+    @Test(timeout=300_000)
+	fun `unconsumed cash balances for all currencies`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.POUNDS, 400.POUNDS, 500.SWISS_FRANCS, 600.SWISS_FRANCS).zip(1..6).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -2161,8 +2161,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets for quantity greater than`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for quantity greater than`() {
         database.transaction {
             listOf(10.DOLLARS, 25.POUNDS, 50.POUNDS, 100.SWISS_FRANCS).zip(listOf(3, 1, 1, 3)).forEach { (howMuch, states) ->
                 vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
@@ -2176,8 +2176,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets for issuer party`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for issuer party`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)
             listOf(DUMMY_CASH_ISSUER, BOC.ref(1)).forEach {
@@ -2192,8 +2192,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed fungible assets for single currency and quantity greater than`() {
+    @Test(timeout=300_000)
+	fun `unconsumed fungible assets for single currency and quantity greater than`() {
         database.transaction {
             listOf(100.DOLLARS, 100.POUNDS, 50.POUNDS, 100.SWISS_FRANCS).forEach {
                 vaultFiller.fillWithSomeTestCash(it, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -2210,8 +2210,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     /** Vault Custom Query tests */
 
     // specifying Query on Commercial Paper contract state attributes
-    @Test
-    fun `custom query using JPA - commercial paper schema V1 single attribute`() {
+    @Test(timeout=300_000)
+	fun `custom query using JPA - commercial paper schema V1 single attribute`() {
         database.transaction {
             val issuance = MEGA_CORP.ref(1)
 
@@ -2247,8 +2247,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // specifying Query on Commercial Paper contract state attributes
-    @Test
-    fun `custom query using JPA - commercial paper schema V1 - multiple attributes`() {
+    @Test(timeout=300_000)
+	fun `custom query using JPA - commercial paper schema V1 - multiple attributes`() {
         database.transaction {
             val issuance = MEGA_CORP.ref(1)
 
@@ -2294,8 +2294,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     /** Chaining together different Query Criteria tests**/
 
     // specifying Query on Cash contract state attributes
-    @Test
-    fun `custom - all cash states with amount of currency greater or equal than`() {
+    @Test(timeout=300_000)
+	fun `custom - all cash states with amount of currency greater or equal than`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
@@ -2321,8 +2321,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // specifying Query on Linear state attributes
-    @Test
-    fun `unconsumed linear heads for linearId between two timestamps`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for linearId between two timestamps`() {
         database.transaction {
             val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
@@ -2340,8 +2340,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // specifying Query on Linear state attributes
-    @Test
-    fun `unconsumed linear heads for a given external id`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for a given external id`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST2")
@@ -2356,8 +2356,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // specifying Query on Linear state attributes
-    @Test
-    fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
         database.transaction {
             val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
@@ -2383,8 +2383,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     // specifying Query on Linear state attributes
-    @Test
-    fun `unconsumed linear heads for a given external id or uuid`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for a given external id or uuid`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             val aState = vaultFiller.fillWithSomeTestLinearStates(1, "TEST2").states
@@ -2406,8 +2406,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads for single participant`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for single participant`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
@@ -2426,8 +2426,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads for multiple participants`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads for multiple participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
             identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
@@ -2448,8 +2448,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `composite query for fungible and linear states`() {
+    @Test(timeout=300_000)
+	fun `composite query for fungible and linear states`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestDeals(listOf("123"))
@@ -2476,8 +2476,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `composite query for fungible, linear and dummy states for multiple participants`() {
+    @Test(timeout=300_000)
+	fun `composite query for fungible, linear and dummy states for multiple participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
             identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
@@ -2509,8 +2509,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads where external id is null`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads where external id is null`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1)
@@ -2526,8 +2526,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumed linear heads where external id is not null`() {
+    @Test(timeout=300_000)
+	fun `unconsumed linear heads where external id is not null`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1)
@@ -2543,8 +2543,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `enriched and overridden composite query handles defaults correctly`() {
+    @Test(timeout=300_000)
+	fun `enriched and overridden composite query handles defaults correctly`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 2, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
@@ -2568,8 +2568,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `sorted, enriched and overridden composite query with constraints handles defaults correctly`() {
+    @Test(timeout=300_000)
+	fun `sorted, enriched and overridden composite query with constraints handles defaults correctly`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
@@ -2595,8 +2595,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun unconsumedCashStatesForSpending_single_issuer_reference() {
+    @Test(timeout=300_000)
+	fun unconsumedCashStatesForSpending_single_issuer_reference() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             this.session.flush()
@@ -2613,8 +2613,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `unconsumedCashStatesForSpending single issuer reference not matching`() {
+    @Test(timeout=300_000)
+	fun `unconsumedCashStatesForSpending single issuer reference not matching`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
 
@@ -2628,8 +2628,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
-    fun `record a transaction with number of inputs greater than vault page size`() {
+    @Test(timeout=300_000)
+	fun `record a transaction with number of inputs greater than vault page size`() {
         val notary = dummyNotary
         val issuerKey = notary.keyPair
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
@@ -2669,8 +2669,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
      * Dynamic trackBy() tests are H2 only, since rollback stops events being emitted.
      */
 
-    @Test
-    fun trackCashStates_unconsumed() {
+    @Test(timeout=300_000)
+	fun trackCashStates_unconsumed() {
         val updates = database.transaction {
             val updates =
             // DOCSTART VaultQueryExample15
@@ -2710,8 +2710,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun trackCashStates_consumed() {
+    @Test(timeout=300_000)
+	fun trackCashStates_consumed() {
 
         val updates = database.transaction {
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
@@ -2752,8 +2752,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun trackCashStates_all() {
+    @Test(timeout=300_000)
+	fun trackCashStates_all() {
         val updates = database.transaction {
             val updates =
                     database.transaction {
@@ -2805,8 +2805,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun trackLinearStates() {
+    @Test(timeout=300_000)
+	fun trackLinearStates() {
 
         val updates = database.transaction {
             // DOCSTART VaultQueryExample16
@@ -2852,8 +2852,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun trackDealStates() {
+    @Test(timeout=300_000)
+	fun trackDealStates() {
         val updates = database.transaction {
             // DOCSTART VaultQueryExample17
             val (snapshot, updates) = vaultService.trackBy<DealState>()
@@ -2893,8 +2893,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun `track by only returns updates of tracked type`() {
+    @Test(timeout=300_000)
+	fun `track by only returns updates of tracked type`() {
         val updates = database.transaction {
             val (snapshot, updates) = vaultService.trackBy<DummyDealContract.State>()
             assertThat(snapshot.states).hasSize(0)
@@ -2916,8 +2916,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun `track by of super class only returns updates of sub classes of tracked type`() {
+    @Test(timeout=300_000)
+	fun `track by of super class only returns updates of sub classes of tracked type`() {
         val updates = database.transaction {
             val (snapshot, updates) = vaultService.trackBy<DealState>()
             assertThat(snapshot.states).hasSize(0)
@@ -2939,8 +2939,8 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
         }
     }
 
-    @Test
-    fun `track by of contract state interface returns updates of all states`() {
+    @Test(timeout=300_000)
+	fun `track by of contract state interface returns updates of all states`() {
         val updates = database.transaction {
             val (snapshot, updates) = vaultService.trackBy<ContractState>()
             assertThat(snapshot.states).hasSize(0)

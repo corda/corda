@@ -13,7 +13,7 @@ import java.util.function.Function
 @ExtendWith(LocalSerialization::class)
 class DeserializeStringTest : TestBase(KOTLIN) {
     @Test
-    fun `test deserializing string`() {
+	fun `test deserializing string`() {
         val stringMessage = StringMessage("Hello World!")
         val data = stringMessage.serialize()
 
@@ -38,7 +38,7 @@ class DeserializeStringTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing string list of arrays`() {
+	fun `test deserializing string list of arrays`() {
         val stringListArray = StringListOfArray(listOf(
             arrayOf("Hello"), arrayOf("World"), arrayOf("!"))
         )

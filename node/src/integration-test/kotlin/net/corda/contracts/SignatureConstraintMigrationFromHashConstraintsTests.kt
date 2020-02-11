@@ -21,8 +21,8 @@ import kotlin.test.assertTrue
 
 open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConstraintVersioningTests() {
 
-    @Test
-    fun `can evolve from lower contract class version to higher one`() {
+    @Test(timeout=300_000)
+	fun `can evolve from lower contract class version to higher one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(
@@ -68,8 +68,8 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertEquals(transformedMessage, stateAndRef!!.state.data.message)
     }
 
-    @Test
-    fun `auto migration from HashConstraint to SignatureConstraint`() {
+    @Test(timeout=300_000)
+	fun `auto migration from HashConstraint to SignatureConstraint`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -84,8 +84,8 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertTrue(consumingTransaction.outputs.single().constraint is SignatureAttachmentConstraint)
     }
 
-    @Test
-    fun `HashConstraint cannot be migrated if 'disableHashConstraints' system property is not set to true`() {
+    @Test(timeout=300_000)
+	fun `HashConstraint cannot be migrated if 'disableHashConstraints' system property is not set to true`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -100,8 +100,8 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertTrue(consumingTransaction.outputs.single().constraint is HashAttachmentConstraint)
     }
 
-    @Test
-    fun `HashConstraint cannot be migrated to SignatureConstraint if new jar is not signed`() {
+    @Test(timeout=300_000)
+	fun `HashConstraint cannot be migrated to SignatureConstraint if new jar is not signed`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -116,8 +116,8 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertTrue(consumingTransaction.outputs.single().constraint is HashAttachmentConstraint)
     }
 
-    @Test
-    fun `HashConstraint cannot be migrated to SignatureConstraint if platform version is not 4 or greater`() {
+    @Test(timeout=300_000)
+	fun `HashConstraint cannot be migrated to SignatureConstraint if platform version is not 4 or greater`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,
@@ -133,8 +133,8 @@ open class SignatureConstraintMigrationFromHashConstraintsTests : SignatureConst
         assertTrue(consumingTransaction.outputs.single().constraint is HashAttachmentConstraint)
     }
 
-    @Test
-    fun `HashConstraint cannot be migrated to SignatureConstraint if a HashConstraint is specified for one state and another uses an AutomaticPlaceholderConstraint`() {
+    @Test(timeout=300_000)
+	fun `HashConstraint cannot be migrated to SignatureConstraint if a HashConstraint is specified for one state and another uses an AutomaticPlaceholderConstraint`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
         val (issuanceTransaction, consumingTransaction) = upgradeCorDappBetweenTransactions(
                 cordapp = oldUnsignedCordapp,

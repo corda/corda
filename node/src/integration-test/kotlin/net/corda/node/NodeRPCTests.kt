@@ -22,8 +22,8 @@ class NodeRPCTests {
     private val CORDAPP_LICENCE = "Open Source (Apache 2)"
     private val HEXADECIMAL_REGEX = "[0-9a-fA-F]+".toRegex()
 
-    @Test
-    fun `run nodeDiagnosticInfo`() {
+    @Test(timeout=300_000)
+	fun `run nodeDiagnosticInfo`() {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS, extraCordappPackagesToScan = emptyList())) {
             val nodeDiagnosticInfo = startNode().get().rpc.nodeDiagnosticInfo()
             assertTrue(nodeDiagnosticInfo.version.matches(CORDA_VERSION_REGEX))

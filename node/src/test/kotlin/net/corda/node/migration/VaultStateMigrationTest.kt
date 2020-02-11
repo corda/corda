@@ -354,8 +354,8 @@ class VaultStateMigrationTest {
         }
     }
 
-    @Test
-    fun `Check a simple migration works`() {
+    @Test(timeout=300_000)
+	fun `Check a simple migration works`() {
         addCashStates(10, BOB)
         addCashStates(10, ALICE)
         assertEquals(20, getVaultStateCount())
@@ -367,8 +367,8 @@ class VaultStateMigrationTest {
         assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
     }
 
-    @Test
-    fun `Check state paging works`() {
+    @Test(timeout=300_000)
+	fun `Check state paging works`() {
         addCashStates(1010, BOB)
 
         assertEquals(0, getStatePartyCount())
@@ -379,8 +379,8 @@ class VaultStateMigrationTest {
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
-    @Test
-    fun `Check state fields are correct`() {
+    @Test(timeout=300_000)
+	fun `Check state fields are correct`() {
         val tx = createCashTransaction(Cash(), 100.DOLLARS, ALICE)
         storeTransaction(tx)
         createVaultStatesFromTransaction(tx)
@@ -409,8 +409,8 @@ class VaultStateMigrationTest {
         assertEquals(expectedPersistentParty.compositeKey, persistentStateParty.compositeKey)
     }
 
-    @Test
-    fun `Check the connection is open post migration`() {
+    @Test(timeout=300_000)
+	fun `Check the connection is open post migration`() {
         // Liquibase automatically closes the database connection when doing an actual migration. This test ensures the custom migration
         // leaves it open.
         addCashStates(12, ALICE)
@@ -420,8 +420,8 @@ class VaultStateMigrationTest {
         assertFalse(cordaDB.dataSource.connection.isClosed)
     }
 
-    @Test
-    fun `All parties added to state party table`() {
+    @Test(timeout=300_000)
+	fun `All parties added to state party table`() {
         val stx = createLinearStateTransaction("test", parties = listOf(ALICE, BOB, CHARLIE))
         storeTransaction(stx)
         createVaultStatesFromTransaction(stx)
@@ -433,8 +433,8 @@ class VaultStateMigrationTest {
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
-    @Test
-    fun `State with corresponding transaction missing fails migration`() {
+    @Test(timeout=300_000)
+	fun `State with corresponding transaction missing fails migration`() {
         val cash = Cash()
         val unknownTx = createCashTransaction(cash, 100.DOLLARS, BOB)
         createVaultStatesFromTransaction(unknownTx)
@@ -450,8 +450,8 @@ class VaultStateMigrationTest {
         assertEquals(11, getStatePartyCount())
     }
 
-    @Test
-    fun `State with unknown ID is handled correctly`() {
+    @Test(timeout=300_000)
+	fun `State with unknown ID is handled correctly`() {
         addCashStates(1, CHARLIE)
         addCashStates(10, BOB)
         val migration = VaultStateMigration()
@@ -468,8 +468,8 @@ class VaultStateMigrationTest {
         migration.execute(null)
     }
 
-    @Test
-    fun `State with non-owning key for our name marked as relevant`() {
+    @Test(timeout=300_000)
+	fun `State with non-owning key for our name marked as relevant`() {
         val tx = createCashTransaction(Cash(), 100.DOLLARS, BOB2)
         storeTransaction(tx)
         createVaultStatesFromTransaction(tx)
@@ -490,8 +490,8 @@ class VaultStateMigrationTest {
         checkStatesEqual(expectedPersistentState, persistentState)
     }
 
-    @Test
-    fun `State already in state party table is excluded`() {
+    @Test(timeout=300_000)
+	fun `State already in state party table is excluded`() {
         val tx = createCashTransaction(Cash(), 100.DOLLARS, BOB)
         storeTransaction(tx)
         createVaultStatesFromTransaction(tx)
@@ -503,8 +503,8 @@ class VaultStateMigrationTest {
         assertEquals(6, getStatePartyCount())
     }
 
-    @Test
-    fun `Consumed states are not migrated`() {
+    @Test(timeout=300_000)
+	fun `Consumed states are not migrated`() {
         addCashStates(1010, BOB, Vault.StateStatus.CONSUMED)
         assertEquals(0, getStatePartyCount())
         val migration = VaultStateMigration()
@@ -512,8 +512,8 @@ class VaultStateMigrationTest {
         assertEquals(0, getStatePartyCount())
     }
 
-    @Test
-    fun `State created with notary change transaction can be migrated`() {
+    @Test(timeout=300_000)
+	fun `State created with notary change transaction can be migrated`() {
         // This test is a little bit of a hack - it checks that these states are migrated correctly by looking at params in the database,
         // but these will not be there for V3 nodes. Handling for this must be tested manually.
         val cashTx = createCashTransaction(Cash(), 5.DOLLARS, BOB)
@@ -531,8 +531,8 @@ class VaultStateMigrationTest {
     }
 
     // Used to test migration performance
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `Migrate large database`() {
         val statesAtOnce = 500L
         val stateMultiplier = 300L
@@ -556,8 +556,8 @@ class VaultStateMigrationTest {
     }
 
     // Used to generate a persistent database for further testing.
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `Create persistent DB`() {
         val cashStatesToAdd = 1000
         val linearStatesToAdd = 0
@@ -583,8 +583,8 @@ class VaultStateMigrationTest {
         cordaDB.close()
     }
 
-    @Test
-    @Ignore
+    @Test(timeout=300_000)
+@Ignore
     fun `Run on persistent DB`() {
         cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
         val connection = (liquibaseDB.connection as JdbcConnection)

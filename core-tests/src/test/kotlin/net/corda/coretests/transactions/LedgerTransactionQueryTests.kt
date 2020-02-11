@@ -98,8 +98,8 @@ class LedgerTransactionQueryTests {
         return tx.toLedgerTransaction(services)
     }
 
-    @Test
-    fun `Simple InRef Indexer tests`() {
+    @Test(timeout=300_000)
+	fun `Simple InRef Indexer tests`() {
         val ltx = makeDummyTransaction()
         assertEquals(0, ltx.inRef<IntTypeDummyState>(0).state.data.data)
         assertEquals("0", ltx.inRef<StringTypeDummyState>(1).state.data.data)
@@ -108,8 +108,8 @@ class LedgerTransactionQueryTests {
         assertFailsWith<IndexOutOfBoundsException> { ltx.inRef<IntTypeDummyState>(10) }
     }
 
-    @Test
-    fun `Simple OutRef Indexer tests`() {
+    @Test(timeout=300_000)
+	fun `Simple OutRef Indexer tests`() {
         val ltx = makeDummyTransaction()
         assertEquals(0, ltx.outRef<IntTypeDummyState>(0).state.data.data)
         assertEquals("0", ltx.outRef<StringTypeDummyState>(1).state.data.data)
@@ -118,8 +118,8 @@ class LedgerTransactionQueryTests {
         assertFailsWith<IndexOutOfBoundsException> { ltx.outRef<IntTypeDummyState>(10) }
     }
 
-    @Test
-    fun `Simple Input Indexer tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Input Indexer tests`() {
         val ltx = makeDummyTransaction()
         assertEquals(0, (ltx.getInput(0) as IntTypeDummyState).data)
         assertEquals("0", (ltx.getInput(1) as StringTypeDummyState).data)
@@ -128,8 +128,8 @@ class LedgerTransactionQueryTests {
         assertFailsWith<IndexOutOfBoundsException> { ltx.getInput(10) }
     }
 
-    @Test
-    fun `Simple Output Indexer tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Output Indexer tests`() {
         val ltx = makeDummyTransaction()
         assertEquals(0, (ltx.getOutput(0) as IntTypeDummyState).data)
         assertEquals("0", (ltx.getOutput(1) as StringTypeDummyState).data)
@@ -138,8 +138,8 @@ class LedgerTransactionQueryTests {
         assertFailsWith<IndexOutOfBoundsException> { ltx.getOutput(10) }
     }
 
-    @Test
-    fun `Simple Command Indexer tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Command Indexer tests`() {
         val ltx = makeDummyTransaction()
         assertEquals(0, ltx.getCommand<Commands.Cmd1>(0).value.id)
         assertEquals(0, ltx.getCommand<Commands.Cmd2>(1).value.id)
@@ -148,8 +148,8 @@ class LedgerTransactionQueryTests {
         assertFailsWith<IndexOutOfBoundsException> { ltx.getOutput(10) }
     }
 
-    @Test
-    fun `Simple Inputs of type tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Inputs of type tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.inputsOfType(IntTypeDummyState::class.java)
         assertEquals(5, intStates.size)
@@ -161,8 +161,8 @@ class LedgerTransactionQueryTests {
         assertEquals(emptyList(), notPresentQuery)
     }
 
-    @Test
-    fun `Simple InputsRefs of type tests`() {
+    @Test(timeout=300_000)
+	fun `Simple InputsRefs of type tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.inRefsOfType(IntTypeDummyState::class.java)
         assertEquals(5, intStates.size)
@@ -174,8 +174,8 @@ class LedgerTransactionQueryTests {
         assertEquals(listOf(ltx.inputs[1], ltx.inputs[3], ltx.inputs[5], ltx.inputs[7], ltx.inputs[9]), stringStates)
     }
 
-    @Test
-    fun `Simple Outputs of type tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Outputs of type tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.outputsOfType(IntTypeDummyState::class.java)
         assertEquals(5, intStates.size)
@@ -187,8 +187,8 @@ class LedgerTransactionQueryTests {
         assertEquals(emptyList(), notPresentQuery)
     }
 
-    @Test
-    fun `Simple OutputsRefs of type tests`() {
+    @Test(timeout=300_000)
+	fun `Simple OutputsRefs of type tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.outRefsOfType(IntTypeDummyState::class.java)
         assertEquals(5, intStates.size)
@@ -202,8 +202,8 @@ class LedgerTransactionQueryTests {
         assertTrue(stringStates.all { it.ref.txhash == ltx.id })
     }
 
-    @Test
-    fun `Simple Commands of type tests`() {
+    @Test(timeout=300_000)
+	fun `Simple Commands of type tests`() {
         val ltx = makeDummyTransaction()
         val intCmd1 = ltx.commandsOfType(Commands.Cmd1::class.java)
         assertEquals(5, intCmd1.size)
@@ -215,8 +215,8 @@ class LedgerTransactionQueryTests {
         assertEquals(emptyList(), notPresentQuery)
     }
 
-    @Test
-    fun `Filtered Input Tests`() {
+    @Test(timeout=300_000)
+	fun `Filtered Input Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterInputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -225,8 +225,8 @@ class LedgerTransactionQueryTests {
         assertEquals("3", stringStates.single().data)
     }
 
-    @Test
-    fun `Filtered InRef Tests`() {
+    @Test(timeout=300_000)
+	fun `Filtered InRef Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterInRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -237,8 +237,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.inputs[7], stringStates.single())
     }
 
-    @Test
-    fun `Filtered Output Tests`() {
+    @Test(timeout=300_000)
+	fun `Filtered Output Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterOutputs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -247,8 +247,8 @@ class LedgerTransactionQueryTests {
         assertEquals("3", stringStates.single().data)
     }
 
-    @Test
-    fun `Filtered OutRef Tests`() {
+    @Test(timeout=300_000)
+	fun `Filtered OutRef Tests`() {
         val ltx = makeDummyTransaction()
         val intStates = ltx.filterOutRefs(IntTypeDummyState::class.java, Predicate { it.data.rem(2) == 0 })
         assertEquals(3, intStates.size)
@@ -261,8 +261,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.id, stringStates.single().ref.txhash)
     }
 
-    @Test
-    fun `Filtered Commands Tests`() {
+    @Test(timeout=300_000)
+	fun `Filtered Commands Tests`() {
         val ltx = makeDummyTransaction()
         val intCmds1 = ltx.filterCommands(Commands.Cmd1::class.java, Predicate { it.id.rem(2) == 0 })
         assertEquals(3, intCmds1.size)
@@ -271,8 +271,8 @@ class LedgerTransactionQueryTests {
         assertEquals(3, intCmds2.single().value.id)
     }
 
-    @Test
-    fun `Find Input Tests`() {
+    @Test(timeout=300_000)
+	fun `Find Input Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findInput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getInput(8), intState)
@@ -280,8 +280,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.getInput(7), stringState)
     }
 
-    @Test
-    fun `Find InRef Tests`() {
+    @Test(timeout=300_000)
+	fun `Find InRef Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findInRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.inRef(8), intState)
@@ -289,8 +289,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.inRef(7), stringState)
     }
 
-    @Test
-    fun `Find Output Tests`() {
+    @Test(timeout=300_000)
+	fun `Find Output Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findOutput(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.getOutput(8), intState)
@@ -298,8 +298,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.getOutput(7), stringState)
     }
 
-    @Test
-    fun `Find OutRef Tests`() {
+    @Test(timeout=300_000)
+	fun `Find OutRef Tests`() {
         val ltx = makeDummyTransaction()
         val intState = ltx.findOutRef(IntTypeDummyState::class.java, Predicate { it.data == 4 })
         assertEquals(ltx.outRef(8), intState)
@@ -307,8 +307,8 @@ class LedgerTransactionQueryTests {
         assertEquals(ltx.outRef(7), stringState)
     }
 
-    @Test
-    fun `Find Commands Tests`() {
+    @Test(timeout=300_000)
+	fun `Find Commands Tests`() {
         val ltx = makeDummyTransaction()
         val intCmd1 = ltx.findCommand(Commands.Cmd1::class.java, Predicate { it.id == 2 })
         assertEquals(ltx.getCommand(4), intCmd1)

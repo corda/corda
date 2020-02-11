@@ -18,7 +18,7 @@ class DeserializeBigDecimalTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing big decimal`() {
+	fun `test deserializing big decimal`() {
         val bigDecimal = BigDecimalData(BigDecimal.valueOf(VERY_BIG_DECIMAL))
         val data = bigDecimal.serialize()
 

@@ -45,8 +45,8 @@ class CordaServiceIssueOnceAtStartupTests {
         private const val sentFlowMarker = "SentFlow"
     }
 
-    @Test
-    fun test() {
+    @Test(timeout=300_000)
+	fun test() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = FINANCE_CORDAPPS + enclosedCordapp(), inMemoryDB = false,
                 systemProperties = mapOf(armedPropName to "true", tempFilePropertyName to tmpFile.absolutePath))) {
             var node = startNode(providedName = ALICE_NAME).getOrThrow()

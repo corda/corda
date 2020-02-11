@@ -18,7 +18,7 @@ class DeserializeInputStreamTest : TestBase(KOTLIN) {
     }
 
     @Test
-    fun `test deserializing input stream`() {
+	fun `test deserializing input stream`() {
         val data = MESSAGE.byteInputStream().serialize()
 
         sandbox {

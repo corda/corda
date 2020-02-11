@@ -7,8 +7,8 @@ import kotlin.test.assertEquals
 
 class ConfigOperatorTests {
 
-    @Test
-    fun `config plus behaves the same as map plus`() {
+    @Test(timeout=300_000)
+	fun `config plus behaves the same as map plus`() {
         val config = arrayOf("x" to "y1", "a" to "b", "z" to "Z")
         val overrides = arrayOf("x" to "y2", "c" to "d", "z" to null)
         val old = ConfigFactory.parseMap(mapOf(*config) + mapOf(*overrides))

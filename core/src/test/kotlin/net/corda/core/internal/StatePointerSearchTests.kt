@@ -42,16 +42,16 @@ class StatePointerSearchTests {
         override val participants: List<AbstractParty> get() = listOf()
     }
 
-    @Test
-    fun `find pointer in state with generic type`() {
+    @Test(timeout=300_000)
+	fun `find pointer in state with generic type`() {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithGeneric(Amount(100L, Issued(partyAndRef, linearPointer)))
         val results = StatePointerSearch(testState).search()
         assertEquals(results, setOf(linearPointer))
     }
 
-    @Test
-    fun `find pointers which are inside a list`() {
+    @Test(timeout=300_000)
+	fun `find pointers which are inside a list`() {
         val linearPointerOne = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val linearPointerTwo = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithList(listOf(linearPointerOne, linearPointerTwo))
@@ -59,8 +59,8 @@ class StatePointerSearchTests {
         assertEquals(results, setOf(linearPointerOne, linearPointerTwo))
     }
 
-    @Test
-    fun `find pointers which are inside a map`() {
+    @Test(timeout=300_000)
+	fun `find pointers which are inside a map`() {
         val linearPointerOne = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val linearPointerTwo = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithMap(mapOf(linearPointerOne to 1, 2 to linearPointerTwo))
@@ -68,24 +68,24 @@ class StatePointerSearchTests {
         assertEquals(results, setOf(linearPointerOne, linearPointerTwo))
     }
 
-    @Test
-    fun `find pointers which are inside a set`() {
+    @Test(timeout=300_000)
+	fun `find pointers which are inside a set`() {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithSet(setOf(linearPointer))
         val results = StatePointerSearch(testState).search()
         assertEquals(results, setOf(linearPointer))
     }
 
-    @Test
-    fun `find pointers which are inside nested iterables`() {
+    @Test(timeout=300_000)
+	fun `find pointers which are inside nested iterables`() {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithListOfList(listOf(listOf(linearPointer)))
         val results = StatePointerSearch(testState).search()
         assertEquals(results, setOf(linearPointer))
     }
 
-    @Test
-    fun `ignore static fields`() {
+    @Test(timeout=300_000)
+	fun `ignore static fields`() {
         val results = StatePointerSearch(StateWithStaticField(1)).search()
         assertThat(results).isEmpty()
     }

@@ -32,8 +32,8 @@ class RpcServerObservableSerializerTests {
         return subMap
     }
 
-    @Test
-    fun canSerializerBeRegistered() {
+    @Test(timeout=300_000)
+	fun canSerializerBeRegistered() {
         val sf = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader)
 
         try {
@@ -43,8 +43,8 @@ class RpcServerObservableSerializerTests {
         }
     }
 
-    @Test
-    fun canAssociateWithContext() {
+    @Test(timeout=300_000)
+	fun canAssociateWithContext() {
         val observable = TestObservableContext(
                 subscriptionMap(),
                 clientAddressToObservables = ConcurrentHashMap(),
@@ -58,8 +58,8 @@ class RpcServerObservableSerializerTests {
         assertEquals(observable, newContext.properties[RpcServerObservableSerializer.RpcObservableContextKey])
     }
 
-    @Test
-    fun serialiseFakeObservable() {
+    @Test(timeout=300_000)
+	fun serialiseFakeObservable() {
         val testClientAddress = "clientAddres"
         val observable = TestObservableContext(
                 subscriptionMap(),

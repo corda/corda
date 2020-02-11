@@ -84,8 +84,8 @@ class PersistentIdentityMigrationNewTableTest{
         cordaDB.close()
     }
 
-    @Test
-    fun `migrate identities to new table`() {
+    @Test(timeout=300_000)
+	fun `migrate identities to new table`() {
          val pkHash = addTestMapping(cordaDB.dataSource.connection, alice)
          PersistentIdentityMigrationNewTable()
          verifyTestMigration(cordaDB.dataSource.connection, pkHash, alice.name.toString())

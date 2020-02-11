@@ -26,8 +26,8 @@ class ProcessUtilitiesTests {
         }
     }
 
-    @Test
-    fun `test dummy process can be started`() {
+    @Test(timeout=300_000)
+	fun `test dummy process can be started`() {
         val tmpFile = tempFolder.newFile("${ProcessUtilitiesTests::class.java.simpleName}.txt")
         val startedProcess = ProcessUtilities.startJavaProcess<ProcessUtilitiesTests>(listOf(tmpFile.absolutePath))
         assertTrue { startedProcess.waitFor(20, TimeUnit.SECONDS) }

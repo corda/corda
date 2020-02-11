@@ -103,8 +103,8 @@ class ReferenceStateTests {
         }
     }
 
-    @Test
-    fun `create a reference state then refer to it multiple times`() {
+    @Test(timeout=300_000)
+	fun `create a reference state then refer to it multiple times`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             // Create a reference state. The reference state is created in the normal way. A transaction with one
             // or more outputs. It makes sense to create them one at a time, so the creator can have fine grained
@@ -142,8 +142,8 @@ class ReferenceStateTests {
         }
     }
 
-    @Test
-    fun `Non-creator node cannot spend spend a reference state`() {
+    @Test(timeout=300_000)
+	fun `Non-creator node cannot spend spend a reference state`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 output(CONTRACT_ID, "REF DATA", ExampleState(ALICE_PARTY, "HELLO CORDA"))
@@ -161,8 +161,8 @@ class ReferenceStateTests {
         }
     }
 
-    @Test
-    fun `Can't use old reference states`() {
+    @Test(timeout=300_000)
+	fun `Can't use old reference states`() {
         val refData = ExampleState(ALICE_PARTY, "HELLO CORDA")
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -197,8 +197,8 @@ class ReferenceStateTests {
         }
     }
 
-    @Test
-    fun `state ref cannot be a reference input and regular input in the same transaction`() {
+    @Test(timeout=300_000)
+	fun `state ref cannot be a reference input and regular input in the same transaction`() {
         val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
         val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))
         assertThatIllegalArgumentException().isThrownBy {

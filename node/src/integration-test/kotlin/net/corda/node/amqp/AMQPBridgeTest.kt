@@ -47,8 +47,8 @@ class AMQPBridgeTest {
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
-    @Test
-    fun `test acked and nacked messages`() {
+    @Test(timeout=300_000)
+	fun `test acked and nacked messages`() {
         // Create local queue
         val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
         val (artemisServer, artemisClient, bridgeManager) = createArtemis(sourceQueueName)
@@ -168,8 +168,8 @@ class AMQPBridgeTest {
         artemisServer.stop()
     }
 
-    @Test
-    fun `bridge with strict CRL checking does not connect to server with invalid certificates`() {
+    @Test(timeout=300_000)
+	fun `bridge with strict CRL checking does not connect to server with invalid certificates`() {
         // Note that the opposite of this test (that a connection is established if strict checking is disabled) is carried out by the
         // ack/nack test above. "Strict CRL checking" means that soft fail mode is disabled.
         val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()

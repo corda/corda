@@ -50,8 +50,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `simple node startup and shutdown`() {
+    @Test(timeout=300_000)
+	fun `simple node startup and shutdown`() {
         val handle = driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(node)
@@ -59,8 +59,8 @@ class DriverTests {
         nodeMustBeDown(handle)
     }
 
-    @Test
-    fun `starting with default notary`() {
+    @Test(timeout=300_000)
+	fun `starting with default notary`() {
         driver {
             // Make sure the default is a single-node notary
             val notary = defaultNotaryNode.getOrThrow()
@@ -75,8 +75,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `default notary is visible when the startNode future completes`() {
+    @Test(timeout=300_000)
+	fun `default notary is visible when the startNode future completes`() {
         // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
         repeat(3) {
             driver(DriverParameters(startNodesInProcess = true)) {
@@ -86,8 +86,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `debug mode enables debug logging level`() {
+    @Test(timeout=300_000)
+	fun `debug mode enables debug logging level`() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
@@ -103,8 +103,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
+    @Test(timeout=300_000)
+	fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
         driver(DriverParameters(jmxPolicy = JmxPolicy.defaultEnabled(), startNodesInProcess = false, notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             // request access to some JMX metrics via Jolokia HTTP/JSON
@@ -114,8 +114,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
+    @Test(timeout=300_000)
+	fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
         val baseDirectory = driver {
@@ -128,8 +128,8 @@ class DriverTests {
         assertThat(NodeStartup().isNodeRunningAt(baseDirectory)).isTrue()
     }
 
-    @Test
-    fun `driver rejects multiple nodes with the same name parallel`() {
+    @Test(timeout=300_000)
+	fun `driver rejects multiple nodes with the same name parallel`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
             assertThatIllegalArgumentException().isThrownBy {
@@ -138,8 +138,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `driver rejects multiple nodes with the same organisation name`() {
+    @Test(timeout=300_000)
+	fun `driver rejects multiple nodes with the same organisation name`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
             assertThatIllegalArgumentException().isThrownBy {
@@ -148,8 +148,8 @@ class DriverTests {
         }
     }
 
-    @Test
-    fun `driver allows reusing names of nodes that have been stopped`() {
+    @Test(timeout=300_000)
+	fun `driver allows reusing names of nodes that have been stopped`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
             nodeA.stop()
@@ -158,8 +158,8 @@ class DriverTests {
     }
 
 
-    @Test
-    fun `driver waits for in-process nodes to finish`() {
+    @Test(timeout=300_000)
+	fun `driver waits for in-process nodes to finish`() {
         fun NodeHandle.stopQuietly() = try {
             stop()
         } catch (e: Exception) {

@@ -16,8 +16,8 @@ class PersistentScheduledFlowRepositoryTest {
     private val databaseConfig: DatabaseConfig = DatabaseConfig()
     private val mark = Instant.now()
 
-    @Test
-    fun `test that earliest item is returned`() {
+    @Test(timeout=300_000)
+	fun `test that earliest item is returned`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
@@ -38,8 +38,8 @@ class PersistentScheduledFlowRepositoryTest {
         }
     }
 
-    @Test
-    fun `test that item is rescheduled`() {
+    @Test(timeout=300_000)
+	fun `test that item is rescheduled`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })

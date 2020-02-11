@@ -30,8 +30,8 @@ class SpecificationTest {
         override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(configuration[addresses], configuration[useSsl]))
     }
 
-    @Test
-    fun parse() {
+    @Test(timeout=300_000)
+	fun parse() {
 
         val useSslValue = true
         val principalAddressValue = Address("localhost", 8080)
@@ -53,8 +53,8 @@ class SpecificationTest {
         }
     }
 
-    @Test
-    fun parse_list_aggregation() {
+    @Test(timeout=300_000)
+	fun parse_list_aggregation() {
 
         val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {
 
@@ -75,8 +75,8 @@ class SpecificationTest {
         assertThat(result.value().get()).isEqualTo(elements.max())
     }
 
-    @Test
-    fun validate() {
+    @Test(timeout=300_000)
+	fun validate() {
 
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
@@ -93,8 +93,8 @@ class SpecificationTest {
         }
     }
 
-    @Test
-    fun validate_list_aggregation() {
+    @Test(timeout=300_000)
+	fun validate_list_aggregation() {
 
         fun parseMax(elements: List<Long>): Valid<Long> {
 
@@ -130,8 +130,8 @@ class SpecificationTest {
         }
     }
 
-    @Test
-    fun validate_with_domain_specific_errors() {
+    @Test(timeout=300_000)
+	fun validate_with_domain_specific_errors() {
 
         val useSslValue = true
         val principalAddressValue = Address("localhost", 8080)
@@ -151,8 +151,8 @@ class SpecificationTest {
         }
     }
 
-    @Test
-    fun chained_delegated_properties_are_not_added_multiple_times() {
+    @Test(timeout=300_000)
+	fun chained_delegated_properties_are_not_added_multiple_times() {
 
         val spec = object : Configuration.Specification<List<String>?>("Test") {
 

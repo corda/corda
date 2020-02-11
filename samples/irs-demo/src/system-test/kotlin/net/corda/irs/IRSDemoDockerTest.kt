@@ -38,8 +38,8 @@ class IRSDemoDockerTest {
                 .build()
     }
 
-    @Test
-    fun `runs IRS demo selenium phantomjs`() {
+    @Test(timeout=300_000)
+	fun `runs IRS demo selenium phantomjs`() {
 
         val driver = PhantomJSDriver()
 

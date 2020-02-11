@@ -30,8 +30,8 @@ class SimmValuationTest {
         const val testTradeId = "trade1"
     }
 
-    @Test
-    fun `runs SIMM valuation demo`() {
+    @Test(timeout=300_000)
+	fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,

@@ -17,8 +17,8 @@ class CashConfigDataFlowTest {
     @After
     fun cleanUp() = mockNet.stopNodes()
 
-    @Test
-    fun `issuable currencies read in from cordapp config`() {
+    @Test(timeout=300_000)
+	fun `issuable currencies read in from cordapp config`() {
         val node = mockNet.createNode(MockNodeParameters(
                 additionalCordapps = listOf(FINANCE_WORKFLOWS_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("EUR", "USD"))))
         ))

@@ -72,8 +72,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         override fun captureUser(): String = rpcContext().invocation.principal().name
     }
 
-    @Test
-    fun `simple RPCs`() {
+    @Test(timeout=300_000)
+	fun `simple RPCs`() {
         rpcDriver {
             val proxy = testProxy()
             // Does nothing, doesn't throw.
@@ -88,8 +88,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `simple observable`() {
+    @Test(timeout=300_000)
+	fun `simple observable`() {
         rpcDriver {
             val proxy = testProxy()
             // This tests that the observations are transmitted correctly, also completion is transmitted.
@@ -98,8 +98,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `complex observables`() {
+    @Test(timeout=300_000)
+	fun `complex observables`() {
         rpcDriver {
             val proxy = testProxy()
             // This checks that we can return an object graph with complex usage of observables, like an observable
@@ -143,8 +143,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `simple ListenableFuture`() {
+    @Test(timeout=300_000)
+	fun `simple ListenableFuture`() {
         rpcDriver {
             val proxy = testProxy()
             val value = proxy.makeListenableFuture().getOrThrow()
@@ -152,8 +152,8 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun `complex ListenableFuture`() {
+    @Test(timeout=300_000)
+	fun `complex ListenableFuture`() {
         rpcDriver {
             val proxy = testProxy()
             val serverQuote = openFuture<Pair<String, CordaFuture<String>>>()
@@ -180,16 +180,16 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
         }
     }
 
-    @Test
-    fun versioning() {
+    @Test(timeout=300_000)
+	fun versioning() {
         rpcDriver {
             val proxy = testProxy()
             assertFailsWith<UnsupportedOperationException> { proxy.addedLater() }
         }
     }
 
-    @Test
-    fun `authenticated user is available to RPC`() {
+    @Test(timeout=300_000)
+	fun `authenticated user is available to RPC`() {
         rpcDriver {
             val proxy = testProxy()
             assertThat(proxy.captureUser()).isEqualTo(rpcTestUser.username)

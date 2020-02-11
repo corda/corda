@@ -47,8 +47,8 @@ class NodePerformanceTests {
             val averageMs: Double
     )
 
-    @Test
-    fun `empty flow per second`() {
+    @Test(timeout=300_000)
+	fun `empty flow per second`() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
 
@@ -77,8 +77,8 @@ class NodePerformanceTests {
         }
     }
 
-    @Test
-    fun `empty flow rate`() {
+    @Test(timeout=300_000)
+	fun `empty flow rate`() {
         internalDriver(startNodesInProcess = true) {
             val a = startNode(rpcUsers = listOf(User("A", "A", setOf(startFlow<EmptyFlow>())))).get()
             a as InProcess
@@ -91,8 +91,8 @@ class NodePerformanceTests {
         }
     }
 
-    @Test
-    fun `self pay rate`() {
+    @Test(timeout=300_000)
+	fun `self pay rate`() {
         val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
         internalDriver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),

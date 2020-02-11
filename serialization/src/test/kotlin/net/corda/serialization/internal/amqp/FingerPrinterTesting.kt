@@ -29,8 +29,8 @@ class FingerPrinterTestingTests {
         const val VERBOSE = true
     }
 
-    @Test
-    fun testingTest() {
+    @Test(timeout=300_000)
+	fun testingTest() {
         val fpt = FingerPrinterTesting()
         val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
         val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
@@ -42,8 +42,8 @@ class FingerPrinterTestingTests {
         assertEquals("1", fpt.fingerprint(typeModel.inspect(String::class.java)))
     }
 
-    @Test
-    fun worksAsReplacement() {
+    @Test(timeout=300_000)
+	fun worksAsReplacement() {
         data class C(val a: Int, val b: Long)
 
         val factory = SerializerFactoryBuilder.build(AllWhitelist,

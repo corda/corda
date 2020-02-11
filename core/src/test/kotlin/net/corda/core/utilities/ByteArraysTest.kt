@@ -12,8 +12,8 @@ import java.nio.ReadOnlyBufferException
 import kotlin.test.assertEquals
 
 class ByteArraysTest {
-    @Test
-    fun `slice works`() {
+    @Test(timeout=300_000)
+	fun `slice works`() {
         byteArrayOf(9, 9, 0, 1, 2, 3, 4, 9, 9).let {
             sliceWorksImpl(it, OpaqueBytesSubSequence(it, 2, 5))
         }
@@ -46,8 +46,8 @@ class ByteArraysTest {
         check(byteArrayOf(), seq.slice(2, 1))
     }
 
-    @Test
-    fun `test hex parsing strictly uppercase`() {
+    @Test(timeout=300_000)
+	fun `test hex parsing strictly uppercase`() {
         val HEX_REGEX = "^[0-9A-F]+\$".toRegex()
 
         val privacySalt = net.corda.core.contracts.PrivacySalt()
