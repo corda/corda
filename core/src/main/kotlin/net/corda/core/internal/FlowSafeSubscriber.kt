@@ -23,8 +23,8 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
     override fun onNext(t: T) {
         try {
             actual.onNext(t)
-        } catch(e: Throwable) {
-            if(actual is ActionSubscriber) {
+        } catch (e: Throwable) {
+            if (actual is ActionSubscriber) {
                 // this Subscriber wraps an ActionSubscriber which is always a leaf Observer, then call user-defined onError
                 Exceptions.throwOrReport(e, this)
             } else {
@@ -61,8 +61,7 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
             )
         }
     }
-
 }
 
 @VisibleForTesting
-class OnNextFailedException(message: String, cause: Throwable): OnErrorNotImplementedException(message, cause)
+class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImplementedException(message, cause)
