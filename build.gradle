@@ -668,9 +668,9 @@ task parallelRegressionTest(type: ParallelTestGroup) {
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest", "smokeTest"
-    numberOfShards 4
+    numberOfShards 10
     streamOutput false
-    coresPerFork 6
+    coresPerFork 3
     memoryInGbPerFork 10
     distribute DistributeTestsBy.CLASS
     nodeTaints "big"
