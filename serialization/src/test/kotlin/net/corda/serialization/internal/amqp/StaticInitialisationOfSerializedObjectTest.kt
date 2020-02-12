@@ -40,7 +40,7 @@ class C2(var b: Int) {
 }
 
 class StaticInitialisationOfSerializedObjectTest {
-    @Test(expected = java.lang.ExceptionInInitializerError::class)
+    @Test(expected = java.lang.ExceptionInInitializerError::class, timeout=300_000)
     fun itBlowsUp() {
         C()
     }

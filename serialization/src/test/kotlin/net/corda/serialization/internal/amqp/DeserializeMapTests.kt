@@ -28,7 +28,7 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected = java.io.NotSerializableException::class)
+    @Test(expected = java.io.NotSerializableException::class, timeout=300_000)
     fun abstractMapFromMapOf() {
         data class C(val c: AbstractMap<String, Int>)
 
@@ -38,7 +38,7 @@ class DeserializeMapTests {
         DeserializationInput(sf).deserialize(serialisedBytes)
     }
 
-    @Test(expected = java.io.NotSerializableException::class)
+    @Test(expected = java.io.NotSerializableException::class, timeout=300_000)
     fun abstractMapFromTreeMap() {
         data class C(val c: AbstractMap<String, Int>)
 

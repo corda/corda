@@ -35,7 +35,7 @@ class SignedDataTest {
         assertEquals(data, unwrappedData)
     }
 
-    @Test(expected = SignatureException::class)
+    @Test(expected = SignatureException::class, timeout=300_000)
     fun `make sure incorrectly signed data raises an exception`() {
         val keyPairA = generateKeyPair()
         val keyPairB = generateKeyPair()
