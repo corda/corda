@@ -25,6 +25,8 @@ import kotlin.test.assertFailsWith
 class CordappProviderImplTests {
     private companion object {
         val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")
+        val contractsJAR: URL = this::class.java.getResource("/samplecontract.jar")
+        val contractsJARDuplicate: URL = this::class.java.getResource("/samplecontract-duplicate.jar")
         // TODO: Cordapp name should differ from the JAR name
         const val isolatedCordappName = "isolated"
         val emptyJAR: URL = this::class.java.getResource("empty.jar")
@@ -187,6 +189,19 @@ class CordappProviderImplTests {
             fixupAttachmentIds(listOf(ID2, ID1))
         }
         assertThat(fixedIDs).containsExactlyInAnyOrder(ID2, ID4)
+    }
+
+    @Test(timeout=300_000)
+    fun `test that we find an attachment for a cordapp contract class we when have two jars with same hash`() {
+        val provider = newCordappProvider(contractsJAR, contractsJARDuplicate)
+        val className = "com.template.contracts.TemplateContract"
+        val firstId = provider.getAppContext(provider.cordapps[0]).attachmentId
+        val secondId = provider.getAppContext(provider.cordapps[1]).attachmentId
+        val actual = provider.getContractAttachmentID(className)
+
+        assertNotNull(actual)
+        assertEquals(firstId, secondId)
+        assertEquals(actual!!, firstId)
     }
 
     private fun File.writeFixupRules(vararg lines: String): File {
