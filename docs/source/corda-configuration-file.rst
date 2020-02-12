@@ -457,7 +457,7 @@ notary
     a wait time update to the client (implementation specific and dependent on the counter
     party version).
 
-    *Default:* Implementation dependend
+    *Default:* Implementation dependent
 
   raft
     *(Experimental)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
