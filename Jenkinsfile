@@ -5,8 +5,11 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
-    options { timestamps() }
+    agent { label 'local-k8s' }
+    options {
+            timestamps()
+            timeout(time: 3, unit: 'HOURS')
+    }
 
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
