@@ -12,6 +12,7 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Test
+import java.security.Security
 import java.security.UnrecoverableKeyException
 import java.security.cert.CertPathValidator
 import java.security.cert.CertPathValidatorException
@@ -94,6 +95,7 @@ class X509NameConstraintsTest {
 
     @Test
     fun `x500 name with correct cn and extra attribute`() {
+        Security.addProvider(BouncyCastleProvider())
         val acceptableNames = listOf("CN=Bank A TLS, UID=", "O=Bank A")
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 

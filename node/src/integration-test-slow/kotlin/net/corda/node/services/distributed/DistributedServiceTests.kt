@@ -25,6 +25,7 @@ import net.corda.testing.node.internal.DummyClusterSpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -81,6 +82,7 @@ class DistributedServiceTests {
     }
 
     // TODO This should be in RaftNotaryServiceTests
+    @Ignore
     @Test
     fun `cluster survives if a notary is killed`() {
         setup {
@@ -119,6 +121,7 @@ class DistributedServiceTests {
 
     // TODO Use a dummy distributed service rather than a Raft Notary Service as this test is only about Artemis' ability
     // to handle distributed services
+    @Ignore
     @Test
     fun `requests are distributed evenly amongst the nodes`() {
         setup {

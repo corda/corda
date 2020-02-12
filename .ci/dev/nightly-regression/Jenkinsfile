@@ -4,11 +4,12 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'local-k8s' }
     options {
         timestamps()
         overrideIndexTriggers(false)
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+        timeout(time: 3, unit: 'HOURS')
     }
     triggers {
         pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
