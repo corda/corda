@@ -9,6 +9,7 @@ pipeline {
         timestamps()
         overrideIndexTriggers(false)
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+        timeout(time: 3, unit: 'HOURS')
     }
     triggers {
         pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'

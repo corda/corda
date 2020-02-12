@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.safeSymbolicRead
 import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
@@ -36,6 +37,7 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.nio.file.Files
 import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
@@ -204,6 +206,20 @@ class NetworkRegistrationHelperTest {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `successful registration with symbolic link for certificates directory`() {
+        assertThat(config.signingCertificateStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
+
+        val originalCertificatesDirectory = (config.baseDirectory / "certificates2").createDirectories()
+        Files.createSymbolicLink(config.certificatesDirectory, originalCertificatesDirectory)
+
+        val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(CORDA_ROOT_CA to it.first.certificate) }
+
+        createRegistrationHelper(rootAndIntermediateCA = rootAndIntermediateCA).generateKeysAndRegister()
+    }
+
     private fun createNodeCaCertPath(type: CertificateType = CertificateType.NODE_CA,
                                      legalName: CordaX500Name = nodeLegalName,
                                      publicKey: PublicKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public,
@@ -268,7 +284,7 @@ class NetworkRegistrationHelperTest {
      * the certificate itself.
      */
     private fun saveNetworkTrustStore(vararg trustedCertificates: Pair<String, X509Certificate>) {
-        config.certificatesDirectory.createDirectories()
+        config.certificatesDirectory.safeSymbolicRead().createDirectories()
         val rootTruststorePath = config.certificatesDirectory / networkRootTrustStoreFileName
         X509KeyStore.fromFile(rootTruststorePath, networkRootTrustStorePassword, createNew = true).update {
             trustedCertificates.forEach {

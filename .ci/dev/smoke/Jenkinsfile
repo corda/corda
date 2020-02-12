@@ -5,8 +5,11 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent { label 'local-k8s' }
-    options { timestamps() 
-              overrideIndexTriggers(false) }
+    options {
+        timestamps()
+        overrideIndexTriggers(false)
+        timeout(time: 3, unit: 'HOURS')
+    }
 
     triggers {
         issueCommentTrigger('.*smoke tests.*')
