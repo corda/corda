@@ -452,6 +452,13 @@ notary
 
     *Default:* not defined
 
+  etaMessageThresholdSeconds
+    If the wait time estimate on the internal queue exceeds this value, the notary may send
+    a wait time update to the client (implementation specific and dependent on the counter
+    party version).
+
+    *Default:* Implementation dependent
+
   raft
     *(Experimental)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
 

@@ -86,7 +86,7 @@ open class NetworkRegistrationHelper(
      * @throws CertificateRequestException if the certificate retrieved by doorman is invalid.
      */
     fun generateKeysAndRegister() {
-        certificatesDirectory.createDirectories()
+        certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
         val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
