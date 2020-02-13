@@ -15,7 +15,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
-
+    testImplementation "io.gitlab.arturbosch.detekt:detekt-test:$detekt_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "io.gitlab.arturbosch.detekt:detekt-api:$detekt_version"
 }
