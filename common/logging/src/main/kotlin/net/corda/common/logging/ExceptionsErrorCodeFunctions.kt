@@ -6,9 +6,33 @@ import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 
 fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
+    //Returns an iterator that traverses all the exception's cause chain stopping in case of loops (an exception caused by itself)
+    fun walkExceptionCausedByList(e : Throwable) : Iterator<Throwable> {
+        return object : Iterator<Throwable> {
+            private var cursor : Throwable? = e
+            private val knownThrowables = mutableSetOf<Throwable>()
 
+            override fun hasNext(): Boolean {
+                return cursor != null
+            }
+
+            override fun next(): Throwable {
+                val result = cursor
+                val cause = cursor?.cause
+                cursor = if(cause != null && knownThrowables.add(cause)) {
+                    cause
+                } else {
+                    null
+                }
+                return result!!
+            }
+        }
+    }
     return when {
-        error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
+        error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
+            val message = walkExceptionCausedByList(error).asSequence().mapNotNull(Throwable::message).joinToString(" - ")
+            CompositeMessage("$message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
+        }
         else -> this
     }
 }
