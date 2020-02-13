@@ -45,6 +45,7 @@ sealed class FlowIORequest<out R : Any> {
      * @property shouldRetrySend specifies whether the send should be retried.
      * @return a map from session to received message.
      */
+    //net.corda.core.internal.FlowIORequest.SendAndReceive
     data class SendAndReceive(
             val sessionToMessage: Map<FlowSession, SerializedBytes<Any>>,
             val shouldRetrySend: Boolean
@@ -80,7 +81,15 @@ sealed class FlowIORequest<out R : Any> {
     /**
      * Suspend the flow until all Initiating sessions are confirmed.
      */
-    object WaitForSessionConfirmations : FlowIORequest<Unit>()
+    class WaitForSessionConfirmations : FlowIORequest<Unit>() {
+        override fun equals(other: Any?): Boolean {
+            return this === other
+        }
+
+        override fun hashCode(): Int {
+            return System.identityHashCode(this)
+        }
+    }
 
     /**
      * Execute the specified [operation], suspend the flow until completion.
