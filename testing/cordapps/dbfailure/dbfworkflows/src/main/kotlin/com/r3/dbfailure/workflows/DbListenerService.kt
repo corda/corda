@@ -143,6 +143,9 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                             )
                             log.info("SQL result: ${statement.resultSet}")
                         }
+                        else -> {
+                            // do nothing, everything else must be handled elsewhere
+                        }
                     }
                 }
             }
