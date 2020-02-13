@@ -4,7 +4,12 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -40,11 +45,23 @@ import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertPath
+import java.security.cert.CertPathValidator
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXCertPathValidatorResult
+import java.security.cert.PKIXParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
-import java.util.Spliterator.*
+import java.util.Spliterator.DISTINCT
+import java.util.Spliterator.IMMUTABLE
+import java.util.Spliterator.NONNULL
+import java.util.Spliterator.ORDERED
+import java.util.Spliterator.SIZED
+import java.util.Spliterator.SORTED
+import java.util.Spliterator.SUBSIZED
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
@@ -78,6 +95,8 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
 operator fun Duration.times(multiplicand: Double): Duration = Duration.ofNanos((toNanos() * multiplicand).roundToLong())
+fun min(d1: Duration, d2: Duration): Duration = if (d1 <= d2) d1 else d2
+
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception

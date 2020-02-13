@@ -17,6 +17,7 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConn
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.min
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -262,9 +263,12 @@ class ReconnectingCordaRPCOps private constructor(
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
-            // TODO - make the exponential retry factor configurable.
             val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            val nextInterval = retryInterval * rpcConfiguration.connectionRetryIntervalMultiplier
+            val nextInterval = min(
+                    rpcConfiguration.connectionMaxRetryInterval,
+                    retryInterval * rpcConfiguration.connectionRetryIntervalMultiplier
+            )
+            log.info("Could not establish connection.  Next retry interval $nextInterval")
             return establishConnectionWithRetry(nextInterval, nextRoundRobinIndex, remainingRetries)
         }
         override val proxy: CordaRPCOps
