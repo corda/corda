@@ -211,24 +211,28 @@ class NodeVaultService(
 
     override val rawUpdates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked {
-            if (FlowStateMachineImpl.currentStateMachine() != null) {
-                // we are inside a flow! we cannot allow flows to subscribe observers,
-                // because if a flow adds a subscriber; if the observer under the subscriber holds references to
-                // flow's properties, essentially to fiber's properties then, since it does not unsubscribes on flow's/ fiber's completion,
-                // it could prevent the flow/ fiber swapped our of memory.
-                PreventSubscriptionsSubject(_rawUpdatesPublisher) {
-                    log.error("Flow tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                            "- the subscription did not succeed " +
-                            "- aborting the flow ")
+            FlowStateMachineImpl.currentStateMachine()?.let {
+                // we are inside a flow; we cannot allow flows to subscribe Rx Observers,
+                // because the Observer could reference flow's properties, essentially fiber's properties then,
+                // since it does not unsubscribe on flow's/ fiber's completion,
+                // it could prevent the flow/ fiber -object- get garbage collected.
+                return PreventSubscriptionsSubject(_rawUpdatesPublisher) {
+                    log.error(
+                        "Flow ${it.id} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                                "- the subscription did not succeed " +
+                                "- aborting the flow "
+                    )
 
-                    throw FlowException("Flow tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                            "- the subscription did not succeed ")
+                    throw FlowException(
+                        "Flow ${it.id} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                                "- the subscription did not succeed "
+                    )
                 }
-            } else {
-                // we are not inside a flow; we are most likely inside a CordaService,
-                // we will wrap with 'safe subscriptions' here, namely add -not unsubscribing- subscribers.
-                FlowSafeSubject(_rawUpdatesPublisher)
             }
+            // we are not inside a flow, we are most likely inside a CordaService;
+            // we will wrap with 'flow safe subscriptions' here;
+            // every Observable.subscribe to this object should be wrapped with a FlowSafeSubscriber (-not unsubscribe- subscribers).
+            return FlowSafeSubject(_rawUpdatesPublisher)
         }
 
     override val updates: Observable<Vault.Update<ContractState>>
