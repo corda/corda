@@ -20,15 +20,16 @@ object CreateStateFlow {
     // 1000s control exception handlling in the service/vault listener
     enum class ErrorTarget(val targetNumber: Int) {
         NoError(0),
-        ServiceSqlSyntaxError(1),
-        ServiceNullConstraintViolation(2),
-        ServiceValidUpdate(3),
-        ServiceReadState(4),
-        ServiceCheckForState(5),
-        ServiceThrowInvalidParameter(6),
-        ServiceThrowMotherOfAllExceptions(7),
-        ServiceThrowUnrecoverableError(8),
-        ServiceSqlSyntaxErrorOnConsumed(9),
+        ServiceSqlSyntaxError(10000),
+        ServiceNullConstraintViolation(20000),
+        ServiceValidUpdate(30000),
+        ServiceReadState(40000),
+        ServiceCheckForState(50000),
+        ServiceThrowInvalidParameter(60000),
+        ServiceThrowMotherOfAllExceptions(70000),
+        ServiceThrowUnrecoverableError(80000),
+        ServiceSqlSyntaxErrorOnConsumed(90000),
+        ServiceConstraintViolationException(1000000),
         TxInvalidState(10),
         FlowSwallowErrors(100),
         ServiceSwallowErrors(1000)
@@ -41,7 +42,7 @@ object CreateStateFlow {
     private val targetMap = ErrorTarget.values().associateBy(ErrorTarget::targetNumber)
 
     fun getServiceTarget(target: Int?): ErrorTarget {
-        return target?.let { targetMap.getValue(it % 10) } ?: CreateStateFlow.ErrorTarget.NoError
+        return target?.let { targetMap.getValue(((it/10000) % 1000)*10000) } ?: CreateStateFlow.ErrorTarget.NoError
     }
 
     fun getServiceExceptionHandlingTarget(target: Int?): ErrorTarget {

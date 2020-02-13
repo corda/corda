@@ -10,9 +10,11 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
+import org.hibernate.exception.ConstraintViolationException
 import rx.observers.Subscribers
 import java.lang.IllegalStateException
 import java.security.InvalidParameterException
+import java.sql.SQLException
 
 @CordaService
 class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
@@ -113,6 +115,10 @@ class DbListenerService(services: AppServiceHub) : SingletonSerializeAsToken() {
                                     log.info("Throw Unrecoverable error")
                                     throw OutOfMemoryError("Unrecoverable error")
                                 }
+                            }
+                            CreateStateFlow.ErrorTarget.ServiceConstraintViolationException -> {
+                                log.info("Throw ConstraintViolationException")
+                                throw ConstraintViolationException("Dummy Hibernate Exception ", SQLException(), " Will cause flow retry!")
                             }
                             else -> {
                                 // do nothing, everything else must be handled elsewhere

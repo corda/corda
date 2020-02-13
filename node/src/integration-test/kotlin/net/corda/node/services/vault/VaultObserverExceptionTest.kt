@@ -736,7 +736,6 @@ class VaultObserverExceptionTest {
 
     @Test
     fun `Subscribing to NodeVaultService rawUpdates from a flow is not allowed` () {
-
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
             cordappsForAllNodes = listOf(
@@ -756,10 +755,38 @@ class VaultObserverExceptionTest {
         }
     }
 
-    //TODO add retry from checkpoint test
     @Test
     fun `Failing Observer wrapped with FlowSafeSubscriber will survive and be re-called upon flow retry`() {
+        var onNextCount = 0
+        var onErrorCount = 0
+        DbListenerService.onNextVisited = { _ -> onNextCount++ }
+        DbListenerService.onError = {/*just rethrow - we just want to check that onError gets visited by parties*/ throw it}
+        DbListenerService.onErrorVisited = { _ -> onErrorCount++ }
 
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+            cordappsForAllNodes = listOf(
+                findCordapp("com.r3.dbfailure.contracts"),
+                findCordapp("com.r3.dbfailure.workflows"),
+                findCordapp("com.r3.transactionfailure.workflows"),
+                findCordapp("com.r3.dbfailure.schemas")),
+            inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            assertFailsWith<TimeoutException> {
+                aliceNode.rpc.startFlow(
+                    ErrorHandling::CheckpointAfterErrorFlow,
+                    CreateStateFlow.errorTargetsToNum(
+                        CreateStateFlow.ErrorTarget.ServiceConstraintViolationException,
+                        CreateStateFlow.ErrorTarget.FlowSwallowErrors
+                    )
+                ).returnValue.getOrThrow(20.seconds)
+            }
+
+            assertEquals(4, onNextCount)
+            assertEquals(4, onErrorCount)
+        }
     }
 
     private fun NodeHandle.getNotarisedTransactionIds(): List<String> {
