@@ -35,6 +35,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
         }
+        resources {
+            srcDirs "src/integration-test/resources"
+        }
     }
     smokeTest {
         kotlin {
