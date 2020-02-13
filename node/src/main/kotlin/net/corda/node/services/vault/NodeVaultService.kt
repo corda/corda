@@ -217,10 +217,12 @@ class NodeVaultService(
                 // flow's properties, essentially to fiber's properties then, since it does not unsubscribes on flow's/ fiber's completion,
                 // it could prevent the flow/ fiber swapped our of memory.
                 PreventSubscriptionsSubject(_rawUpdatesPublisher) {
-                    log.error("Cannot subscribe to NodeVaultService.rawUpdates from a flow! " +
+                    log.error("Flow tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                            "- the subscription did not succeed " +
                             "- aborting the flow ")
 
-                    throw FlowException("Cannot subscribe to NodeVaultService.rawUpdates from a flow! ")
+                    throw FlowException("Flow tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                            "- the subscription did not succeed ")
                 }
             } else {
                 // we are not inside a flow; we are most likely inside a CordaService,

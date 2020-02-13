@@ -750,7 +750,7 @@ class VaultObserverExceptionTest {
 
             val future = aliceNode.rpc.startFlow(ErrorHandling::SubscribingRawUpdatesFlow).returnValue
 
-            assertFailsWith<CordaRuntimeException>("Cannot subscribe to NodeVaultService.rawUpdates from a flow!") {
+            assertFailsWith<CordaRuntimeException>("Flow tried to subscribe an Rx.Observer to VaultService.rawUpdates - the subscription did not succeed ") {
                 future.getOrThrow(30.seconds)
             }
         }
@@ -758,7 +758,7 @@ class VaultObserverExceptionTest {
 
     //TODO add retry from checkpoint test
     @Test
-    fun `Failing Observer wrapped with FlowSafeSubscriber will remain and re-called upon flow retry`() {
+    fun `Failing Observer wrapped with FlowSafeSubscriber will survive and be re-called upon flow retry`() {
 
     }
 
