@@ -20,7 +20,6 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
@@ -614,7 +613,8 @@ class CordaRPCClient private constructor(
                     addresses,
                     configuration,
                     gracefulReconnect,
-                    sslConfiguration
+                    sslConfiguration,
+                    classLoader
             )
         } else {
             CordaRPCConnection(getRpcClient().start(
