@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
@@ -209,7 +210,24 @@ class NodeVaultService(
     }
 
     override val rawUpdates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _rawUpdatesPublisher }
+        get() = mutex.locked {
+            if (FlowStateMachineImpl.currentStateMachine() != null) {
+                // we are inside a flow! we cannot allow flows to subscribe observers,
+                // because if a flow adds a subscriber; if the observer under the subscriber holds references to
+                // flow's properties, essentially to fiber's properties then, since it does not unsubscribes on flow's/ fiber's completion,
+                // it could prevent the flow/ fiber swapped our of memory.
+                PreventSubscriptionsSubject(_rawUpdatesPublisher) {
+                    log.error("Cannot subscribe to NodeVaultService.rawUpdates from a flow! " +
+                            "- hospitalising the flow ")
+
+                    throw FlowException("Cannot subscribe to NodeVaultService.rawUpdates from a flow! ")
+                }
+            } else {
+                // we are not inside a flow; we are most likely inside a CordaService,
+                // we will wrap with 'safe subscriptions' here, namely add -not unsubscribing- subscribers.
+                FlowSafeSubject(_rawUpdatesPublisher)
+            }
+        }
 
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }

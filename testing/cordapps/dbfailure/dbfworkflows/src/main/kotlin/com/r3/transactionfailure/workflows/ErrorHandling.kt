@@ -30,9 +30,10 @@ object ErrorHandling {
             val txTarget = CreateStateFlow.getTxTarget(errorTarget)
             val state = DbFailureContract.TestState(
                 UniqueIdentifier(),
-                ourIdentity,
+                listOf(ourIdentity),
                 if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else "valid hibernate value",
-                errorTarget)
+                errorTarget,
+                ourIdentity)
             val txCommand = Command(DbFailureContract.Commands.Create(), ourIdentity.owningKey)
             val txBuilder = TransactionBuilder(notary).addOutputState(state).addCommand(txCommand)
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
@@ -48,6 +49,17 @@ object ErrorHandling {
             }
             sleep(1.seconds) // checkpoint - this checkpoint should fail
             hookAfterSecondCheckpoint.invoke() // should be never executed
+        }
+    }
+
+    @StartableByRPC
+    class SubscribingRawUpdatesFlow: FlowLogic<Unit>() {
+        override fun call() {
+            val rawUpdates = serviceHub.vaultService.rawUpdates
+            logger.info("Accessing rawUpdates in a flow is fine! ")
+            rawUpdates.subscribe {
+                println("However, adding a subscription will make the flow fail!")
+            }
         }
     }
 

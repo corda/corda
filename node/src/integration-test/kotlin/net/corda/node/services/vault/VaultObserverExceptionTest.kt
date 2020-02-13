@@ -1,34 +1,47 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.strands.concurrent.Semaphore
+import com.r3.dbfailure.contracts.DbFailureContract
 import com.r3.dbfailure.workflows.CreateStateFlow
-import com.r3.dbfailure.workflows.CreateStateFlow.Initiator
 import com.r3.dbfailure.workflows.CreateStateFlow.errorTargetsToNum
 import com.r3.dbfailure.workflows.DbListenerService
 import com.r3.dbfailure.workflows.DbListenerService.MakeServiceThrowErrorFlow
+import com.r3.dbfailure.workflows.SendStateFlow
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
+import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.findCordapp
+import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.sql.SQLException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.persistence.PersistenceException
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -50,6 +63,8 @@ class VaultObserverExceptionTest {
         StaffedFlowHospital.onFlowAdmitted.clear()
         DbListenerService.onError = null
         DbListenerService.safeSubscription = true
+        DbListenerService.onNextVisited = {}
+        DbListenerService.onErrorVisited = null
     }
 
     /**
@@ -75,9 +90,9 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             aliceNode.rpc.startFlow(
-                    ::Initiator,
-                    "Syntax Error in Custom SQL",
-                    CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
+                CreateStateFlow::Initiator,
+                "Syntax Error in Custom SQL",
+                CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
             val foundExpectedException = testControlFuture.getOrThrow(30.seconds)
 
@@ -109,7 +124,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             aliceNode.rpc.startFlow(
-                ::Initiator,
+                CreateStateFlow::Initiator,
                 "Syntax Error in Custom SQL",
                 CreateStateFlow.errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError)
             ).returnValue.then { testControlFuture.complete(false) }
@@ -138,7 +153,7 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
+            aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
@@ -166,9 +181,9 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
-                    CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "InvalidParameterException", CreateStateFlow.errorTargetsToNum(
+                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
 
@@ -202,7 +217,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             assertFailsWith<TimeoutException>("PersistenceException") {
-                aliceNode.rpc.startFlow(::Initiator, "EntityManager", errorTargetsToNum(
+                aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "EntityManager", errorTargetsToNum(
                         CreateStateFlow.ErrorTarget.TxInvalidState))
                         .returnValue.getOrThrow(30.seconds)
             }
@@ -235,7 +250,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
             val flowHandle = aliceNode.rpc.startFlow(
-                    ::Initiator, "EntityManager",
+                    CreateStateFlow::Initiator, "EntityManager",
                     CreateStateFlow.errorTargetsToNum(
                             CreateStateFlow.ErrorTarget.TxInvalidState,
                             CreateStateFlow.ErrorTarget.FlowSwallowErrors))
@@ -263,7 +278,7 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
+            val flowHandle = aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             val flowResult = flowHandle.returnValue
@@ -286,7 +301,7 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            val flowHandle = aliceNode.rpc.startFlow(::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
+            val flowHandle = aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "EntityManager", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError,
                     CreateStateFlow.ErrorTarget.ServiceSwallowErrors))
             val flowResult = flowHandle.returnValue
@@ -316,20 +331,20 @@ class VaultObserverExceptionTest {
         }
 
         driver(DriverParameters(
-                inMemoryDB = false,
-                startNodesInProcess = true,
-                isDebug = true,
-                cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
-                        findCordapp("com.r3.dbfailure.workflows"),
-                        findCordapp("com.r3.transactionfailure.workflows"),
-                        findCordapp("com.r3.dbfailure.schemas")))) {
+                    inMemoryDB = false,
+                    startNodesInProcess = true,
+                    isDebug = true,
+                    cordappsForAllNodes = listOf(findCordapp("com.r3.dbfailure.contracts"),
+                                                 findCordapp("com.r3.dbfailure.workflows"),
+                                                 findCordapp("com.r3.transactionfailure.workflows"),
+                                                 findCordapp("com.r3.dbfailure.schemas")))) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
 
             node.rpc.startFlow(::CheckpointAfterErrorFlow, CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowMotherOfAllExceptions, // throw not persistence exception
                     CreateStateFlow.ErrorTarget.FlowSwallowErrors
-            )
+                )
             )
             waitUntilHospitalised.acquire()
 
@@ -364,9 +379,9 @@ class VaultObserverExceptionTest {
                 cordappsForAllNodes = testCordapps())) {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser)).getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
-                    CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
-                    CreateStateFlow.ErrorTarget.FlowSwallowErrors))
+            aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "Exception", CreateStateFlow.errorTargetsToNum(
+                CreateStateFlow.ErrorTarget.ServiceThrowInvalidParameter,
+                CreateStateFlow.ErrorTarget.FlowSwallowErrors))
             waitUntilHospitalised.acquire() // wait here until flow gets hospitalised
         }
 
@@ -379,7 +394,7 @@ class VaultObserverExceptionTest {
             val aliceUser = User("user", "foo", setOf(Permissions.all()))
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), startInSameProcess = false).getOrThrow()
             aliceNode.rpc.startFlow(::MakeServiceThrowErrorFlow).returnValue.getOrThrow()
-            aliceNode.rpc.startFlow(::Initiator, "UnrecoverableError", CreateStateFlow.errorTargetsToNum(
+            aliceNode.rpc.startFlow(CreateStateFlow::Initiator, "UnrecoverableError", CreateStateFlow.errorTargetsToNum(
                     CreateStateFlow.ErrorTarget.ServiceThrowUnrecoverableError))
 
             val terminated = (aliceNode as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
@@ -398,4 +413,369 @@ class VaultObserverExceptionTest {
         }
     }
 
+    /**
+     * An error is thrown inside of the [VaultService.rawUpdates] observable while recording a transaction inside of the initiating node.
+     *
+     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
+     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
+     * counterparty node.
+     *
+     * More importantly, the observer listening to the [VaultService.rawUpdates] observable should not unsubscribe.
+     *
+     * Check onNext is visited the correct number of times.
+     *
+     * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
+     */
+    @Test
+    fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer - onNext check`() {
+        var observationCounter = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+
+        val rawUpdatesCount = ConcurrentHashMap<Party, Int>()
+        DbListenerService.onNextVisited = { party ->
+            if (rawUpdatesCount.putIfAbsent(party, 1) != null) {
+                rawUpdatesCount.computeIfPresent(party) { _, count -> count + 1 }
+            }
+        }
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+                                cordappsForAllNodes = listOf(
+                                    findCordapp("com.r3.dbfailure.contracts"),
+                                    findCordapp("com.r3.dbfailure.workflows"),
+                                    findCordapp("com.r3.dbfailure.schemas")
+                                ),inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
+
+            val startErrorInObservableWhenConsumingState = {
+
+                val stateId = aliceNode.rpc.startFlow(
+                    CreateStateFlow::Initiator,
+                    "AllGood",
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
+                ).returnValue.getOrThrow(30.seconds)
+
+                println("Created new state")
+
+                val flowHandle = aliceNode.rpc.startFlow(
+                    SendStateFlow::PassErroneousOwnableState, // throws at consumed state -> should end up in hospital -> flow should hang
+                    stateId,
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.NoError),
+                    bobNode.nodeInfo.legalIdentities.first()
+                )
+
+                Assertions.assertThatExceptionOfType(TimeoutException::class.java)
+                    .isThrownBy { flowHandle.returnValue.getOrThrow(20.seconds) }
+
+                stateId
+            }
+
+            assertEquals(0, notary.getNotarisedTransactionIds().size)
+
+            println("First set of flows")
+            val stateId = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(1, notary.getNotarisedTransactionIds().size)
+            assertEquals(1, observationCounter)
+            assertEquals(2, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+
+            println("Second set of flows")
+            val stateId2 = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(2, notary.getNotarisedTransactionIds().size)
+            assertEquals(2, observationCounter)
+            assertEquals(4, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+        }
+    }
+
+    /**
+     * An error is thrown inside of the [VaultService.rawUpdates] observable while recording a transaction inside of the initiating node.
+     *
+     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
+     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
+     * counterparty node.
+     *
+     * More importantly, the observer listening to the [VaultService.rawUpdates] observable should not unsubscribe.
+     *
+     * Check onNext and onError are visited the correct number of times.
+     *
+     * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
+     */
+    @Test
+    fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer - onNext and onError check`() {
+        var observationCounter = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+
+        val rawUpdatesCount = ConcurrentHashMap<Party, Int>()
+        DbListenerService.onNextVisited = { party ->
+            if (rawUpdatesCount.putIfAbsent(party, 1) != null) {
+                rawUpdatesCount.computeIfPresent(party) { _, count -> count + 1 }
+            }
+        }
+
+        DbListenerService.onError = {/*just rethrow - we just want to check that onError gets visited by parties*/ throw it}
+        DbListenerService.onErrorVisited = { party ->
+            if (rawUpdatesCount.putIfAbsent(party, 1) != null) {
+                rawUpdatesCount.computeIfPresent(party) { _, count -> count + 1 }
+            }
+        }
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+                                cordappsForAllNodes = listOf(
+                                    findCordapp("com.r3.dbfailure.contracts"),
+                                    findCordapp("com.r3.dbfailure.workflows"),
+                                    findCordapp("com.r3.dbfailure.schemas")
+                                ),
+                                inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
+
+            val startErrorInObservableWhenConsumingState = {
+
+                val stateId = aliceNode.rpc.startFlow(
+                    CreateStateFlow::Initiator,
+                    "AllGood",
+                    // should be a hospital exception
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
+                ).returnValue.getOrThrow(30.seconds)
+
+                val flowHandle = aliceNode.rpc.startFlow(
+                    SendStateFlow::PassErroneousOwnableState,
+                    stateId,
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.NoError),
+                    bobNode.nodeInfo.legalIdentities.first()
+                )
+
+                Assertions.assertThatExceptionOfType(TimeoutException::class.java)
+                    .isThrownBy { flowHandle.returnValue.getOrThrow(20.seconds) }
+
+                stateId
+            }
+
+            assertEquals(0, notary.getNotarisedTransactionIds().size)
+
+            val stateId = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(1, notary.getNotarisedTransactionIds().size)
+            assertEquals(1, observationCounter)
+            assertEquals(3, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+
+            val stateId2 = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(2, notary.getNotarisedTransactionIds().size)
+            assertEquals(2, observationCounter)
+            assertEquals(6, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+        }
+    }
+
+    /**
+     * An error is thrown inside of the [VaultService.rawUpdates] observable while recording a transaction inside of the counterparty node.
+     *
+     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent.
+     * Observer events are recorded on both the initiating node and the counterparty node.
+     *
+     * More importantly, the observer listening to the [VaultService.rawUpdates] observable should not unsubscribe.
+     *
+     * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
+     */
+    @Test
+    fun `Throw user error in VaultService rawUpdates during counterparty FinalityFlow blows up the flow but does not break the Observer`() {
+        var observationCounter = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+
+        val rawUpdatesCount = ConcurrentHashMap<Party, Int>()
+        DbListenerService.onNextVisited = { party ->
+            if (rawUpdatesCount.putIfAbsent(party, 1) != null) {
+                rawUpdatesCount.computeIfPresent(party) { _, count -> count + 1 }
+            }
+        }
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+                                cordappsForAllNodes = listOf(
+                                    findCordapp("com.r3.dbfailure.contracts"),
+                                    findCordapp("com.r3.dbfailure.workflows"),
+                                    findCordapp("com.r3.dbfailure.schemas")
+                                ),
+                                inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
+
+            val startErrorInObservableWhenCreatingSecondState = {
+
+                val stateId = aliceNode.rpc.startFlow(
+                    CreateStateFlow::Initiator,
+                    "AllGood",
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.NoError)
+                ).returnValue.getOrThrow(30.seconds)
+
+                aliceNode.rpc.startFlow(
+                    SendStateFlow::PassErroneousOwnableState,
+                    stateId,
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxError),
+                    bobNode.nodeInfo.legalIdentities.first()
+                ).returnValue.getOrThrow(20.seconds)
+
+                stateId
+            }
+
+            assertEquals(0, notary.getNotarisedTransactionIds().size)
+
+            val stateId = startErrorInObservableWhenCreatingSecondState()
+            assertEquals(1, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(1, notary.getNotarisedTransactionIds().size)
+            assertEquals(1, observationCounter)
+            assertEquals(2, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(1, rawUpdatesCount[bobNode.nodeInfo.singleIdentity()])
+
+            val stateId2 = startErrorInObservableWhenCreatingSecondState()
+            assertEquals(1, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
+            assertEquals(2, aliceNode.getAllStates(Vault.StateStatus.CONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(2, notary.getNotarisedTransactionIds().size)
+            assertEquals(2, observationCounter)
+            assertEquals(4, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(2, rawUpdatesCount[bobNode.nodeInfo.singleIdentity()])
+        }
+    }
+
+    /**
+     * An error is thrown inside of the [VaultService.updates] observable while recording a transaction inside of the initiating node.
+     *
+     * This causes the transaction to not be saved on the local node but the notary still records the transaction as spent. The transaction
+     * also is not send to the counterparty node since it failed before reaching the send. Therefore no subscriber events occur on the
+     * counterparty node.
+     *
+     * More importantly, the observer listening to the [VaultService.updates] observable should not unsubscribe.
+     *
+     * This test causes 2 failures inside of the [rx.Observer] to ensure that the Observer is still subscribed.
+     */
+    @Test
+    fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer`() {
+        var observationCounter = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+
+        val rawUpdatesCount = ConcurrentHashMap<Party, Int>()
+        DbListenerService.onNextVisited = { party ->
+            if (rawUpdatesCount.putIfAbsent(party, 1) != null) {
+                rawUpdatesCount.computeIfPresent(party) { _, count -> count + 1 }
+            }
+        }
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+                                cordappsForAllNodes = listOf(
+                                    findCordapp("com.r3.dbfailure.contracts"),
+                                    findCordapp("com.r3.dbfailure.workflows"),
+                                    findCordapp("com.r3.dbfailure.schemas")
+                                ),
+                                inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
+
+            val startErrorInObservableWhenConsumingState = {
+
+                val stateId = aliceNode.rpc.startFlow(
+                    CreateStateFlow::Initiator,
+                    "AllGood",
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.ServiceSqlSyntaxErrorOnConsumed)
+                ).returnValue.getOrThrow(30.seconds)
+
+                val flowHandle = aliceNode.rpc.startFlow(
+                    SendStateFlow::PassErroneousOwnableState,
+                    stateId,
+                    errorTargetsToNum(CreateStateFlow.ErrorTarget.NoError),
+                    bobNode.nodeInfo.legalIdentities.first()
+                )
+
+                Assertions.assertThatExceptionOfType(TimeoutException::class.java)
+                    .isThrownBy { flowHandle.returnValue.getOrThrow(20.seconds) }
+
+                stateId
+            }
+
+            assertEquals(0, notary.getNotarisedTransactionIds().size)
+
+            val stateId = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId, Vault.StateStatus.CONSUMED).size)
+            assertEquals(1, aliceNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(1, notary.getNotarisedTransactionIds().size)
+            assertEquals(1, observationCounter)
+            assertEquals(2, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+
+            val stateId2 = startErrorInObservableWhenConsumingState()
+            assertEquals(0, aliceNode.getStatesById(stateId2, Vault.StateStatus.CONSUMED).size)
+            assertEquals(2, aliceNode.getAllStates(Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(0, bobNode.getStatesById(stateId2, Vault.StateStatus.UNCONSUMED).size)
+            assertEquals(2, notary.getNotarisedTransactionIds().size)
+            assertEquals(4, rawUpdatesCount[aliceNode.nodeInfo.singleIdentity()])
+            assertEquals(0, rawUpdatesCount.getOrDefault(bobNode.nodeInfo.singleIdentity(), 0))
+        }
+    }
+
+    @Test
+    fun `Subscribing to NodeVaultService rawUpdates from a flow is not allowed` () {
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+            cordappsForAllNodes = listOf(
+                findCordapp("com.r3.dbfailure.contracts"),
+                findCordapp("com.r3.dbfailure.workflows"),
+                findCordapp("com.r3.dbfailure.schemas")
+            ),
+            inMemoryDB = false)
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            val future = aliceNode.rpc.startFlow(ErrorHandling::SubscribingRawUpdatesFlow).returnValue
+
+            assertFailsWith<CordaRuntimeException>("Cannot subscribe to NodeVaultService.rawUpdates from a flow!") {
+                future.getOrThrow(30.seconds)
+            }
+        }
+    }
+
+    //TODO add retry from checkpoint test
+    @Test
+    fun `Failing Observer wrapped with FlowSafeSubscriber will remain and re-called upon flow retry`() {
+
+    }
+
+    private fun NodeHandle.getNotarisedTransactionIds(): List<String> {
+        return rpc.startFlowDynamic(SendStateFlow.NotarisedTxs::class.java).returnValue.getOrThrow()
+    }
+
+    private fun NodeHandle.getStatesById(id: UniqueIdentifier?, status: Vault.StateStatus): List<StateAndRef<DbFailureContract.TestState>> {
+        return rpc.vaultQueryByCriteria(
+            QueryCriteria.LinearStateQueryCriteria(
+                linearId = if (id != null) listOf(id) else null,
+                status = status
+            ), DbFailureContract.TestState::class.java
+        ).states
+    }
+
+    private fun NodeHandle.getAllStates(status: Vault.StateStatus): List<StateAndRef<DbFailureContract.TestState>> {
+        return getStatesById(null, status)
+    }
 }

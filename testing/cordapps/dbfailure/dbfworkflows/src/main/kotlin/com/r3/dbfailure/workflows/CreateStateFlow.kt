@@ -28,6 +28,7 @@ object CreateStateFlow {
         ServiceThrowInvalidParameter(6),
         ServiceThrowMotherOfAllExceptions(7),
         ServiceThrowUnrecoverableError(8),
+        ServiceSqlSyntaxErrorOnConsumed(9),
         TxInvalidState(10),
         FlowSwallowErrors(100),
         ServiceSwallowErrors(1000)
@@ -69,10 +70,11 @@ object CreateStateFlow {
             val txTarget = getTxTarget(errorTarget)
             logger.info("Test flow: The tx error target is $txTarget")
             val state = DbFailureContract.TestState(
-                    UniqueIdentifier(),
-                    ourIdentity,
-                    if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else randomValue,
-                    errorTarget)
+                UniqueIdentifier(),
+                listOf(ourIdentity),
+                if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else randomValue,
+                errorTarget, ourIdentity
+            )
             val txCommand = Command(DbFailureContract.Commands.Create(), ourIdentity.owningKey)
 
             logger.info("Test flow: tx builder")
