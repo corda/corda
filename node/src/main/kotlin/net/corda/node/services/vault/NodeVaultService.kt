@@ -218,7 +218,7 @@ class NodeVaultService(
                 // it could prevent the flow/ fiber swapped our of memory.
                 PreventSubscriptionsSubject(_rawUpdatesPublisher) {
                     log.error("Cannot subscribe to NodeVaultService.rawUpdates from a flow! " +
-                            "- hospitalising the flow ")
+                            "- aborting the flow ")
 
                     throw FlowException("Cannot subscribe to NodeVaultService.rawUpdates from a flow! ")
                 }
