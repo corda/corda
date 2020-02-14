@@ -95,7 +95,7 @@ class ClassCarpenterTest {
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
 
-    @Test(expected = DuplicateNameException::class)
+    @Test(expected = DuplicateNameException::class, timeout=300_000)
     fun duplicates() {
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
         cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
@@ -301,7 +301,7 @@ class ClassCarpenterTest {
         assertEquals(testD, i["d"])
     }
 
-    @Test(expected = java.lang.IllegalArgumentException::class)
+    @Test(expected = java.lang.IllegalArgumentException::class, timeout=300_000)
     fun `null parameter small int`() {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
@@ -313,7 +313,7 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = NullablePrimitiveException::class)
+    @Test(expected = NullablePrimitiveException::class, timeout=300_000)
     fun `nullable parameter small int`() {
         val className = "iEnjoySwede"
         val schema = ClassSchema(
@@ -351,7 +351,7 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class)
+    @Test(expected = java.lang.reflect.InvocationTargetException::class, timeout=300_000)
     fun `non nullable parameter integer with null`() {
         val className = "iEnjoyWibble"
         val schema = ClassSchema(
@@ -383,7 +383,7 @@ class ClassCarpenterTest {
         assertEquals("$className{a=[1, 2, 3]}", i.toString())
     }
 
-    @Test(expected = java.lang.reflect.InvocationTargetException::class)
+    @Test(expected = java.lang.reflect.InvocationTargetException::class, timeout=300_000)
     fun `nullable int array throws`() {
         val className = "iEnjoySwede"
         val schema = ClassSchema(

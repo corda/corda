@@ -1,13 +1,22 @@
 package net.corda.client.rpc
 
-import net.corda.core.context.*
+import net.corda.core.CordaRuntimeException
+import net.corda.core.context.Actor
+import net.corda.core.context.AuthServiceId
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
+import net.corda.core.context.Trace
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
-import net.corda.core.messaging.*
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
@@ -22,8 +31,14 @@ import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.testing.common.internal.checkNotOnClasspath
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.ProcessUtilities
@@ -31,6 +46,7 @@ import net.corda.testing.node.internal.poll
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -38,7 +54,10 @@ import rx.subjects.PublishSubject
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -47,6 +66,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
         val log = contextLogger()
+        const val testJar = "net/corda/client/rpc/test.jar"
     }
 
     private lateinit var node: NodeWithInfo
@@ -242,6 +262,29 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
                 arguments = listOf(node.node.configuration.rpcOptions.address.toString(), financeLocation)
         )
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
+    }
+
+    @Test(timeout=300_000)
+    fun `nonspecific reconnect errors dont trigger graceful reconnect`() {
+        val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)!!
+        val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)!!
+        var disconnects = 0
+        var reconnects = 0
+        val gracefulReconnect = GracefulReconnect(onDisconnect = {++disconnects}, onReconnect = {++reconnects})
+
+        // This just recreates the original issue which allowed us to fix this.  Any non-rpc exception would do
+        // https://r3-cev.atlassian.net/browse/CORDA-3572
+        assertThatThrownBy {
+            client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect).use {
+                val rpc = it.proxy
+                rpc.uploadAttachment(inputJar1)
+                rpc.uploadAttachment(inputJar2)
+            }
+        }.isInstanceOf(CordaRuntimeException::class.java)
+                .hasMessageContaining(DuplicateAttachmentException::class.java.name)
+
+        assertThat(disconnects).isEqualTo(0)
+        assertThat(reconnects).isEqualTo(0)
     }
 
     private fun checkShellNotification(info: StateMachineInfo) {

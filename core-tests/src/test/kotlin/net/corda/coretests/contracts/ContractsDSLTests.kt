@@ -47,7 +47,7 @@ class RequireSingleCommandTests(private val testFunction: (Collection<CommandWit
         assertEquals(returnedCommand, validCommandOne, "they should be the same")
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class, timeout=300_000)
     fun `check error is thrown if more than one valid command`() {
         val commands = listOf(validCommandOne, validCommandTwo)
         testFunction(commands)

@@ -127,7 +127,7 @@ class CollectSignaturesFlowTests : WithContracts {
         Assert.assertThat(missingSigners, `is`(emptySet()))
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class, timeout=300_000)
     fun `throws exception when extra sessions are initiated`() {
         bobNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)
         charlieNode.registerInitiatedFlow(ExtraSessionsFlowResponder::class.java)

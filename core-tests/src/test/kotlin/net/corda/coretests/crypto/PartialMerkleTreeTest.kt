@@ -270,7 +270,7 @@ class PartialMerkleTreeTest {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test(expected = Exception::class)
+    @Test(expected = Exception::class, timeout=300_000)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
         hm1.serialize()
