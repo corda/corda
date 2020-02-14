@@ -52,7 +52,7 @@ class WalkExceptionCausedByListTest(@Suppress("UNUSED_PARAMETER") testTitle: Str
         }
     }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun test() {
         Assert.assertEquals(expectedExceptionSequence, e.walkExceptionCausedByList().asSequence().toList())
     }
