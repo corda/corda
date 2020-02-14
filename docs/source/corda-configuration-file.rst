@@ -643,7 +643,7 @@ sshd
 
 systemProperties
   An optional map of additional system properties to be set when launching via ``corda.jar`` only.
-  Keys and values of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
+  Keys and values of the map should be strings. e.g. ``systemProperties = { "visualvm.display.name" = FooBar }``
 
   *Default:* not defined
 
