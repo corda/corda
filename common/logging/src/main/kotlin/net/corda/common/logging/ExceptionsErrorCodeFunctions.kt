@@ -4,33 +4,35 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
+//Returns an iterator that traverses all the exception's cause chain stopping in case of loops (an exception caused by itself)
+fun Throwable.walkExceptionCausedByList() : Iterator<Throwable> {
+    val self = this
+    return object : Iterator<Throwable> {
+        private var cursor : Throwable? = self
+        private val knownThrowables = mutableSetOf<Throwable>()
 
-fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
-    //Returns an iterator that traverses all the exception's cause chain stopping in case of loops (an exception caused by itself)
-    fun walkExceptionCausedByList(e : Throwable) : Iterator<Throwable> {
-        return object : Iterator<Throwable> {
-            private var cursor : Throwable? = e
-            private val knownThrowables = mutableSetOf<Throwable>()
+        override fun hasNext(): Boolean {
+            return cursor != null
+        }
 
-            override fun hasNext(): Boolean {
-                return cursor != null
+        override fun next(): Throwable {
+            val result = cursor
+            val cause = cursor?.cause
+            cursor = if(cause != null && knownThrowables.add(cause)) {
+                cause
+            } else {
+                null
             }
-
-            override fun next(): Throwable {
-                val result = cursor
-                val cause = cursor?.cause
-                cursor = if(cause != null && knownThrowables.add(cause)) {
-                    cause
-                } else {
-                    null
-                }
-                return result!!
-            }
+            return result!!
         }
     }
+}
+
+fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
+
     return when {
         error != null && level.isInRange(Level.FATAL, Level.WARN) -> {
-            val message = walkExceptionCausedByList(error).asSequence().mapNotNull(Throwable::message).joinToString(" - ")
+            val message = error.walkExceptionCausedByList().asSequence().mapNotNull(Throwable::message).joinToString(" - ")
             CompositeMessage("$message [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
         }
         else -> this
