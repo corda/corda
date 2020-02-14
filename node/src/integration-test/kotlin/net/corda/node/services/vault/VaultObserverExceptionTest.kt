@@ -749,7 +749,11 @@ class VaultObserverExceptionTest {
 
             val flowHandle = aliceNode.rpc.startFlow(ErrorHandling::SubscribingRawUpdatesFlow)
 
-            assertFailsWith<CordaRuntimeException>("Flow ${flowHandle.id} tried to subscribe an Rx.Observer to VaultService.rawUpdates - the subscription did not succeed ") {
+            assertFailsWith<CordaRuntimeException>(
+                "Flow ${ErrorHandling.SubscribingRawUpdatesFlow::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                        "- Rx.Observables should only be subscribed outside the context of a flow " +
+                        "- the subscription did not succeed "
+            ) {
                 flowHandle.returnValue.getOrThrow(30.seconds)
             }
         }

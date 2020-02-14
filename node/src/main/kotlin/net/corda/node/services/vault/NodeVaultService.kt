@@ -218,13 +218,15 @@ class NodeVaultService(
                 // it could prevent the flow/ fiber -object- get garbage collected.
                 return PreventSubscriptionsSubject(_rawUpdatesPublisher) {
                     log.error(
-                        "Flow ${it.id} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                        "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                                "- Rx.Observables should only be subscribed outside the context of a flow " +
                                 "- the subscription did not succeed " +
                                 "- aborting the flow "
                     )
 
                     throw FlowException(
-                        "Flow ${it.id} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                        "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                                "- Rx.Observables should only be subscribed outside the context of a flow " +
                                 "- the subscription did not succeed "
                     )
                 }
