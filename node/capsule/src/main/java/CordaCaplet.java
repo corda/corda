@@ -321,16 +321,16 @@ public class CordaCaplet extends Capsule {
      * Helper class so that we can parse the "systemProperties" element of node.conf.
      */
     private static class Property {
-        private final String path;
+        private final String key;
         private final Object value;
 
-        Property(String path, Object value) {
-            this.path = path;
+        Property(String key, Object value) {
+            this.key = key;
             this.value = value;
         }
 
         String getKey() {
-            return path;
+            return key;
         }
 
         Object getValue() {
