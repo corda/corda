@@ -26,6 +26,7 @@ import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.lang.RuntimeException
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
@@ -159,6 +160,47 @@ class CordaRPCClientReconnectionTest {
                 assertTrue {
                     latch.await(2, TimeUnit.SECONDS)
                 }
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `when user code throws an error on a reconnecting observable, then onError is invoked and observable is unsubscribed successfully`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
+            val normalLatch = CountDownLatch(1)
+            val errorLatch = CountDownLatch(1)
+            var observedEvents = 0
+
+            fun startNode(address: NetworkHostAndPort): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val addresses = listOf(NetworkHostAndPort("localhost", portAllocator.nextPort()), NetworkHostAndPort("localhost", portAllocator.nextPort()))
+
+            startNode(addresses[0])
+            val client = CordaRPCClient(addresses)
+
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val cashStatesFeed = rpcOps.vaultTrack(Cash.State::class.java)
+                val subscription = cashStatesFeed.updates.subscribe ({
+                    normalLatch.countDown()
+                    observedEvents++
+                    throw RuntimeException()
+                }, {
+                    errorLatch.countDown()
+                })
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+                rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get()
+
+                assertTrue { normalLatch.await(2, TimeUnit.SECONDS) }
+                assertTrue { errorLatch.await(2, TimeUnit.SECONDS) }
+                assertThat(subscription.isUnsubscribed).isTrue()
+                assertThat(observedEvents).isEqualTo(1)
             }
         }
     }
