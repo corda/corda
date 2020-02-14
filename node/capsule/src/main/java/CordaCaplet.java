@@ -17,6 +17,7 @@ import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
+import static com.typesafe.config.ConfigUtil.splitPath;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.stream.Collectors.toMap;
 
@@ -233,7 +234,6 @@ public class CordaCaplet extends Capsule {
             try {
                 Map<String, ?> overrideSystemProps = nodeConfig.getConfig("systemProperties").entrySet().stream()
                     .map(Property::create)
-                    .filter(Property::isValid)
                     .collect(toMap(Property::getKey, Property::getValue));
                 log(LOG_VERBOSE, "Configured system properties = " + overrideSystemProps);
                 for (Map.Entry<String, ?> entry : overrideSystemProps.entrySet()) {
@@ -321,20 +321,16 @@ public class CordaCaplet extends Capsule {
      * Helper class so that we can parse the "systemProperties" element of node.conf.
      */
     private static class Property {
-        private final List<String> path;
+        private final String key;
         private final Object value;
 
-        Property(List<String> path, Object value) {
-            this.path = path;
+        Property(String key, Object value) {
+            this.key = key;
             this.value = value;
         }
 
-        boolean isValid() {
-            return path.size() == 1;
-        }
-
         String getKey() {
-            return path.get(0);
+            return key;
         }
 
         Object getValue() {
@@ -342,7 +338,12 @@ public class CordaCaplet extends Capsule {
         }
 
         static Property create(Map.Entry<String, ConfigValue> entry) {
-            return new Property(ConfigUtil.splitPath(entry.getKey()), entry.getValue().unwrapped());
+            // String.join is preferred here over Typesafe's joinPath method, as the joinPath method would put quotes around the system
+            // property key which is undesirable here.
+            return new Property(
+                    String.join(".", splitPath(entry.getKey())),
+                    entry.getValue().unwrapped()
+            );
         }
     }
 }

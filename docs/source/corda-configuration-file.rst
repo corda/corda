@@ -452,6 +452,13 @@ notary
 
     *Default:* not defined
 
+  etaMessageThresholdSeconds
+    If the wait time estimate on the internal queue exceeds this value, the notary may send
+    a wait time update to the client (implementation specific and dependent on the counter
+    party version).
+
+    *Default:* Implementation dependent
+
   raft
     *(Experimental)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
 
@@ -636,7 +643,7 @@ sshd
 
 systemProperties
   An optional map of additional system properties to be set when launching via ``corda.jar`` only.
-  Keys and values of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
+  Keys and values of the map should be strings. e.g. ``systemProperties = { "visualvm.display.name" = FooBar }``
 
   *Default:* not defined
 
