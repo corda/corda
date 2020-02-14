@@ -23,7 +23,7 @@ Flows API improvements
 
 Corda 4.4 introduces a new ``FlowLogic.await`` API that allows a CorDapp developers to suspend their flow when executing user-defined long-running operations (e.g. call-outs to external services, long-running DB operations). This prevents these long-running operations from blocking the flow thread, allowing other flows to progress in the interim. Previously, these operations had to be executed synchronously, blocking the flow thread.
 
-The CorDapp developer can decide whether to run these asynchronous flow operations on a dedicated node pool, or to handle the threading themselves directly.
+The CorDapp developer can decide whether to run these asynchronous flow operations in a dedicated thread pool, or to handle the threading themselves directly.
 
 Note that as before, the flow framework suspends automatically for certain operations (e.g. when waiting to receive a message from a counterparty). These suspensions do not have to be triggered explicitly.
 
