@@ -105,3 +105,11 @@ include 'core-deterministic:testing:verifier'
 include 'serialization-deterministic'
 
 include 'tools:checkpoint-agent'
+
+// Use custom build file names over build.gradle for subprojects
+void rename_build_file_to_module_name(project) {
+    project.buildFileName = "${project.name}.build.gradle"
+    project.children.each { child -> rename_build_file_to_module_name(child) }
+}
+
+rootProject.children.each { subproject -> rename_build_file_to_module_name(subproject) }
