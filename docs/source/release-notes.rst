@@ -4,7 +4,68 @@ Release notes
 .. contents:: 
     :depth: 2
 
-Welcome to the Corda 4.3 release notes. Please read these carefully to understand what’s new in this release and how the features can help you. Just as prior releases have brought with them commitments to wire and API stability, Corda 4.3 comes with those same guarantees. States and apps valid in Corda 3.0 are transparently usable in Corda 4.3.
+Welcome to the Corda 4.4 release notes. Please read these carefully to understand what’s new in this release and how the features can help you. Just as prior releases have brought with them commitments to wire and API stability, Corda 4.4 comes with those same guarantees. States and apps valid in Corda 3.0 are transparently usable in Corda 4.4.
+
+.. _release_notes_v4_4:
+
+Corda 4.4
+=========
+
+Corda 4.4 lays the foundation of a new open-core approach for the Corda codebase. This involved a refactoring of the main functional components of Corda. Please consult :doc:`cordapp-overview.rst` to get an overview of the practical impact on CorDapp development.
+
+Furthermore, Corda 4.4 introduces improvements to the flow framework API, a new diagnostic ``ServiceHub`` call and includes a number of security enhancements.
+
+Changes for developers in Corda 4.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Flows API improvements
++++++++++++++++++++++++
+
+Corda 4.4 introduces a new ``FlowLogic.await`` API that allows a CorDapp developers to suspend their flow when executing user-defined long-running operations (e.g. call-outs to external services, long-running DB operations). This prevents these long-running operations from blocking the flow thread, allowing other flows to progress in the interim. Previously, these operations had to be executed synchronously, blocking the flow thread.
+
+The CorDapp developer can decide whether to run these asynchronous flow operations on a dedicated node pool, or to handle the threading themselves directly.
+
+Note that as before, the flow framework suspends automatically for certain operations (e.g. when waiting to receive a message from a counterparty). These suspensions do not have to be triggered explicitly.
+
+The node operator can configure the number of threads to dedicate to external operations.
+
+Corda 4.4 also introduces a new ``HospitalizeFlowException`` exception type that, when thrown, causes a flow to halt execution and send itself to the flow hospital for observation. The flow will automatically be retried on the next node start.
+
+This exception gives user code a way to retry a flow from its last checkpoint if a known intermittent failure occurred.
+
+
+Diagnostic API
++++++++++++++++++++++++
+
+Corda 4.4 introduces a ``ServiceHub`` call available to CorDapp developers that allows them to access:
+
+* The edition of Corda being run (e.g. Open Source, Enterprise)
+* The version of Corda being run including the patch number (eg. 3.2.20190215)
+
+
+Security enhancements
++++++++++++++++++++++++
+
+* The SSH server in the :doc:`shell` has been updated to remove outdated weak ciphers and algorithms.
+* The ability to SSH into the standalone shell has been removed
+* A new read-only RPC user role template has been documented in :doc:`shell`
+
+
+Platform version change
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Given the addition of new APIs, the platform version of Corda 4.4 has been bumped up from 5 to 6. This is to prevent CorDapps that use it being deployed onto nodes unable to host them. Note that the minimum platform version has not been changed - this means that older Corda nodes can still interoperate with Corda 4.4 nodes. Since the APIs added do not affect the wire protocol or have other zone-level implications, applications can take advantage of these new platform version 6 features even if the Corda 4.4 node is running on a network whose minimum platform version is 4.
+
+For more information on platform version, please see :doc:`versioning`. For more details on upgrading a CorDapp to use platform version 5, please see :doc:`app-upgrade-notes`.
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Issues Fixed
+~~~~~~~~~~~~
+
 
 .. _release_notes_v4_3:
 
