@@ -4,9 +4,6 @@ plugins {
     id 'kotlin-jpa'
 }
 
-group 'net.corda'
-version '4.4-SNAPSHOT'
-
 sourceCompatibility = 1.8
 
 repositories {
