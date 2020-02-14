@@ -264,7 +264,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `nonspecific reconnect errors dont trigger graceful reconnect`() {
         val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)!!
         val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)!!
