@@ -7,7 +7,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 @RunWith(Parameterized::class)
-class WalkExceptionCausedByListTest(testTitle: String, private val e: Throwable, private val expectedExceptionSequence: List<Throwable>) {
+class WalkExceptionCausedByListTest(@Suppress("UNUSED_PARAMETER") testTitle: String, private val e: Throwable, private val expectedExceptionSequence: List<Throwable>) {
 
     private class TestThrowable(val id : Int, cause : Throwable?) : Throwable(cause) {
         override fun toString(): String {
