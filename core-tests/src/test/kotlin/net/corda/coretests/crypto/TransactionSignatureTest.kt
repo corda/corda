@@ -39,7 +39,7 @@ class TransactionSignatureTest {
     }
 
     /** Verification should fail; corrupted metadata - clearData (Merkle root) has changed. */
-    @Test(expected = SignatureException::class)
+    @Test(expected = SignatureException::class,timeout=300_000)
     fun `Signature metadata full failure clearData has changed`() {
         val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))

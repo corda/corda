@@ -72,7 +72,7 @@ class RpcCustomSerializersTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `when a custom serializer is missing from the rpc client the resulting exception progagtes and client does not reconnect`() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val server = startNode(providedName = ALICE_NAME).get()

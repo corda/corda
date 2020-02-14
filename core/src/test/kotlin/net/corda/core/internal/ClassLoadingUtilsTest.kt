@@ -69,7 +69,7 @@ class ClassLoadingUtilsTest {
             .doesNotContain(AbstractClass::class.java.name)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class,timeout=300_000)
     fun throwsExceptionWhenClassDoesNotContainProperConstructors() {
         createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
     }

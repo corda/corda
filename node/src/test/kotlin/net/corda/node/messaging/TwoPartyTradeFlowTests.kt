@@ -145,7 +145,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
     }
 
-    @Test(expected = InsufficientBalanceException::class)
+    @Test(expected = InsufficientBalanceException::class, timeout=300_000)
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP), threadPerNode = true)
         val notaryNode = mockNet.defaultNotaryNode

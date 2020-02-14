@@ -45,7 +45,7 @@ class CordappConfigFileProviderTests {
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(alternateValidConfig)
     }
 
-    @Test(expected = ConfigException.Parse::class)
+    @Test(expected = ConfigException.Parse::class, timeout=300_000)
     fun `an invalid config throws an exception`() {
         cordappConfFile.writeText(invalidConfig)
         provider.getConfigByName(cordappName)
