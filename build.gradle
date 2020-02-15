@@ -125,6 +125,7 @@ buildscript {
     ext.commons_lang_version = '3.9'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
+    ext.detekt_version = constants.getProperty('detektVersion')
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
         ext.fontawesomefx_commons_version = '11.0'
@@ -464,13 +465,14 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     }
 }
 
-task detekt(type: JavaExec) {
+task detekt(type: JavaExec, dependsOn: ":detekt-plugins:jar") {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def input = "$projectDir"
     def config = "$projectDir/detekt-config.yml"
     def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline]
+    def plugins = "$projectDir/detekt-plugins/build/libs/detekt-plugins-${version}.jar"
+    def params = ['-i', input, '-c', config, '-b', baseline, '--plugins', plugins]
     args(params)
 }
 

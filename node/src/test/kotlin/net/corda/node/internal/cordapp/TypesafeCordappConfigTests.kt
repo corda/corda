@@ -37,7 +37,7 @@ class TypesafeCordappConfigTests {
         assertThat(cordappConf.exists("notexists")).isFalse()
     }
 
-    @Test(expected = CordappConfigException::class)
+    @Test(expected = CordappConfigException::class, timeout=300_000)
     fun `test that an exception is thrown when trying to access a non-extant field`() {
         val config = ConfigFactory.empty()
         val cordappConf = TypesafeCordappConfig(config)

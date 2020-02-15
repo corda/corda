@@ -164,7 +164,7 @@ class FXSwap {
         }
     }
 
-    @Test @Ignore
+    @Test(timeout=300_000) @Ignore
     fun `pretty print`() {
         println ( prettyPrint(contract) )
     }

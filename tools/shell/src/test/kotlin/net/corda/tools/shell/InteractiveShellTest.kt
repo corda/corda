@@ -171,13 +171,13 @@ class InteractiveShellTest {
             expected = "10 (1)++200 (2)"
     )
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowStartNoArgs() = check("", "")
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowMissingParam() = check("d: Yo", "")
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test(timeout=300_000)
