@@ -63,10 +63,13 @@ dependencies {
 def cordappDependencies = file("${sourceSets['main'].output.resourcesDir}/META-INF/Cordapp-Dependencies")
 task generateDependencies {
     dependsOn project(':finance:contracts').tasks.jar
+    inputs.files(configurations.cordapp)
     outputs.files(cordappDependencies)
     doLast {
-        configurations.cordapp.forEach { cordapp ->
-            cordappDependencies << sha256(cordapp) << System.lineSeparator()
+        cordappDependencies.newWriter().withWriter { writer ->
+            configurations.cordapp.forEach { cordapp ->
+                writer << sha256(cordapp) << System.lineSeparator()
+            }
         }
     }
 }

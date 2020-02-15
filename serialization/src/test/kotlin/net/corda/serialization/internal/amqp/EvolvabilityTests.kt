@@ -113,7 +113,7 @@ class EvolvabilityTests {
         assertEquals(null, deserializedC.b)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun addAdditionalParam() {
         val sf = testDefaultFactory()
         val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")
@@ -321,7 +321,7 @@ class EvolvabilityTests {
         DeserializationInput(factory).deserialize(SerializedBytes<NetworkParametersExample>(url.readBytes()))
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     @Suppress("UNUSED")
     fun addMandatoryFieldWithAltConstructorUnAnnotated() {
         val sf = testDefaultFactory()

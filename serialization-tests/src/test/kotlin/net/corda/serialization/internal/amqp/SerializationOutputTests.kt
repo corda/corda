@@ -322,7 +322,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class, timeout=300_000)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap())
         serdes(obj)
@@ -364,7 +364,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test whitelist`() {
         val obj = Woo2(4)
         serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
@@ -380,7 +380,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         ))
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test generic list subclass is not supported`() {
         val obj = FooList()
         serdes(obj)
@@ -458,13 +458,13 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test mismatched property and constructor naming`() {
         val obj = Mismatch(456)
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
         serdes(obj)

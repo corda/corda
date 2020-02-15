@@ -253,7 +253,7 @@ class ObligationTests {
      * Test that the issuance builder rejects building into a transaction with existing
      * cash inputs.
      */
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun `reject issuance with inputs`() {
         // Issue some obligation
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -854,7 +854,7 @@ class ObligationTests {
                 fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuedProducts = miniCorpIssuer)).bilateralNetState)
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun `states cannot be netted if not in the normal state`() {
         inState.copy(lifecycle = Lifecycle.DEFAULTED).bilateralNetState
     }
