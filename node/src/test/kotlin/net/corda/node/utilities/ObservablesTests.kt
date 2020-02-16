@@ -249,7 +249,7 @@ class ObservablesTests {
             source.onNext(2) // first observer will run, second observer will run and throw
         }
         source.onNext(3) // both observers will run
-        assertThat(heartBeat == 5)
+        assertEquals(5, heartBeat)
     }
 
     @Test
@@ -264,7 +264,7 @@ class ObservablesTests {
             source.onError(IllegalStateException()) // all FlowSafeSubscribers under FlowSafeSubject get unsubscribed here
         }
         source.onNext(1)
-        assertThat(heartBeat == 2)
+        assertEquals(2, heartBeat)
     }
 
     @Test
@@ -284,7 +284,7 @@ class ObservablesTests {
             sourceWrapper.onNext(1)
         }
         sourceWrapper.onNext(2)
-        assertThat(heartBeat == 1)
+        assertEquals(1, heartBeat)
     }
 
     /**
@@ -309,7 +309,7 @@ class ObservablesTests {
             sourceWrapper.onNext(1)
         }
         sourceWrapper.onNext(2)
-        assertThat(heartBeat == 3)
+        assertEquals(3, heartBeat)
     }
 
     @Test
@@ -326,7 +326,7 @@ class ObservablesTests {
 
         source.onNext(1)
         source.onNext(1)
-        assertThat(heartBeat == 4)
+        assertEquals(4, heartBeat)
     }
 
     @Test
