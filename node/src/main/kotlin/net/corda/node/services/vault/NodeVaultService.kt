@@ -221,14 +221,14 @@ class NodeVaultService(
                 return PreventSubscriptionsSubject(_rawUpdatesPublisher) {
                     log.error(
                         "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                                "- Rx.Observables should only be subscribed outside the context of a flow " +
+                                "- Rx.Observables should only be subscribed to outside the context of a flow " +
                                 "- the subscription did not succeed " +
                                 "- aborting the flow "
                     )
 
                     FlowException(
                         "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                                "- Rx.Observables should only be subscribed outside the context of a flow " +
+                                "- Rx.Observables should only be subscribed to outside the context of a flow " +
                                 "- the subscription did not succeed "
                     )
                 }
