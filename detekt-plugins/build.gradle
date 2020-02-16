@@ -1,23 +1,11 @@
 plugins {
-    id 'java'
     id 'kotlin'
-    id 'kotlin-jpa'
-}
-
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation "io.gitlab.arturbosch.detekt:detekt-api:$detekt_version"
+    testImplementation "junit:junit:$junit_version"
     testImplementation "io.gitlab.arturbosch.detekt:detekt-test:$detekt_version"
     testImplementation "org.assertj:assertj-core:$assertj_version"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "io.gitlab.arturbosch.detekt:detekt-api:$detekt_version"
-}
-
-publish {
-    name "corda-detekt-plugins"
 }
