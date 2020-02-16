@@ -63,5 +63,10 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
     }
 }
 
+/**
+ * We throw [OnNextFailedException] to pass the exception back through the preceding [Subscriber] chain
+ * without triggering any [SafeSubscriber.onError]s. Since we extending an [OnErrorNotImplementedException]
+ * the exception will be re-thrown at [Exceptions.throwOrReport].
+ */
 @VisibleForTesting
 class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImplementedException(message, cause)
