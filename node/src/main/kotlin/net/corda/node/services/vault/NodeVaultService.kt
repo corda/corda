@@ -226,7 +226,7 @@ class NodeVaultService(
                                 "- aborting the flow "
                     )
 
-                    throw FlowException(
+                    FlowException(
                         "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
                                 "- Rx.Observables should only be subscribed outside the context of a flow " +
                                 "- the subscription did not succeed "
