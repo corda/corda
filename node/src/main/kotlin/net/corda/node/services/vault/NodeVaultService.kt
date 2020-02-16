@@ -234,8 +234,7 @@ class NodeVaultService(
                 }
             }
             // we are not inside a flow, we are most likely inside a CordaService;
-            // we will wrap with 'flow safe subscriptions' here;
-            // every Observable.subscribe to this object should be wrapped with a FlowSafeSubscriber (-not unsubscribe- subscribers).
+            // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
             return FlowSafeSubject(_rawUpdatesPublisher)
         }
 
