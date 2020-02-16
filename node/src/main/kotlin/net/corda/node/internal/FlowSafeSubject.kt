@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.node.internal
 
 import net.corda.core.internal.FlowSafeSubscriber
 import net.corda.core.internal.VisibleForTesting

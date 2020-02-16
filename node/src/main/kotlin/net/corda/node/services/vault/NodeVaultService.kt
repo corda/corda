@@ -18,6 +18,8 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
+import net.corda.node.internal.FlowSafeSubject
+import net.corda.node.internal.PreventSubscriptionsSubject
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
