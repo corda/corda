@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import rx.Observer
 import rx.Subscriber
 import rx.exceptions.CompositeException
 import rx.exceptions.Exceptions
@@ -12,13 +13,21 @@ import rx.plugins.RxJavaPlugins
 
 /**
  * Extends [SafeSubscriber] to override [SafeSubscriber.onNext], [SafeSubscriber.onError] and [SafeSubscriber._onError].
+ *
+ * [FlowSafeSubscriber] will not set [SafeSubscriber.done] flag to true and will not call [SafeSubscriber.unsubscribe] upon
+ * error inside [Observer.onNext]. This way, the underlying [Observer] will not get unsubscribed.
+ *
+ * An [Observer] that does not unscubscribe due to errors in [onNext] events becomes useful when an unsubscribe could
+ * lead to a malfunctioning CorDapp, due to a single isolated error. If the [Observer] was unsubscribed,
+ * any events pushed on the base subject would no longer reach the subscriber that threw the error.
  */
 @VisibleForTesting
 class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual) {
 
     /**
-     * Duplicate of [SafeSubscriber.onNext], however it only delegates to [SafeSubscriber.onError] if it
-     * wraps an [ActionSubscriber] which is a leaf in an Subscribers' tree structure.
+     * Duplicate of [SafeSubscriber.onNext]. However, it ignores [SafeSubscriber.done] flag.
+     * It only delegates to [SafeSubscriber.onError] if it wraps an [ActionSubscriber] which is
+     * a leaf in an Subscribers' tree structure.
      */
     override fun onNext(t: T) {
         try {
