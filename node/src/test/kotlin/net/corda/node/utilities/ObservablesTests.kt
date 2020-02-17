@@ -360,13 +360,21 @@ class ObservablesTests {
         }
     }
 
+    /**
+     * In this test we create a chain of Subscribers with this the following order:
+     * FlowSafeSubscriber_X -> FlowSafeSubject -> PublishSubject -> FlowSafeSubscriber_Y
+     *
+     * FlowSafeSubscriber_Y.onNext throws an error, since FlowSafeSubscriber_Y.onError is not defined,
+     * it will throw a OnErrorNotImplementedException. Then it will be propagated back until FlowSafeSubscriber_X.
+     * FlowSafeSubscriber_X will identify it is a not leaf subscriber and therefore will rethrow it as OnNextFailedException.
+     */
     @Test
-    fun `propagated Rx exception will be rethrown at ConsistentSafeSubscriber onError`() {
+    fun `propagated Rx exception will be rethrown at FlowSafeSubscriber onError`() {
         val source = FlowSafeSubject(PublishSubject.create<Int>())
         source.subscribe { throw IllegalStateException("123") } // will give a leaf FlowSafeSubscriber
         val sourceWrapper = FlowSafeSubscriber(Subscribers.from(source)) // will give an inner FlowSafeSubscriber
 
-        assertFailsWith<OnErrorNotImplementedException>("123") {
+        assertFailsWith<OnNextFailedException>("Observer.onNext failed, this is a non leaf FlowSafeSubscriber, therefore onError will be skipped") {
             // IllegalStateException will be wrapped and rethrown as a OnErrorNotImplementedException in leaf FlowSafeSubscriber,
             // will be caught by inner FlowSafeSubscriber and just be rethrown
             sourceWrapper.onNext(1)
