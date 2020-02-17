@@ -334,10 +334,14 @@ class ObservablesTests {
         assertEquals(2, heartBeatOnError)
     }
 
+    /**
+     * In this test FlowSafeSubscriber throws an OnNextFailedException which is a OnErrorNotImplementedException.
+     * Because its underlying subscriber is not an ActionSubscriber, it will not be considered as a leaf FlowSafeSubscriber.
+     */
     @Test
     fun `throwing FlowSafeSubscriber at onNext will wrap with a Rx OnErrorNotImplementedException`() {
         val flowSafeSubscriber = FlowSafeSubscriber<Int>(Subscribers.create { throw IllegalStateException() })
-        assertFailsWith<OnErrorNotImplementedException> {
+        assertFailsWith<OnErrorNotImplementedException> { // actually fails with an OnNextFailedException
             flowSafeSubscriber.onNext(1)
         }
     }
