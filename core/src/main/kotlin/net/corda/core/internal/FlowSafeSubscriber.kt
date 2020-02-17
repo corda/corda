@@ -10,16 +10,18 @@ import rx.internal.util.ActionSubscriber
 import rx.observers.SafeSubscriber
 import rx.plugins.RxJavaHooks
 import rx.plugins.RxJavaPlugins
+import rx.subjects.Subject
 
 /**
  * Extends [SafeSubscriber] to override [SafeSubscriber.onNext], [SafeSubscriber.onError] and [SafeSubscriber._onError].
  *
- * [FlowSafeSubscriber] will not set [SafeSubscriber.done] flag to true and will not call [SafeSubscriber.unsubscribe] upon
- * error inside [Observer.onNext]. This way, the underlying [Observer] will not get unsubscribed.
+ * [FlowSafeSubscriber] will not set [SafeSubscriber.done] flag to true nor will call [SafeSubscriber.unsubscribe] upon
+ * error inside [Observer.onNext]. This way, the [FlowSafeSubscriber] will not get unsubscribed and therefore the underlying [Observer]
+ * will not get removed.
  *
- * An [Observer] that does not unscubscribe due to errors in [onNext] events becomes useful when an unsubscribe could
- * lead to a malfunctioning CorDapp, due to a single isolated error. If the [Observer] was unsubscribed,
- * any events pushed on the base subject would no longer reach the subscriber that threw the error.
+ * An [Observer] that will not get removed due to errors in [onNext] events becomes useful when an unsubscribe could
+ * lead to a malfunctioning CorDapp, due to a single isolated error. If the [Observer] gets removed,
+ * it will no longer be available the next time any events are pushed from the base [Subject].
  */
 @VisibleForTesting
 class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual) {
