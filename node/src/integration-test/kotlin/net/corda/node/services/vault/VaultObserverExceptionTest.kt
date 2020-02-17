@@ -9,9 +9,9 @@ import com.r3.dbfailure.workflows.DbListenerService.MakeServiceThrowErrorFlow
 import com.r3.dbfailure.workflows.SendStateFlow
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
-import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
@@ -737,7 +737,7 @@ class VaultObserverExceptionTest {
     }
 
     @Test
-    fun `Subscribing to NodeVaultService rawUpdates from a flow is not allowed` () {
+    fun `Accessing NodeVaultService rawUpdates from a flow is not allowed` () {
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
             cordappsForAllNodes = listOf(
@@ -751,10 +751,9 @@ class VaultObserverExceptionTest {
 
             val flowHandle = aliceNode.rpc.startFlow(::SubscribingRawUpdatesFlow)
 
-            assertFailsWith<CordaRuntimeException>(
-                "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                        "- Rx.Observables should only be subscribed outside the context of a flow " +
-                        "- the subscription did not succeed "
+            assertFailsWith<FlowException>(
+                "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to access VaultService.rawUpdates " +
+                        "- Rx.Observables should only be accessed to outside the context of a flow "
             ) {
                 flowHandle.returnValue.getOrThrow(30.seconds)
             }
@@ -830,10 +829,11 @@ class VaultObserverExceptionTest {
     @StartableByRPC
     class SubscribingRawUpdatesFlow: FlowLogic<Unit>() {
         override fun call() {
-            val rawUpdates = serviceHub.vaultService.rawUpdates
-            logger.info("Accessing rawUpdates in a flow is fine! ")
+            logger.info("Accessing rawUpdates within a flow will throw! ")
+            val rawUpdates = serviceHub.vaultService.rawUpdates // throws
+            logger.info("Code flow should never reach this logging or the following segment! ")
             rawUpdates.subscribe {
-                println("However, adding a subscription will make the flow fail!")
+                println("Code flow should never get in here!")
             }
         }
     }

@@ -36,16 +36,3 @@ class FlowSafeSubject<T, R>(private val actual: Subject<T, R>) : Observer<T> by 
         return actual.hasObservers()
     }
 }
-
-/**
- * The [PreventSubscriptionsSubject] is used to prevent any subscriptions to its underlying [Subject].
- */
-class PreventSubscriptionsSubject<T, R>(private val actual: Subject<T, R>, errorAction: () -> Exception) : Observer<T> by actual,
-    Subject<T, R>(OnSubscribe<R> { _ ->
-        throw errorAction()
-    }) {
-
-    override fun hasObservers(): Boolean {
-        return actual.hasObservers()
-    }
-}

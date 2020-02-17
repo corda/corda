@@ -19,7 +19,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.internal.FlowSafeSubject
-import net.corda.node.internal.PreventSubscriptionsSubject
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
@@ -218,20 +217,16 @@ class NodeVaultService(
                 // because the Observer could reference flow's properties, essentially fiber's properties then,
                 // since it does not unsubscribe on flow's/ fiber's completion,
                 // it could prevent the flow/ fiber -object- get garbage collected.
-                return PreventSubscriptionsSubject(_rawUpdatesPublisher) {
-                    log.error(
-                        "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                                "- Rx.Observables should only be subscribed to outside the context of a flow " +
-                                "- the subscription did not succeed " +
-                                "- aborting the flow "
-                    )
+                log.error(
+                    "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
+                            "- Rx.Observables should only be accessed to outside the context of a flow " +
+                            "- aborting the flow "
+                )
 
-                    FlowException(
-                        "Flow ${it.logic::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
-                                "- Rx.Observables should only be subscribed to outside the context of a flow " +
-                                "- the subscription did not succeed "
-                    )
-                }
+                throw FlowException(
+                    "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
+                            "- Rx.Observables should only be accessed to outside the context of a flow "
+                )
             }
             // we are not inside a flow, we are most likely inside a CordaService;
             // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
