@@ -317,19 +317,21 @@ class ObservablesTests {
 
     @Test
     fun `throwing FlowSafeSubscriber as a leaf will call onError`() {
-        var heartBeat = 0
+        var heartBeatOnNext = 0
+        var heartBeatOnError = 0
         val source = FlowSafeSubject(PublishSubject.create<Int>())
         // add a leaf FlowSafeSubscriber
-        source.subscribe(/*onNext*/{
-            heartBeat++
+        source.subscribe({
+            heartBeatOnNext++
             throw IllegalStateException()
-        },/*onError*/{
-            heartBeat++
+        }, {
+            heartBeatOnError++
         })
 
         source.onNext(1)
         source.onNext(1)
-        assertEquals(4, heartBeat)
+        assertEquals(2, heartBeatOnNext)
+        assertEquals(2, heartBeatOnError)
     }
 
     @Test
