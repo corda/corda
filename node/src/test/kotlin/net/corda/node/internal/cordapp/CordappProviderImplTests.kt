@@ -6,6 +6,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.internal.ContractJarTestUtils
+import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
@@ -15,6 +17,7 @@ import org.junit.Test
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
+import java.nio.file.Files
 import java.util.jar.JarOutputStream
 import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
@@ -25,8 +28,6 @@ import kotlin.test.assertFailsWith
 class CordappProviderImplTests {
     private companion object {
         val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")
-        val contractsJAR: URL = this::class.java.getResource("/samplecontract.jar")
-        val contractsJARDuplicate: URL = this::class.java.getResource("/samplecontract-duplicate.jar")
         // TODO: Cordapp name should differ from the JAR name
         const val isolatedCordappName = "isolated"
         val emptyJAR: URL = this::class.java.getResource("empty.jar")
@@ -193,15 +194,23 @@ class CordappProviderImplTests {
 
     @Test(timeout=300_000)
     fun `test that we find an attachment for a cordapp contract class we when have two jars with same hash`() {
-        val provider = newCordappProvider(contractsJAR, contractsJARDuplicate)
-        val className = "com.template.contracts.TemplateContract"
-        val firstId = provider.getAppContext(provider.cordapps[0]).attachmentId
-        val secondId = provider.getAppContext(provider.cordapps[1]).attachmentId
-        val actual = provider.getContractAttachmentID(className)
 
-        assertNotNull(actual)
-        assertEquals(firstId, secondId)
-        assertEquals(actual!!, firstId)
+        SelfCleaningDir().use { file ->
+            val jarAndSigner = ContractJarTestUtils.makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val signedJarPath = jarAndSigner.first
+            val duplicateJarPath = signedJarPath.parent.resolve("duplicate-" + signedJarPath.fileName)
+
+            Files.copy(signedJarPath, duplicateJarPath)
+            val provider = newCordappProvider(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            val className = "com.example.MyContract"
+            val firstId = provider.getAppContext(provider.cordapps[0]).attachmentId
+            val secondId = provider.getAppContext(provider.cordapps[1]).attachmentId
+            val actual = provider.getContractAttachmentID(className)
+
+            assertNotNull(actual)
+            assertEquals(firstId, secondId)
+            assertEquals(actual!!, firstId)
+        }
     }
 
     private fun File.writeFixupRules(vararg lines: String): File {
