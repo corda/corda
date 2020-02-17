@@ -316,7 +316,7 @@ class ObservablesTests {
     }
 
     @Test
-    fun `throwing FlowSafeSubscriber as a leaf will call onError`() {
+    fun `throwing inside onNext of a FlowSafeSubscriber leaf subscriber will call onError`() {
         var heartBeatOnNext = 0
         var heartBeatOnError = 0
         val source = FlowSafeSubject(PublishSubject.create<Int>())
