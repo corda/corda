@@ -290,9 +290,10 @@ class ObservablesTests {
     }
 
     /**
-     * A FlowSafeSubscriber that is not a leaf in a Subscribers structure, if it throws at onNext,
-     * it will not call its onError, because in case it wraps a [PublishSubject] it will then call [PublishSubject.onError]
-     * which will shut down all of the Subscribers under it.
+     * A FlowSafeSubscriber that is NOT a leaf in a Subscribers structure, if it throws at onNext, it will not call its onError.
+     *
+     *  The reason why it should not call its onError is: if it wraps a [PublishSubject], calling [FlowSafeSubscriber.onError]
+     *  will then call [PublishSubject.onError] which will shut down all the Subscribers under the [PublishSubject].
      */
     @Test
     fun `FlowSafeSubject wrapped with a FlowSafeSubscriber will preserve the structure, if one of them is unsafe and it throws`() {
