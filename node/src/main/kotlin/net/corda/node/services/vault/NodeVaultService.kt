@@ -2,10 +2,10 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
@@ -223,7 +223,7 @@ class NodeVaultService(
                             "- aborting the flow "
                 )
 
-                throw FlowException(
+                throw CordaRuntimeException(
                     "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
                             "- Rx.Observables should only be accessed to outside the context of a flow "
                 )

@@ -9,9 +9,9 @@ import com.r3.dbfailure.workflows.DbListenerService.MakeServiceThrowErrorFlow
 import com.r3.dbfailure.workflows.SendStateFlow
 import com.r3.transactionfailure.workflows.ErrorHandling
 import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlow
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
@@ -751,7 +751,7 @@ class VaultObserverExceptionTest {
 
             val flowHandle = aliceNode.rpc.startFlow(::SubscribingRawUpdatesFlow)
 
-            assertFailsWith<FlowException>(
+            assertFailsWith<CordaRuntimeException>(
                 "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to access VaultService.rawUpdates " +
                         "- Rx.Observables should only be accessed to outside the context of a flow "
             ) {
