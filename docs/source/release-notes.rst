@@ -4,7 +4,7 @@ Release notes
 .. contents:: 
     :depth: 2
 
-Welcome to the Corda 4.4 release notes. Please read these carefully to understand what’s new in this release and how the features can help you. Just as prior releases have brought with them commitments to wire and API stability, Corda 4.4 comes with those same guarantees. States and apps valid in Corda 3.0 are transparently usable in Corda 4.4.
+Welcome to the Corda 4.4 release notes. Please read these carefully to understand what’s new in this release and how the features can help you. Just as prior releases have brought with them commitments to wire and API stability, Corda 4.4 comes with those same guarantees. States and apps valid in Corda 3.0 are usable in Corda 4.4.
 
 .. _release_notes_v4_4:
 
@@ -21,13 +21,13 @@ Changes for developers in Corda 4.4
 Flows API improvements
 +++++++++++++++++++++++
 
-Corda 4.4 introduces a new ``FlowLogic.await`` API that allows a CorDapp developers to suspend their flow when executing user-defined long-running operations (e.g. call-outs to external services, long-running DB operations). This prevents these long-running operations from blocking the flow thread, allowing other flows to progress in the interim. Previously, these operations had to be executed synchronously, blocking the flow thread.
+Corda 4.4 introduces a new ``FlowLogic.await`` API that allows a CorDapp developer to suspend their flow when executing user-defined long-running operations (e.g. call-outs to external services). This prevents these long-running operations from blocking the flow thread, allowing other flows to progress in the interim. Previously, these operations had to be executed synchronously, blocking the flow thread.
 
 The CorDapp developer can decide whether to run these asynchronous flow operations in a dedicated thread pool, or to handle the threading themselves directly.
 
 Note that as before, the flow framework suspends automatically for certain operations (e.g. when waiting to receive a message from a counterparty). These suspensions do not have to be triggered explicitly.
 
-The node operator can configure the number of threads to dedicate to external operations.
+The node operator can configure the number of threads in the threadpool to dedicate to external operations.
 
 Corda 4.4 also introduces a new ``HospitalizeFlowException`` exception type that, when thrown, causes a flow to halt execution and send itself to the flow hospital for observation. The flow will automatically be retried on the next node start.
 
@@ -507,7 +507,7 @@ Corda 4
 Welcome to the Corda 4 release notes. Please read these carefully to understand what's new in this
 release and how the changes can help you. Just as prior releases have brought with them commitments
 to wire and API stability, Corda 4 comes with those same guarantees. States and apps valid in
-Corda 3 are transparently usable in Corda 4.
+Corda 3 are usable in Corda 4.
 
 For app developers, we strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade
 procedure, along with how you can adjust your app to opt-in to new features making your app more secure and
