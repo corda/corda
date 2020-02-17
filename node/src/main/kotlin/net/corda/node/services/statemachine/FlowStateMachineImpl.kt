@@ -108,8 +108,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     override val logger = log
     override val resultFuture: CordaFuture<R> get() = uncheckedCast(getTransientField(TransientValues::resultFuture))
-    override val context: InvocationContext get() = transientState!!.value.checkpoint.invocationContext
-    override val ourIdentity: Party get() = transientState!!.value.checkpoint.ourIdentity
+    override val context: InvocationContext get() = transientState!!.value.checkpoint.checkpointState.invocationContext
+    override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     internal var hasSoftLockedStates: Boolean = false
         set(value) {
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
@@ -349,7 +349,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun checkpointIfSubflowIdempotent(subFlow: Class<FlowLogic<*>>) {
-        val currentFlow = snapshot().checkpoint.subFlowStack.last().flowClass
+        val currentFlow = snapshot().checkpoint.checkpointState.subFlowStack.last().flowClass
         if (!currentFlow.isIdempotentFlow() && subFlow.isIdempotentFlow()) {
             suspend(FlowIORequest.ForceCheckpoint, false)
         }
@@ -453,7 +453,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun containsIdempotentFlows(): Boolean {
-        val subFlowStack = snapshot().checkpoint.subFlowStack
+        val subFlowStack = snapshot().checkpoint.checkpointState.subFlowStack
         return subFlowStack.any { IdempotentFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 

@@ -853,9 +853,9 @@ class SingleThreadedStateMachineManager(
     private fun getFlowSessionIds(checkpoint: Checkpoint): Set<SessionId> {
         val initiatedFlowStart = (checkpoint.flowState as? FlowState.Unstarted)?.flowStart as? FlowStart.Initiated
         return if (initiatedFlowStart == null) {
-            checkpoint.sessions.keys
+            checkpoint.checkpointState.sessions.keys
         } else {
-            checkpoint.sessions.keys + initiatedFlowStart.initiatedSessionId
+            checkpoint.checkpointState.sessions.keys + initiatedFlowStart.initiatedSessionId
         }
     }
 
@@ -901,7 +901,7 @@ class SingleThreadedStateMachineManager(
         // final sanity checks
         require(lastState.pendingDeduplicationHandlers.isEmpty()) { "Flow cannot be removed until all pending deduplications have completed" }
         require(lastState.isRemoved) { "Flow must be in removable state before removal" }
-        require(lastState.checkpoint.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
+        require(lastState.checkpoint.checkpointState.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE

@@ -40,10 +40,13 @@ class ErrorFlowTransition(
         return builder {
             // If we're errored and propagating do the actual propagation and update the index.
             if (remainingErrorsToPropagate.isNotEmpty() && errorState.propagating) {
-                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(startingState.checkpoint.sessions, errorMessages)
+                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(
+                        startingState.checkpoint.checkpointState.sessions,
+                        errorMessages
+                )
                 val newCheckpoint = startingState.checkpoint.copy(
                         errorState = errorState.copy(propagatedIndex = allErrors.size),
-                        sessions = newSessions
+                        checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
                 actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
@@ -65,7 +68,7 @@ class ErrorFlowTransition(
                         Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
+                        Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
                 ))
 
                 currentState = currentState.copy(

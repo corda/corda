@@ -211,7 +211,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             // Poke into Quasar's stack and find the object references to the sub-flows so that we can correctly get the current progress
             // step for each sub-call.
             val stackObjects = fiber.getQuasarStack()
-            subFlowStack.map { it.toJson(stackObjects) }
+            checkpointState.subFlowStack.map { it.toJson(stackObjects) }
         } else {
             emptyList()
         }
@@ -226,9 +226,9 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                         timestamp,
                         now
                 ),
-                origin = invocationContext.origin.toOrigin(),
-                ourIdentity = ourIdentity,
-                activeSessions = sessions.mapNotNull { it.value.toActiveSession(it.key) },
+                origin = checkpointState.invocationContext.origin.toOrigin(),
+                ourIdentity = checkpointState.ourIdentity,
+                activeSessions = checkpointState.sessions.mapNotNull { it.value.toActiveSession(it.key) },
                 errored = errorState as? ErrorState.Errored
         )
     }
