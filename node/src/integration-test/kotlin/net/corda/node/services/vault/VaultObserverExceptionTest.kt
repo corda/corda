@@ -749,10 +749,10 @@ class VaultObserverExceptionTest {
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            val flowHandle = aliceNode.rpc.startFlow(ErrorHandling::SubscribingRawUpdatesFlow)
+            val flowHandle = aliceNode.rpc.startFlow(::SubscribingRawUpdatesFlow)
 
             assertFailsWith<CordaRuntimeException>(
-                "Flow ${ErrorHandling.SubscribingRawUpdatesFlow::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
+                "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to subscribe an Rx.Observer to VaultService.rawUpdates " +
                         "- Rx.Observables should only be subscribed outside the context of a flow " +
                         "- the subscription did not succeed "
             ) {
@@ -827,4 +827,14 @@ class VaultObserverExceptionTest {
         return getStatesById(null, status)
     }
 
+    @StartableByRPC
+    class SubscribingRawUpdatesFlow: FlowLogic<Unit>() {
+        override fun call() {
+            val rawUpdates = serviceHub.vaultService.rawUpdates
+            logger.info("Accessing rawUpdates in a flow is fine! ")
+            rawUpdates.subscribe {
+                println("However, adding a subscription will make the flow fail!")
+            }
+        }
+    }
 }

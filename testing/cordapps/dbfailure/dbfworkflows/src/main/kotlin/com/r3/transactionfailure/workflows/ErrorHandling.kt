@@ -51,16 +51,4 @@ object ErrorHandling {
             hookAfterSecondCheckpoint.invoke() // should be never executed
         }
     }
-
-    @StartableByRPC
-    class SubscribingRawUpdatesFlow: FlowLogic<Unit>() {
-        override fun call() {
-            val rawUpdates = serviceHub.vaultService.rawUpdates
-            logger.info("Accessing rawUpdates in a flow is fine! ")
-            rawUpdates.subscribe {
-                println("However, adding a subscription will make the flow fail!")
-            }
-        }
-    }
-
 }
