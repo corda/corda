@@ -280,7 +280,7 @@ class ObservablesTests {
             }
         })
         source.subscribe { heartBeat += it }
-        // wrap FlowSafeSubject with a FlowSafeSubscriber
+        // wrapping FlowSafeSubject with a SafeSubscriber
         val sourceWrapper = SafeSubscriber(Subscribers.from(source))
         assertFailsWith<OnErrorFailedException> {
             sourceWrapper.onNext(1)
