@@ -9,8 +9,8 @@ import rx.subjects.Subject
 
 /**
  * [FlowSafeSubject] is used to unwrap an [Observer] from a [SafeSubscriber], re-wrap it with a [FlowSafeSubscriber]
- * and then subscribe it to its underlying [Subject]. It is only used to provide therefore, its underlying [Subject] with
- * non unsubscribing [rx.Observer]s.
+ * and then subscribe it to its underlying [Subject]. It is only used therefore, to provide its underlying [Subject] with
+ * subscribing of non unsubscribing [rx.Observer]s.
  *
  * Upon [rx.Observable.subscribe] it will wrap everything that is a non [SafeSubscriber] with a [FlowSafeSubscriber] the same way
  * [rx.subjects.PublishSubject] wraps everything that is a non [SafeSubscriber] with a [SafeSubscriber].
