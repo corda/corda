@@ -1,12 +1,17 @@
+import net.corda.gradle.jarfilter.JarFilterTask
+import net.corda.gradle.jarfilter.MetaFixerTask
+import proguard.gradle.ProGuardTask
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
-description 'Corda serialization (deterministic)'
+plugins {
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+    id 'java-library'
+    id 'idea'
+}
+apply from: "${rootProject.projectDir}/deterministic.gradle"
 
-apply from: '../deterministic.gradle'
-apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'java-library'
-apply plugin: 'idea'
+description 'Corda serialization (deterministic)'
 
 evaluationDependsOn(":serialization")
 
@@ -37,7 +42,7 @@ dependencies {
     implementation "com.google.guava:guava:$guava_version"
 }
 
-jar {
+tasks.getByName('jar') {
     archiveBaseName = 'DOES-NOT-EXIST'
     // Don't build a jar here because it would be the wrong one.
     // The jar we really want will be built by the metafix task.
@@ -47,7 +52,8 @@ jar {
 def serializationJarTask = tasks.getByPath(':serialization:jar')
 def originalJar = serializationJarTask.outputs.files.singleFile
 
-task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
+def patchSerialization = tasks.register('patchSerialization', Zip) {
+    dependsOn serializationJarTask
     destinationDirectory = file("$buildDir/source-libs")
     metadataCharset 'UTF-8'
     archiveClassifier = 'transient'
@@ -69,8 +75,8 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
     includeEmptyDirs = false
 }
 
-import proguard.gradle.ProGuardTask
-task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic').assemble) {
+def predeterminise = tasks.register('predeterminise', ProGuardTask) {
+    dependsOn project(':core-deterministic').assemble
     injars patchSerialization
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
@@ -100,8 +106,7 @@ task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic'
     keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
 }
 
-import net.corda.gradle.jarfilter.JarFilterTask
-task jarFilter(type: JarFilterTask) {
+def jarFilter = tasks.register('jarFilter', JarFilterTask) {
     jars predeterminise
     annotations {
         forDelete = [
@@ -148,7 +153,6 @@ task determinise(type: ProGuardTask) {
     keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
 }
 
-import net.corda.gradle.jarfilter.MetaFixerTask
 task metafix(type: MetaFixerTask) {
     outputDir file("$buildDir/libs")
     jars determinise
@@ -158,7 +162,8 @@ task metafix(type: MetaFixerTask) {
     preserveTimestamps = false
 }
 
-task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
+def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask) {
+    dependsOn jdkTask
     injars metafix
 
     libraryjars deterministic_rt_jar
