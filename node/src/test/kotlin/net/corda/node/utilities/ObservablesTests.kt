@@ -347,7 +347,7 @@ class ObservablesTests {
     }
 
     @Test
-    fun `throwing FlowSafeSubscriber at onError will wrap with a Rx OnErrorFailedException`() {
+    fun `throwing inside FlowSafeSubscriber onError will wrap with a Rx OnErrorFailedException`() {
         val flowSafeSubscriber = FlowSafeSubscriber<Int>(
             ActionSubscriber(
                 { throw IllegalStateException() },
