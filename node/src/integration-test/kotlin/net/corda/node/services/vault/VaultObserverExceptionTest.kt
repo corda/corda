@@ -12,6 +12,8 @@ import com.r3.transactionfailure.workflows.ErrorHandling.CheckpointAfterErrorFlo
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
@@ -794,7 +796,22 @@ class VaultObserverExceptionTest {
     }
 
     private fun NodeHandle.getNotarisedTransactionIds(): List<String> {
-        return rpc.startFlowDynamic(SendStateFlow.NotarisedTxs::class.java).returnValue.getOrThrow()
+
+        @StartableByRPC
+        class NotarisedTxs : FlowLogic<List<String>>() {
+            override fun call(): List<String> {
+                val session = serviceHub.jdbcSession()
+                val statement = session.createStatement()
+                statement.execute("SELECT TRANSACTION_ID FROM NODE_NOTARY_COMMITTED_TXS;")
+                val result = mutableListOf<String>()
+                while (statement.resultSet.next()) {
+                    result.add(statement.resultSet.getString(1))
+                }
+                return result
+            }
+        }
+
+        return rpc.startFlowDynamic(NotarisedTxs::class.java).returnValue.getOrThrow()
     }
 
     private fun NodeHandle.getStatesById(id: UniqueIdentifier?, status: Vault.StateStatus): List<StateAndRef<DbFailureContract.TestState>> {
@@ -809,4 +826,5 @@ class VaultObserverExceptionTest {
     private fun NodeHandle.getAllStates(status: Vault.StateStatus): List<StateAndRef<DbFailureContract.TestState>> {
         return getStatesById(null, status)
     }
+
 }

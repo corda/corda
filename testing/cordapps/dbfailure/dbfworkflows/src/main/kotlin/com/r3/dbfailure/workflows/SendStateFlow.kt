@@ -85,17 +85,4 @@ object SendStateFlow {
         }
     }
 
-    @StartableByRPC
-    class NotarisedTxs : FlowLogic<List<String>>() {
-        override fun call(): List<String> {
-            val session = serviceHub.jdbcSession()
-            val statement = session.createStatement()
-            statement.execute("SELECT TRANSACTION_ID FROM NODE_NOTARY_COMMITTED_TXS;")
-            val result = mutableListOf<String>()
-            while (statement.resultSet.next()) {
-                result.add(statement.resultSet.getString(1))
-            }
-            return result
-        }
-    }
 }
