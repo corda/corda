@@ -225,18 +225,19 @@ class ObservablesTests {
 
     @Test
     fun `FlowSafeSubject subscribes by default FlowSafeSubscribers, wrapped Observers will survive errors from onNext`() {
-        var heartBeat = 0
+        var heartBeat1 = 0
+        var heartBeat2 = 0
         val source = FlowSafeSubject(PublishSubject.create<Int>())
         source.subscribe { runNo ->
             // subscribes with a FlowSafeSubscriber
-            heartBeat++
+            heartBeat1++
             if (runNo == 1) {
                 throw IllegalStateException()
             }
         }
         source.subscribe { runNo ->
             // subscribes with a FlowSafeSubscriber
-            heartBeat++
+            heartBeat2++
             if (runNo == 2) {
                 throw IllegalStateException()
             }
@@ -249,7 +250,8 @@ class ObservablesTests {
             source.onNext(2) // first observer will run, second observer will run and throw
         }
         source.onNext(3) // both observers will run
-        assertEquals(5, heartBeat)
+        assertEquals(3, heartBeat1)
+        assertEquals(2, heartBeat2)
     }
 
     @Test
