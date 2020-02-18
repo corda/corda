@@ -225,7 +225,7 @@ class ObservablesTests {
         assertEquals(2, count)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `FlowSafeSubject subscribes by default FlowSafeSubscribers, wrapped Observers will survive errors from onNext`() {
         var heartBeat1 = 0
         var heartBeat2 = 0
@@ -257,7 +257,7 @@ class ObservablesTests {
         assertEquals(2, heartBeat2)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `FlowSafeSubject unsubscribes FlowSafeSubscribers only upon explicitly calling onError`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
@@ -272,7 +272,7 @@ class ObservablesTests {
         assertEquals(2, heartBeat)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `FlowSafeSubject wrapped with a SafeSubscriber shuts down the whole structure, if one of them is unsafe and it throws`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
@@ -299,7 +299,7 @@ class ObservablesTests {
      * The reason why it should not call its onError is: if it wraps a [PublishSubject], calling [FlowSafeSubscriber.onError]
      * will then call [PublishSubject.onError] which will shut down all the subscribers under the [PublishSubject].
      */
-    @Test
+    @Test(timeout=300_000)
     fun `FlowSafeSubject wrapped with a FlowSafeSubscriber will preserve the structure, if one of them is unsafe and it throws`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
@@ -319,7 +319,7 @@ class ObservablesTests {
         assertEquals(3, heartBeat)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `throwing inside onNext of a FlowSafeSubscriber leaf subscriber will call onError`() {
         var heartBeatOnNext = 0
         var heartBeatOnError = 0
@@ -342,7 +342,7 @@ class ObservablesTests {
      * In this test FlowSafeSubscriber throws an OnNextFailedException which is a OnErrorNotImplementedException.
      * Because its underlying subscriber is not an ActionSubscriber, it will not be considered as a leaf FlowSafeSubscriber.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `throwing FlowSafeSubscriber at onNext will wrap with a Rx OnErrorNotImplementedException`() {
         val flowSafeSubscriber = FlowSafeSubscriber<Int>(Subscribers.create { throw IllegalStateException() })
         assertFailsWith<OnErrorNotImplementedException> { // actually fails with an OnNextFailedException
@@ -350,7 +350,7 @@ class ObservablesTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `throwing inside FlowSafeSubscriber onError will wrap with a Rx OnErrorFailedException`() {
         val flowSafeSubscriber = FlowSafeSubscriber<Int>(
             ActionSubscriber(
@@ -372,7 +372,7 @@ class ObservablesTests {
      * it will throw a OnErrorNotImplementedException. Then it will be propagated back until FlowSafeSubscriber_X.
      * FlowSafeSubscriber_X will identify it is a not leaf subscriber and therefore will rethrow it as OnNextFailedException.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `propagated Rx exception will be rethrown at FlowSafeSubscriber onError`() {
         val source = PublishSubject.create<Int>()
         source.flowSafeSubscribe().subscribe { throw IllegalStateException("123") } // will give a leaf FlowSafeSubscriber
@@ -385,7 +385,7 @@ class ObservablesTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `test flowSafeSubscribe strictMode = true replaces SafeSubscriber subclass`() {
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(
@@ -402,7 +402,7 @@ class ObservablesTests {
         assertEquals(2, heartBeat)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `test flowSafeSubscribe strictMode = false will not replace SafeSubscriber subclass`() {
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(

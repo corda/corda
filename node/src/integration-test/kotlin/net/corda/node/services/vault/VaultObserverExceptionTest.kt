@@ -106,7 +106,7 @@ class VaultObserverExceptionTest {
      * Causing an SqlException via a syntax error in a vault observer causes the flow to hit the
      * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation - Unsafe subscribe
      */
-    @Test
+    @Test(timeout=300_000)
     fun unhandledSqlExceptionFromVaultObserverGetsHospitalised_UnsafeSubscription() {
         DbListenerService.safeSubscription = false
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
@@ -428,7 +428,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer - onNext check`() {
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
@@ -510,7 +510,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer - onNext and onError check`() {
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
@@ -594,7 +594,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the observer to ensure that the observer is still subscribed.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during counterparty FinalityFlow blows up the flow but does not break the Observer`() {
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
@@ -669,7 +669,7 @@ class VaultObserverExceptionTest {
      *
      * This test causes 2 failures inside of the [rx.Observer] to ensure that the Observer is still subscribed.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `Throw user error in VaultService rawUpdates during FinalityFlow blows up the flow but does not break the Observer`() {
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
@@ -736,7 +736,7 @@ class VaultObserverExceptionTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `Accessing NodeVaultService rawUpdates from a flow is not allowed` () {
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
@@ -760,7 +760,7 @@ class VaultObserverExceptionTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `Failing Observer wrapped with FlowSafeSubscriber will survive and be re-called upon flow retry`() {
         var onNextCount = 0
         var onErrorCount = 0
