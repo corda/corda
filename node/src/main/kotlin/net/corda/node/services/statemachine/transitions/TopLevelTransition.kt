@@ -113,7 +113,7 @@ class TopLevelTransition(
                 is Try.Success -> {
                     val containsTimedSubflow = containsTimedFlows(currentState.checkpoint.checkpointState.subFlowStack)
                     currentState = currentState.copy(
-                            checkpoint = currentState.checkpoint.copyCheckPointAppendSubflow(subFlow.value)
+                            checkpoint = currentState.checkpoint.copyAppendSubflow(subFlow.value)
                     )
                     // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
                     // been scheduled already.
@@ -138,7 +138,7 @@ class TopLevelTransition(
                 val isLastSubFlowTimed = checkpoint.checkpointState.subFlowStack.last().isEnabledTimedFlow
                 val newSubFlowStack = checkpoint.checkpointState.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.copyCheckPointUpdateSubflow(newSubFlowStack)
+                        checkpoint = checkpoint.copyUpdateSubflow(newSubFlowStack)
                 )
                 if (isLastSubFlowTimed && !containsTimedFlows(currentState.checkpoint.checkpointState.subFlowStack)) {
                     actions.add(Action.CancelFlowTimeout(currentState.flowLogic.runId))
@@ -252,7 +252,7 @@ class TopLevelTransition(
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
             val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
-            currentState = currentState.copy(checkpoint = checkpoint.copyCheckPointUpdateSession(newSessions))
+            currentState = currentState.copy(checkpoint = checkpoint.copyUpdateSession(newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)
         }

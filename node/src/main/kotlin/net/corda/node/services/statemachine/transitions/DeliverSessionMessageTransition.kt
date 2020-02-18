@@ -80,7 +80,7 @@ class DeliverSessionMessageTransition(
                         errors = emptyList(),
                         deduplicationSeed = sessionState.deduplicationSeed
                 )
-                val newCheckpoint = currentState.checkpoint.copyCheckPointAppendSession(
+                val newCheckpoint = currentState.checkpoint.copyAppendSession(
                         event.sessionMessage.recipientSessionId to initiatedSession
                 )
                 // Send messages that were buffered pending confirmation of session.
@@ -105,7 +105,7 @@ class DeliverSessionMessageTransition(
                 )
 
                 currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.copyCheckPointAppendSession(
+                        checkpoint = currentState.checkpoint.copyAppendSession(
                                 event.sessionMessage.recipientSessionId to newSessionState
                         )
                 )
@@ -138,7 +138,7 @@ class DeliverSessionMessageTransition(
                 val flowError = FlowError(payload.errorId, exception)
                 val newSessionState = sessionState.copy(errors = sessionState.errors + flowError)
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.copyCheckPointAppendSession(sessionId to newSessionState)
+                        checkpoint = checkpoint.copyAppendSession(sessionId to newSessionState)
                 )
             }
             else -> freshErrorTransition(UnexpectedEventInState())
@@ -157,7 +157,7 @@ class DeliverSessionMessageTransition(
                     val sessionId = event.sessionMessage.recipientSessionId
                     val flowError = FlowError(payload.errorId, exception)
                     currentState = currentState.copy(
-                            checkpoint = checkpoint.copyCheckPointAppendSession(sessionId to sessionState.copy(rejectionError = flowError))
+                            checkpoint = checkpoint.copyAppendSession(sessionId to sessionState.copy(rejectionError = flowError))
                     )
                 }
             }
@@ -176,7 +176,7 @@ class DeliverSessionMessageTransition(
             is SessionState.Initiated -> {
                 val newSessionState = sessionState.copy(initiatedState = InitiatedSessionState.Ended)
                 currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.copyCheckPointAppendSession(sessionId to newSessionState)
+                        checkpoint = currentState.checkpoint.copyAppendSession(sessionId to newSessionState)
 
                 )
             }

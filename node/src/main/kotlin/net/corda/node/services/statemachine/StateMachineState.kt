@@ -46,13 +46,9 @@ data class StateMachineState(
 )
 
 /**
- * @param invocationContext the initiator of the flow.
- * @param ourIdentity the identity the flow is run as.
- * @param sessions map of source session ID to session state.
- * @param subFlowStack the stack of currently executing subflows.
+ * @param checkpointState the state of the checkpoint
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
- * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 data class Checkpoint(
         val checkpointState: CheckpointState,
@@ -84,25 +80,45 @@ data class Checkpoint(
         }
     }
 
-    fun copyCheckPointUpdateSession(sessions: SessionMap) : Checkpoint {
-        return copy(checkpointState = this.checkpointState.copy(sessions = sessions))
+    /**
+     * Returns a copy of the Checkpoint with a new session map.
+     * @param sessions the new map of session ID to session state.
+     */
+    fun copyUpdateSession(sessions: SessionMap) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = sessions))
     }
 
-    fun copyCheckPointAppendSession(session: Pair<SessionId, SessionState>) : Checkpoint {
-        return copy(checkpointState = this.checkpointState.copy(sessions = this.checkpointState.sessions + session))
+    /**
+     * Returns a copy of the Checkpoint with an extra session added to the session map.
+     * @param session the extra session to add.
+     */
+    fun copyAppendSession(session: Pair<SessionId, SessionState>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
     }
 
-    fun copyCheckPointUpdateSubflow(subFlows: List<SubFlow>) : Checkpoint {
-        return copy(checkpointState = this.checkpointState.copy(subFlowStack = subFlows))
+    /**
+     * Returns a copy of the Checkpoint with a new subFlow stack.
+     * @param subFlows the new List of subFlows.
+     */
+    fun copyUpdateSubflow(subFlows: List<SubFlow>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = subFlows))
     }
 
-    fun copyCheckPointAppendSubflow(subFlow: SubFlow) : Checkpoint {
-        return copy(checkpointState = this.checkpointState.copy(subFlowStack = this.checkpointState.subFlowStack + subFlow))
+    /**
+     * Returns a copy of the Checkpoint with an extra subflow added to the subFlow Stack.
+     * @param subFlow the subFlow to add to the stack of subFlows
+     */
+    fun copyAppendSubflow(subFlow: SubFlow) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
     }
 }
 
 /**
- *
+ * @param invocationContext the initiator of the flow.
+ * @param ourIdentity the identity the flow is run as.
+ * @param sessions map of source session ID to session state.
+ * @param subFlowStack the stack of currently executing subflows.
+ * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 data class CheckpointState(
         val invocationContext: InvocationContext,
