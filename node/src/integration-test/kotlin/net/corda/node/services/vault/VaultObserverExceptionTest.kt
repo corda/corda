@@ -107,7 +107,7 @@ class VaultObserverExceptionTest {
      * DatabsaseEndocrinologist in the FlowHospital and being kept for overnight observation - Unsafe subscribe
      */
     @Test(timeout=300_000)
-    fun unhandledSqlExceptionFromVaultObserverGetsHospitalised_UnsafeSubscription() {
+    fun unhandledSqlExceptionFromVaultObserverGetsHospitalisedUnsafeSubscription() {
         DbListenerService.safeSubscription = false
         val testControlFuture = openFuture<Boolean>().toCompletableFuture()
 
