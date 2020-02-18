@@ -32,6 +32,7 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
      * It only delegates to [SafeSubscriber.onError] if it wraps an [ActionSubscriber] which is
      * a leaf in an Subscribers' tree structure.
      */
+    @Suppress("TooGenericExceptionCaught")
     override fun onNext(t: T) {
         try {
             actual.onNext(t)
@@ -60,6 +61,7 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
     /**
      * Duplicate of [SafeSubscriber._onError]. However, it will not call [Subscriber.unsubscribe].
      */
+    @Suppress("TooGenericExceptionCaught")
     override fun _onError(e: Throwable) {
         RxJavaPlugins.getInstance().errorHandler.handleError(e)
         try {
