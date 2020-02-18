@@ -1,17 +1,19 @@
-apply plugin: 'kotlin'
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
 
 configurations {
     testData
 }
 
 dependencies {
-    testCompile project(':core')
-    testCompile project(':finance:workflows')
-    testCompile project(':node-driver')
-    testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
+    testImplementation project(':core')
+    testImplementation project(':finance:workflows')
+    testImplementation project(':node-driver')
+    testImplementation project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 
-    testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testCompile "org.jetbrains.kotlin:kotlin-reflect"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect"
 
     testImplementation "junit:junit:$junit_version"
 
@@ -19,7 +21,9 @@ dependencies {
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junit_platform_version}"
 }
 
-jar.enabled = false
+tasks.getByName('jar') {
+    enabled = false
+}
 
 test {
     ext {
