@@ -34,14 +34,15 @@ Corda 4.4 also introduces a new ``HospitalizeFlowException`` exception type that
 This exception gives user code a way to retry a flow from its last checkpoint if a known intermittent failure occurred.
 
 
-Diagnostic API
+New utility APIs
 +++++++++++++++++++++++
 
-Corda 4.4 introduces a ``ServiceHub`` call available to CorDapp developers that allows them to access:
+Corda 4.4 introduces a new call (``ServiceHub.DiagnosticsService``) available to CorDapp developers that allows them to access:
 
 * The edition of Corda being run (e.g. Open Source, Enterprise)
 * The version of Corda being run including the patch number (eg. 3.2.20190215)
 
+Corda 4.4 also provides a callback (``AppServiceHub.register``) to allow Corda services to register custom actions to be performed once the node is fully started-up. This pattern prevents issues caused by the service trying to immediately access a part of the node that hadn't yet been initialised .
 
 Security enhancements
 +++++++++++++++++++++++
@@ -57,10 +58,6 @@ Platform version change
 Given the addition of new APIs, the platform version of Corda 4.4 has been bumped up from 5 to 6. This is to prevent CorDapps that use it being deployed onto nodes unable to host them. Note that the minimum platform version has not been changed - this means that older Corda nodes can still interoperate with Corda 4.4 nodes. Since the APIs added do not affect the wire protocol or have other zone-level implications, applications can take advantage of these new platform version 6 features even if the Corda 4.4 node is running on a network whose minimum platform version is 4.
 
 For more information on platform version, please see :doc:`versioning`. For more details on upgrading a CorDapp to use platform version 5, please see :doc:`app-upgrade-notes`.
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Issues Fixed
