@@ -14,6 +14,7 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
 import net.corda.core.node.services.vault.*
+import net.corda.core.observable.flowSafeSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*

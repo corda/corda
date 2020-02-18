@@ -3,9 +3,9 @@ package net.corda.node.utilities
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
-import net.corda.core.internal.FlowSafeSubscriber
-import net.corda.core.internal.OnNextFailedException
-import net.corda.core.internal.flowSafeSubscribe
+import net.corda.core.observable.internal.FlowSafeSubscriber
+import net.corda.core.observable.internal.OnNextFailedException
+import net.corda.core.observable.flowSafeSubscribe
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
