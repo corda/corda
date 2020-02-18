@@ -46,22 +46,15 @@ data class StateMachineState(
 )
 
 /**
- * @param invocationContext the initiator of the flow.
- * @param ourIdentity the identity the flow is run as.
- * @param sessions map of source session ID to session state.
- * @param subFlowStack the stack of currently executing subflows.
+ * @param checkpointState the state of the checkpoint
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
- * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 data class Checkpoint(
-        val invocationContext: InvocationContext,
-        val ourIdentity: Party,
-        val sessions: SessionMap, // This must preserve the insertion order!
-        val subFlowStack: List<SubFlow>,
+        val checkpointState: CheckpointState,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val numberOfSuspends: Int
+        val result: Any? = null
 ) {
 
     val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
@@ -79,18 +72,61 @@ data class Checkpoint(
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
-                        invocationContext = invocationContext,
-                        ourIdentity = ourIdentity,
-                        sessions = emptyMap(),
-                        subFlowStack = listOf(topLevelSubFlow),
+                        checkpointState = CheckpointState(invocationContext, ourIdentity, emptyMap(), listOf(topLevelSubFlow), numberOfSuspends = 0),
                         flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
-                        errorState = ErrorState.Clean,
-                        numberOfSuspends = 0
+                        errorState = ErrorState.Clean
                 )
             }
         }
     }
+
+    /**
+     * Returns a copy of the Checkpoint with a new session map.
+     * @param sessions the new map of session ID to session state.
+     */
+    fun setSessions(sessions: SessionMap) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = sessions))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with an extra session added to the session map.
+     * @param session the extra session to add.
+     */
+    fun addSession(session: Pair<SessionId, SessionState>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with a new subFlow stack.
+     * @param subFlows the new List of subFlows.
+     */
+    fun setSubflows(subFlows: List<SubFlow>) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = subFlows))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with an extra subflow added to the subFlow Stack.
+     * @param subFlow the subFlow to add to the stack of subFlows
+     */
+    fun addSubflow(subFlow: SubFlow) : Checkpoint {
+        return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
+    }
 }
+
+/**
+ * @param invocationContext the initiator of the flow.
+ * @param ourIdentity the identity the flow is run as.
+ * @param sessions map of source session ID to session state.
+ * @param subFlowStack the stack of currently executing subflows.
+ * @param numberOfSuspends the number of flow suspends due to IO API calls.
+ */
+data class CheckpointState(
+        val invocationContext: InvocationContext,
+        val ourIdentity: Party,
+        val sessions: SessionMap, // This must preserve the insertion order!
+        val subFlowStack: List<SubFlow>,
+        val numberOfSuspends: Int
+)
 
 /**
  * The state of a session.

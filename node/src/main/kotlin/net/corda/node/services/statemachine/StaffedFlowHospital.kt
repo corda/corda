@@ -232,7 +232,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 }
             }
 
-            val record = MedicalRecord.Flow(time, flowFiber.id, currentState.checkpoint.numberOfSuspends, errors, report.by, outcome)
+            val numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends
+            val record = MedicalRecord.Flow(time, flowFiber.id, numberOfSuspends, errors, report.by, outcome)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
@@ -314,7 +315,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
             return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 

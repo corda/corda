@@ -46,7 +46,7 @@ class StartedFlowTransition(
 
     private fun waitForSessionConfirmationsTransition(): TransitionResult {
         return builder {
-            if (currentState.checkpoint.sessions.values.any { it is SessionState.Initiating }) {
+            if (currentState.checkpoint.checkpointState.sessions.values.any { it is SessionState.Initiating }) {
                 FlowContinuation.ProcessEvents
             } else {
                 resumeFlowLogic(Unit)
@@ -76,7 +76,7 @@ class StartedFlowTransition(
         val checkpoint = currentState.checkpoint
         val resultMap = LinkedHashMap<FlowSession, FlowInfo>()
         for ((sessionId, session) in sessionIdToSession) {
-            val sessionState = checkpoint.sessions[sessionId]
+            val sessionState = checkpoint.checkpointState.sessions[sessionId]
             if (sessionState is SessionState.Initiated) {
                 resultMap[session] = sessionState.peerFlowInfo
             } else {
@@ -159,14 +159,14 @@ class StartedFlowTransition(
             sourceSessionIdToSessionMap: Map<SessionId, FlowSessionImpl>
     ): Map<FlowSession, SerializedBytes<Any>>? {
         val checkpoint = currentState.checkpoint
-        val pollResult = pollSessionMessages(checkpoint.sessions, sourceSessionIdToSessionMap.keys) ?: return null
+        val pollResult = pollSessionMessages(checkpoint.checkpointState.sessions, sourceSessionIdToSessionMap.keys) ?: return null
         val resultMap = LinkedHashMap<FlowSession, SerializedBytes<Any>>()
         for ((sessionId, message) in pollResult.messages) {
             val session = sourceSessionIdToSessionMap[sessionId]!!
             resultMap[session] = message
         }
         currentState = currentState.copy(
-                checkpoint = checkpoint.copy(sessions = pollResult.newSessionMap)
+                checkpoint = checkpoint.setSessions(sessions = pollResult.newSessionMap)
         )
         return resultMap
     }
@@ -205,10 +205,10 @@ class StartedFlowTransition(
 
     private fun TransitionBuilder.sendInitialSessionMessagesIfNeeded(sourceSessions: Set<SessionId>) {
         val checkpoint = startingState.checkpoint
-        val newSessions = LinkedHashMap<SessionId, SessionState>(checkpoint.sessions)
+        val newSessions = LinkedHashMap<SessionId, SessionState>(checkpoint.checkpointState.sessions)
         var index = 0
         for (sourceSessionId in sourceSessions) {
-            val sessionState = checkpoint.sessions[sourceSessionId]
+            val sessionState = checkpoint.checkpointState.sessions[sourceSessionId]
             if (sessionState == null) {
                 return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             }
@@ -225,7 +225,7 @@ class StartedFlowTransition(
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
-        currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
+        currentState = currentState.copy(checkpoint = checkpoint.setSessions(sessions = newSessions))
     }
 
     private fun sendTransition(flowIORequest: FlowIORequest.Send): TransitionResult {
@@ -244,10 +244,10 @@ class StartedFlowTransition(
 
     private fun TransitionBuilder.sendToSessionsTransition(sourceSessionIdToMessage: Map<SessionId, SerializedBytes<Any>>) {
         val checkpoint = startingState.checkpoint
-        val newSessions = LinkedHashMap(checkpoint.sessions)
+        val newSessions = LinkedHashMap(checkpoint.checkpointState.sessions)
         var index = 0
         for ((sourceSessionId, message) in sourceSessionIdToMessage) {
-            val existingSessionState = checkpoint.sessions[sourceSessionId]
+            val existingSessionState = checkpoint.checkpointState.sessions[sourceSessionId]
             if (existingSessionState == null) {
                 return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             } else {
@@ -286,7 +286,7 @@ class StartedFlowTransition(
             }
 
         }
-        currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
+        currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
     }
 
     private fun sessionToSessionId(session: FlowSession): SessionId {
@@ -295,7 +295,7 @@ class StartedFlowTransition(
 
     private fun collectErroredSessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
         return sessionIds.flatMap { sessionId ->
-            val sessionState = checkpoint.sessions[sessionId]!!
+            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Uninitiated -> emptyList()
                 is SessionState.Initiating -> {
@@ -311,14 +311,14 @@ class StartedFlowTransition(
     }
 
     private fun collectErroredInitiatingSessionErrors(checkpoint: Checkpoint): List<Throwable> {
-        return checkpoint.sessions.values.mapNotNull { sessionState ->
+        return checkpoint.checkpointState.sessions.values.mapNotNull { sessionState ->
             (sessionState as? SessionState.Initiating)?.rejectionError?.exception
         }
     }
 
     private fun collectEndedSessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
         return sessionIds.mapNotNull { sessionId ->
-            val sessionState = checkpoint.sessions[sessionId]!!
+            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
                     if (sessionState.initiatedState === InitiatedSessionState.Ended) {
@@ -338,7 +338,7 @@ class StartedFlowTransition(
 
     private fun collectEndedEmptySessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
         return sessionIds.mapNotNull { sessionId ->
-            val sessionState = checkpoint.sessions[sessionId]!!
+            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
                     if (sessionState.initiatedState === InitiatedSessionState.Ended &&
@@ -372,7 +372,7 @@ class StartedFlowTransition(
                 collectErroredSessionErrors(sessionIds, checkpoint) + collectEndedSessionErrors(sessionIds, checkpoint)
             }
             is FlowIORequest.WaitForLedgerCommit -> {
-                collectErroredSessionErrors(checkpoint.sessions.keys, checkpoint)
+                collectErroredSessionErrors(checkpoint.checkpointState.sessions.keys, checkpoint)
             }
             is FlowIORequest.GetFlowInfo -> {
                 collectErroredSessionErrors(flowIORequest.sessions.map(this::sessionToSessionId), checkpoint)
@@ -413,7 +413,7 @@ class StartedFlowTransition(
         return builder {
             // The `numberOfSuspends` is added to the deduplication ID in case an async
             // operation is executed multiple times within the same flow.
-            val deduplicationId = context.id.toString() + ":" + currentState.checkpoint.numberOfSuspends.toString()
+            val deduplicationId = context.id.toString() + ":" + currentState.checkpoint.checkpointState.numberOfSuspends.toString()
             actions.add(Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation))
             FlowContinuation.ProcessEvents
         }

@@ -52,7 +52,7 @@ object CheckpointVerifier {
                 }
 
                 // For each Subflow, compare the checkpointed version to the current version.
-                checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
+                checkpoint.checkpointState.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
             }
         }
     }

@@ -4,7 +4,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
-import net.corda.core.internal.declaredField
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
@@ -48,7 +47,7 @@ class DeliverSessionMessageTransition(
                     pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers + event.deduplicationHandler
             )
             // Check whether we have a session corresponding to the message.
-            val existingSession = startingState.checkpoint.sessions[event.sessionMessage.recipientSessionId]
+            val existingSession = startingState.checkpoint.checkpointState.sessions[event.sessionMessage.recipientSessionId]
             if (existingSession == null) {
                 freshErrorTransition(CannotFindSessionException(event.sessionMessage.recipientSessionId))
             } else {
@@ -81,8 +80,8 @@ class DeliverSessionMessageTransition(
                         errors = emptyList(),
                         deduplicationSeed = sessionState.deduplicationSeed
                 )
-                val newCheckpoint = currentState.checkpoint.copy(
-                        sessions = currentState.checkpoint.sessions + (event.sessionMessage.recipientSessionId to initiatedSession)
+                val newCheckpoint = currentState.checkpoint.addSession(
+                        event.sessionMessage.recipientSessionId to initiatedSession
                 )
                 // Send messages that were buffered pending confirmation of session.
                 val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
@@ -104,9 +103,10 @@ class DeliverSessionMessageTransition(
                 val newSessionState = sessionState.copy(
                         receivedMessages = sessionState.receivedMessages + message
                 )
+
                 currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.copy(
-                                sessions = startingState.checkpoint.sessions + (event.sessionMessage.recipientSessionId to newSessionState)
+                        checkpoint = currentState.checkpoint.addSession(
+                                event.sessionMessage.recipientSessionId to newSessionState
                         )
                 )
             }
@@ -138,9 +138,7 @@ class DeliverSessionMessageTransition(
                 val flowError = FlowError(payload.errorId, exception)
                 val newSessionState = sessionState.copy(errors = sessionState.errors + flowError)
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.copy(
-                                sessions = checkpoint.sessions + (sessionId to newSessionState)
-                        )
+                        checkpoint = checkpoint.addSession(sessionId to newSessionState)
                 )
             }
             else -> freshErrorTransition(UnexpectedEventInState())
@@ -159,9 +157,7 @@ class DeliverSessionMessageTransition(
                     val sessionId = event.sessionMessage.recipientSessionId
                     val flowError = FlowError(payload.errorId, exception)
                     currentState = currentState.copy(
-                            checkpoint = checkpoint.copy(
-                                    sessions = checkpoint.sessions + (sessionId to sessionState.copy(rejectionError = flowError))
-                            )
+                            checkpoint = checkpoint.addSession(sessionId to sessionState.copy(rejectionError = flowError))
                     )
                 }
             }
@@ -171,7 +167,7 @@ class DeliverSessionMessageTransition(
 
     private fun TransitionBuilder.endMessageTransition() {
         val sessionId = event.sessionMessage.recipientSessionId
-        val sessions = currentState.checkpoint.sessions
+        val sessions = currentState.checkpoint.checkpointState.sessions
         val sessionState = sessions[sessionId]
         if (sessionState == null) {
             return freshErrorTransition(CannotFindSessionException(sessionId))
@@ -180,9 +176,8 @@ class DeliverSessionMessageTransition(
             is SessionState.Initiated -> {
                 val newSessionState = sessionState.copy(initiatedState = InitiatedSessionState.Ended)
                 currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.copy(
-                                sessions = sessions + (sessionId to newSessionState)
-                        )
+                        checkpoint = currentState.checkpoint.addSession(sessionId to newSessionState)
+
                 )
             }
             else -> {
