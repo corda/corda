@@ -92,3 +92,7 @@ class CordappResolverTest {
     }
 
 }
+
+fun CordappResolver.resetForTesting() {
+    clear()
+}

@@ -3,6 +3,7 @@ package net.corda.node.internal.cordapp
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.cordapp.CordappResolver
+import net.corda.core.internal.cordapp.resetForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
@@ -71,7 +72,7 @@ class CordappProviderImplTests {
 
     @After
     fun shutdown() {
-        CordappResolver::class.members.single { it.name == "clear" }.call(CordappResolver)
+        CordappResolver.resetForTesting()
     }
 
     @Test(timeout=300_000)
