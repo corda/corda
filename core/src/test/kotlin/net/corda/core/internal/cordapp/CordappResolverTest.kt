@@ -8,6 +8,7 @@ import org.junit.Before
 import org.junit.Test
 import java.lang.IllegalStateException
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CordappResolverTest {
     @Before
@@ -36,18 +37,19 @@ class CordappResolverTest {
     }
 
     @Test(timeout=300_000)
-	fun `when the same cordapp is registered for the same class multiple times, the resolver deduplicates and returns it as the current one`() {
+	fun `when the same cordapp is registered for the same class multiple times an exception is raised`() {
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = 222
         ))
-        CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
-                contractClassNames = listOf(javaClass.name),
-                minimumPlatformVersion = 2,
-                targetPlatformVersion = 456
-        ))
-        assertThat(CordappResolver.currentCordapp).isNotNull()
+        assertFailsWith<IllegalStateException> {
+            CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
+                    contractClassNames = listOf(javaClass.name),
+                    minimumPlatformVersion = 2,
+                    targetPlatformVersion = 456
+            ))
+        }
     }
 
     @Test(timeout=300_000)
