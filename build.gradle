@@ -465,18 +465,20 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     }
 }
 
-task detekt(type: JavaExec, dependsOn: ":detekt-plugins:jar") {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
+tasks.register('detekt', JavaExec) {
     def input = "$projectDir"
     def config = "$projectDir/detekt-config.yml"
     def baseline = "$projectDir/detekt-baseline.xml"
-    def plugins = "$projectDir/detekt-plugins/build/libs/detekt-plugins-${version}.jar"
+    def detektPluginsJar = project(':detekt-plugins').tasks.jar
+    def plugins = detektPluginsJar.outputs.files.singleFile
     def params = ['-i', input, '-c', config, '-b', baseline, '--plugins', plugins]
+    inputs.files(detektPluginsJar, config, baseline)
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
     args(params)
 }
 
-task detektBaseline(type: JavaExec) {
+tasks.register('detektBaseline', JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def input = "$projectDir"
