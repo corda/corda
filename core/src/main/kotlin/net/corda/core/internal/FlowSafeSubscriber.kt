@@ -1,5 +1,7 @@
 package net.corda.core.internal
 
+import rx.Observable
+import rx.Observable.unsafeCreate
 import rx.Observer
 import rx.Subscriber
 import rx.exceptions.CompositeException
@@ -81,3 +83,41 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
  */
 @VisibleForTesting
 class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImplementedException(message, cause)
+
+/**
+ * [flowSafeSubscribe] is used to return an Observable, through which we can subscribe non unsubscribing [rx.Observer]s
+ * to the source [Observable].
+ *
+ * It unwraps an [Observer] from a [SafeSubscriber], re-wraps it with a [FlowSafeSubscriber] and then subscribes it
+ * to the source [Observable].
+ *
+ * In case we need to subscribe with a [SafeSubscriber] via [flowSafeSubscribe], we have to:
+ * 1. Call it with [strictMode] = false
+ * 1. Declare a custom Subscriber that will extend [SafeSubscriber].
+ * 2. Wrap with the custom Subscriber the [rx.Observer] to be subscribed to [FlowSafeSubject].
+ * 3. Subscribe to [FlowSafeSubject] passing the custom Subscriber.
+ */
+fun <T> Observable<T>.flowSafeSubscribe(strictMode: Boolean = false): Observable<T> {
+
+    class OnFlowSafeSubscribe<T>(val source: Observable<T>): Observable.OnSubscribe<T> {
+
+        override fun call(subscriber: Subscriber<in T>) {
+            if (isSafeSubscriber(subscriber)) {
+                source.unsafeSubscribe(FlowSafeSubscriber((subscriber as SafeSubscriber).actual))
+            } else {
+                source.unsafeSubscribe(subscriber)
+            }
+        }
+
+        private fun isSafeSubscriber(subscriber: Subscriber<*>): Boolean {
+            return if (strictMode) {
+                // In strictMode mode we capture SafeSubscriber subclasses as well
+                SafeSubscriber::class.java.isAssignableFrom(subscriber::class.java)
+            } else {
+                subscriber::class == SafeSubscriber::class
+            }
+        }
+    }
+
+    return unsafeCreate(OnFlowSafeSubscribe(this))
+}

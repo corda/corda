@@ -18,7 +18,6 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
-import net.corda.node.internal.FlowSafeSubject
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
@@ -230,7 +229,7 @@ class NodeVaultService(
             }
             // we are not inside a flow, we are most likely inside a CordaService;
             // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
-            return FlowSafeSubject(_rawUpdatesPublisher)
+            return _rawUpdatesPublisher.flowSafeSubscribe(strictMode = true)
         }
 
     override val updates: Observable<Vault.Update<ContractState>>
