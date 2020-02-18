@@ -166,7 +166,7 @@ class StartedFlowTransition(
             resultMap[session] = message
         }
         currentState = currentState.copy(
-                checkpoint = checkpoint.copyUpdateSession(sessions = pollResult.newSessionMap)
+                checkpoint = checkpoint.setSessions(sessions = pollResult.newSessionMap)
         )
         return resultMap
     }
@@ -225,7 +225,7 @@ class StartedFlowTransition(
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
-        currentState = currentState.copy(checkpoint = checkpoint.copyUpdateSession(sessions = newSessions))
+        currentState = currentState.copy(checkpoint = checkpoint.setSessions(sessions = newSessions))
     }
 
     private fun sendTransition(flowIORequest: FlowIORequest.Send): TransitionResult {
@@ -286,7 +286,7 @@ class StartedFlowTransition(
             }
 
         }
-        currentState = currentState.copy(checkpoint = checkpoint.copyUpdateSession(newSessions))
+        currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
     }
 
     private fun sessionToSessionId(session: FlowSession): SessionId {

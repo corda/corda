@@ -84,7 +84,7 @@ data class Checkpoint(
      * Returns a copy of the Checkpoint with a new session map.
      * @param sessions the new map of session ID to session state.
      */
-    fun copyUpdateSession(sessions: SessionMap) : Checkpoint {
+    fun setSessions(sessions: SessionMap) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(sessions = sessions))
     }
 
@@ -92,7 +92,7 @@ data class Checkpoint(
      * Returns a copy of the Checkpoint with an extra session added to the session map.
      * @param session the extra session to add.
      */
-    fun copyAppendSession(session: Pair<SessionId, SessionState>) : Checkpoint {
+    fun addSession(session: Pair<SessionId, SessionState>) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
     }
 
@@ -100,7 +100,7 @@ data class Checkpoint(
      * Returns a copy of the Checkpoint with a new subFlow stack.
      * @param subFlows the new List of subFlows.
      */
-    fun copyUpdateSubflow(subFlows: List<SubFlow>) : Checkpoint {
+    fun setSubflows(subFlows: List<SubFlow>) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(subFlowStack = subFlows))
     }
 
@@ -108,7 +108,7 @@ data class Checkpoint(
      * Returns a copy of the Checkpoint with an extra subflow added to the subFlow Stack.
      * @param subFlow the subFlow to add to the stack of subFlows
      */
-    fun copyAppendSubflow(subFlow: SubFlow) : Checkpoint {
+    fun addSubflow(subFlow: SubFlow) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
     }
 }
