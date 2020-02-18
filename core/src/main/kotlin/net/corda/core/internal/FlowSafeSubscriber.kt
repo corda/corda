@@ -93,9 +93,9 @@ class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImple
  *
  * In case we need to subscribe with a [SafeSubscriber] via [flowSafeSubscribe], we have to:
  * 1. Call it with [strictMode] = false
- * 1. Declare a custom Subscriber that will extend [SafeSubscriber].
- * 2. Wrap with the custom Subscriber the [rx.Observer] to be subscribed to [FlowSafeSubject].
- * 3. Subscribe to [FlowSafeSubject] passing the custom Subscriber.
+ * 1. Declare a custom SafeSubscriber extending [SafeSubscriber].
+ * 2. Wrap with the custom SafeSubscriber the [rx.Observer] to be subscribed to the source [Observable].
+ * 3. Subscribe passing in as argument the custom SafeSubscriber.
  */
 fun <T> Observable<T>.flowSafeSubscribe(strictMode: Boolean = false): Observable<T> {
 
