@@ -753,7 +753,7 @@ class VaultObserverExceptionTest {
 
             assertFailsWith<CordaRuntimeException>(
                 "Flow ${SubscribingRawUpdatesFlow::class.java.name} tried to access VaultService.rawUpdates " +
-                        "- Rx.Observables should only be accessed to outside the context of a flow "
+                        "- Rx.Observables should only be accessed outside the context of a flow "
             ) {
                 flowHandle.returnValue.getOrThrow(30.seconds)
             }

@@ -218,13 +218,13 @@ class NodeVaultService(
                 // it could prevent the flow/ fiber -object- get garbage collected.
                 log.error(
                     "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
-                            "- Rx.Observables should only be accessed to outside the context of a flow " +
+                            "- Rx.Observables should only be accessed outside the context of a flow " +
                             "- aborting the flow "
                 )
 
                 throw CordaRuntimeException(
                     "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
-                            "- Rx.Observables should only be accessed to outside the context of a flow "
+                            "- Rx.Observables should only be accessed outside the context of a flow "
                 )
             }
             // we are not inside a flow, we are most likely inside a CordaService;
