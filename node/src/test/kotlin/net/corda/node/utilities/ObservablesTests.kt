@@ -387,8 +387,6 @@ class ObservablesTests {
 
     @Test
     fun `test flowSafeSubscribe strictMode = true replaces SafeSubscriber subclass`() {
-        class CustomSafeSubscriber<T>(actual: Subscriber<in T>): SafeSubscriber<T>(actual)
-
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(
             Subscribers.create<Int> {
@@ -406,8 +404,6 @@ class ObservablesTests {
 
     @Test
     fun `test flowSafeSubscribe strictMode = false will not replace SafeSubscriber subclass`() {
-        class CustomSafeSubscriber<T>(actual: Subscriber<in T>): SafeSubscriber<T>(actual)
-
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(
             Subscribers.create<Int> {
@@ -568,4 +564,6 @@ class ObservablesTests {
 
         subscription3.unsubscribe()
     }
+
+    class CustomSafeSubscriber<T>(actual: Subscriber<in T>): SafeSubscriber<T>(actual)
 }
