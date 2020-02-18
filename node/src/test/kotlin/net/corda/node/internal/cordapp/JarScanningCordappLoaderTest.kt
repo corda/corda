@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.testing.node.internal.cordappWithPackages
@@ -9,6 +10,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
 import net.corda.core.internal.packageName_
+import org.junit.After
 
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
@@ -38,6 +40,11 @@ class JarScanningCordappLoaderTest {
     private companion object {
         const val isolatedContractId = "net.corda.isolated.contracts.AnotherDummyContract"
         const val isolatedFlowName = "net.corda.isolated.workflows.IsolatedIssuanceFlow"
+    }
+
+    @After
+    fun shutdown() {
+        CordappResolver::class.members.single { it.name == "clear" }.call(CordappResolver)
     }
 
     @Test(timeout=300_000)

@@ -47,11 +47,10 @@ object CordappResolver {
         for ((registeredClassName, registeredCordapps) in alreadyRegistered) {
             val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
 
-            if (duplicateCordapps.isNotEmpty()) {
-                logger.warnOnce("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
-                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
-                        "${duplicateCordapps.map { it.name }}")
-                continue
+            if (duplicateCordapps.isNotEmpty() && !insideInMemoryTest) {
+                throw java.lang.IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                    "is installed multiple times on the node. The following files correspond to the exact same content: " +
+                    "${duplicateCordapps.map { it.name }}")
             }
             // During in-memory tests, the spawned nodes share the same CordappResolver, so detected conflicts can be spurious.
             if (registeredClassName in contractClasses && !insideInMemoryTest) {

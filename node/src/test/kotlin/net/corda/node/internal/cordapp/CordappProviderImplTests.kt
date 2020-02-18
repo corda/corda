@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
@@ -11,11 +12,13 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.FileOutputStream
+import java.lang.IllegalStateException
 import java.net.URL
 import java.nio.file.Files
 import java.util.jar.JarOutputStream
@@ -64,6 +67,11 @@ class CordappProviderImplTests {
     @Before
     fun setup() {
         attachmentStore = MockAttachmentStorage()
+    }
+
+    @After
+    fun shutdown() {
+        CordappResolver::class.members.single { it.name == "clear" }.call(CordappResolver)
     }
 
     @Test(timeout=300_000)
@@ -193,7 +201,7 @@ class CordappProviderImplTests {
     }
 
     @Test(timeout=300_000)
-    fun `test that we find an attachment for a cordapp contract class we when have two jars with same hash`() {
+    fun `test an exception is raised when we have two jars with the same hash`() {
 
         SelfCleaningDir().use { file ->
             val jarAndSigner = ContractJarTestUtils.makeTestSignedContractJar(file.path, "com.example.MyContract")
@@ -201,15 +209,9 @@ class CordappProviderImplTests {
             val duplicateJarPath = signedJarPath.parent.resolve("duplicate-" + signedJarPath.fileName)
 
             Files.copy(signedJarPath, duplicateJarPath)
-            val provider = newCordappProvider(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
-            val className = "com.example.MyContract"
-            val firstId = provider.getAppContext(provider.cordapps[0]).attachmentId
-            val secondId = provider.getAppContext(provider.cordapps[1]).attachmentId
-            val actual = provider.getContractAttachmentID(className)
-
-            assertNotNull(actual)
-            assertEquals(firstId, secondId)
-            assertEquals(actual!!, firstId)
+            assertFailsWith<IllegalStateException> {
+                newCordappProvider(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            }
         }
     }
 
