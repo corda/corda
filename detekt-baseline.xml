@@ -182,7 +182,6 @@
     <ID>ComplexMethod:RPCClientProxyHandler.kt$RPCClientProxyHandler$// This is the general function that transforms a client side RPC to internal Artemis messages. override fun invoke(proxy: Any, method: Method, arguments: Array&lt;out Any?&gt;?): Any?</ID>
     <ID>ComplexMethod:RPCClientProxyHandler.kt$RPCClientProxyHandler$private fun attemptReconnect()</ID>
     <ID>ComplexMethod:RPCServer.kt$RPCServer$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
-    <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$ private fun doInvoke(method: Method, args: Array&lt;out Any&gt;?, maxNumberOfAttempts: Int): Any?</ID>
     <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ private tailrec fun establishConnectionWithRetry( retryInterval: Duration, roundRobinIndex: Int = 0, retries: Int = -1 ): CordaRPCConnection?</ID>
     <ID>ComplexMethod:RemoteTypeCarpenter.kt$SchemaBuildingRemoteTypeCarpenter$override fun carpent(typeInformation: RemoteTypeInformation): Type</ID>
     <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test(timeout=300_000) fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
@@ -1534,6 +1533,8 @@
     <ID>TooGenericExceptionCaught:FinanceJSONSupport.kt$CalendarDeserializer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowHandle.kt$FlowProgressHandleImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowMessaging.kt$FlowMessagingImpl$exception: Exception</ID>
+    <ID>TooGenericExceptionCaught:FlowSafeSubscriber.kt$FlowSafeSubscriber$e2: Throwable</ID>
+    <ID>TooGenericExceptionCaught:FlowSafeSubscriber.kt$FlowSafeSubscriber$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:FlowStackSnapshotTest.kt$FlowStackSnapshotTest$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowStateMachineImpl.kt$FlowStateMachineImpl$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:FlowStateMachineImpl.kt$FlowStateMachineImpl$t: Throwable</ID>
@@ -2022,9 +2023,6 @@
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.identity.*</ID>
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.transactions.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.context.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.messaging.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CordaRPCOps.kt$import net.corda.core.node.services.vault.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import org.assertj.core.api.Assertions.*</ID>
@@ -2169,8 +2167,6 @@
     <ID>WildcardImport:InternalMockNetwork.kt$import net.corda.testing.node.*</ID>
     <ID>WildcardImport:InternalSerializationTestHelpers.kt$import net.corda.serialization.internal.*</ID>
     <ID>WildcardImport:InternalTestUtils.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:InternalUtils.kt$import java.security.cert.*</ID>
-    <ID>WildcardImport:InternalUtils.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:IssuerModel.kt$import tornadofx.*</ID>
     <ID>WildcardImport:JVMConfig.kt$import tornadofx.*</ID>
     <ID>WildcardImport:JacksonSupport.kt$import com.fasterxml.jackson.core.*</ID>
