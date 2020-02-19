@@ -219,7 +219,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         // present in the CorDapp.
         val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
                 scanResult.getClassesWithSuperclass(SinglePartyNotaryService::class)
-        if(!result.isEmpty()) {
+        if (result.isNotEmpty()) {
             logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
         }
         return result.firstOrNull()

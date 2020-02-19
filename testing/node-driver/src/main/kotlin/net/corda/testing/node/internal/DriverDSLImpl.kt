@@ -142,11 +142,7 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
-    override val cordappsClassLoader: ClassLoader? = if (!startNodesInProcess) {
-        createCordappsClassLoader(cordappsForAllNodes)
-    } else {
-        null
-    }
+    override val cordappsClassLoader: URLClassLoader? = createCordappsClassLoader(cordappsForAllNodes)
 
     interface Waitable {
         @Throws(InterruptedException::class)
@@ -195,14 +191,15 @@ class DriverDSLImpl(
     }
 
     override fun shutdown() {
-        if (waitForAllNodesToFinish) {
-            state.locked {
-                processes.forEach { it.waitFor() }
+        cordappsClassLoader.use { _ ->
+            if (waitForAllNodesToFinish) {
+                state.locked {
+                    processes.forEach { it.waitFor() }
+                }
             }
+            _shutdownManager?.shutdown()
+            _executorService?.shutdownNow()
         }
-        _shutdownManager?.shutdown()
-        _executorService?.shutdownNow()
-        (cordappsClassLoader as? AutoCloseable)?.close()
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
@@ -992,7 +989,7 @@ class DriverDSLImpl(
             return config
         }
 
-        private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): ClassLoader? {
+        private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
             if (cordapps == null || cordapps.isEmpty()) {
                 return null
             }
