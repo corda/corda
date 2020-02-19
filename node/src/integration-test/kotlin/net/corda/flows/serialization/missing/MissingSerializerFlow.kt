@@ -12,14 +12,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.requiredContractClassName
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 
-@InitiatingFlow
 @StartableByRPC
 class MissingSerializerFlow(private val value: Long) : FlowLogic<SecureHash>() {
     @Suspendable
