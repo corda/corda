@@ -1129,18 +1129,18 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization(driverDsl.cordappsClassLoader)
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
-    try {
-        driverDsl.start()
-        return dsl(coerce(driverDsl))
-    } catch (exception: Throwable) {
-        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        throw exception
-    } finally {
-        driverDsl.shutdown()
-        shutdownHook.cancel()
-        serializationEnv?.close()
+    setDriverSerialization(driverDsl.cordappsClassLoader).use { _ ->
+        val shutdownHook = addShutdownHook(driverDsl::shutdown)
+        try {
+            driverDsl.start()
+            return dsl(coerce(driverDsl))
+        } catch (exception: Throwable) {
+            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+            throw exception
+        } finally {
+            driverDsl.shutdown()
+            shutdownHook.cancel()
+        }
     }
 }
 
@@ -1157,8 +1157,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization()
-    val driverDsl = driverDslWrapper(
+    setDriverSerialization().use { _ ->
+        val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                 portAllocation = defaultParameters.portAllocation,
                 debugPortAllocation = defaultParameters.debugPortAllocation,
@@ -1180,18 +1180,18 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                 djvmCordaSource = defaultParameters.djvmCordaSource,
                 environmentVariables = defaultParameters.environmentVariables
             )
-    )
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
-    try {
-        driverDsl.start()
-        return dsl(coerce(driverDsl))
-    } catch (exception: Throwable) {
-        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        throw exception
-    } finally {
-        driverDsl.shutdown()
-        shutdownHook.cancel()
-        serializationEnv?.close()
+        )
+        val shutdownHook = addShutdownHook(driverDsl::shutdown)
+        try {
+            driverDsl.start()
+            return dsl(coerce(driverDsl))
+        } catch (exception: Throwable) {
+            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+            throw exception
+        } finally {
+            driverDsl.shutdown()
+            shutdownHook.cancel()
+        }
     }
 }
 
