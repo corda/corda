@@ -19,7 +19,7 @@ object CordappResolver {
         @Volatile private var result: Boolean = false
         @Volatile private var clearResult: Boolean = true
 
-        @Synchronized operator fun getValue(thisRef: Any?, prop: KProperty<*>): Boolean {
+        operator fun getValue(thisRef: Any?, prop: KProperty<*>): Boolean {
             if (clearResult) {
                 result = insideInMemoryTest()
                 clearResult = false
@@ -27,7 +27,7 @@ object CordappResolver {
             return result
         }
 
-        @Synchronized fun clear() {
+        fun clear() {
             clearResult = true
         }
     }
