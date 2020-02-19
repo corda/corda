@@ -3,7 +3,6 @@ package net.corda.core.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.warnOnce
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
 
@@ -48,7 +47,7 @@ object CordappResolver {
             val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
 
             if (duplicateCordapps.isNotEmpty() && !insideInMemoryTest) {
-                throw java.lang.IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                throw IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
                     "is installed multiple times on the node. The following files correspond to the exact same content: " +
                     "${duplicateCordapps.map { it.name }}")
             }
