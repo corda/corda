@@ -5,6 +5,7 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KProperty
 
 /**
  * Provides a way to acquire information about the calling CorDapp.
@@ -14,7 +15,24 @@ object CordappResolver {
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
-    private val insideInMemoryTest: Boolean by lazy { insideInMemoryTest() }
+    private val insideInMemoryTest: Boolean by InsideInMemoryTestDelegate
+
+    private object InsideInMemoryTestDelegate {
+        @Volatile private var result: Boolean = false
+        @Volatile var clearResult: Boolean = true
+
+        @Synchronized operator fun getValue(thisRef: Any?, prop: KProperty<*>): Boolean {
+            if (clearResult) {
+                result = insideInMemoryTest()
+                clearResult = false
+            }
+            return result
+        }
+
+        @Synchronized fun clear() {
+            clearResult = true
+        }
+    }
 
     // TODO Use the StackWalker API once we migrate to Java 9+
     private var cordappResolver: () -> Cordapp? = {
@@ -126,6 +144,7 @@ object CordappResolver {
 
     @VisibleForTesting
     internal fun clear() {
+        InsideInMemoryTestDelegate.clear()
         cordappClasses.clear()
     }
 }
