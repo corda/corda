@@ -64,6 +64,7 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
      */
     @Suppress("TooGenericExceptionCaught")
     override fun _onError(e: Throwable) {
+        @Suppress("DEPRECATION")
         RxJavaPlugins.getInstance().errorHandler.handleError(e)
         try {
             actual.onError(e)
