@@ -5,7 +5,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.core.observable.internal.FlowSafeSubscriber
 import net.corda.core.observable.internal.OnNextFailedException
-import net.corda.core.observable.flowSafeSubscribe
+import net.corda.core.observable.flowSafeObservable
 import net.corda.node.services.vault.flowSafeLooseSubscribe
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.testing.internal.configureDatabase
@@ -227,19 +227,19 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-    fun `FlowSafeSubject subscribes by default FlowSafeSubscribers, wrapped Observers will survive errors from onNext`() {
+    fun `flowSafeObservable returned Observable subscribes FlowSafeSubscribers, wrapped Observers will survive errors from onNext`() {
         var heartBeat1 = 0
         var heartBeat2 = 0
         val source = PublishSubject.create<Int>()
-        val flowSafeSubscriber = source.flowSafeSubscribe()
-        flowSafeSubscriber.subscribe { runNo ->
+        val flowSafeObservable = source.flowSafeObservable()
+        flowSafeObservable.subscribe { runNo ->
             // subscribes with a FlowSafeSubscriber
             heartBeat1++
             if (runNo == 1) {
                 throw IllegalStateException()
             }
         }
-        flowSafeSubscriber.subscribe { runNo ->
+        flowSafeObservable.subscribe { runNo ->
             // subscribes with a FlowSafeSubscriber
             heartBeat2++
             if (runNo == 2) {
@@ -259,11 +259,11 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-    fun `FlowSafeSubject unsubscribes FlowSafeSubscribers only upon explicitly calling onError`() {
+    fun `PublishSubject unsubscribes FlowSafeSubscribers only upon explicitly calling onError`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
-        source.flowSafeSubscribe().subscribe { heartBeat += it }
-        source.flowSafeSubscribe().subscribe { heartBeat += it }
+        source.flowSafeObservable().subscribe { heartBeat += it }
+        source.flowSafeObservable().subscribe { heartBeat += it }
         source.onNext(1)
         // send an onError event
         assertFailsWith<CompositeException> {
@@ -274,7 +274,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-    fun `FlowSafeSubject wrapped with a SafeSubscriber shuts down the whole structure, if one of them is unsafe and it throws`() {
+    fun `PublishSubject wrapped with a SafeSubscriber shuts down the whole structure, if one of them is unsafe and it throws`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
         source.unsafeSubscribe(Subscribers.create { runNo -> // subscribes unsafe; It does not wrap with FlowSafeSubscriber
@@ -283,7 +283,7 @@ class ObservablesTests {
                 throw IllegalStateException()
             }
         })
-        source.flowSafeSubscribe().subscribe { heartBeat += it }
+        source.flowSafeObservable().subscribe { heartBeat += it }
         // wrapping PublishSubject with a SafeSubscriber
         val sourceWrapper = SafeSubscriber(Subscribers.from(source))
         assertFailsWith<OnErrorFailedException> {
@@ -301,7 +301,7 @@ class ObservablesTests {
      * will then call [PublishSubject.onError] which will shut down all the subscribers under the [PublishSubject].
      */
     @Test(timeout=300_000)
-    fun `FlowSafeSubject wrapped with a FlowSafeSubscriber will preserve the structure, if one of them is unsafe and it throws`() {
+    fun `PublishSubject wrapped with a FlowSafeSubscriber will preserve the structure, if one of its children subscribers is unsafe and it throws`() {
         var heartBeat = 0
         val source = PublishSubject.create<Int>()
         source.unsafeSubscribe(Subscribers.create { runNo ->
@@ -310,7 +310,7 @@ class ObservablesTests {
                 throw IllegalStateException()
             }
         })
-        source.flowSafeSubscribe().subscribe { heartBeat++ }
+        source.flowSafeObservable().subscribe { heartBeat++ }
         // wrap PublishSubject with a FlowSafeSubscriber
         val sourceWrapper = FlowSafeSubscriber(Subscribers.from(source))
         assertFailsWith<OnNextFailedException>("Observer.onNext failed, this is a non leaf FlowSafeSubscriber, therefore onError will be skipped") {
@@ -326,7 +326,7 @@ class ObservablesTests {
         var heartBeatOnError = 0
         val source = PublishSubject.create<Int>()
         // add a leaf FlowSafeSubscriber
-        source.flowSafeSubscribe().subscribe({
+        source.flowSafeObservable().subscribe({
             heartBeatOnNext++
             throw IllegalStateException()
         }, {
@@ -376,7 +376,7 @@ class ObservablesTests {
     @Test(timeout=300_000)
     fun `propagated Rx exception will be rethrown at FlowSafeSubscriber onError`() {
         val source = PublishSubject.create<Int>()
-        source.flowSafeSubscribe().subscribe { throw IllegalStateException("123") } // will give a leaf FlowSafeSubscriber
+        source.flowSafeObservable().subscribe { throw IllegalStateException("123") } // will give a leaf FlowSafeSubscriber
         val sourceWrapper = FlowSafeSubscriber(Subscribers.from(source)) // will give an inner FlowSafeSubscriber
 
         assertFailsWith<OnNextFailedException>("Observer.onNext failed, this is a non leaf FlowSafeSubscriber, therefore onError will be skipped") {
@@ -387,7 +387,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-    fun `test flowSafeSubscribe strictMode = true replaces SafeSubscriber subclass`() {
+    fun `test OnFlowSafeSubscribe strictMode = true replaces SafeSubscriber subclass`() {
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(
             Subscribers.create<Int> {
@@ -396,7 +396,7 @@ class ObservablesTests {
             })
 
         val source = PublishSubject.create<Int>()
-        source.flowSafeSubscribe().subscribe(customSafeSubscriber) // it should replace CustomSafeSubscriber with FlowSafeSubscriber
+        source.flowSafeObservable().subscribe(customSafeSubscriber) // it should replace CustomSafeSubscriber with FlowSafeSubscriber
 
         assertFailsWith<OnErrorNotImplementedException> { source.onNext(1) }
         assertFailsWith<OnErrorNotImplementedException> { source.onNext(1) }
@@ -404,7 +404,7 @@ class ObservablesTests {
     }
 
     @Test(timeout=300_000)
-    fun `test flowSafeSubscribe strictMode = false will not replace SafeSubscriber subclass`() {
+    fun `test OnFlowSafeSubscribe strictMode = false will not replace SafeSubscriber subclass`() {
         var heartBeat = 0
         val customSafeSubscriber = CustomSafeSubscriber(
             Subscribers.create<Int> {
