@@ -1,6 +1,7 @@
 package net.corda.core.observable.internal
 
 import net.corda.core.internal.VisibleForTesting
+import rx.Observable
 import rx.Observer
 import rx.Subscriber
 import rx.exceptions.CompositeException
@@ -84,3 +85,35 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
  */
 @VisibleForTesting
 class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImplementedException(message, cause)
+
+/**
+ * [OnFlowSafeSubscribe] returns an [Observable] holding a reference to the source [Observable]. Upon subscribing to it,
+ * when reaching [call] method, if the subscriber passed in [isSafeSubscriber] it will unwrap the [Observer] from
+ * the [SafeSubscriber], re-wrap it with [FlowSafeSubscriber] and then subscribe it to the source [Observable].
+ *
+ * In case we need to subscribe with a [SafeSubscriber] to the source [Observable] via [OnFlowSafeSubscribe], we have to:
+ * 1. Declare a custom SafeSubscriber extending [SafeSubscriber].
+ * 2. Wrap our [rx.Observer] -to be subscribed to the source [Observable]- with the custom SafeSubscriber.
+ * 3. Create a [OnFlowSafeSubscribe] object with [strictMode] = false.
+ * 3. Call [Observable.unsafeCreate] passing in as argument the [OnFlowSafeSubscribe].
+ * 4. Subscribe to the returned [Observable] passing in as argument the custom SafeSubscriber.
+ */
+class OnFlowSafeSubscribe<T>(val source: Observable<T>, private val strictMode: Boolean): Observable.OnSubscribe<T> {
+
+    override fun call(subscriber: Subscriber<in T>) {
+        if (isSafeSubscriber(subscriber)) {
+            source.unsafeSubscribe(FlowSafeSubscriber((subscriber as SafeSubscriber).actual))
+        } else {
+            source.unsafeSubscribe(subscriber)
+        }
+    }
+
+    private fun isSafeSubscriber(subscriber: Subscriber<*>): Boolean {
+        return if (strictMode) {
+            // In strictMode mode we capture SafeSubscriber subclasses as well
+            SafeSubscriber::class.java.isAssignableFrom(subscriber::class.java)
+        } else {
+            subscriber::class == SafeSubscriber::class
+        }
+    }
+}

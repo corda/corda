@@ -6,6 +6,7 @@ import net.corda.core.internal.tee
 import net.corda.core.observable.internal.FlowSafeSubscriber
 import net.corda.core.observable.internal.OnNextFailedException
 import net.corda.core.observable.flowSafeSubscribe
+import net.corda.node.services.vault.flowSafeLooseSubscribe
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -395,7 +396,7 @@ class ObservablesTests {
             })
 
         val source = PublishSubject.create<Int>()
-        source.flowSafeSubscribe(strictMode = true).subscribe(customSafeSubscriber) // it should replace CustomSafeSubscriber with FlowSafeSubscriber
+        source.flowSafeSubscribe().subscribe(customSafeSubscriber) // it should replace CustomSafeSubscriber with FlowSafeSubscriber
 
         assertFailsWith<OnErrorNotImplementedException> { source.onNext(1) }
         assertFailsWith<OnErrorNotImplementedException> { source.onNext(1) }
@@ -412,7 +413,7 @@ class ObservablesTests {
             })
 
         val source = PublishSubject.create<Int>()
-        source.flowSafeSubscribe(strictMode = false).subscribe(customSafeSubscriber) // it should not replace CustomSafeSubscriber with FlowSafeSubscriber
+        source.flowSafeLooseSubscribe().subscribe(customSafeSubscriber) // it should not replace CustomSafeSubscriber with FlowSafeSubscriber
 
         assertFailsWith<OnErrorNotImplementedException> { source.onNext(1) }
         source.onNext(1)

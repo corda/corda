@@ -67,6 +67,7 @@ class VaultObserverExceptionTest {
         DbListenerService.safeSubscription = true
         DbListenerService.onNextVisited = {}
         DbListenerService.onErrorVisited = null
+        DbListenerService.withCustomSafeSubscriber = false
     }
 
     /**
@@ -791,6 +792,39 @@ class VaultObserverExceptionTest {
 
             assertEquals(4, onNextCount)
             assertEquals(4, onErrorCount)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `Users may subscribe to NodeVaultService rawUpdates with their own custom SafeSubscribers`() {
+        var onNextCount = 0
+        DbListenerService.onNextVisited = { _ -> onNextCount++ }
+
+        val user = User("user", "foo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true,
+            cordappsForAllNodes = listOf(
+                findCordapp("com.r3.dbfailure.contracts"),
+                findCordapp("com.r3.dbfailure.workflows"),
+                findCordapp("com.r3.transactionfailure.workflows"),
+                findCordapp("com.r3.dbfailure.schemas")),
+            inMemoryDB = false)
+        ) {
+            // Subscribing with custom SafeSubscriber; the custom SafeSubscriber will not get replaced by a FlowSafeSubscriber
+            // meaning that it will behave as a SafeSubscriber; it will get unsubscribed upon throwing an error.
+            // Because we throw a ConstraintViolationException, the Rx Observer will get unsubscribed but the flow will retry
+            // from previous checkpoint, however the Observer will no longer be there.
+            DbListenerService.withCustomSafeSubscriber = true
+            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            aliceNode.rpc.startFlow(
+                ErrorHandling::CheckpointAfterErrorFlow,
+                CreateStateFlow.errorTargetsToNum(
+                    CreateStateFlow.ErrorTarget.ServiceConstraintViolationException,
+                    CreateStateFlow.ErrorTarget.FlowSwallowErrors
+                )
+            ).returnValue.getOrThrow(20.seconds)
+
+            assertEquals(1, onNextCount)
         }
     }
 
