@@ -762,7 +762,7 @@ class VaultObserverExceptionTest {
     }
 
     @Test(timeout=300_000)
-    fun `Failing Observer wrapped with FlowSafeSubscriber will survive and be re-called upon flow retry`() {
+    fun `Failing Observer wrapped with ResilientSubscriber will survive and be re-called upon flow retry`() {
         var onNextCount = 0
         var onErrorCount = 0
         DbListenerService.onNextVisited = { _ -> onNextCount++ }
@@ -809,7 +809,7 @@ class VaultObserverExceptionTest {
                 findCordapp("com.r3.dbfailure.schemas")),
             inMemoryDB = false)
         ) {
-            // Subscribing with custom SafeSubscriber; the custom SafeSubscriber will not get replaced by a FlowSafeSubscriber
+            // Subscribing with custom SafeSubscriber; the custom SafeSubscriber will not get replaced by a ResilientSubscriber
             // meaning that it will behave as a SafeSubscriber; it will get unsubscribed upon throwing an error.
             // Because we throw a ConstraintViolationException, the Rx Observer will get unsubscribed but the flow will retry
             // from previous checkpoint, however the Observer will no longer be there.

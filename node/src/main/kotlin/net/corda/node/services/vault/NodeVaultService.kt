@@ -14,7 +14,7 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
 import net.corda.core.node.services.vault.*
-import net.corda.core.observable.internal.OnFlowSafeSubscribe
+import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
@@ -230,7 +230,7 @@ class NodeVaultService(
             }
             // we are not inside a flow, we are most likely inside a CordaService;
             // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
-            return _rawUpdatesPublisher.flowSafeLooseSubscribe()
+            return _rawUpdatesPublisher.resilientOnError()
         }
 
     override val updates: Observable<Vault.Update<ContractState>>
@@ -820,5 +820,4 @@ class NodeVaultService(
 }
 
 /** The Observable returned allows subscribing with custom SafeSubscribers to source [Observable]. */
-@VisibleForTesting
-fun<T> Observable<T>.flowSafeLooseSubscribe(): Observable<T> = Observable.unsafeCreate(OnFlowSafeSubscribe(this, false))
+internal fun<T> Observable<T>.resilientOnError(): Observable<T> = Observable.unsafeCreate(OnResilientSubscribe(this, false))

@@ -17,8 +17,8 @@ import rx.subjects.Subject
 /**
  * Extends [SafeSubscriber] to override [SafeSubscriber.onNext], [SafeSubscriber.onError] and [SafeSubscriber._onError].
  *
- * [FlowSafeSubscriber] will not set [SafeSubscriber.done] flag to true nor will call [SafeSubscriber.unsubscribe] upon
- * error inside [Observer.onNext]. This way, the [FlowSafeSubscriber] will not get unsubscribed and therefore the underlying [Observer]
+ * [ResilientSubscriber] will not set [SafeSubscriber.done] flag to true nor will call [SafeSubscriber.unsubscribe] upon
+ * error inside [Observer.onNext]. This way, the [ResilientSubscriber] will not get unsubscribed and therefore the underlying [Observer]
  * will not get removed.
  *
  * An [Observer] that will not get removed due to errors in [onNext] events becomes useful when an unsubscribe could
@@ -26,7 +26,7 @@ import rx.subjects.Subject
  * it will no longer be available the next time any events are pushed from the base [Subject].
  */
 @VisibleForTesting
-class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual) {
+class ResilientSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual) {
 
     /**
      * Duplicate of [SafeSubscriber.onNext]. However, it ignores [SafeSubscriber.done] flag.
@@ -45,7 +45,7 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
                 // this Subscriber may wrap a non leaf Observer. In case the wrapped Observer is a PublishSubject then we
                 // should not call onError because PublishSubjectState.onError will shut down all of the Observers under it
                 throw OnNextFailedException(
-                    "Observer.onNext failed, this is a non leaf FlowSafeSubscriber, therefore onError will be skipped", e
+                    "Observer.onNext failed, this is a non leaf ResilientSubscriber, therefore onError will be skipped", e
                 )
             }
         }
@@ -88,22 +88,22 @@ class FlowSafeSubscriber<T>(actual: Subscriber<in T>) : SafeSubscriber<T>(actual
 class OnNextFailedException(message: String, cause: Throwable) : OnErrorNotImplementedException(message, cause)
 
 /**
- * [OnFlowSafeSubscribe] returns an [Observable] holding a reference to the source [Observable]. Upon subscribing to it,
+ * [OnResilientSubscribe] returns an [Observable] holding a reference to the source [Observable]. Upon subscribing to it,
  * when reaching [call] method, if the subscriber passed in [isSafeSubscriber] it will unwrap the [Observer] from
- * the [SafeSubscriber], re-wrap it with [FlowSafeSubscriber] and then subscribe it to the source [Observable].
+ * the [SafeSubscriber], re-wrap it with [ResilientSubscriber] and then subscribe it to the source [Observable].
  *
- * In case we need to subscribe with a [SafeSubscriber] to the source [Observable] via [OnFlowSafeSubscribe], we have to:
+ * In case we need to subscribe with a [SafeSubscriber] to the source [Observable] via [OnResilientSubscribe], we have to:
  * 1. Declare a custom SafeSubscriber extending [SafeSubscriber].
  * 2. Wrap our [rx.Observer] -to be subscribed to the source [Observable]- with the custom SafeSubscriber.
- * 3. Create a [OnFlowSafeSubscribe] object with [strictMode] = false.
- * 3. Call [Observable.unsafeCreate] passing in as argument the [OnFlowSafeSubscribe].
+ * 3. Create a [OnResilientSubscribe] object with [strictMode] = false.
+ * 3. Call [Observable.unsafeCreate] passing in as argument the [OnResilientSubscribe].
  * 4. Subscribe to the returned [Observable] passing in as argument the custom SafeSubscriber.
  */
-class OnFlowSafeSubscribe<T>(val source: Observable<T>, private val strictMode: Boolean): Observable.OnSubscribe<T> {
+class OnResilientSubscribe<T>(val source: Observable<T>, private val strictMode: Boolean): Observable.OnSubscribe<T> {
 
     override fun call(subscriber: Subscriber<in T>) {
         if (isSafeSubscriber(subscriber)) {
-            source.unsafeSubscribe(FlowSafeSubscriber((subscriber as SafeSubscriber).actual))
+            source.unsafeSubscribe(ResilientSubscriber((subscriber as SafeSubscriber).actual))
         } else {
             source.unsafeSubscribe(subscriber)
         }
