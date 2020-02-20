@@ -64,23 +64,25 @@ class DBCheckpointStorageTests {
     @Test(timeout=300_000)
 	fun `add new checkpoint`() {
         val (id, checkpoint) = newCheckpoint()
+        val serializedCheckpoint = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedCheckpoint)
         }
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedCheckpoint)
         }
         newCheckpointStorage()
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedCheckpoint)
         }
     }
 
     @Test(timeout=300_000)
 	fun `remove checkpoint`() {
         val (id, checkpoint) = newCheckpoint()
+        val serializedCheckpoint = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedCheckpoint)
         }
         database.transaction {
             checkpointStorage.removeCheckpoint(id)
@@ -97,55 +99,61 @@ class DBCheckpointStorageTests {
     @Test(timeout=300_000)
 	fun `add and remove checkpoint in single commit operate`() {
         val (id, checkpoint) = newCheckpoint()
+        val serializedCheckpoint = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val (id2, checkpoint2) = newCheckpoint()
+        val serializedCheckpoint2 = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
-            checkpointStorage.addCheckpoint(id2, checkpoint2)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedCheckpoint)
+            checkpointStorage.addCheckpoint(id2, checkpoint2, serializedCheckpoint2)
             checkpointStorage.removeCheckpoint(id)
         }
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint2)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedCheckpoint2)
         }
         newCheckpointStorage()
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint2)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedCheckpoint2)
         }
     }
 
     @Test(timeout=300_000)
 	fun `add two checkpoints then remove first one`() {
         val (id, firstCheckpoint) = newCheckpoint()
+        val serializedFirstCheckpoint = firstCheckpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
         database.transaction {
-            checkpointStorage.addCheckpoint(id, firstCheckpoint)
+            checkpointStorage.addCheckpoint(id, firstCheckpoint, serializedFirstCheckpoint)
         }
         val (id2, secondCheckpoint) = newCheckpoint()
+        val serializedSecondCheckpoint = secondCheckpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
-            checkpointStorage.addCheckpoint(id2, secondCheckpoint)
+            checkpointStorage.addCheckpoint(id2, secondCheckpoint, serializedSecondCheckpoint)
         }
         database.transaction {
             checkpointStorage.removeCheckpoint(id)
         }
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(secondCheckpoint)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedSecondCheckpoint)
         }
         newCheckpointStorage()
         database.transaction {
-            assertThat(checkpointStorage.checkpoints()).containsExactly(secondCheckpoint)
+            assertThat(checkpointStorage.checkpoints()).containsExactly(serializedSecondCheckpoint)
         }
     }
 
     @Test(timeout=300_000)
 	fun `add checkpoint and then remove after 'restart'`() {
         val (id, originalCheckpoint) = newCheckpoint()
+        val serializedOriginalCheckpoint = originalCheckpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
-            checkpointStorage.addCheckpoint(id, originalCheckpoint)
+            checkpointStorage.addCheckpoint(id, originalCheckpoint, serializedOriginalCheckpoint)
         }
         newCheckpointStorage()
         val reconstructedCheckpoint = database.transaction {
             checkpointStorage.checkpoints().single()
         }
         database.transaction {
-            assertThat(reconstructedCheckpoint).isEqualTo(originalCheckpoint).isNotSameAs(originalCheckpoint)
+            assertThat(reconstructedCheckpoint).isEqualTo(serializedOriginalCheckpoint).isNotSameAs(serializedOriginalCheckpoint)
         }
         database.transaction {
             checkpointStorage.removeCheckpoint(id)
@@ -160,7 +168,8 @@ class DBCheckpointStorageTests {
         val mockServices = MockServices(emptyList(), ALICE.name)
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            val serializedCheckpoint = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedCheckpoint)
         }
 
         database.transaction {
@@ -169,7 +178,8 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             val (id1, checkpoint1) = newCheckpoint(2)
-            checkpointStorage.addCheckpoint(id1, checkpoint1)
+            val serializedCheckpoint1 = checkpoint1.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpointStorage.addCheckpoint(id1, checkpoint1, serializedCheckpoint1)
         }
 
         assertThatThrownBy {
@@ -185,7 +195,7 @@ class DBCheckpointStorageTests {
         }
     }
 
-    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, SerializedBytes<Checkpoint>> {
+    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, Checkpoint> {
         val id = StateMachineRunId.createRandom()
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
@@ -193,7 +203,7 @@ class DBCheckpointStorageTests {
         val frozenLogic = logic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, SubFlowVersion.CoreFlow(version), false)
                 .getOrThrow()
-        return id to checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        return id to checkpoint
     }
 
 }

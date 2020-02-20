@@ -5,7 +5,8 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="add_new_checkpoints_table-pg" dbms="postgresql">
-        <createTable tableName="node_checkpoints_new">
+        <dropTable tableName="node_checkpoints"></dropTable>
+        <createTable tableName="node_checkpoints">
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>

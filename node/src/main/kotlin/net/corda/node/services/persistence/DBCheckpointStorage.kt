@@ -3,28 +3,28 @@ package net.corda.node.services.persistence
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.debug
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
+import net.corda.node.services.statemachine.FlowState
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.hibernate.annotations.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
-import java.util.stream.Stream
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import org.hibernate.annotations.Type
-import java.lang.Exception
-import java.math.BigInteger
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Instant
+import java.util.*
+import java.util.stream.Stream
+import javax.persistence.CascadeType
+import javax.persistence.Column
+import javax.persistence.Entity
 import javax.persistence.FetchType
+import javax.persistence.GeneratedValue
+import javax.persistence.GenerationType
+import javax.persistence.Id
 import javax.persistence.JoinColumn
 import javax.persistence.OneToOne
 
@@ -45,21 +45,21 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "flow_id", length = 64, nullable = false)
             var id: String,
 
-            @OneToOne(fetch = FetchType.LAZY)
+            @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
             @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
             var blob: DBFlowCheckpointBlob,
 
-            @OneToOne(fetch = FetchType.LAZY)
+            @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
             @JoinColumn(name = "result_id", referencedColumnName = "id")
             var result: DBFlowResult?,
 
-            @OneToOne(fetch = FetchType.LAZY)
+            @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
             @JoinColumn(name = "error_id", referencedColumnName = "id")
             var exceptionDetails: DBFlowException?,
 
-            @OneToOne(fetch = FetchType.LAZY)
-            @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
-            var flowMetadata: DBFlowMetadata,
+//            @OneToOne(fetch = FetchType.LAZY)
+//            @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
+//            var flowMetadata: DBFlowMetadata,
 
             @Column(name = "status")
             var status: FlowStatus,
@@ -73,7 +73,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "flow_io_request")
             var ioRequestType: Class<FlowIORequest<*>>,
 
-            @Column(name = "timestamp")
+            @Column(name = "timestamp", nullable = false)
             var checkpointInstant: Instant
     )
 
@@ -81,8 +81,9 @@ class DBCheckpointStorage : CheckpointStorage {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_blobs")
     class DBFlowCheckpointBlob(
             @Id
+            @GeneratedValue(strategy = GenerationType.SEQUENCE)
             @Column(name = "id", nullable = false)
-            var id: BigInteger? = null,
+            private var id: Long? = null,
 
             @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
@@ -101,7 +102,8 @@ class DBCheckpointStorage : CheckpointStorage {
     class DBFlowResult(
             @Id
             @Column(name = "id", nullable = false)
-            var id: BigInteger? = null,
+            @GeneratedValue(strategy = GenerationType.SEQUENCE)
+            private var id: Long? = null,
 
             @Type(type = "corda-blob")
             @Column(name = "result_value", nullable = false)
@@ -116,7 +118,8 @@ class DBCheckpointStorage : CheckpointStorage {
     class DBFlowException(
             @Id
             @Column(name = "id", nullable = false)
-            var id: BigInteger? = null,
+            @GeneratedValue(strategy = GenerationType.SEQUENCE)
+            private var id: Long? = null,
 
             @Column(name = "type", nullable = false)
             var type: Class<Exception>,
@@ -175,58 +178,56 @@ class DBCheckpointStorage : CheckpointStorage {
 
     )
 
-    @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
-    class DBCheckpoint(
-            @Id
-            @Suppress("MagicNumber") // database column width
-            @Column(name = "checkpoint_id", length = 64, nullable = false)
-            var checkpointId: String = "",
-
-            @Type(type = "corda-blob")
-            @Column(name = "checkpoint_value", nullable = false)
-            var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    ) {
-        override fun toString() = "DBCheckpoint(checkpointId = ${checkpointId}, checkpointSize = ${checkpoint.size})"
+    private fun createDBCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint,
+                                   serializedCheckpoint: SerializedBytes<Checkpoint>): DBFlowCheckpoint {
+        val flowState = when (checkpoint.flowState) {
+            is FlowState.Unstarted ->  checkpoint.flowState.frozenFlowLogic
+            is FlowState.Started -> checkpoint.flowState.frozenFiber
+        }
+        return DBFlowCheckpoint(
+                id = id.uuid.toString(),
+                blob = DBFlowCheckpointBlob(
+                        checkpoint = serializedCheckpoint.bytes,
+                        flowStack = flowState.bytes
+                ),
+                result = DBFlowResult(),
+                exceptionDetails = null,
+                status = FlowStatus.RUNNABLE,
+                compatible = false,
+                progressStep = "",
+                ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
+                checkpointInstant = Instant.now())
     }
 
-    override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().save(DBCheckpoint().apply {
-            checkpointId = id.uuid.toString()
-            this.checkpoint = checkpoint.bytes
-            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
-        })
+    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>) {
+        currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedCheckpoint))
     }
 
-    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().update(DBCheckpoint().apply {
-            checkpointId = id.uuid.toString()
-            this.checkpoint = checkpoint.bytes
-            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
-        })
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>) {
+        currentDBSession().update(createDBCheckpoint(id, checkpoint, serializedCheckpoint))
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
-        val delete = criteriaBuilder.createCriteriaDelete(DBCheckpoint::class.java)
-        val root = delete.from(DBCheckpoint::class.java)
-        delete.where(criteriaBuilder.equal(root.get<String>(DBCheckpoint::checkpointId.name), id.uuid.toString()))
+        val delete = criteriaBuilder.createCriteriaDelete(DBFlowCheckpoint::class.java)
+        val root = delete.from(DBFlowCheckpoint::class.java)
+        delete.where(criteriaBuilder.equal(root.get<String>(DBFlowCheckpoint::id.name), id.uuid.toString()))
         return session.createQuery(delete).executeUpdate() > 0
     }
 
     override fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>? {
-        val bytes = currentDBSession().get(DBCheckpoint::class.java, id.uuid.toString())?.checkpoint ?: return null
+        val bytes = currentDBSession().get(DBFlowCheckpoint::class.java, id.uuid.toString())?.blob?.checkpoint ?: return null
         return SerializedBytes(bytes)
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>> {
         val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(DBCheckpoint::class.java)
-        val root = criteriaQuery.from(DBCheckpoint::class.java)
+        val criteriaQuery = session.criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
         return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.checkpointId)) to SerializedBytes<Checkpoint>(it.checkpoint)
+            StateMachineRunId(UUID.fromString(it.id)) to SerializedBytes<Checkpoint>(it.blob.checkpoint)
         }
     }
 

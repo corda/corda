@@ -33,10 +33,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     object NodeCore
 
     object NodeCoreV1 : MappedSchema(schemaFamily = NodeCore.javaClass, version = 1,
-            mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
-
-                    //new checkpoints - keeping old around to allow testing easily (for now)
-                    DBCheckpointStorage.DBFlowCheckpoint::class.java,
+            mappedTypes = listOf(DBCheckpointStorage.DBFlowCheckpoint::class.java,
                     DBCheckpointStorage.DBFlowCheckpointBlob::class.java,
                     DBCheckpointStorage.DBFlowResult::class.java,
                     DBCheckpointStorage.DBFlowException::class.java,

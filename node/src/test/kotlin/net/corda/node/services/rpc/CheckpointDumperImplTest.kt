@@ -104,7 +104,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -130,7 +130,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -144,7 +144,7 @@ class CheckpointDumperImplTest {
         }
     }
 
-    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, SerializedBytes<Checkpoint>> {
+    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, Checkpoint> {
         val id = StateMachineRunId.createRandom()
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
@@ -152,6 +152,10 @@ class CheckpointDumperImplTest {
         val frozenLogic = logic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, myself.identity.party, SubFlowVersion.CoreFlow(version), false)
                 .getOrThrow()
-        return id to checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        return id to checkpoint
+    }
+
+    private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
+        return checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }
