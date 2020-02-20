@@ -24,6 +24,6 @@ dependencies {
 }
 
 // This module has no artifact and only contains tests.
-tasks.getByName('jar') {
+tasks.named('jar', Jar) {
     enabled = false
 }
