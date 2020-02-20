@@ -418,7 +418,7 @@ lazyBridgeStart
 messagingServerAddress
   The address of the ArtemisMQ broker instance.
   If not provided the node will run one locally.
-  0.0.0.0 should not be specified since this needs to be a valid external client address.   
+  0.0.0.0 should not be specified since this needs to be a valid client address.   
   
   *Default:* not defined
 
@@ -581,6 +581,7 @@ rpcSettings
 
     adminAddress
       host and port for the RPC admin binding (this is the endpoint that the node process will connect to).
+      this needs to follow the same host rules as address setting (see above)  
 
       *Default:* not defined
 
