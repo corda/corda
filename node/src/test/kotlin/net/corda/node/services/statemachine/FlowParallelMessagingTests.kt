@@ -31,7 +31,6 @@ class FlowParallelMessagingTests {
 
     companion object {
 
-
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var senderNode: TestStartedNode
         private lateinit var recipientNode1: TestStartedNode

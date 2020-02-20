@@ -29,13 +29,15 @@ interface FlowMessaging {
     fun sendSessionMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId)
 
     @Suspendable
-    fun sendSessionMessages(messageData: List<Triple<Destination, SessionMessage, SenderDeduplicationId>>)
+    fun sendSessionMessages(messageData: List<Message>)
 
     /**
      * Start the messaging using the [onMessage] message handler.
      */
     fun start(onMessage: (ReceivedMessage, deduplicationHandler: DeduplicationHandler) -> Unit)
 }
+
+data class Message(val destination: Destination, val sessionMessage: SessionMessage, val dedupId: SenderDeduplicationId)
 
 /**
  * Implementation of [FlowMessaging] using a [ServiceHubInternal] to do the messaging and routing.
@@ -60,8 +62,8 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     @Suspendable
-    override fun sendSessionMessages(messageData: List<Triple<Destination, SessionMessage, SenderDeduplicationId>>) {
-        val addressedMessages = messageData.map { (destination, message, deduplicationId) -> createMessage(destination, message, deduplicationId) }
+    override fun sendSessionMessages(messageData: List<Message>) {
+        val addressedMessages = messageData.map { createMessage(it.destination, it.sessionMessage, it.dedupId) }
         serviceHub.networkService.send(addressedMessages)
     }
 

@@ -355,6 +355,7 @@ abstract class FlowLogic<out T> {
         stateMachine.suspend(request, maySkipCheckpoint)
     }
 
+    @Suspendable
     private fun serializePayloads(payloadsPerSession: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
         val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
 

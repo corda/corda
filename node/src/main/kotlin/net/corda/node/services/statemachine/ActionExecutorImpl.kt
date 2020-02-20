@@ -194,9 +194,9 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendMultiple(action: Action.SendMultiple) {
-        val messageData = action.sendInitial.map { Triple(it.destination, it.initialise, it.deduplicationId) } +
-                action.sendExisting.map { Triple(it.peerParty, it.message, it.deduplicationId) }
-        flowMessaging.sendSessionMessages(messageData)
+        val messages = action.sendInitial.map { Message(it.destination, it.initialise, it.deduplicationId) } +
+                action.sendExisting.map { Message(it.peerParty, it.message, it.deduplicationId) }
+        flowMessaging.sendSessionMessages(messages)
     }
 
     @Suspendable

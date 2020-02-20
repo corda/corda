@@ -248,10 +248,7 @@ class StartedFlowTransition(
         val newSessions = LinkedHashMap(checkpoint.sessions)
         var index = 0
         for ((sourceSessionId, message) in sourceSessionIdToMessage) {
-            if (!checkpoint.sessions.containsKey(sourceSessionId))
-                return freshErrorTransition(CannotFindSessionException(sourceSessionId))
-
-            val existingSessionState = checkpoint.sessions[sourceSessionId]!!
+            val existingSessionState = checkpoint.sessions[sourceSessionId] ?: return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             if (existingSessionState is SessionState.Initiated && existingSessionState.initiatedState is InitiatedSessionState.Ended) {
                 return freshErrorTransition(IllegalStateException("Tried to send to ended session $sourceSessionId"))
             }
