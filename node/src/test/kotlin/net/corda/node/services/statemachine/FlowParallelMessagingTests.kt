@@ -31,6 +31,7 @@ class FlowParallelMessagingTests {
 
     companion object {
 
+
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var senderNode: TestStartedNode
         private lateinit var recipientNode1: TestStartedNode
@@ -65,7 +66,7 @@ class FlowParallelMessagingTests {
     }
 
 
-    @Test
+    @Test(timeout=300_000)
     fun `messages can be exchanged in parallel using sendAll & receiveAll between multiple parties successfully`() {
         val messages = mapOf(
                 recipientParty1 to MessageType.REPLY,
@@ -79,7 +80,7 @@ class FlowParallelMessagingTests {
         assertEquals("ok", result)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow exceptions from counterparties during receiveAll are handled properly`() {
         val messages = mapOf(
                 recipientParty1 to MessageType.REPLY,
@@ -93,7 +94,7 @@ class FlowParallelMessagingTests {
                 .hasMessage("graceful failure")
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `runtime exceptions from counterparties during receiveAll are handled properly`() {
         val messages = mapOf(
                 recipientParty1 to MessageType.REPLY,
@@ -106,7 +107,7 @@ class FlowParallelMessagingTests {
                 .isInstanceOf(UnexpectedFlowEndException::class.java)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `initial session messages and existing session messages can be sent together using sendAll`() {
         val flow = senderNode.services.startFlow(StagedSenderFlow(listOf(recipientParty1, recipientParty2)))
 
@@ -116,7 +117,7 @@ class FlowParallelMessagingTests {
         assertEquals("ok", result)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `messages can be exchanged successfully even between anonymous parties`() {
         val senderAnonymousParty = senderNode.createConfidentialIdentity(senderParty)
         val firstRecipientAnonymousParty = recipientNode1.createConfidentialIdentity(recipientParty1)
@@ -163,6 +164,7 @@ class FlowParallelMessagingTests {
         }
     }
 
+    @Suppress("TooGenericExceptionThrown")
     @InitiatedBy(SenderFlow::class)
     class RecipientFlow(private val otherPartySession: FlowSession): FlowLogic<String>() {
         @Suspendable
