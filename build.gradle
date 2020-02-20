@@ -25,14 +25,14 @@ buildscript {
 
     ext.quasar_group = 'co.paralleluniverse'
     // Set version of Quasar according to version of Java used:
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        ext.quasar_version = constants.getProperty("quasarVersion11")
-        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
-    } else {
+    if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
+    } else {
+        ext.quasar_version = constants.getProperty("quasarVersion11")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
     }
     ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
@@ -126,13 +126,13 @@ buildscript {
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
     ext.detekt_version = constants.getProperty('detektVersion')
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+    if (JavaVersion.current().isJava8()) {
+        ext.fontawesomefx_commons_version = '8.15'
+        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    } else {
         // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
         ext.fontawesomefx_commons_version = '11.0'
         ext.fontawesomefx_fontawesome_version = '4.7.0-11'
-    } else {
-        ext.fontawesomefx_commons_version = '8.15'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
     }
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
@@ -225,11 +225,7 @@ apply plugin: 'java'
 
 logger.lifecycle("Java version: {}", JavaVersion.current())
 sourceCompatibility = VERSION_1_8
-if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-    targetCompatibility = VERSION_1_8
-} else {
-    targetCompatibility = VERSION_11
-}
+targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
 logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
@@ -265,11 +261,7 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-        targetCompatibility = VERSION_1_8
-    } else {
-        targetCompatibility = VERSION_11
-    }
+    targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -292,7 +284,7 @@ allprojects {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
-            jvmTarget = "1.8"
+            jvmTarget = VERSION_1_8
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
             allWarningsAsErrors = warnings_as_errors
