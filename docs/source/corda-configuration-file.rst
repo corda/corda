@@ -106,6 +106,9 @@ overridden via:
 
 Limitations
 ```````````
+* Please note that to limit external connections to your node please use loopback address 127.0.0.1 instead of 
+  localhost for client settings such as p2pAddress; since localhost is translated internally to the physical hostname 
+  and can be reached externally.
 
 * If the same key is overridden by both an environment variable and system property, the system property takes precedence.
 
@@ -150,6 +153,7 @@ Configuration file fields
 additionalP2PAddresses
   An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the :ref:`p2pAddress <corda_configuration_file_p2pAddress>`.
   Nodes can use this configuration option to advertise HA endpoints and aliases to external parties.
+  0.0.0.0 is not a valid host setting since each additionalP2PAddress must be an external client address.  
 
   *Default:* empty list
 
@@ -414,7 +418,7 @@ lazyBridgeStart
 messagingServerAddress
   The address of the ArtemisMQ broker instance.
   If not provided the node will run one locally.
-  0.0.0.0 should not be specified since this needs to be an externally valid routable address.   
+  0.0.0.0 should not be specified since this needs to be a valid external client address.   
   
   *Default:* not defined
 
@@ -550,7 +554,7 @@ p2pAddress
   However, note that the host is the included as the advertised entry in the network map.
   As a result the value listed here must be **externally accessible when running nodes across a cluster of machines.**
   If the provided host is unreachable, the node will try to auto-discover its public one.
-  0.0.0.0 is not a valid host setting since p2pAddress must be an externally valid routable address.  
+  0.0.0.0 is not a valid host setting since p2pAddress must be an external client address.  
   
 
   *Default:* not defined
