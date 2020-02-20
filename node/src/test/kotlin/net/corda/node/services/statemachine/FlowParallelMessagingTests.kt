@@ -181,7 +181,7 @@ class FlowParallelMessagingTests {
 
     @StartableByRPC
     @InitiatingFlow
-    class StagedSenderFlow(private val parties: List<out Destination>): FlowLogic<String>() {
+    class StagedSenderFlow(private val parties: List<Destination>): FlowLogic<String>() {
         @Suspendable
         override fun call(): String {
             if (parties.size < 2) {
