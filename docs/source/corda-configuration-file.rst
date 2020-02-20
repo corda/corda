@@ -414,7 +414,8 @@ lazyBridgeStart
 messagingServerAddress
   The address of the ArtemisMQ broker instance.
   If not provided the node will run one locally.
-
+  0.0.0.0 should not be specified since this needs to be an externally valid routable address.   
+  
   *Default:* not defined
 
 messagingServerExternal
@@ -549,9 +550,11 @@ p2pAddress
   However, note that the host is the included as the advertised entry in the network map.
   As a result the value listed here must be **externally accessible when running nodes across a cluster of machines.**
   If the provided host is unreachable, the node will try to auto-discover its public one.
+  0.0.0.0 is not a valid host setting since p2pAddress must be an externally valid routable address.  
+  
 
   *Default:* not defined
-
+  
 rpcAddress (deprecated)
   The address of the RPC system on which RPC requests can be made to the node.
   If not provided then the node will run without RPC.
