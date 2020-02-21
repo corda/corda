@@ -243,7 +243,6 @@ dependencies {
     slowIntegrationTestRuntime configurations.testRuntime
 
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
 }
 
 tasks.withType(JavaCompile) {

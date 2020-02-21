@@ -2,8 +2,6 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.cordapp.CordappResolver
-import net.corda.core.internal.cordapp.resetForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
@@ -12,7 +10,6 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -66,11 +63,6 @@ class CordappProviderImplTests {
     @Before
     fun setup() {
         attachmentStore = MockAttachmentStorage()
-    }
-
-    @After
-    fun shutdown() {
-        CordappResolver.resetForTesting()
     }
 
     @Test(timeout=300_000)
