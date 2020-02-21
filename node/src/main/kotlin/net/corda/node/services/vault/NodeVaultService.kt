@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
@@ -13,6 +14,7 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
 import net.corda.core.node.services.vault.*
+import net.corda.core.observable.internal.OnResilientSubscribe
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
@@ -209,7 +211,27 @@ class NodeVaultService(
     }
 
     override val rawUpdates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _rawUpdatesPublisher }
+        get() = mutex.locked {
+            FlowStateMachineImpl.currentStateMachine()?.let {
+                // we are inside a flow; we cannot allow flows to subscribe Rx Observers,
+                // because the Observer could reference flow's properties, essentially fiber's properties then,
+                // since it does not unsubscribe on flow's/ fiber's completion,
+                // it could prevent the flow/ fiber -object- get garbage collected.
+                log.error(
+                    "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
+                            "- Rx.Observables should only be accessed outside the context of a flow " +
+                            "- aborting the flow "
+                )
+
+                throw CordaRuntimeException(
+                    "Flow ${it.logic::class.java.name} tried to access VaultService.rawUpdates " +
+                            "- Rx.Observables should only be accessed outside the context of a flow "
+                )
+            }
+            // we are not inside a flow, we are most likely inside a CordaService;
+            // we will expose, by default, subscribing of -non unsubscribing- rx.Observers to rawUpdates.
+            return _rawUpdatesPublisher.resilientOnError()
+        }
 
     override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
@@ -414,7 +436,7 @@ class NodeVaultService(
                                 HospitalizeFlowException(wrapped)
                             }
                         }
-                    } ?: HospitalizeFlowException(e)
+                    } ?: (e as? SQLException ?: (e as? PersistenceException ?: HospitalizeFlowException(e)))
                 }
             }
         }
@@ -796,3 +818,6 @@ class NodeVaultService(
         return myTypes
     }
 }
+
+/** The Observable returned allows subscribing with custom SafeSubscribers to source [Observable]. */
+internal fun<T> Observable<T>.resilientOnError(): Observable<T> = Observable.unsafeCreate(OnResilientSubscribe(this, false))
