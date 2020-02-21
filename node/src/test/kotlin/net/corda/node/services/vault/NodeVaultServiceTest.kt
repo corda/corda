@@ -2,7 +2,6 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
@@ -11,7 +10,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.packageName
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
@@ -897,20 +895,18 @@ class NodeVaultServiceTest {
 
         fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
 
-        CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
-            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
-            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
-            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
-            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
-            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
-            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
-            services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
 
-            // Test one.
-            // RelevancyStatus is ALL by default. This should return five states.
-            val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
-            assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
-        }
+        // Test one.
+        // RelevancyStatus is ALL by default. This should return five states.
+        val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
+        assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
 
         // We should never see 2 or 7.
     }

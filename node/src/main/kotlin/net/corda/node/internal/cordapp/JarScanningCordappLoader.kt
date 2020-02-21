@@ -9,7 +9,6 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
@@ -30,6 +29,7 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipInputStream
@@ -52,12 +52,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
         }
     }
-
+    private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
     override val cordapps: List<CordappImpl> by lazy { loadCordapps() + extraCordapps }
 
     override val appClassLoader: URLClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
-    override fun close() = appClassLoader.close()
+    override fun close() {
+        cordappClasses.clear()
+        appClassLoader.close()
+    }
 
     companion object {
         private val logger = contextLogger()
@@ -128,8 +131,33 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         }
                     }
                 }
-        cordapps.forEach(CordappResolver::register)
+        cordapps.forEach(::register)
         return cordapps
+    }
+
+    private fun register(cordapp: Cordapp) {
+        val contractClasses = cordapp.contractClassNames.toSet()
+        val existingClasses = cordappClasses.keys
+        val classesToRegister = cordapp.cordappClasses.toSet()
+        val notAlreadyRegisteredClasses = classesToRegister - existingClasses
+        val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
+
+        notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
+
+        for ((registeredClassName, registeredCordapps) in alreadyRegistered) {
+            val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
+
+            if (duplicateCordapps.isNotEmpty()) {
+                throw IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+                        "${duplicateCordapps.map { it.name }}")
+            }
+            if (registeredClassName in contractClasses) {
+                throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
+                        "Please remove the previous version when upgrading to a new version.")
+            }
+            cordappClasses[registeredClassName] = registeredCordapps + cordapp
+        }
     }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {

@@ -7,7 +7,6 @@ import net.corda.core.internal.cordapp.resetForTesting
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappConfigProvider
@@ -63,7 +62,6 @@ class CordappProviderImplTests {
     }
 
     private lateinit var attachmentStore: AttachmentStorage
-    private val whitelistedContractImplementations = testNetworkParameters().whitelistedContractImplementations
 
     @Before
     fun setup() {
@@ -212,6 +210,18 @@ class CordappProviderImplTests {
             Files.copy(signedJarPath, duplicateJarPath)
             assertFailsWith<IllegalStateException> {
                 newCordappProvider(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `test an exception is raised when two jars share a contract`() {
+
+        SelfCleaningDir().use { file ->
+            val jarA = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForA"), generateManifest = false, jarFileName = "sampleA.jar")
+            val jarB = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForB"), generateManifest = false, jarFileName = "sampleB.jar")
+            assertFailsWith<IllegalStateException> {
+                newCordappProvider(jarA.toUri().toURL(), jarB.toUri().toURL())
             }
         }
     }
