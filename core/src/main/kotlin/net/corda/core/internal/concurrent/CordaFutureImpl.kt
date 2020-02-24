@@ -78,6 +78,7 @@ fun <ELEMENT> CordaFuture<out ELEMENT>.mapError(transform: (Throwable) -> Throwa
  * But if this future or the transform fails, the returned future's outcome is the same throwable.
  * In the case where this future fails, the transform is not invoked.
  */
+@Suppress("TooGenericExceptionCaught")
 fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): CordaFuture<W> = CordaFutureImpl<W>().also { result ->
     thenMatch(success@ {
         result.captureLater(try {
@@ -85,6 +86,9 @@ fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): Cor
         } catch (e: Exception) {
             result.setException(e)
             return@success
+        } catch (t: Throwable) {
+            result.setException(t)
+            throw t
         })
     }, {
         result.setException(it)
