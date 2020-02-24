@@ -10,6 +10,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.DBCheckpointStorage.FlowStatus
 import java.time.Instant
 
 /**
@@ -54,7 +55,11 @@ data class Checkpoint(
         val checkpointState: CheckpointState,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val result: Any? = null
+        val result: Any? = null,
+        val status: FlowStatus = FlowStatus.RUNNABLE,
+        val progressStep: String? = null,
+        val flowIoRequest: FlowIORequest<*>? = null,
+        val compatible: Boolean = true
 ) {
 
     val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
