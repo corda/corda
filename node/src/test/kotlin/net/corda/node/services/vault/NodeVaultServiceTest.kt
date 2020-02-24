@@ -885,7 +885,7 @@ class NodeVaultServiceTest {
     }
 
     @Test(timeout=300_000)
-	fun `V3 vault queries return all states by default`() {
+	fun `Vault queries return all states by default`() {
         fun createTx(number: Int, vararg participants: Party): SignedTransaction {
             return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
                 addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
