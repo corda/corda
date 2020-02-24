@@ -136,11 +136,15 @@ interface ValueOrException<in V> {
     fun captureLater(f: CordaFuture<out V>) = f.then { capture { f.getOrThrow() } }
 
     /** Run the given block (in the foreground) and set this future to its outcome. */
+    @Suppress("TooGenericExceptionCaught")
     fun capture(block: () -> V): Boolean {
         return set(try {
             block()
         } catch (e: Exception) {
             return setException(e)
+        } catch (t: Throwable) {
+            setException(t)
+            throw t
         })
     }
 }
@@ -160,12 +164,16 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
     override fun setException(t: Throwable) = impl.completeExceptionally(t)
     override fun <W> then(callback: (CordaFuture<V>) -> W) = thenImpl(defaultLog, callback)
     /** For testing only. */
+    @Suppress("TooGenericExceptionCaught")
     internal fun <W> thenImpl(log: Logger, callback: (CordaFuture<V>) -> W) {
         impl.whenComplete { _, _ ->
             try {
                 callback(this)
             } catch (e: Exception) {
                 log.error(listenerFailedMessage, e)
+            } catch (t: Throwable) {
+                log.error(listenerFailedMessage, t)
+                throw t
             }
         }
     }
