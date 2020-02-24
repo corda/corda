@@ -26,6 +26,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.streams.toList
@@ -97,7 +98,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout=300_000)
-	fun `add and remove checkpoint in single commit operate`() {
+    fun `add and remove checkpoint in single commit operate`() {
         val (id, checkpoint) = newCheckpoint()
         val serializedCheckpoint = checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val (id2, checkpoint2) = newCheckpoint()
@@ -117,7 +118,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout=300_000)
-	fun `add two checkpoints then remove first one`() {
+    fun `add two checkpoints then remove first one`() {
         val (id, firstCheckpoint) = newCheckpoint()
         val serializedFirstCheckpoint = firstCheckpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
@@ -142,7 +143,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout=300_000)
-	fun `add checkpoint and then remove after 'restart'`() {
+    fun `add checkpoint and then remove after 'restart'`() {
         val (id, originalCheckpoint) = newCheckpoint()
         val serializedOriginalCheckpoint = originalCheckpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         database.transaction {
@@ -164,7 +165,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout=300_000)
-	fun `verify checkpoints compatible`() {
+    fun `verify checkpoints compatible`() {
         val mockServices = MockServices(emptyList(), ALICE.name)
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)

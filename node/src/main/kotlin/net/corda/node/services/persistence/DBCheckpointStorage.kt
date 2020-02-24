@@ -39,7 +39,7 @@ class DBCheckpointStorage : CheckpointStorage {
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_new")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBFlowCheckpoint(
             @Id
             @Column(name = "flow_id", length = 64, nullable = false)

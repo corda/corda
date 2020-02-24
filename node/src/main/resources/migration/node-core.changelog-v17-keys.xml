@@ -12,23 +12,24 @@
         <addPrimaryKey columnNames="invocation_id" constraintName="node_flow_metadata_pk" tableName="node_flow_metadata"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_new_checkpoint_schema_foreign_keys">
-        <addForeignKeyConstraint baseColumnNames="checkpoint_blob_id" baseTableName="node_checkpoints"
-                                 constraintName="node_checkpoint_blob_id_to_blob_table_fk"
-                                 referencedColumnNames="id" referencedTableName="node_checkpoint_blobs"/>
 
-        <addForeignKeyConstraint baseColumnNames="error_id" baseTableName="node_checkpoints"
-                                 constraintName="node_checkpoints_to_exceptions_fk"
-                                 referencedColumnNames="id" referencedTableName="node_flow_exceptions"/>
+<changeSet author="R3.Corda" id="add_new_checkpoint_schema_foreign_keys">
+    <addForeignKeyConstraint baseColumnNames="id" baseTableName="node_checkpoint_blobs"
+                             constraintName="node_checkpoint_blob_id_to_blob_table_fk"
+                             referencedColumnNames="checkpoint_blob_id" referencedTableName="node_checkpoints"/>
 
-        <addForeignKeyConstraint baseColumnNames="result_id" baseTableName="node_checkpoints"
-                                 constraintName="node_checkpoint_to_result_fk"
-                                 referencedColumnNames="id" referencedTableName="node_flow_results"/>
+    <addForeignKeyConstraint baseColumnNames="id" baseTableName="node_flow_exceptions"
+                             constraintName="node_checkpoints_to_exceptions_fk"
+                             referencedColumnNames="error_id" referencedTableName="node_checkpoints"/>
 
-        <addForeignKeyConstraint baseColumnNames="flow_id" baseTableName="node_flow_metadata"
-                                 constraintName="node_metadata_to_checkpoints_fk"
-                                 referencedColumnNames="flow_id" referencedTableName="node_checkpoints"/>
+<!--    <addForeignKeyConstraint baseColumnNames="id" baseTableName="node_flow_results"-->
+<!--                             constraintName="node_checkpoint_to_result_fk"-->
+<!--                             referencedColumnNames="result_id" referencedTableName="node_checkpoints"/>-->
 
-    </changeSet>
+    <addForeignKeyConstraint baseColumnNames="flow_id" baseTableName="node_flow_metadata"
+                             constraintName="node_metadata_to_checkpoints_fk"
+                             referencedColumnNames="flow_id" referencedTableName="node_checkpoints"/>
+</changeSet>
+
 
 </databaseChangeLog>

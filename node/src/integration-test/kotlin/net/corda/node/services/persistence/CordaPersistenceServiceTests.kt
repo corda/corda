@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
@@ -15,6 +16,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.sql.DriverManager
+import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -53,9 +55,20 @@ class CordaPersistenceServiceTests {
         fun createObjects(count: Int) : Int {
             (1..count).toList().parallelStream().forEach {
                 services.database.transaction {
-                    session.save(DBCheckpointStorage.DBCheckpoint().apply {
-                        checkpointId = it.toString()
-                    })
+                    session.save(DBCheckpointStorage.DBFlowCheckpoint(
+                        id = it.toString(),
+                        blob = DBCheckpointStorage.DBFlowCheckpointBlob(
+                                checkpoint = ByteArray(8192),
+                                flowStack = ByteArray(8192)
+                        ),
+                        result = DBCheckpointStorage.DBFlowResult(),
+                        exceptionDetails = null,
+                        status = DBCheckpointStorage.FlowStatus.RUNNABLE,
+                        compatible = false,
+                        progressStep = "",
+                        ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
+                        checkpointInstant = Instant.now()
+                    ))
                 }
             }
 
