@@ -5,8 +5,6 @@ apply plugin: 'com.jfrog.artifactory'
 dependencies {
     compile project(':core')
     compile project(':node-api')
-    compile project(':tools:cliutils')
-    compile project(":common-logging")
 
     // Unit testing helpers.
     compile "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
