@@ -9,6 +9,7 @@ description 'Testing utilities for Corda'
 
 dependencies {
     compile project(':test-common')
+    compile project(':core-test-utils')
     compile(project(':node')) {
         // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
