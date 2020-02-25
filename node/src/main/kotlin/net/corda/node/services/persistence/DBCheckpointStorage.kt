@@ -7,6 +7,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.Checkpoint.FlowStatus
+import net.corda.node.services.statemachine.Checkpoint.StartReason
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -32,19 +34,6 @@ import javax.persistence.OneToOne
  */
 class DBCheckpointStorage : CheckpointStorage {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
-
-    enum class FlowStatus {
-        RUNNABLE,
-        FAILED,
-        COMPLETED,
-        HOSPITALIZED,
-        KILLED,
-        PAUSED
-    }
-
-    enum class StartReason {
-        RPC, FLOW, SERVICE, SCHEDULED, INITIATED
-    }
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_new")
