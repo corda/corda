@@ -8,7 +8,11 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoCheckpointSerializer
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
+import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.testing.common.internal.asContextEnv
 import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
