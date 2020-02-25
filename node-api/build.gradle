@@ -30,6 +30,10 @@ dependencies {
     // ClassGraph: classpath scanning
     compile "io.github.classgraph:classgraph:$class_graph_version"
 
+    // Kryo: object graph serialization.
+    compile "com.esotericsoftware:kryo:4.0.2"
+    compile "de.javakaffee:kryo-serializers:0.43"
+
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 

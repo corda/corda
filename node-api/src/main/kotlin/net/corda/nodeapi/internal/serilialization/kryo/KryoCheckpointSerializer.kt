@@ -1,4 +1,4 @@
-package net.corda.node.serialization.kryo
+package net.corda.nodeapi.internal.serilialization.kryo
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
@@ -96,7 +96,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     override fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
         return context.kryo {
             SerializedBytes(kryoOutput {
-                kryoMagic.writeTo(this)
+                net.corda.nodeapi.internal.serilialization.kryo.kryoMagic.writeTo(this)
                 context.encoding?.let { encoding ->
                     SectionId.ENCODING.writeTo(this)
                     (encoding as CordaSerializationEncoding).writeTo(this)

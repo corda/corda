@@ -1,6 +1,9 @@
-package net.corda.node.serialization.kryo
+package net.corda.nodeapi.internal.serialization.kryo
 
 import net.corda.core.internal.declaredField
+import net.corda.nodeapi.internal.serilialization.kryo.kryoInput
+import net.corda.nodeapi.internal.serilialization.kryo.kryoOutput
+import net.corda.nodeapi.internal.serilialization.kryo.substitute
 import net.corda.serialization.internal.ByteBufferOutputStream
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertArrayEquals

@@ -8,10 +8,10 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.serialization.kryo.CordaClassResolver
-import net.corda.node.serialization.kryo.CordaKryo
-import net.corda.node.serialization.kryo.DefaultKryoCustomizer
-import net.corda.node.serialization.kryo.kryoMagic
+import net.corda.nodeapi.internal.serilialization.kryo.CordaClassResolver
+import net.corda.nodeapi.internal.serilialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serilialization.kryo.DefaultKryoCustomizer
+import net.corda.nodeapi.internal.serilialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
