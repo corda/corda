@@ -5,7 +5,6 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -35,7 +34,8 @@ class FinalityHandlerTest {
 	fun `sent to flow hospital on error and attempted retry on node restart`() {
         // Setup a network where only Alice has the finance CorDapp and it sends a cash tx to Bob who doesn't have the
         // CorDapp. Bob's FinalityHandler will error when validating the tx.
-        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME,
+               additionalCordapps = FINANCE_CORDAPPS + CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
 
         var bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
@@ -82,11 +82,9 @@ class FinalityHandlerTest {
     }
 
     private fun TestStartedNode.finaliseWithOldApi(stx: SignedTransaction): CordaFuture<SignedTransaction> {
-        return CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
-            @Suppress("DEPRECATION")
-            services.startFlow(FinalityFlow(stx)).resultFuture.apply {
+        @Suppress("DEPRECATION")
+        return services.startFlow(FinalityFlow(stx)).resultFuture.apply {
                 mockNet.runNetwork()
-            }
         }
     }
 
