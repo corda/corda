@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.toSynchronised

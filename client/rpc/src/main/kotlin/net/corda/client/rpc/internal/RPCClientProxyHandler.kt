@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
@@ -11,7 +10,7 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId

@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.CordaInternal
 import net.corda.core.context.Actor

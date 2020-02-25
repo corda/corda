@@ -1,12 +1,10 @@
-package net.corda.client.rpc.internal.serialization.amqp
+package net.corda.nodeapi.internal.rpc.client
 
 
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.rpc.client.CallSite
-import net.corda.nodeapi.internal.rpc.client.ObservableContext
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
@@ -86,7 +84,7 @@ object RpcClientObservableDeSerializer : CustomSerializer.Implements<Observable<
         }
 
         val observableContext =
-                context.properties[RpcClientObservableDeSerializer.RpcObservableContextKey] as ObservableContext
+                context.properties[RpcObservableContextKey] as ObservableContext
 
         if (obj !is List<*>) throw NotSerializableException("Input must be a serialised list")
         if (obj.size != 2) throw NotSerializableException("Expecting two elements, have ${obj.size}")
@@ -105,7 +103,8 @@ object RpcClientObservableDeSerializer : CustomSerializer.Implements<Observable<
 
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
-        return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
+        return pinInSubscriptions(observable, observableContext.hardReferenceStore)
+                .doOnUnsubscribe {
             // This causes Future completions to give warnings because the corresponding OnComplete sent from the server
             // will arrive after the client unsubscribes from the observable and consequently invalidates the mapping.
             // The unsubscribe is due to ObservableToFuture's use of first().

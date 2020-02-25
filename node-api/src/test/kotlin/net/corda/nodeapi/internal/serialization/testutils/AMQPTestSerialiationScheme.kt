@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.testutils
 
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer

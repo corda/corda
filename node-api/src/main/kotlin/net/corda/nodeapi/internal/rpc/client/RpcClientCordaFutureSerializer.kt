@@ -1,4 +1,4 @@
-package net.corda.client.rpc.internal.serialization.amqp
+package net.corda.nodeapi.internal.rpc.client
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.toFuture
@@ -14,7 +14,7 @@ import java.io.NotSerializableException
 class RpcClientCordaFutureSerializer (factory: SerializerFactory)
     : CustomSerializer.Proxy<CordaFuture<*>, RpcClientCordaFutureSerializer.FutureProxy>(
         CordaFuture::class.java,
-        RpcClientCordaFutureSerializer.FutureProxy::class.java, factory
+        FutureProxy::class.java, factory
 ) {
     override fun fromProxy(proxy: FutureProxy): CordaFuture<*> {
         try {

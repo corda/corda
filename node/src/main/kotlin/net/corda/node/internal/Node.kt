@@ -8,7 +8,7 @@ import com.jcabi.manifests.Manifests
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
