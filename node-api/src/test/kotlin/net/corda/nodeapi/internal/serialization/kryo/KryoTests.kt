@@ -23,7 +23,7 @@ import net.corda.serialization.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertArrayEquals

@@ -11,8 +11,8 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.core.*
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -32,7 +32,7 @@ class InMemoryIdentityServiceTests {
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
         val BOB_PUBKEY get() = bob.publicKey
-        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toList(), net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
     }
 
     @Rule
@@ -159,8 +159,8 @@ class InMemoryIdentityServiceTests {
         }
 
         assertFailsWith<IllegalArgumentException> {
-            val owningKey = DEV_INTERMEDIATE_CA.certificate.publicKey
-            val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
+            val owningKey = net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.publicKey
+            val subject = CordaX500Name.build(net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
             service.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
         }
     }

@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.utilities.contextLogger

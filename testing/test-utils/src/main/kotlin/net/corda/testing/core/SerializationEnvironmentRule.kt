@@ -10,8 +10,8 @@ import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.internal.asTestContextEnv
 import net.corda.testing.internal.createTestSerializationEnv
 import net.corda.testing.internal.inVMExecutors
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.testThreadFactory
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.testThreadFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -28,7 +28,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
-            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>().also {
+            InVMConnector::class.staticField<ExecutorService>("threadPoolExecutor").value = rigorousMock<ExecutorService>()
+                    .also {
                 doAnswer {
                     inVMExecutors.computeIfAbsent(effectiveSerializationEnv) {
                         Executors.newCachedThreadPool(testThreadFactory(true)) // Close enough to what InVMConnector makes normally.

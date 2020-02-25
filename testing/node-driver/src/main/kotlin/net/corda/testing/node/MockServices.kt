@@ -41,7 +41,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -61,7 +61,7 @@ import javax.persistence.EntityManager
 
 /** Returns a simple [IdentityService] containing the supplied [identities]. */
 fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentityService {
-    return InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+    return InMemoryIdentityService(identities.toList(), net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
 }
 
 /**
@@ -179,7 +179,7 @@ open class MockServices private constructor(
             identityService.apply {
                 ourNames = setOf(initialIdentity.name)
                 database = persistence
-                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
+                start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
 

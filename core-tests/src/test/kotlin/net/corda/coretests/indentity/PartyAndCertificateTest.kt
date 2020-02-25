@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +26,7 @@ class PartyAndCertificateTest {
 
     @Test(timeout=300_000)
 	fun `reject a path with no roles`() {
-        val path = X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
+        val path = X509Utilities.buildCertPath(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
         assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
     }
 

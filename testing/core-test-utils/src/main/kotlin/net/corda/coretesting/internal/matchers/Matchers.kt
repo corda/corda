@@ -1,4 +1,4 @@
-package net.corda.testing.internal.matchers
+package net.corda.coretesting.internal.matchers
 
 import com.natpryce.hamkrest.*
 

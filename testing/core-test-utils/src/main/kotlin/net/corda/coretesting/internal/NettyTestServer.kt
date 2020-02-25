@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelFuture

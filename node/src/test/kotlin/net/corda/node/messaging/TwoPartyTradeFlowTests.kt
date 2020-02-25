@@ -41,7 +41,7 @@ import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
@@ -666,7 +666,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 // Put a broken command on so at least a signature is created
                 command(issuer.party.owningKey, Cash.Commands.Move())
             }
-            timeWindow(TEST_TX_TIME)
+            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
             if (withError) {
                 this.fails()
             } else {
@@ -706,10 +706,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary,
-                    contractState = CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days))
+                    contractState = CommercialPaper.State(issuer, owner, amount, net.corda.coretesting.internal.TEST_TX_TIME + 7.days))
             command(issuer.party.owningKey, CommercialPaper.Commands.Issue())
             if (!withError)
-                timeWindow(time = TEST_TX_TIME)
+                timeWindow(time = net.corda.coretesting.internal.TEST_TX_TIME)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {

@@ -25,10 +25,10 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
@@ -69,7 +69,7 @@ class CertificateRevocationListNodeTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val ROOT_CA = DEV_ROOT_CA
+    private val ROOT_CA = net.corda.coretesting.internal.DEV_ROOT_CA
     private lateinit var INTERMEDIATE_CA: CertificateAndKeyPair
 
     private val portAllocation = incrementalPortAllocation()
@@ -118,10 +118,10 @@ class CertificateRevocationListNodeTests {
         server = CrlServer(NetworkHostAndPort("localhost", 0))
         server.start()
         INTERMEDIATE_CA = CertificateAndKeyPair(replaceCrlDistPointCaCertificate(
-                DEV_INTERMEDIATE_CA.certificate,
+                net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate,
                 CertificateType.INTERMEDIATE_CA,
                 ROOT_CA.keyPair,
-                "http://${server.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
+                "http://${server.hostAndPort}/crl/intermediate.crl"), net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.keyPair)
     }
 
     @After

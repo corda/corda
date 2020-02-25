@@ -15,8 +15,8 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -62,7 +62,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)
-        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+        identityService.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
     }
 
     @After
@@ -206,8 +206,8 @@ class PersistentIdentityServiceTests {
         }
 
         assertFailsWith<IllegalArgumentException> {
-            val owningKey = DEV_INTERMEDIATE_CA.certificate.publicKey
-            val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
+            val owningKey = net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.publicKey
+            val subject = CordaX500Name.build(net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
             identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
         }
     }
@@ -227,7 +227,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+            it.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())

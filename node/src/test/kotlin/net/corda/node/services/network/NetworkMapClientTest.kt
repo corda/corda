@@ -11,10 +11,10 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.internal.signWith
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.signWith
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -43,7 +43,7 @@ class NetworkMapClientTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate) }
     }
 
     @After

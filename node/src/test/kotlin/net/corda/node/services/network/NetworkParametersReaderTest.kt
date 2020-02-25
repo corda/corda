@@ -11,7 +11,7 @@ import net.corda.node.internal.NetworkParametersReader
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -40,7 +40,7 @@ class NetworkParametersReaderTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"), VersionInfo(1, "TEST", "TEST", "TEST"))
-        networkMapClient.start(DEV_ROOT_CA.certificate)
+        networkMapClient.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
     }
 
     @After
@@ -55,13 +55,13 @@ class NetworkParametersReaderTest {
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(baseDirectory)
         NetworkParametersCopier(server.networkParameters, update = true).install(baseDirectory) // Parameters update file.
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
+        val parameters = NetworkParametersReader(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
         assertFalse((baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
         assertEquals(server.networkParameters, parameters)
         // Parameters from update should be moved to `network-parameters` file.
         val parametersFromFile = (baseDirectory / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+                .verifiedNetworkParametersCert(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
         assertEquals(server.networkParameters, parametersFromFile)
     }
 
@@ -71,7 +71,7 @@ class NetworkParametersReaderTest {
         val baseDirectory = fs.getPath("/node").createDirectories()
         val fileParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(fileParameters).install(baseDirectory)
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
+        val parameters = NetworkParametersReader(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
         assertThat(parameters).isEqualTo(fileParameters)
     }
 

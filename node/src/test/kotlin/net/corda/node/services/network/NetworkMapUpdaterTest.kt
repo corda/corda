@@ -29,11 +29,10 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -81,7 +80,7 @@ class NetworkMapUpdaterTest {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate) }
     }
 
     @After
@@ -99,7 +98,7 @@ class NetworkMapUpdaterTest {
                              networkParameters: NetworkParameters = server.networkParameters,
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
-        updater!!.start(DEV_ROOT_CA.certificate,
+        updater!!.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate,
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
@@ -253,7 +252,7 @@ class NetworkMapUpdaterTest {
         updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         verify(networkParametersStorage, times(1)).saveParameters(any())
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
@@ -271,7 +270,7 @@ class NetworkMapUpdaterTest {
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }

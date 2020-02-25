@@ -1,4 +1,4 @@
-package net.corda.testing.internal.stubs
+package net.corda.coretesting.internal.stubs
 
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS

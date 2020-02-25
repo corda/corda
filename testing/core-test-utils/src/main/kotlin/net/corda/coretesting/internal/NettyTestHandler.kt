@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled

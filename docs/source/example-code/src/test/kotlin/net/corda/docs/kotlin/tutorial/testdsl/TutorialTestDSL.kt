@@ -17,7 +17,6 @@ import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.*
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction

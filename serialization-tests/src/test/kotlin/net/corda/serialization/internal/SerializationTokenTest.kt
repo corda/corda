@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.serilialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serilialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serilialization.kryo.DefaultKryoCustomizer
 import net.corda.nodeapi.internal.serilialization.kryo.kryoMagic
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before

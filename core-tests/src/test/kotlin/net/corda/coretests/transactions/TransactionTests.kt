@@ -17,7 +17,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger

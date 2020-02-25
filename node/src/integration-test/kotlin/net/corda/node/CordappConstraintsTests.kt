@@ -26,7 +26,7 @@ import net.corda.testing.core.*
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.driver.*
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
@@ -279,7 +279,7 @@ class CordappConstraintsTests {
             printVault(alice, states)
 
             // Claim the package, publish the new network parameters , and restart all nodes.
-            val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, null, notary.baseDirectory).read().networkParameters
+            val parameters = NetworkParametersReader(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, null, notary.baseDirectory).read().networkParameters
 
             val newParams = parameters.copy(
                     packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)

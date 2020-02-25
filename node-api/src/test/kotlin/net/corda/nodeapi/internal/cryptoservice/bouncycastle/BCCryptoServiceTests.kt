@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.nodeapi.internal.cryptoservice.WrappedPrivateKey
 import net.corda.nodeapi.internal.cryptoservice.WrappingMode
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider

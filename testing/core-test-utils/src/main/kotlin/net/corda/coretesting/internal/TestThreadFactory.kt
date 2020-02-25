@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadFactory

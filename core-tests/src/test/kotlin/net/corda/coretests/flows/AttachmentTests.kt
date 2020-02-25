@@ -21,8 +21,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.makeUnique
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.fakeAttachment
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode

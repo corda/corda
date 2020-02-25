@@ -37,11 +37,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.NettyTestClient
-import net.corda.testing.internal.NettyTestHandler
-import net.corda.testing.internal.NettyTestServer
+import net.corda.coretesting.internal.NettyTestClient
+import net.corda.coretesting.internal.NettyTestHandler
+import net.corda.coretesting.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -401,7 +401,8 @@ class X509UtilitiesTest {
         val clientHandler = NettyTestHandler { _, msg -> assertEquals("Hello", NettyTestHandler.readString(msg)) }
         NettyTestServer(sslServerContext, serverHandler, portAllocation.nextPort()).use { server ->
             server.start()
-            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler).use { client ->
+            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler)
+                    .use { client ->
                 client.start()
 
                 clientHandler.writeString("Hello")

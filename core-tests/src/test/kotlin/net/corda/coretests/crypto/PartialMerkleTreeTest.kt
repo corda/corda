@@ -24,7 +24,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -91,7 +91,7 @@ class PartialMerkleTreeTest {
                 reference("dummy cash 1")
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
-                timeWindow(TEST_TX_TIME)
+                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
                 this.verifies()
             }
         }

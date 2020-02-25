@@ -22,7 +22,7 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
 import net.corda.testing.dsl.TransactionDSLInterpreter
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
@@ -55,7 +55,7 @@ class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
             megaCorp.ref(123),
             megaCorp.party,
             1000.DOLLARS `issued by` megaCorp.ref(123),
-            TEST_TX_TIME + 7.days
+            net.corda.coretesting.internal.TEST_TX_TIME + 7.days
     )
 
     override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue()
@@ -69,7 +69,7 @@ class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
             issuance = megaCorp.ref(123),
             owner = megaCorp.party,
             faceValue = 1000.DOLLARS `issued by` megaCorp.ref(123),
-            maturityDate = TEST_TX_TIME + 7.days
+            maturityDate = net.corda.coretesting.internal.TEST_TX_TIME + 7.days
     )
 
     override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
@@ -83,7 +83,7 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
             issuance = megaCorp.ref(123),
             owner = megaCorp.party,
             faceValue = 1000.DOLLARS `issued by` megaCorp.ref(123),
-            maturityDate = TEST_TX_TIME + 7.days
+            maturityDate = net.corda.coretesting.internal.TEST_TX_TIME + 7.days
     )
 
     override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
@@ -132,7 +132,7 @@ class CommercialPaperTestsGeneric {
                 attachments(CP_PROGRAM_ID, JavaCommercialPaper.JCP_PROGRAM_ID)
                 output(thisTest.getContract(), "paper", thisTest.getPaper())
                 command(megaCorp.publicKey, thisTest.getIssueCommand(dummyNotary.party))
-                timeWindow(TEST_TX_TIME)
+                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
                 this.verifies()
             }
 
@@ -164,17 +164,17 @@ class CommercialPaperTestsGeneric {
                 command(alice.publicKey, thisTest.getRedeemCommand(dummyNotary.party))
                 tweak {
                     outputs(700.DOLLARS `issued by` megaCorpRef)
-                    timeWindow(TEST_TX_TIME + 8.days)
+                    timeWindow(net.corda.coretesting.internal.TEST_TX_TIME + 8.days)
                     this `fails with` "received amount equals the face value"
                 }
                 outputs(1000.DOLLARS `issued by` megaCorpRef)
 
 
                 tweak {
-                    timeWindow(TEST_TX_TIME + 2.days)
+                    timeWindow(net.corda.coretesting.internal.TEST_TX_TIME + 2.days)
                     this `fails with` "must have matured"
                 }
-                timeWindow(TEST_TX_TIME + 8.days)
+                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME + 8.days)
 
                 tweak {
                     output(thisTest.getContract(), "paper".output<ICommercialPaperState>())
@@ -197,7 +197,7 @@ class CommercialPaperTestsGeneric {
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
             output(thisTest.getContract(), thisTest.getPaper())
             command(miniCorp.publicKey, thisTest.getIssueCommand(dummyNotary.party))
-            timeWindow(TEST_TX_TIME)
+            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }
     }
@@ -209,7 +209,7 @@ class CommercialPaperTestsGeneric {
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
             output(thisTest.getContract(), thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` megaCorpRef))
             command(megaCorp.publicKey, thisTest.getIssueCommand(dummyNotary.party))
-            timeWindow(TEST_TX_TIME)
+            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
     }
@@ -219,9 +219,9 @@ class CommercialPaperTestsGeneric {
         transaction {
             attachment(CP_PROGRAM_ID)
             attachment(JavaCommercialPaper.JCP_PROGRAM_ID)
-            output(thisTest.getContract(), thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days))
+            output(thisTest.getContract(), thisTest.getPaper().withMaturityDate(net.corda.coretesting.internal.TEST_TX_TIME - 10.days))
             command(megaCorp.publicKey, thisTest.getIssueCommand(dummyNotary.party))
-            timeWindow(TEST_TX_TIME)
+            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
     }
@@ -234,7 +234,7 @@ class CommercialPaperTestsGeneric {
             input(thisTest.getContract(), thisTest.getPaper())
             output(thisTest.getContract(), thisTest.getPaper())
             command(megaCorp.publicKey, thisTest.getIssueCommand(dummyNotary.party))
-            timeWindow(TEST_TX_TIME)
+            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
     }
@@ -290,8 +290,8 @@ class CommercialPaperTestsGeneric {
         // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` dummyCashIssuer.ref(1)
         val issuance = megaCorpServices.myInfo.singleIdentity().ref(1)
-        val issueBuilder = CommercialPaperUtils.generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, dummyNotary.party)
-        issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+        val issueBuilder = CommercialPaperUtils.generateIssue(issuance, faceValue, net.corda.coretesting.internal.TEST_TX_TIME + 30.days, dummyNotary.party)
+        issueBuilder.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
         val issuePtx = megaCorpServices.signInitialTransaction(issueBuilder)
         val issueTx = notaryServices.addSignature(issuePtx)
         aliceDatabase.transaction { aliceServices.recordTransactions(listOf(issueTx)) }
@@ -327,7 +327,7 @@ class CommercialPaperTestsGeneric {
                 return Pair(stx, builder.lockId)
             }
 
-            val redeemTX = makeRedeemTX(TEST_TX_TIME + 10.days)
+            val redeemTX = makeRedeemTX(net.corda.coretesting.internal.TEST_TX_TIME + 10.days)
             val tooEarlyRedemption = redeemTX.first
             val tooEarlyRedemptionLockId = redeemTX.second
             val e = assertFailsWith(TransactionVerificationException::class) {
@@ -337,7 +337,7 @@ class CommercialPaperTestsGeneric {
             aliceServices.vaultService.softLockRelease(tooEarlyRedemptionLockId)
             assertTrue("paper must have matured" in e.cause!!.message!!)
 
-            val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days).first
+            val validRedemption = makeRedeemTX(net.corda.coretesting.internal.TEST_TX_TIME + 31.days).first
             validRedemption.toLedgerTransaction(aliceServices).verify()
             // soft lock not released after success either!!! (as transaction not recorded)
         }

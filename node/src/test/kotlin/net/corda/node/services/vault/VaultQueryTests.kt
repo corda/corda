@@ -31,7 +31,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.*
@@ -2218,8 +2218,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaperUtils.generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
-                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                    CommercialPaperUtils.generateIssue(issuance, faceValue, net.corda.coretesting.internal.TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
                         val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
                         notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
@@ -2229,8 +2229,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // MegaCorp™ now issues £10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 10000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaperUtils.generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
-                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                    CommercialPaperUtils.generateIssue(issuance, faceValue2, net.corda.coretesting.internal.TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
                         val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
                         notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
@@ -2255,8 +2255,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
-                    CommercialPaperUtils.generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
-                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                    CommercialPaperUtils.generateIssue(issuance, faceValue, net.corda.coretesting.internal.TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
                         val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
                         notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
@@ -2266,8 +2266,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // MegaCorp™ now issues £5,000 of commercial paper, to mature in 30 days, owned by itself.
             val faceValue2 = 5000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
-                    CommercialPaperUtils.generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
-                        builder.setTimeWindow(TEST_TX_TIME, 30.seconds)
+                    CommercialPaperUtils.generateIssue(issuance, faceValue2, net.corda.coretesting.internal.TEST_TX_TIME + 30.days, DUMMY_NOTARY).let { builder ->
+                        builder.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
                         val stx = services.signInitialTransaction(builder, MEGA_CORP_PUBKEY)
                         notaryServices.addSignature(stx, DUMMY_NOTARY_KEY.public)
                     }
@@ -2277,7 +2277,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val result = builder {
 
                 val ccyIndex = CommercialPaperSchemaV1.PersistentCommercialPaperState::currency.equal(USD.currencyCode)
-                val maturityIndex = CommercialPaperSchemaV1.PersistentCommercialPaperState::maturity.greaterThanOrEqual(TEST_TX_TIME + 30.days)
+                val maturityIndex = CommercialPaperSchemaV1.PersistentCommercialPaperState::maturity.greaterThanOrEqual(net.corda.coretesting.internal.TEST_TX_TIME + 30.days)
                 val faceValueIndex = CommercialPaperSchemaV1.PersistentCommercialPaperState::faceValue.greaterThanOrEqual(10000L)
 
                 val criteria1 = QueryCriteria.VaultCustomQueryCriteria(ccyIndex)

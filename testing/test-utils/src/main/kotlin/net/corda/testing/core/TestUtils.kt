@@ -16,8 +16,8 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
@@ -82,8 +82,8 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
 }
 
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
-    val trustRoot: X509Certificate = DEV_ROOT_CA.certificate
-    val intermediate: CertificateAndKeyPair = DEV_INTERMEDIATE_CA
+    val trustRoot: X509Certificate = net.corda.coretesting.internal.DEV_ROOT_CA.certificate
+    val intermediate: CertificateAndKeyPair = net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
 

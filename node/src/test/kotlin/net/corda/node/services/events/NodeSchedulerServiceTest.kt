@@ -17,9 +17,9 @@ import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.doLookup
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.spectator
+import net.corda.coretesting.internal.doLookup
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
 import org.junit.*

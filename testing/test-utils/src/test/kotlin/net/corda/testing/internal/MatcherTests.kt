@@ -2,7 +2,7 @@ package net.corda.testing.internal
 
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.equalTo
-import net.corda.testing.internal.matchers.hasEntries
+import net.corda.coretesting.internal.matchers.hasEntries
 import org.junit.Test
 import kotlin.test.assertEquals
 

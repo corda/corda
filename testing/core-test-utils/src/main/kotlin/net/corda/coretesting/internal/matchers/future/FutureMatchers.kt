@@ -1,10 +1,10 @@
-package net.corda.testing.internal.matchers.future
+package net.corda.coretesting.internal.matchers.future
 
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.internal.matchers.modifyMismatchDescription
+import net.corda.coretesting.internal.matchers.modifyMismatchDescription
 import java.util.concurrent.Future
 
 /**
