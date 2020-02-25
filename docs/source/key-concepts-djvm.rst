@@ -272,34 +272,29 @@ The DJVM doesn't support multi-threading and so synchronised methods and code bl
 use in sandboxed code. Consequently, we automatically transform them into ordinary methods and code blocks instead.
 
 
-Future Work
-~~~~~~~~~~~
+Trying out the DJVM
+~~~~~~~~~~~~~~~~~~~
 
-Further work is planned:
+Enabling Use of the DJVM for a Node
+...................................
 
- * To enable controlled use of reflection APIs.
+You can enable the DJVM for your node by adding the following line to your node's ``node.conf`` file:
 
- * Currently, dynamic invocation is disallowed. Allow specific lambda and
-   string concatenation meta-factories used by Java code itself.
+.. code-block:: shell
 
- * Map more mathematical operations to use their 'exact' counterparts.
+  systemProperties = { "net.corda.djvm" = true }
 
- * General tightening of the enforced constraints.
-
- * Cost accounting of runtime metrics such as memory allocation, branching and
-   exception handling. More specifically defining sensible runtime thresholds
-   and make further improvements to the instrumentation.
-
- * More sophisticated runtime accounting as discussed in `Runtime Costing`_.
+This will cause your node to use the DJVM to sandbox every call to ``Contract.verify``. If your transaction contains 
+any source of non-determinism, transaction verification will fail.
 
 
-Command-line Tool
-~~~~~~~~~~~~~~~~~
+Using the Command-line Tool
+...........................
 
 You can download and unpack ``corda-djvm-cli.zip`` from the R3 Artifactory.
 Alternatively, you can build it yourself from the source as follows.
 
-Open your terminial and clone the DJVM repository from GitHub:
+Open your terminal and clone the DJVM repository from GitHub:
 
 .. code-block:: shell
 
