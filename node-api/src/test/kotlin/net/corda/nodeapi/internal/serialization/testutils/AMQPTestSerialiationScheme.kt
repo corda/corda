@@ -10,7 +10,7 @@ import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
-import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
+import net.corda.nodeapi.internal.rpc.client.ObservableContext as ClientObservableContext
 
 /**
  * Special serialization context for the round trip tests that allows for both server and client RPC

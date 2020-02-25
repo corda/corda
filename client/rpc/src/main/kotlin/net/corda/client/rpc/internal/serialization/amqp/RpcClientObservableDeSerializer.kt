@@ -1,12 +1,12 @@
 package net.corda.client.rpc.internal.serialization.amqp
 
 
-import net.corda.client.rpc.internal.ObservableContext
-import net.corda.client.rpc.internal.RPCClientProxyHandler
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.rpc.client.CallSite
+import net.corda.nodeapi.internal.rpc.client.ObservableContext
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
@@ -113,7 +113,7 @@ object RpcClientObservableDeSerializer : CustomSerializer.Implements<Observable<
         }.dematerialize<Any>()
     }
 
-    private fun getRpcCallSite(context: SerializationContext, observableContext: ObservableContext): RPCClientProxyHandler.CallSite? {
+    private fun getRpcCallSite(context: SerializationContext, observableContext: ObservableContext): CallSite? {
         val rpcRequestOrObservableId = context.properties[RPCApi.RpcRequestOrObservableIdKey] as Trace.InvocationId
         // Will only return non-null if the trackRpcCallSites option in the RPC configuration has been specified.
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)

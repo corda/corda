@@ -24,7 +24,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
+import net.corda.nodeapi.internal.rpc.client.ObservableContext as ClientObservableContext
 import net.corda.nodeapi.internal.serialization.testutils.TestObservableContext as ServerObservableContext
 
 class RoundTripObservableSerializerTests {
