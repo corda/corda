@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import co.paralleluniverse.fibers.instrument.Retransform
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -227,6 +228,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 MoreExecutors.shutdownAndAwaitTermination(it, 50, SECONDS)
             }
         }
+
+        quasarExcludePackages(configuration)
     }
 
     private val notaryLoader = configuration.notary?.let {
@@ -418,6 +421,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
         }
         return validateKeyStores()
+    }
+
+    private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
+        val quasarInstrumentor = Retransform.getInstrumentor()
+
+        for (packageExclude in nodeConfiguration.quasarExcludePackages) {
+            quasarInstrumentor.addExcludedPackage(packageExclude)
+        }
     }
 
     open fun generateAndSaveNodeInfo(): NodeInfo {
