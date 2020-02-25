@@ -6,8 +6,8 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.context.Trace
 import net.corda.node.internal.serialization.testutils.TestObservableContext
 import net.corda.node.internal.serialization.testutils.serializationContext
-import net.corda.node.serialization.amqp.RpcServerObservableSerializer
-import net.corda.node.services.rpc.ObservableSubscription
+import net.corda.nodeapi.internal.rpc.ObservableSubscription
+import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder

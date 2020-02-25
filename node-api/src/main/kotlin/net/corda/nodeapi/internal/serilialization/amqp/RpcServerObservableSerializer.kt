@@ -1,12 +1,12 @@
-package net.corda.node.serialization.amqp
+package net.corda.nodeapi.internal.serilialization.amqp
 
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.rpc.ObservableContextInterface
-import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.rpc.ObservableContextInterface
+import net.corda.nodeapi.internal.rpc.ObservableSubscription
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
@@ -31,7 +31,7 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
         fun createContext(
                 serializationContext: SerializationContext,
                 observableContext: ObservableContextInterface
-        ) = serializationContext.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
+        ) = serializationContext.withProperty(RpcObservableContextKey, observableContext)
 
         val log = contextLogger()
     }
@@ -80,11 +80,11 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
             context: SerializationContext
     ) {
         val observableId = Trace.InvocationId.newInstance()
-        if (RpcServerObservableSerializer.RpcObservableContextKey !in context.properties) {
+        if (RpcObservableContextKey !in context.properties) {
             throw NotSerializableException("Missing Observable Key on serialization context - $type")
         }
 
-        val observableContext = context.properties[RpcServerObservableSerializer.RpcObservableContextKey]
+        val observableContext = context.properties[RpcObservableContextKey]
                 as ObservableContextInterface
 
         data.withList {

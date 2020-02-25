@@ -2,9 +2,9 @@ package net.corda.node.internal.serialization.testutils
 
 import com.github.benmanes.caffeine.cache.Cache
 import net.corda.core.context.Trace
-import net.corda.node.services.rpc.ObservableContextInterface
-import net.corda.node.services.rpc.ObservableSubscription
+import net.corda.nodeapi.internal.rpc.ObservableContextInterface
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.rpc.ObservableSubscription
 import org.apache.activemq.artemis.api.core.SimpleString
 import java.util.concurrent.ConcurrentHashMap
 

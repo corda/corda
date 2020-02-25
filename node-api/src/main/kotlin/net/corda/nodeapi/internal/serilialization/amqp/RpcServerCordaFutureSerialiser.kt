@@ -1,4 +1,4 @@
-package net.corda.node.serialization.amqp
+package net.corda.nodeapi.internal.serilialization.amqp
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.toObservable
@@ -14,13 +14,13 @@ import java.io.NotSerializableException
 class RpcServerCordaFutureSerializer(factory: SerializerFactory)
     : CustomSerializer.Proxy<CordaFuture<*>,
         RpcServerCordaFutureSerializer.FutureProxy>(
-        CordaFuture::class.java, RpcServerCordaFutureSerializer.FutureProxy::class.java, factory
+        CordaFuture::class.java, FutureProxy::class.java, factory
 ) {
-    override fun fromProxy(proxy: RpcServerCordaFutureSerializer.FutureProxy): CordaFuture<*> {
+    override fun fromProxy(proxy: FutureProxy): CordaFuture<*> {
         throw UnsupportedOperationException()
     }
 
-    override fun toProxy(obj: CordaFuture<*>): RpcServerCordaFutureSerializer.FutureProxy {
+    override fun toProxy(obj: CordaFuture<*>): FutureProxy {
         try {
             return FutureProxy(obj.toObservable())
         } catch (e: NotSerializableException) {

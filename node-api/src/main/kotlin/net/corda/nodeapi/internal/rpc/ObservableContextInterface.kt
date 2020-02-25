@@ -1,4 +1,4 @@
-package net.corda.node.services.rpc
+package net.corda.nodeapi.internal.rpc
 
 import com.github.benmanes.caffeine.cache.Cache
 import net.corda.core.context.Trace

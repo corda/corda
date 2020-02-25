@@ -21,7 +21,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serilialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
