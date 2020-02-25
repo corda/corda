@@ -356,9 +356,9 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val compressedSize = obj.checkpointSerialize(context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
         // If these need fixing, sounds like Kryo wire format changed and checkpoints might not survive an upgrade.
         if (SystemUtils.IS_JAVA_11)
-            assertEquals(20172, uncompressedSize)
+            assertEquals(20184, uncompressedSize)
         else
-            assertEquals(20222, uncompressedSize)
-        assertEquals(1111, compressedSize)
+            assertEquals(20234, uncompressedSize)
+        assertEquals(1123, compressedSize)
     }
 }

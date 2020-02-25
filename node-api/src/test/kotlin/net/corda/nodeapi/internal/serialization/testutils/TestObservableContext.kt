@@ -1,4 +1,4 @@
-package net.corda.node.internal.serialization.testutils
+package net.corda.nodeapi.internal.serialization.testutils
 
 import com.github.benmanes.caffeine.cache.Cache
 import net.corda.core.context.Trace

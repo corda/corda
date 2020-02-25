@@ -1,4 +1,4 @@
-package net.corda.node.internal.serialization.testutils
+package net.corda.nodeapi.internal.serialization.testutils
 
 import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace

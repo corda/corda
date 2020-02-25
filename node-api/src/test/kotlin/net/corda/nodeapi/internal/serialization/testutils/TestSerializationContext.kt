@@ -1,4 +1,4 @@
-package net.corda.node.internal.serialization.testutils
+package net.corda.nodeapi.internal.serialization.testutils
 
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.AllWhitelist

@@ -1,4 +1,4 @@
-package net.corda.node.internal.serialization
+package net.corda.nodeapi.internal.serialization
 
 import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Cache
@@ -9,8 +9,8 @@ import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSer
 import net.corda.core.context.Trace
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.toSynchronised
-import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
-import net.corda.node.internal.serialization.testutils.serializationContext
+import net.corda.nodeapi.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
+import net.corda.nodeapi.internal.serialization.testutils.serializationContext
 import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.rpc.ObservableSubscription
@@ -25,7 +25,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
-import net.corda.node.internal.serialization.testutils.TestObservableContext as ServerObservableContext
+import net.corda.nodeapi.internal.serialization.testutils.TestObservableContext as ServerObservableContext
 
 class RoundTripObservableSerializerTests {
     private fun getID() = Trace.InvocationId("test1", Instant.now())
