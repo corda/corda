@@ -57,10 +57,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     override val appClassLoader: URLClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
-    override fun close() {
-        cordappClasses.clear()
-        appClassLoader.close()
-    }
+    override fun close() = appClassLoader.close()
 
     companion object {
         private val logger = contextLogger()
