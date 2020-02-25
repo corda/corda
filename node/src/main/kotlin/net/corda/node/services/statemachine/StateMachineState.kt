@@ -69,10 +69,6 @@ data class Checkpoint(
         PAUSED
     }
 
-    enum class StartReason {
-        RPC, FLOW, SERVICE, SCHEDULED, INITIATED
-    }
-
     val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
 
     companion object {
