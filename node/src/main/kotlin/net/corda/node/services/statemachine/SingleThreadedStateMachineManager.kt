@@ -229,7 +229,7 @@ class SingleThreadedStateMachineManager(
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-        return mutex.locked {
+        val killFlowResult = mutex.locked {
             cancelTimeoutIfScheduled(id)
             val flow = flows.remove(id)
             if (flow != null) {
@@ -256,6 +256,11 @@ class SingleThreadedStateMachineManager(
                     checkpointStorage.removeCheckpoint(id)
                 }
             }
+        }
+        return if(killFlowResult) {
+            true
+        } else {
+            flowHospital.dropSessionInit(id)
         }
     }
 
