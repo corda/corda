@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.internal.createInstancesOfClassesImplementing

@@ -17,6 +17,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.coretesting.internal.asTestContextEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool

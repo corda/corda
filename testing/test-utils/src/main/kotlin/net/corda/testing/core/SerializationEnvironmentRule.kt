@@ -7,9 +7,9 @@ import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.testing.internal.asTestContextEnv
-import net.corda.testing.internal.createTestSerializationEnv
-import net.corda.testing.internal.inVMExecutors
+import net.corda.coretesting.internal.asTestContextEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.testThreadFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
