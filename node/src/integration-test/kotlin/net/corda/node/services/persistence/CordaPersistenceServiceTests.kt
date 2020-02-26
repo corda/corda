@@ -59,8 +59,7 @@ class CordaPersistenceServiceTests {
                         id = it.toString(),
                         blob = DBCheckpointStorage.DBFlowCheckpointBlob(
                                 checkpoint = ByteArray(8192),
-                                flowStack = ByteArray(8192),
-                                hmac = ByteArray(16)
+                                flowStack = ByteArray(8192)
                         ),
                         result = DBCheckpointStorage.DBFlowResult(),
                         exceptionDetails = null,
@@ -68,8 +67,7 @@ class CordaPersistenceServiceTests {
                         compatible = false,
                         progressStep = "",
                         ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
-                        checkpointInstant = Instant.now(),
-                        flowMetadata = null
+                        checkpointInstant = Instant.now()
                     ))
                 }
             }
