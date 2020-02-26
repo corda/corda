@@ -215,6 +215,11 @@ data class FlowTimeoutConfiguration(
         val backoffBase: Double
 )
 
+/**
+ * Options for controlling Quasar instrumentation.
+ *
+ * @property excludePackages A list of packages to exclude from Quasar instrumentation. Wildcards are allowed (org.xml**).
+ */
 data class QuasarConfiguration(
         val excludePackages: List<String> = emptyList()
 )
