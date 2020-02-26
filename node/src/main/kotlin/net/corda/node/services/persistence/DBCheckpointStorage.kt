@@ -34,6 +34,10 @@ import javax.persistence.OneToOne
  * Simple checkpoint key value storage in DB.
  */
 class DBCheckpointStorage : CheckpointStorage {
+    companion object {
+        private const val HMAC_SIZE_BYTES = 16
+    }
+
     val log: Logger = LoggerFactory.getLogger(this::class.java)
 
     enum class StartReason {
@@ -197,7 +201,7 @@ class DBCheckpointStorage : CheckpointStorage {
                 blob = DBFlowCheckpointBlob(
                         checkpoint = serializedCheckpoint.bytes,
                         flowStack = flowState.bytes,
-                        hmac = ByteArray(16)
+                        hmac = ByteArray(HMAC_SIZE_BYTES)
                 ),
                 result = DBFlowResult(),
                 exceptionDetails = DBFlowException(type = Exception::class.java),
