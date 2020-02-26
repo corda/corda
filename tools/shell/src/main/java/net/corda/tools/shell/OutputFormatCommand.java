@@ -15,6 +15,7 @@ import org.crsh.text.RenderPrintWriter;
 import java.util.Map;
 
 @Man("Allows you to see and update the format that's currently used for the commands' output.")
+@Usage("Allows you to see and update the format that's currently used for the commands' output.")
 public class OutputFormatCommand extends InteractiveShellCommand {
 
     public OutputFormatCommand() {}
