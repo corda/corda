@@ -70,9 +70,9 @@ fun CordaCliWrapper.start(args: Array<String>) {
         } else {
             Help.Ansi.AUTO
         }
+        @Suppress("SpreadOperator")
         val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode).andExit(ExitCodes.FAILURE),
-                *args)
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode), *args)
         // If an error code has been returned, use this and exit
         results?.firstOrNull()?.let {
             if (it is Int) {
