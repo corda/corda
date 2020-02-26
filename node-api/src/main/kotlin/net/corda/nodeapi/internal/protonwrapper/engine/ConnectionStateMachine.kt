@@ -305,6 +305,17 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         logDebugWithMDC { "Session final $session" }
         if (session == this.session) {
             this.session = null
+
+            // If TRANSPORT_CLOSED event was already processed, the 'transport' in all subsequent events is set to null.
+            // There is, however, a chance of missing TRANSPORT_CLOSED event, e.g. when disconnect occurs before opening remote session.
+            // In such cases we must explicitly cleanup the 'transport' in order to guarantee the delivery of CONNECTION_FINAL event.
+            val transport = event.transport
+            if (transport == this.transport) {
+                logDebugWithMDC { "Missed TRANSPORT_CLOSED: force cleanup ${transport.prettyPrint}" }
+                transport.unbind()
+                transport.free()
+                transport.context = null
+            }
         }
     }
 
