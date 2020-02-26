@@ -9,6 +9,7 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -59,15 +60,17 @@ class CordaPersistenceServiceTests {
                         id = it.toString(),
                         blob = DBCheckpointStorage.DBFlowCheckpointBlob(
                                 checkpoint = ByteArray(8192),
-                                flowStack = ByteArray(8192)
+                                flowStack = ByteArray(8192),
+                                hmac = ByteArray(16)
                         ),
                         result = DBCheckpointStorage.DBFlowResult(),
                         exceptionDetails = null,
-                        status = DBCheckpointStorage.FlowStatus.RUNNABLE,
+                        status = FlowStatus.RUNNABLE,
                         compatible = false,
                         progressStep = "",
                         ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
-                        checkpointInstant = Instant.now()
+                        checkpointInstant = Instant.now(),
+                        flowMetadata = null
                     ))
                 }
             }
