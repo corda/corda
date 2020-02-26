@@ -54,8 +54,10 @@ class QuasarExcludePackagesTest {
         Assert.assertTrue(Retransform.getInstrumentor().isExcluded("net.corda.node.internal.QuasarExcludePackagesTest.Test"))
     }
 
+    class ResourceMissingException(message: String) : Exception(message)
+
     private fun getConfig(cfgName: String): Config {
-        val resource = this::class.java.classLoader.getResource(cfgName) ?: throw Exception("Resource not found")
+        val resource = this::class.java.classLoader.getResource(cfgName) ?: throw ResourceMissingException("Resource not found")
         val path = resource.toPath()
         return ConfigHelper.loadConfig(path.parent, path)
     }
