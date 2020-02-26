@@ -54,8 +54,20 @@ data class Checkpoint(
         val checkpointState: CheckpointState,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val result: Any? = null
+        val result: Any? = null,
+        val status: FlowStatus = FlowStatus.RUNNABLE,
+        val progressStep: String? = null,
+        val flowIoRequest: FlowIORequest<*>? = null,
+        val compatible: Boolean = true
 ) {
+    enum class FlowStatus {
+        RUNNABLE,
+        FAILED,
+        COMPLETED,
+        HOSPITALIZED,
+        KILLED,
+        PAUSED
+    }
 
     val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
 
