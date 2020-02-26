@@ -100,13 +100,14 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
-        val checkpointBytes = serializeCheckpoint(action.checkpoint)
         if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, action.checkpoint, checkpointBytes)
+            checkpointStorage.updateCheckpoint(action.id, action.checkpoint,checkpointSerializationContext)
         } else {
-            checkpointStorage.addCheckpoint(action.id, action.checkpoint, checkpointBytes)
+            checkpointStorage.addCheckpoint(action.id, action.checkpoint, checkpointSerializationContext)
         }
         checkpointingMeter.mark()
+        // We should clean this up, when we move all of the serialization into DBCheckpointStorage
+        val checkpointBytes = serializeCheckpoint(action.checkpoint)
         checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
         var lastUpdateTime = lastBandwidthUpdate.get()
         while (System.nanoTime() - lastUpdateTime > TimeUnit.SECONDS.toNanos(1)) {

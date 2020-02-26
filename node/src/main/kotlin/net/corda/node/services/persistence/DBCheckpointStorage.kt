@@ -3,6 +3,8 @@ package net.corda.node.services.persistence
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
@@ -207,12 +209,12 @@ class DBCheckpointStorage : CheckpointStorage {
                 flowMetadata = null)
     }
 
-    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedCheckpoint))
+    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializationContext : CheckpointSerializationContext) {
+        currentDBSession().save(createDBCheckpoint(id, checkpoint, checkpoint.checkpointSerialize(context = serializationContext)))
     }
 
-    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().update(createDBCheckpoint(id, checkpoint, serializedCheckpoint))
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializationContext : CheckpointSerializationContext) {
+        currentDBSession().update(createDBCheckpoint(id, checkpoint, checkpoint.checkpointSerialize(context = serializationContext)))
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {

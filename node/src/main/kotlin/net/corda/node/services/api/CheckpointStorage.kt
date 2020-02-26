@@ -2,6 +2,7 @@ package net.corda.node.services.api
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.node.services.statemachine.Checkpoint
 import java.sql.Connection
 import java.util.stream.Stream
@@ -13,12 +14,12 @@ interface CheckpointStorage {
     /**
      * Add a checkpoint for a new id to the store. Will throw if there is already a checkpoint for this id
      */
-    fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>)
+    fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializationContext : CheckpointSerializationContext)
 
     /**
      * Update an existing checkpoint. Will throw if there is not checkpoint for this id.
      */
-    fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedCheckpoint: SerializedBytes<Checkpoint>)
+    fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializationContext : CheckpointSerializationContext)
 
     /**
      * Remove existing checkpoint from the store.

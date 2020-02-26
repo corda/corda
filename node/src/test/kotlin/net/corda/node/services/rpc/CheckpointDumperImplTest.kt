@@ -54,6 +54,7 @@ class CheckpointDumperImplTest {
     private val baseDirectory = Files.createTempDirectory("CheckpointDumperTest")
     private val file = baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME /
             "checkpoints_dump-${CheckpointDumperImpl.TIME_FORMATTER.format(currentTimestamp)}.zip"
+    private val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
 
     private lateinit var database: CordaPersistence
     private lateinit var services: ServiceHub
@@ -104,7 +105,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, checkpointSerializationContext)
         }
 
         dumper.dumpCheckpoints()
@@ -130,7 +131,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, checkpointSerializationContext)
         }
 
         dumper.dumpCheckpoints()
