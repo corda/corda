@@ -426,7 +426,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
         val quasarInstrumentor = Retransform.getInstrumentor()
 
-        for (packageExclude in nodeConfiguration.quasar.excludePackages) {
+        nodeConfiguration.quasar.excludePackages.forEach { packageExclude ->
             quasarInstrumentor.addExcludedPackage(packageExclude)
         }
     }
