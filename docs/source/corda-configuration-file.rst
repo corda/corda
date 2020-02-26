@@ -558,11 +558,21 @@ p2pAddress
   
 
   *Default:* not defined
-  
-quasarExcludePackages
-  A list of packages to exclude from Quasar instrumentation. Wildcards are allowed, for example ``org.xml**``.
 
-  *Default:* empty list
+quasar
+  Options for controlling Quasar instrumentation.
+
+  excludePackages
+    A list of packages to exclude from Quasar instrumentation. Wildcards are allowed, for example ``org.xml**``.
+
+    *Default:* empty list
+
+  Example configuration:
+
+  .. parsed-literal::
+    quasar {
+      excludePackages=["org.xml**", "org.yaml**"]
+    }
 
 rpcAddress (deprecated)
   The address of the RPC system on which RPC requests can be made to the node.
