@@ -9,6 +9,9 @@ buildscript {
     dependencies {
         classpath "org.yaml:snakeyaml:1.24"
         classpath "io.spring.gradle:dependency-management-plugin:1.0.9.RELEASE"
+        classpath "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+        classpath "org.apache.logging.log4j:log4j-core:$log4j_version"
+        classpath "org.apache.logging.log4j:log4j-api:$log4j_version"
     }
 }
 
@@ -17,14 +20,6 @@ plugins {
 }
 
 group = "${parent.group}.irs-demo"
-
-dependencyManagement {
-    dependencies {
-        dependency "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-        dependency "org.apache.logging.log4j:log4j-core:$log4j_version"
-        dependency "org.apache.logging.log4j:log4j-api:$log4j_version"
-    }
-}
 
 clientDependencies {
     registry 'realBower', type:'bower', url:'https://registry.bower.io'
