@@ -23,7 +23,7 @@ class FlowsExecutionModeTests : NodeBasedTest(emptyList()) {
     @Before
     override fun setUp() {
         super.setUp()
-        node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
+        node = startNode(net.corda.testing.core.ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.node.configuration.rpcOptions.address)
     }
 

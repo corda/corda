@@ -7,4 +7,5 @@ description 'Core test types and helpers for testing Corda'
 dependencies {
     compile project(':core')
     compile project(':test-common')
+    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }

@@ -40,9 +40,9 @@ class SwapIdentitiesFlowTests {
         fun tearDown() = mockNet.stopNodes()
     }
 
-    private val aliceNode = mockNet.createPartyNode(makeUnique(ALICE_NAME))
-    private val bobNode = mockNet.createPartyNode(makeUnique(BOB_NAME))
-    private val charlieNode = mockNet.createPartyNode(makeUnique(CHARLIE_NAME))
+    private val aliceNode = mockNet.createPartyNode(net.corda.testing.core.makeUnique(net.corda.testing.core.ALICE_NAME))
+    private val bobNode = mockNet.createPartyNode(net.corda.testing.core.makeUnique(net.corda.testing.core.BOB_NAME))
+    private val charlieNode = mockNet.createPartyNode(net.corda.testing.core.makeUnique(net.corda.testing.core.CHARLIE_NAME))
     private val alice = aliceNode.info.singleIdentity()
     private val bob = bobNode.info.singleIdentity()
 

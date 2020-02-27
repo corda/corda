@@ -66,9 +66,9 @@ import kotlin.collections.ArrayList
 class JacksonSupportTest(@Suppress("unused") private val name: String, factory: JsonFactory) {
     private companion object {
         val SEED: BigInteger = BigInteger.valueOf(20170922L)
-        val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
-        val BOB_PUBKEY = TestIdentity(BOB_NAME, 80).publicKey
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val ALICE_PUBKEY = TestIdentity(net.corda.testing.core.ALICE_NAME, 70).publicKey
+        val BOB_PUBKEY = TestIdentity(net.corda.testing.core.BOB_NAME, 80).publicKey
+        val DUMMY_NOTARY = TestIdentity(net.corda.testing.core.DUMMY_NOTARY_NAME, 20).party
         val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
 
         @Parameters(name = "{0}")
@@ -152,7 +152,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun SerializedBytes() {
-        val data = TestData(BOB_NAME, "Summary", SubTestData(1234))
+        val data = TestData(net.corda.testing.core.BOB_NAME, "Summary", SubTestData(1234))
         val serializedBytes = data.serialize()
         val json = mapper.valueToTree<ObjectNode>(serializedBytes)
         println(mapper.writeValueAsString(json))
@@ -178,7 +178,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         println(mapper.writeValueAsString(json))
         assertThat(json["class"].textValue()).isEqualTo("net.corda.client.jackson.JacksonSupportTest\$ClassNotOnClasspath")
         assertThat(json["deserialized"].valueAs<Map<*, *>>(mapper)).isEqualTo(mapOf(
-                "name" to BOB_NAME.toString(),
+                "name" to net.corda.testing.core.BOB_NAME.toString(),
                 "value" to 54321
         ))
         assertThat(mapper.convertValue<SerializedBytes<*>>(BinaryNode(serializedBytes.bytes))).isEqualTo(serializedBytes)
@@ -564,7 +564,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `NodeInfo serialization`() {
-        val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+        val (nodeInfo) = createNodeInfoAndSigned(net.corda.testing.core.ALICE_NAME)
         val json = mapper.valueToTree<ObjectNode>(nodeInfo)
         val (addresses, legalIdentitiesAndCerts, platformVersion, serial) = json.assertHasOnlyFields(
                 "addresses",
@@ -578,7 +578,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         legalIdentitiesAndCerts.run {
             assertThat(this).hasSize(1)
-            assertThat(this[0].valueAs<CordaX500Name>(mapper)).isEqualTo(ALICE_NAME)
+            assertThat(this[0].valueAs<CordaX500Name>(mapper)).isEqualTo(net.corda.testing.core.ALICE_NAME)
         }
         assertThat(platformVersion.intValue()).isEqualTo(nodeInfo.platformVersion)
         assertThat(serial.longValue()).isEqualTo(nodeInfo.serial)
@@ -586,9 +586,9 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `NodeInfo deserialization on name`() {
-        val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+        val (nodeInfo) = createNodeInfoAndSigned(net.corda.testing.core.ALICE_NAME)
 
-        fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(ALICE_NAME.toString()))
+        fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(net.corda.testing.core.ALICE_NAME.toString()))
 
         assertThatThrownBy { convertToNodeInfo() }
 
@@ -599,7 +599,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Test(timeout=300_000)
 	fun `NodeInfo deserialization on public key`() {
-        val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+        val (nodeInfo) = createNodeInfoAndSigned(net.corda.testing.core.ALICE_NAME)
 
         fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(nodeInfo.legalIdentities[0].owningKey.toBase58String()))
 

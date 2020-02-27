@@ -62,7 +62,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(net.corda.testing.core.DUMMY_NOTARY_NAME)) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
         val log = contextLogger()
@@ -81,11 +81,11 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
     @Before
     override fun setUp() {
         super.setUp()
-        node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
+        node = startNode(net.corda.testing.core.ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
-        identity = notaryNodes.first().info.identityFromX500Name(DUMMY_NOTARY_NAME)
+        identity = notaryNodes.first().info.identityFromX500Name(net.corda.testing.core.DUMMY_NOTARY_NAME)
     }
 
     @After
@@ -214,7 +214,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
     @Test(timeout=300_000)
 	fun `flow initiator via RPC`() {
         val externalTrace = Trace.newInstance()
-        val impersonatedActor = Actor(Actor.Id("Mark Dadada"), AuthServiceId("Test"), owningLegalIdentity = BOB_NAME)
+        val impersonatedActor = Actor(Actor.Id("Mark Dadada"), AuthServiceId("Test"), owningLegalIdentity = net.corda.testing.core.BOB_NAME)
         login(rpcUser.username, rpcUser.password, externalTrace, impersonatedActor)
         val proxy = connection!!.proxy
 

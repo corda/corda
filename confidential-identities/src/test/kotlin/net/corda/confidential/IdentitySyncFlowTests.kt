@@ -49,8 +49,8 @@ class IdentitySyncFlowTests {
     @Test(timeout=300_000)
 	fun `sync confidential identities`() {
         // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val aliceNode = mockNet.createPartyNode(net.corda.testing.core.ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(net.corda.testing.core.BOB_NAME)
         val alice: Party = aliceNode.info.singleIdentity()
         val bob: Party = bobNode.info.singleIdentity()
         val notary = mockNet.defaultNotaryIdentity
@@ -77,9 +77,9 @@ class IdentitySyncFlowTests {
     @Test(timeout=300_000)
 	fun `don't offer other's identities confidential identities`() {
         // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
+        val aliceNode = mockNet.createPartyNode(net.corda.testing.core.ALICE_NAME)
+        val bobNode = mockNet.createPartyNode(net.corda.testing.core.BOB_NAME)
+        val charlieNode = mockNet.createPartyNode(net.corda.testing.core.CHARLIE_NAME)
         val alice: Party = aliceNode.info.singleIdentity()
         val bob: Party = bobNode.info.singleIdentity()
         val charlie: Party = charlieNode.info.singleIdentity()
