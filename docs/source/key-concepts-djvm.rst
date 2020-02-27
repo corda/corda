@@ -16,14 +16,6 @@ So, what does it mean for a piece of code to be fully deterministic?  Ultimately
 as a function, is pure. In other words, given the same set of inputs, it will always produce the same set of outputs
 without inflicting any side-effects that might later affect the computation.
 
-.. important:: The code in the DJVM module has not yet been integrated with the rest of the platform.  It will eventually become a
-   part of the node and enforce deterministic and secure execution of smart contract code, which is mobile and may
-   propagate around the network without human intervention.
-
-   Currently, it stands alone as an evaluation version. We want to give developers the ability to start trying it out and
-   get used to developing deterministic code under the set of constraints that we envision will be placed on contract code
-   in the future.
-
 Non-Determinism
 ~~~~~~~~~~~~~~~
 
@@ -275,6 +267,43 @@ use in sandboxed code. Consequently, we automatically transform them into ordina
 Trying out the DJVM
 ~~~~~~~~~~~~~~~~~~~
 
+.. warning:: The code in the DJVM module is still a beta release, and has not been integrated with the rest of the platform. It is provided
+  to allow developers to try out the DJVM and experiment with developing deterministic code under the set of constraints that we envision
+  will be placed on contract code in the future.
+
+Tweaking Your Contract Code
+...........................
+
+CorDapp developers may need to tweak their CorDapps for use inside the DJVM. This is because not every class, constructor or method defined
+in the ``corda-core`` and ``corda-serialization`` modules is available when running inside the sandbox.
+
+During development, you can choose to compile individual CorDapp modules against the DJVM by defining the following
+``deterministic.gradle`` script plugin:
+
+.. code-block:: shell
+
+  configurations {
+      compileClasspath { Configuration c -> deterministic(c) }
+  }
+
+  private final void deterministic(Configuration configuration) {
+      if (configuration.state == Configuration.State.UNRESOLVED) {
+          // Ensure that this module uses the deterministic Corda artifacts.
+          configuration.resolutionStrategy.dependencySubstitution {
+              substitute module("$corda_release_group:corda-serialization") with module("$corda_release_group:corda-serialization-deterministic:$corda_release_version")
+              substitute module("$corda_release_group:corda-core") with module("$corda_release_group:corda-core-deterministic:$corda_release_version")
+          }
+      }
+  }
+
+And applying it to individual modules of your CorDapp using:
+
+.. code-block:: shell
+
+  apply from: "${rootProject.projectDir}/deterministic.gradle"
+
+Uses of classes, constructors or methods not available inside the DJVM in that module will then cause compilation errors.
+
 Enabling Use of the DJVM for a Node
 ...................................
 
@@ -287,6 +316,8 @@ You can enable the DJVM for your node by adding the following line to your node'
 This will cause your node to use the DJVM to sandbox every call to ``Contract.verify``. If your transaction contains 
 any source of non-determinism, transaction verification will fail.
 
+Alternatively, you can enable the DJVM when creating nodes via DemoBench by ticking the ``Deterministic Contract Verification`` checkbox
+when creating the initial notary node.
 
 Using the Command-line Tool
 ...........................
