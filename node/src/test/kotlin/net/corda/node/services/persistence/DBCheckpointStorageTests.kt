@@ -1,5 +1,7 @@
 package net.corda.node.services.persistence
 
+import junit.framework.Assert.assertNotNull
+import junit.framework.Assert.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -436,6 +438,27 @@ class DBCheckpointStorageTests {
             val criteria = session.criteriaBuilder.createQuery(DBCheckpointStorage.DBFlowException::class.java)
             criteria.select(criteria.from(DBCheckpointStorage.DBFlowException::class.java))
             assertEquals(0, session.createQuery(criteria).resultList.size)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Check that flow io request can be added to a checkpoint`() {
+        val (id, checkpoint) = newCheckpoint(1)
+        database.transaction {
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+            val checkpoint = checkpointStorage.getDBCheckpoint(id)
+            assertNull(checkpoint?.ioRequestType)
+        }
+        val instantNow = Instant.now()
+        database.transaction {
+            checkpointStorage.updateFlowIoRequest(id, FlowIORequest.Sleep(instantNow))
+        }
+        database.transaction {
+            val checkpoint = checkpointStorage.getDBCheckpoint(id)
+            assertNotNull(checkpoint?.ioRequestType)
+            val classFromCheckpoint = checkpoint?.ioRequestType!!
+            assert(classFromCheckpoint == FlowIORequest.Sleep::class.java)
         }
     }
 

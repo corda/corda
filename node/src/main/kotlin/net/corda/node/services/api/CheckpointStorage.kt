@@ -1,6 +1,7 @@
 package net.corda.node.services.api
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowState
@@ -41,4 +42,9 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    /**
+     * Update a specific checkpoints ioRequest
+     */
+    fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>)
 }

@@ -4,6 +4,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -226,6 +227,17 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
+    }
+
+    override fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>) {
+        val checkpoint = getDBCheckpoint(id)
+        checkpoint?.ioRequestType = ioRequest.javaClass
+        currentDBSession().update(checkpoint)
+    }
+
+    @VisibleForTesting
+    fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
+        return currentDBSession().get(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
