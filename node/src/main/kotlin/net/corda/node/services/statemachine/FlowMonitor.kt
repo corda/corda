@@ -6,6 +6,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.LifecycleSupport
+import net.corda.node.services.persistence.DBCheckpointStorage
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -33,13 +34,15 @@ internal class FlowMonitor(
 
     private var shutdownScheduler = false
 
+    private var database = DBCheckpointStorage()
+
     override fun start() {
         synchronized(this) {
             if (scheduler == null) {
                 scheduler = defaultScheduler()
                 shutdownScheduler = true
             }
-            scheduler!!.scheduleAtFixedRate({ logFlowsWaitingForParty() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
+            scheduler!!.scheduleAtFixedRate({ logAndUpdateDB() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
             started = true
         }
     }
@@ -53,7 +56,20 @@ internal class FlowMonitor(
         }
     }
 
-    private fun logFlowsWaitingForParty() {
+    private fun logAndUpdateDB() {
+        updateDbWithWaitingFlows()
+        logWaitingFlows()
+    }
+
+    private fun updateDbWithWaitingFlows() {
+        for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
+            val ioRequest = flow.ioRequest()
+            if (ioRequest != null) {
+                database.updateFlowIoRequest(flow.id, ioRequest)
+            }
+        }
+    }
+    private fun logWaitingFlows() {
         for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
             flow.ioRequest()?.let { request -> logger.info(warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)) }
         }
