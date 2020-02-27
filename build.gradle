@@ -515,6 +515,7 @@ bintrayConfig {
             'corda-node-api',
             'corda-node-djvm',
             'corda-test-common',
+            'corda-core-test-utils',
             'corda-test-utils',
             'corda-test-db',
             'corda-jackson',
