@@ -73,6 +73,7 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
+    publish testJar
 }
 
 jar {
