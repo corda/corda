@@ -12,7 +12,6 @@ buildscript {
 }
 
 plugins {
-    id 'io.spring.dependency-management'
     id 'com.craigburke.client-dependencies' version '1.4.0'
 }
 
