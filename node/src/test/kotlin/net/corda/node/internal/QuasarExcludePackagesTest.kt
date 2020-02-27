@@ -13,7 +13,7 @@ import org.junit.Test
 class QuasarExcludePackagesTest {
 
     @Test(timeout=300_000)
-    fun `quasarexcludePackages default is empty list`() {
+    fun `quasarExcludePackages default is empty list`() {
 
         // Arrange
         val config = getConfig("working-config.conf")
@@ -22,12 +22,12 @@ class QuasarExcludePackagesTest {
         val nodeConfiguration :NodeConfiguration = V1NodeConfigurationSpec.parse(config).value()
 
         // Assert
-        Assert.assertEquals(emptyList<String>(), nodeConfiguration.quasar.excludePackages)
+        Assert.assertEquals(emptyList<String>(), nodeConfiguration.quasarExcludePackages)
     }
 
 
     @Test(timeout=300_000)
-    fun `quasarexcludePackages is read from configuration`() {
+    fun `quasarExcludePackages is read from configuration`() {
 
         // Arrange
         val config = getConfig("test-config-quasarexcludepackages.conf")
@@ -36,11 +36,11 @@ class QuasarExcludePackagesTest {
         val nodeConfiguration :NodeConfiguration = V1NodeConfigurationSpec.parse(config).value()
 
         // Assert
-        Assert.assertEquals(listOf("net.corda.node.internal.QuasarExcludePackagesTest**"), nodeConfiguration.quasar.excludePackages)
+        Assert.assertEquals(listOf("net.corda.node.internal.QuasarExcludePackagesTest**"), nodeConfiguration.quasarExcludePackages)
     }
 
     @Test(timeout=300_000)
-    fun `quasarexcludePackages is passed through to QuasarInstrumentor`() {
+    fun `quasarExcludePackages is passed through to QuasarInstrumentor`() {
 
         // Arrange
         val config = getConfig("test-config-quasarexcludepackages.conf")

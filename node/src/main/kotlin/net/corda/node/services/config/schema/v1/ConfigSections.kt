@@ -24,12 +24,10 @@ import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.QuasarConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
@@ -188,14 +186,6 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
 
     override fun parseValid(configuration: Config): Valid<FlowTimeoutConfiguration> {
         return valid(FlowTimeoutConfiguration(configuration[timeout], configuration[maxRestartCount], configuration[backoffBase]))
-    }
-}
-
-internal object QuasarConfigurationSpec : Configuration.Specification<QuasarConfiguration>("QuasarConfiguration"){
-    private val excludePackages by string().list().optional().withDefaultValue(NodeConfigurationImpl.Defaults.quasarExcludePackages)
-
-    override fun parseValid(configuration: Config): Valid<QuasarConfiguration> {
-        return valid(QuasarConfiguration(configuration[excludePackages]))
     }
 }
 

@@ -90,7 +90,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val flowExternalOperationThreadPoolSize: Int
 
-    val quasar: QuasarConfiguration
+    val quasarExcludePackages: List<String>
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -213,15 +213,6 @@ data class FlowTimeoutConfiguration(
         val timeout: Duration,
         val maxRestartCount: Int,
         val backoffBase: Double
-)
-
-/**
- * Options for controlling Quasar instrumentation.
- *
- * @property excludePackages A list of packages to exclude from Quasar instrumentation. Wildcards are allowed (org.xml**).
- */
-data class QuasarConfiguration(
-        val excludePackages: List<String> = emptyList()
 )
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
