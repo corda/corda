@@ -89,19 +89,20 @@ class ForeignExchangeFlow(private val tradeId: String,
                           private val baseCurrencyAmount: Amount<Issued<Currency>>,
                           private val quoteCurrencyAmount: Amount<Issued<Currency>>,
                           private val counterparty: Party,
-                          private val weAreBaseCurrencySeller: Boolean) : FlowLogic<SecureHash>() {
+                          private val weAreBaseCurrencySeller: Boolean,
+                          private val notary: Party) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
         // Specifically we own the assets we wish to sell.
         // Also prepare the other side query
         val (localRequest, remoteRequest) = if (weAreBaseCurrencySeller) {
-            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity, counterparty)
-            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity)
+            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity, counterparty, notary)
+            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity, notary)
             Pair(local, remote)
         } else {
-            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity, counterparty)
-            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity)
+            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity, counterparty, notary)
+            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity, notary)
             Pair(local, remote)
         }
 
