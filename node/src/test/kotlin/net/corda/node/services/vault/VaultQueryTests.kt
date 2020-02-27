@@ -15,6 +15,7 @@ import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
