@@ -3,6 +3,9 @@ import java.nio.file.Files
 import org.yaml.snakeyaml.DumperOptions
 
 buildscript {
+    ext {
+        springBootVersion = '1.5.21.RELEASE'
+    }
     repositories {
         mavenCentral()
     }
@@ -63,11 +66,11 @@ configurations {
 }
 
 dependencies {
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    compile("org.springframework.boot:spring-boot-starter-web:$springBootVersion") {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-    compile('org.springframework.boot:spring-boot-starter-log4j2')
+    compile("org.springframework.boot:spring-boot-starter-log4j2:$springBootVersion")
     runtimeOnly("org.apache.logging.log4j:log4j-web:$log4j_version")
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     compile project(":client:rpc")
@@ -82,7 +85,7 @@ dependencies {
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
-    testCompile('org.springframework.boot:spring-boot-starter-test') {
+    testCompile("org.springframework.boot:spring-boot-starter-test:$springBootVersion") {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
