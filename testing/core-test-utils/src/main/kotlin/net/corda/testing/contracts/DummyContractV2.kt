@@ -29,6 +29,7 @@ class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State
             require(priors.isNotEmpty()) { "States to move to new owner must not be empty" }
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)
+            @Suppress("SpreadOperator")
             return TransactionBuilder(notary = priors[0].state.notary).withItems(
                     /* INPUTS  */ *priors.toTypedArray(),
                     /* COMMAND */ Command(cmd, priorState.owners.map { it.owningKey }),

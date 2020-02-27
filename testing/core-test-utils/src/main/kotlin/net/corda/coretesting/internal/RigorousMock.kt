@@ -1,3 +1,4 @@
+@file: Suppress("MatchingDeclarationName")
 package net.corda.coretesting.internal
 
 import com.nhaarman.mockito_kotlin.doAnswer
