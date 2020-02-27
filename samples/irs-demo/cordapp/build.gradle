@@ -7,6 +7,8 @@ apply plugin: 'application'
 
 mainClassName = 'net.corda.irs.IRSDemo'
 
+evaluationDependsOn(":node:capsule")
+
 sourceSets {
     integrationTest {
         kotlin {
