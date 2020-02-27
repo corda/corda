@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.crypto
+package net.corda.nodeapitests.internal.crypto
 
 
 import io.netty.handler.ssl.ClientAuth
@@ -42,6 +42,14 @@ import net.corda.coretesting.internal.NettyTestHandler
 import net.corda.coretesting.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.checkValidity
+import net.corda.nodeapi.internal.crypto.getSupportedKey
+import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
+import net.corda.nodeapi.internal.crypto.save
+import net.corda.nodeapi.internal.crypto.toBc
+import net.corda.nodeapi.internal.crypto.x509
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*

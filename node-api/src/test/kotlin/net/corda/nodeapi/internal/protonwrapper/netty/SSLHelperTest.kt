@@ -3,8 +3,8 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.coretesting.internal.configureTestSSL
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.testing.internal.configureTestSSL
 import org.junit.Test
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SNIHostName

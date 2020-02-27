@@ -67,19 +67,6 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
-fun configureTestSSL(legalName: CordaX500Name): MutualSslConfiguration {
-
-    val certificatesDirectory = Files.createTempDirectory("certs")
-    val config = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
-    if (config.trustStore.getOptional() == null) {
-        loadDevCaTrustStore().copyTo(config.trustStore.get(true))
-    }
-    if (config.keyStore.getOptional() == null) {
-        config.keyStore.get(true).registerDevP2pCertificates(legalName)
-    }
-    return config
-}
-
 private val defaultRootCaName = X500Principal("CN=Corda Root CA,O=R3 Ltd,L=London,C=GB")
 private val defaultIntermediateCaName = X500Principal("CN=Corda Intermediate CA,O=R3 Ltd,L=London,C=GB")
 

@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.nodeapitests.internal
 
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig

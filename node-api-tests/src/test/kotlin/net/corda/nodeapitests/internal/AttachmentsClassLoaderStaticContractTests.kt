@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal
+package net.corda.nodeapitests.internal
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
@@ -19,7 +19,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
-import net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests.AttachmentDummyContract.Companion.ATTACHMENT_PROGRAM_ID
+import net.corda.nodeapitests.internal.AttachmentsClassLoaderStaticContractTests.AttachmentDummyContract.Companion.ATTACHMENT_PROGRAM_ID
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -45,7 +45,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     class AttachmentDummyContract : Contract {
         companion object {
-            const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
+            const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapitests.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
         }
 
         data class State(val magicNumber: Int = 0) : ContractState {
@@ -95,7 +95,8 @@ class AttachmentsClassLoaderStaticContractTests {
 
     @Test(timeout=300_000)
 	fun `test serialization of WireTransaction with statically loaded contract`() {
-        val tx = AttachmentDummyContract().generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
+        val tx = AttachmentDummyContract()
+                .generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val wireTransaction = tx.toWireTransaction(serviceHub)
         val bytes = wireTransaction.serialize()
         val copiedWireTransaction = bytes.deserialize()
