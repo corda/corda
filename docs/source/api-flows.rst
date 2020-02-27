@@ -215,7 +215,7 @@ Remember that a transaction generally needs a notary to:
 * Prevent double-spends if the transaction has inputs
 * Serve as a timestamping authority if the transaction has a time-window
 
-There are several ways to retrieve a notary from the network map:
+A notary can be retrieved from the network map as follows:
 
 .. container:: codeset
 
