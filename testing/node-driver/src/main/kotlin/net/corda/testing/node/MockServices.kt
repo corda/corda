@@ -61,7 +61,7 @@ import javax.persistence.EntityManager
 
 /** Returns a simple [IdentityService] containing the supplied [identities]. */
 fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentityService {
-    return InMemoryIdentityService(identities.toList(), net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
+    return InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
 }
 
 /**
@@ -179,7 +179,7 @@ open class MockServices private constructor(
             identityService.apply {
                 ourNames = setOf(initialIdentity.name)
                 database = persistence
-                start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
+                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
 

@@ -136,10 +136,10 @@ class TransactionSerializationTests {
 
     @Test(timeout=300_000)
 	fun timeWindow() {
-        tx.setTimeWindow(net.corda.coretesting.internal.TEST_TX_TIME, 30.seconds)
+        tx.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
-        assertEquals(net.corda.coretesting.internal.TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
+        assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
     }
 
     @Test(timeout=300_000)

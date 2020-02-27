@@ -57,7 +57,7 @@ class CordaRPCClientReconnectionTest {
 
             fun startNode(): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -95,7 +95,7 @@ class CordaRPCClientReconnectionTest {
 
             fun startNode(): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -132,7 +132,7 @@ class CordaRPCClientReconnectionTest {
 
             fun startNode(address: NetworkHostAndPort): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -173,7 +173,7 @@ class CordaRPCClientReconnectionTest {
 
             fun startNode(address: NetworkHostAndPort): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -212,7 +212,7 @@ class CordaRPCClientReconnectionTest {
 
             fun startNode(): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -250,7 +250,7 @@ class CordaRPCClientReconnectionTest {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             fun startNode(): NodeHandle {
                 return startNode(
-                        providedName = net.corda.testing.core.CHARLIE_NAME,
+                        providedName = CHARLIE_NAME,
                         rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                         customOverrides = mapOf("rpcSettings.address" to address.toString())
                 ).getOrThrow()
@@ -280,7 +280,7 @@ class CordaRPCClientReconnectionTest {
             val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
             val conf = config.copy(maxReconnectAttempts = 2)
             fun startNode(): NodeHandle = startNode(
-                    providedName = net.corda.testing.core.CHARLIE_NAME,
+                    providedName = CHARLIE_NAME,
                     rpcUsers = listOf(CordaRPCClientTest.rpcUser),
                     customOverrides = mapOf("rpcSettings.address" to address.toString())
             ).getOrThrow()

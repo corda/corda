@@ -7,16 +7,20 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.core.serialization.serialize
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
-import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
-import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -26,7 +30,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -62,7 +65,7 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)
-        identityService.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
     }
 
     @After
@@ -206,8 +209,8 @@ class PersistentIdentityServiceTests {
         }
 
         assertFailsWith<IllegalArgumentException> {
-            val owningKey = net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.publicKey
-            val subject = CordaX500Name.build(net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
+            val owningKey = DEV_INTERMEDIATE_CA.certificate.publicKey
+            val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
             identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
         }
     }
@@ -227,7 +230,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(net.corda.coretesting.internal.DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())

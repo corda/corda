@@ -401,8 +401,7 @@ class X509UtilitiesTest {
         val clientHandler = NettyTestHandler { _, msg -> assertEquals("Hello", NettyTestHandler.readString(msg)) }
         NettyTestServer(sslServerContext, serverHandler, portAllocation.nextPort()).use { server ->
             server.start()
-            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler)
-                    .use { client ->
+            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler).use { client ->
                 client.start()
 
                 clientHandler.writeString("Hello")

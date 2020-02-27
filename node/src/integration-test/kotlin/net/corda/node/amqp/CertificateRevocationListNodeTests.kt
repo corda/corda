@@ -69,7 +69,7 @@ class CertificateRevocationListNodeTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val ROOT_CA = net.corda.coretesting.internal.DEV_ROOT_CA
+    private val ROOT_CA = DEV_ROOT_CA
     private lateinit var INTERMEDIATE_CA: CertificateAndKeyPair
 
     private val portAllocation = incrementalPortAllocation()
@@ -118,10 +118,10 @@ class CertificateRevocationListNodeTests {
         server = CrlServer(NetworkHostAndPort("localhost", 0))
         server.start()
         INTERMEDIATE_CA = CertificateAndKeyPair(replaceCrlDistPointCaCertificate(
-                net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.certificate,
+                DEV_INTERMEDIATE_CA.certificate,
                 CertificateType.INTERMEDIATE_CA,
                 ROOT_CA.keyPair,
-                "http://${server.hostAndPort}/crl/intermediate.crl"), net.corda.coretesting.internal.DEV_INTERMEDIATE_CA.keyPair)
+                "http://${server.hostAndPort}/crl/intermediate.crl"), DEV_INTERMEDIATE_CA.keyPair)
     }
 
     @After

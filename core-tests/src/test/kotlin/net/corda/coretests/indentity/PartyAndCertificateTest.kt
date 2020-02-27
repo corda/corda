@@ -26,7 +26,7 @@ class PartyAndCertificateTest {
 
     @Test(timeout=300_000)
 	fun `reject a path with no roles`() {
-        val path = X509Utilities.buildCertPath(net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
+        val path = X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
         assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
     }
 

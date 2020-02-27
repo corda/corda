@@ -91,7 +91,7 @@ class PartialMerkleTreeTest {
                 reference("dummy cash 1")
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
         }

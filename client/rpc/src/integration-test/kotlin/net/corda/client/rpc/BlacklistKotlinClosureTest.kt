@@ -31,7 +31,7 @@ class BlacklistKotlinClosureTest {
     @Test(timeout=300_000)
 	fun `closure sent via RPC`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
-            val rpc = startNode(providedName = net.corda.testing.core.ALICE_NAME).getOrThrow().rpc
+            val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(RPCException::class.java)
                     .isThrownBy { rpc.startFlow(::FlowC, packet) }

@@ -54,7 +54,7 @@ class NodeRegistrationTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val portAllocation = incrementalPortAllocation()
-    private val registrationHandler = RegistrationHandler(net.corda.coretesting.internal.DEV_ROOT_CA)
+    private val registrationHandler = RegistrationHandler(DEV_ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort
 
@@ -79,7 +79,7 @@ class NodeRegistrationTest {
                 URL("http://$serverHostAndPort"),
                 null,
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
-                rootCert = net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
+                rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,

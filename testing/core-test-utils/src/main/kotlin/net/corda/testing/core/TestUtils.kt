@@ -82,8 +82,8 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
 }
 
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
-    val trustRoot: X509Certificate = net.corda.coretesting.internal.DEV_ROOT_CA.certificate
-    val intermediate: CertificateAndKeyPair = net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+    val trustRoot: X509Certificate = DEV_ROOT_CA.certificate
+    val intermediate: CertificateAndKeyPair = DEV_INTERMEDIATE_CA
 
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
 

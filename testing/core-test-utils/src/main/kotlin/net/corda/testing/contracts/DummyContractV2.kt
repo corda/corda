@@ -19,7 +19,7 @@ class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State
          * An overload of move for just one input state.
          */
         @JvmStatic
-        fun move(prior: StateAndRef<State>, newOwner: AbstractParty) = Companion.move(listOf(prior), newOwner)
+        fun move(prior: StateAndRef<State>, newOwner: AbstractParty) = move(listOf(prior), newOwner)
 
         /**
          * Returns a [TransactionBuilder] that takes the given input states and transfers them to the newOwner.

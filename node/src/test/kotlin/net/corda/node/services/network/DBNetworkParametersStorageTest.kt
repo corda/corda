@@ -48,7 +48,7 @@ class DBNetworkParametersStorageTest {
     fun setUp() {
         netParams1 = certKeyPair.sign(testNetworkParameters(minimumPlatformVersion = 1))
         netParams2 = certKeyPair.sign(testNetworkParameters(minimumPlatformVersion = 2))
-        incorrectParams = createDevNetworkMapCa(net.corda.coretesting.internal.DEV_INTERMEDIATE_CA).sign(testNetworkParameters(minimumPlatformVersion = 3))
+        incorrectParams = createDevNetworkMapCa(DEV_INTERMEDIATE_CA).sign(testNetworkParameters(minimumPlatformVersion = 3))
         hash1 = netParams1.raw.hash
         hash2 = netParams2.raw.hash
         hash3 = incorrectParams.raw.hash
@@ -61,7 +61,7 @@ class DBNetworkParametersStorageTest {
         networkMapClient = createMockNetworkMapClient()
         networkParametersService = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
             database.transaction {
-                setCurrentParameters(netParams1, net.corda.coretesting.internal.DEV_ROOT_CA.certificate)
+                setCurrentParameters(netParams1, DEV_ROOT_CA.certificate)
             }
         }
     }

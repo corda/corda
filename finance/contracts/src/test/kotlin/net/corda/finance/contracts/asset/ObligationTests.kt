@@ -69,7 +69,7 @@ class ObligationTests {
     private val trustedCashContract = NonEmptySet.of(SecureHash.randomSHA256() as SecureHash)
     private val megaIssuedDollars = NonEmptySet.of(Issued(defaultIssuer, USD))
     private val megaIssuedPounds = NonEmptySet.of(Issued(defaultIssuer, GBP))
-    private val fivePm: Instant = net.corda.coretesting.internal.TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
+    private val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
     private val sixPm: Instant = fivePm + 1.hours
     private val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
     private val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuedProducts = megaIssuedPounds)
@@ -331,7 +331,7 @@ class ObligationTests {
     @Test(timeout=300_000)
 	fun `generate set lifecycle`() {
         // We don't actually verify the states, this is just here to make things look sensible
-        val dueBefore = net.corda.coretesting.internal.TEST_TX_TIME - 7.days
+        val dueBefore = TEST_TX_TIME - 7.days
 
         // Generate a transaction issuing the obligation.
         var tx = TransactionBuilder(null).apply {
@@ -397,7 +397,7 @@ class ObligationTests {
                 input("Bob's $1,000,000 obligation to Alice")
                 // Note we can sign with either key here
                 command(ALICE_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -414,7 +414,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output(Obligation.PROGRAM_ID, "change", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB))
                 command(listOf(BOB_PUBKEY, MEGA_CORP_PUBKEY), Obligation.Commands.Net(NetType.CLOSE_OUT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -429,7 +429,7 @@ class ObligationTests {
                 input("Bob's $1,000,000 obligation to Alice")
                 output(Obligation.PROGRAM_ID, "change", oneMillionDollars.splitEvenly(2).first().OBLIGATION between Pair(ALICE, BOB))
                 command(BOB_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "amounts owed on input and output must match"
             }
         }
@@ -442,7 +442,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(MEGA_CORP_PUBKEY, Obligation.Commands.Net(NetType.CLOSE_OUT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "any involved party has signed"
             }
         }
@@ -458,7 +458,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(listOf(ALICE_PUBKEY, BOB_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -473,7 +473,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(BOB_PUBKEY, Obligation.Commands.Net(NetType.PAYMENT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
         }
@@ -487,7 +487,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE))
                 command(listOf(ALICE_PUBKEY, BOB_PUBKEY, MEGA_CORP_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -502,7 +502,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output(Obligation.PROGRAM_ID, "MegaCorp's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE))
                 command(listOf(ALICE_PUBKEY, BOB_PUBKEY), Obligation.Commands.Net(NetType.PAYMENT))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
         }
@@ -576,7 +576,7 @@ class ObligationTests {
         val commodityContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/commodity-claims.html")
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
-        val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), net.corda.coretesting.internal.TEST_TX_TIME)
+        val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
                 obligationDef, oneUnitFcoj.quantity, NULL_PARTY)
         // Try settling a simple commodity obligation
@@ -614,14 +614,14 @@ class ObligationTests {
         }
 
         // Try defaulting an obligation due in the future
-        val pastTestTime = net.corda.coretesting.internal.TEST_TX_TIME - 7.days
-        val futureTestTime = net.corda.coretesting.internal.TEST_TX_TIME + 7.days
+        val pastTestTime = TEST_TX_TIME - 7.days
+        val futureTestTime = TEST_TX_TIME + 7.days
         transaction {
             attachments(Obligation.PROGRAM_ID)
             input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime)
             output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
             command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
-            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "the due date has passed"
         }
 
@@ -632,7 +632,7 @@ class ObligationTests {
                 input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime)
                 output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
                 command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
-                timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -967,7 +967,7 @@ class ObligationTests {
 
     private val cashContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/cash-claims.html")
     private val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
-        get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), net.corda.coretesting.internal.TEST_TX_TIME)
+        get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), TEST_TX_TIME)
     private val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
         get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

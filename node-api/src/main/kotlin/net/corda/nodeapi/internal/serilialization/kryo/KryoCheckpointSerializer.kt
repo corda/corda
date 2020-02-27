@@ -96,7 +96,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     override fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
         return context.kryo {
             SerializedBytes(kryoOutput {
-                net.corda.nodeapi.internal.serilialization.kryo.kryoMagic.writeTo(this)
+                kryoMagic.writeTo(this)
                 context.encoding?.let { encoding ->
                     SectionId.ENCODING.writeTo(this)
                     (encoding as CordaSerializationEncoding).writeTo(this)

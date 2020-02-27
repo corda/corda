@@ -25,6 +25,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
@@ -665,7 +666,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 // Put a broken command on so at least a signature is created
                 command(issuer.party.owningKey, Cash.Commands.Move())
             }
-            timeWindow(net.corda.coretesting.internal.TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             if (withError) {
                 this.fails()
             } else {

@@ -29,10 +29,10 @@ import java.security.KeyPair
 import java.security.PublicKey
 
 object TransactionGenerator {
-    private val DUMMY_NOTARY: Party = TestIdentity(net.corda.testing.core.DUMMY_NOTARY_NAME, 20).party
+    private val DUMMY_NOTARY: Party = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 
     private val DUMMY_CASH_ISSUER_KEY: KeyPair = entropyToKeyPair(BigInteger.valueOf(10))
-    private val DUMMY_CASH_ISSUER_IDENTITY = net.corda.testing.core.getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
+    private val DUMMY_CASH_ISSUER_IDENTITY = getTestPartyAndCertificate(Party(CordaX500Name("Snake Oil Issuer", "London", "GB"), DUMMY_CASH_ISSUER_KEY.public))
     private val DUMMY_CASH_ISSUER = DUMMY_CASH_ISSUER_IDENTITY.party.ref(1)
 
     private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
