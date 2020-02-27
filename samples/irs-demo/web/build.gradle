@@ -8,6 +8,7 @@ buildscript {
     }
     dependencies {
         classpath "org.yaml:snakeyaml:1.24"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:1.5.21.RELEASE"
         classpath "io.spring.gradle:dependency-management-plugin:1.0.9.RELEASE"
         classpath "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
         classpath "org.apache.logging.log4j:log4j-core:$log4j_version"
