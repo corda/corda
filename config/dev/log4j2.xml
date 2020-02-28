@@ -66,8 +66,8 @@
             <PatternLayout pattern="%msg%n%throwable{0}" />
         </Console>
 
-        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
-             those that are older than 60 days, but keep the most recent 10 GB -->
+        <!-- Will generate up to 500 log files for a given day. Adjust this number according to the available storage.
+             During every rollover it will delete those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingRandomAccessFile name="RollingFile-Appender"
                      fileName="${log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
