@@ -6,6 +6,7 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client RPC modules'
 
+evaluationDependsOn(":node:capsule")
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
