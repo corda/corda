@@ -82,7 +82,6 @@ fun CordaCliWrapper.start(args: Array<String>) {
                 val throwable = ex.cause ?: ex
                 if (this@start.verbose || this@start.subCommands.any { it.verbose }) {
                     throwable.printStackTrace()
-                } else {
                 }
                 printError(throwable.rootMessage ?: "Use --verbose for more details")
                 return listOf(ExitCodes.FAILURE)
