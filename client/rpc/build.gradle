@@ -6,7 +6,6 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda client RPC modules'
 
-evaluationDependsOn(":node:capsule")
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -74,6 +73,7 @@ processSmokeTestResources {
 dependencies {
     compile project(':core')
     compile project(':node-api')
+    compile project(':node:capsule')
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
