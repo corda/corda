@@ -7,7 +7,7 @@
     <changeSet author="R3.Corda" id="add_new_checkpoints_table" dbms="!postgresql">
         <dropTable tableName="node_checkpoints"></dropTable>
         <createTable tableName="node_checkpoints">
-            <column name="id" type="NVARCHAR(64)">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="checkpoint_blob_id" type="BIGINT">
@@ -19,7 +19,7 @@
             <column name="error_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
-            <column name="flow_id" type="BIGINT">
+            <column name="invocation_id" type="NVARCHAR(128)">
                 <constraints nullable="true"/>
             </column>
             <column name="status" type="TINYINT">
@@ -53,7 +53,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="hmac" type="NVARCHAR(32)">
                 <constraints nullable="false"/>
@@ -71,7 +71,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
@@ -91,7 +91,7 @@
                 <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>

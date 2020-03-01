@@ -5,7 +5,7 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="add_new_checkpoint_schema_primary_keys">
-        <addPrimaryKey columnNames="id" constraintName="node_checkpoints_pk" tableName="node_checkpoints"/>
+        <addPrimaryKey columnNames="flow_id" constraintName="node_checkpoints_pk" tableName="node_checkpoints"/>
         <addPrimaryKey columnNames="id" constraintName="node_checkpoints_blobs_pk" tableName="node_checkpoints_blobs"/>
         <addPrimaryKey columnNames="id" constraintName="node_checkpoint_exceptions_pk" tableName="node_flow_exceptions"/>
         <addPrimaryKey columnNames="id" constraintName="node_checkpoint_results_pk" tableName="node_flow_results"/>
@@ -26,9 +26,9 @@
                              constraintName="node_checkpoint_to_result_fk"
                              referencedColumnNames="id" referencedTableName="node_flow_results"/>
 
-    <addForeignKeyConstraint baseColumnNames="flow_id" baseTableName="node_checkpoints"
+    <addForeignKeyConstraint baseColumnNames="invocation_id" baseTableName="node_checkpoints"
                              constraintName="node_metadata_to_checkpoints_fk"
-                             referencedColumnNames="flow_id" referencedTableName="node_flow_metadata"/>
+                             referencedColumnNames="invocation_id" referencedTableName="node_flow_metadata"/>
 </changeSet>
 
 

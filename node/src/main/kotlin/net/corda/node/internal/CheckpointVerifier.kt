@@ -39,7 +39,7 @@ object CheckpointVerifier {
         checkpointStorage.getAllCheckpoints().use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
-                    serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                    serializedCheckpoint.deserialize(checkpointSerializationContext)
                 } catch (e: ClassNotFoundException) {
                     val message = e.message
                     if (message != null) {

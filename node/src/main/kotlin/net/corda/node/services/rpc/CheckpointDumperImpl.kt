@@ -149,8 +149,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                     instrumentCheckpointAgent(runId)
 
                                 val (bytes, fileName) = try {
-                                    val checkpoint =
-                                            serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                                    val checkpoint = serialisedCheckpoint.deserialize(checkpointSerializationContext)
                                     val json = checkpoint.toJson(runId.uuid, now)
                                     val jsonBytes = writer.writeValueAsBytes(json)
                                     jsonBytes to "${json.topLevelFlowClass.simpleName}-${runId.uuid}.json"
@@ -229,6 +228,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 origin = checkpointState.invocationContext.origin.toOrigin(),
                 ourIdentity = checkpointState.ourIdentity,
                 activeSessions = checkpointState.sessions.mapNotNull { it.value.toActiveSession(it.key) },
+                // This can only ever return as [ErrorState.Clean] which causes it to become [null]
                 errored = errorState as? ErrorState.Errored
         )
     }

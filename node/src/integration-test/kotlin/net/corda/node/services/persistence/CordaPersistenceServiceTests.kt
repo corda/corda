@@ -53,25 +53,29 @@ class CordaPersistenceServiceTests {
 
     @CordaService
     class MultiThreadedDbLoader(private val services: AppServiceHub) : SingletonSerializeAsToken() {
-        fun createObjects(count: Int) : Int {
+        fun createObjects(count: Int): Int {
             (1..count).toList().parallelStream().forEach {
+                val now = Instant.now()
                 services.database.transaction {
-                    session.save(DBCheckpointStorage.DBFlowCheckpoint(
-                        id = it.toString(),
-                        blob = DBCheckpointStorage.DBFlowCheckpointBlob(
+                    session.save(
+                        DBCheckpointStorage.DBFlowCheckpoint(
+                            id = it.toString(),
+                            blob = DBCheckpointStorage.DBFlowCheckpointBlob(
                                 checkpoint = ByteArray(8192),
                                 flowStack = ByteArray(8192),
-                                hmac = ByteArray(16)
-                        ),
-                        result = DBCheckpointStorage.DBFlowResult(),
-                        exceptionDetails = null,
-                        status = FlowStatus.RUNNABLE,
-                        compatible = false,
-                        progressStep = "",
-                        ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
-                        checkpointInstant = Instant.now(),
-                        flowMetadata = null
-                    ))
+                                hmac = ByteArray(16),
+                                persistedInstant = now
+                            ),
+                            result = DBCheckpointStorage.DBFlowResult(value = ByteArray(16), persistedInstant = now),
+                            exceptionDetails = null,
+                            status = FlowStatus.RUNNABLE,
+                            compatible = false,
+                            progressStep = "",
+                            ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
+                            checkpointInstant = Instant.now(),
+                            flowMetadata = null
+                        )
+                    )
                 }
             }
 

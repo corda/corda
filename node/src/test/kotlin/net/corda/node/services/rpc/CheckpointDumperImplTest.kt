@@ -23,9 +23,12 @@ import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
+import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.FlowStart
+import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -104,7 +107,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -130,7 +133,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeCheckpoint(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -140,7 +143,14 @@ class CheckpointDumperImplTest {
 
     private fun newCheckpointStorage() {
         database.transaction {
-            checkpointStorage = DBCheckpointStorage()
+            checkpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+                override fun record(
+                    serializedCheckpointState: SerializedBytes<CheckpointState>,
+                    serializedFlowState: SerializedBytes<FlowState>
+                ) {
+                    // do nothing
+                }
+            })
         }
     }
 
@@ -155,7 +165,7 @@ class CheckpointDumperImplTest {
         return id to checkpoint
     }
 
-    private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+    private fun serializeFlowState(checkpoint: Checkpoint): SerializedBytes<FlowState> {
+        return checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }

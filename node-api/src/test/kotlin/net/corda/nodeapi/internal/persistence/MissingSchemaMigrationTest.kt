@@ -47,7 +47,7 @@ class MissingSchemaMigrationTest {
 	fun `test that an error is thrown when forceThrowOnMissingMigration is set and a mapped schema is missing a migration`() {
         assertThatThrownBy {
             createSchemaMigration(setOf(GoodSchema), true)
-                .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                .nodeStartup(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         }.isInstanceOf(MissingMigrationException::class.java)
     }
 
@@ -55,7 +55,7 @@ class MissingSchemaMigrationTest {
 	fun `test that an error is not thrown when forceThrowOnMissingMigration is not set and a mapped schema is missing a migration`() {
         assertDoesNotThrow {
             createSchemaMigration(setOf(GoodSchema), false)
-                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         }
     }
 
@@ -64,7 +64,7 @@ class MissingSchemaMigrationTest {
         assertDoesNotThrow("This test failure indicates " +
                 "a new table has been added to the node without the appropriate migration scripts being present") {
             createSchemaMigration(NodeSchemaService().internalSchemas(), false)
-                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         }
     }
 

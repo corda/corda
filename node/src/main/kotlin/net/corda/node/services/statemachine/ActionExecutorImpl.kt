@@ -31,8 +31,7 @@ class ActionExecutorImpl(
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
         private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: CheckpointSerializationContext,
-        metrics: MetricRegistry
+        private val checkpointSerializationContext: CheckpointSerializationContext
 ) : ActionExecutor {
 
     private companion object {
@@ -47,12 +46,6 @@ class ActionExecutorImpl(
             return reservoir.snapshot.values.sum()
         }
     }
-
-    private val checkpointingMeter = metrics.meter("Flows.Checkpointing Rate")
-    private val checkpointSizesThisSecond = SlidingTimeWindowReservoir(1, TimeUnit.SECONDS)
-    private val lastBandwidthUpdate = AtomicLong(0)
-    private val checkpointBandwidthHist = metrics.register("Flows.CheckpointVolumeBytesPerSecondHist", Histogram(SlidingTimeWindowArrayReservoir(1, TimeUnit.DAYS)))
-    private val checkpointBandwidth = metrics.register("Flows.CheckpointVolumeBytesPerSecondCurrent", LatchedGauge(checkpointSizesThisSecond))
 
     @Suspendable
     override fun executeAction(fiber: FlowFiber, action: Action) {
@@ -100,21 +93,12 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
-        val checkpointBytes = serializeCheckpoint(action.checkpoint)
+        val checkpoint = action.checkpoint
+        val serializedFlowState = checkpoint.flowState.checkpointSerialize(checkpointSerializationContext)
         if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, action.checkpoint, checkpointBytes)
+            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
         } else {
-            checkpointStorage.addCheckpoint(action.id, action.checkpoint, checkpointBytes)
-        }
-        checkpointingMeter.mark()
-        checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
-        var lastUpdateTime = lastBandwidthUpdate.get()
-        while (System.nanoTime() - lastUpdateTime > TimeUnit.SECONDS.toNanos(1)) {
-            if (lastBandwidthUpdate.compareAndSet(lastUpdateTime, System.nanoTime())) {
-                val checkpointVolume = checkpointSizesThisSecond.snapshot.values.sum()
-                checkpointBandwidthHist.update(checkpointVolume)
-            }
-            lastUpdateTime = lastBandwidthUpdate.get()
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState)
         }
     }
 
@@ -256,10 +240,6 @@ class ActionExecutorImpl(
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
-    }
-
-    private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.checkpointSerialize(context = checkpointSerializationContext)
     }
 
     private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {
