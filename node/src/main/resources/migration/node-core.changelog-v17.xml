@@ -42,7 +42,7 @@
     </changeSet>
 
     <changeSet author="R3.Corda" id="add_new_checkpoint_blob_table" dbms="!postgresql">
-        <createTable tableName="node_checkpoints_blobs">
+        <createTable tableName="node_checkpoint_blobs">
             <column name="id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>

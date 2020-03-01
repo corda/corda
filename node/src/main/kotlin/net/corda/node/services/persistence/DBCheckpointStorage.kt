@@ -112,7 +112,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     )
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints_blobs")
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoint_blobs")
     class DBFlowCheckpointBlob(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
