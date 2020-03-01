@@ -136,6 +136,12 @@ data class Checkpoint(
         return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
     }
 
+    /**
+     * A partially serialized form of [Checkpoint].
+     *
+     * [Checkpoint.Serialized] contains the same fields as [Checkpoint] except that some of its fields are still serialized. The checkpoint
+     * can then be deserialized as needed.
+     */
     data class Serialized(
         val serializedCheckpointState: SerializedBytes<CheckpointState>,
         val serializedFlowState: SerializedBytes<FlowState>,
@@ -146,6 +152,11 @@ data class Checkpoint(
         val flowIoRequest: Class<out FlowIORequest<*>>?,
         val compatible: Boolean
     ) {
+        /**
+         * Deserializes the serialized fields contained in [Checkpoint.Serialized].
+         *
+         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized]
+         */
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             return Checkpoint(
                 checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),

@@ -28,7 +28,11 @@ interface CheckpointStorage {
 
     /**
      * Load an existing checkpoint from the store.
-     * @return the checkpoint, still in serialized form, or null if not found.
+     *
+     * The checkpoint returned from this function will be a _clean_ checkpoint. No error information is loaded into the checkpoint
+     * even if the previous status of the checkpoint was [Checkpoint.FlowStatus.FAILED] or [Checkpoint.FlowStatus.HOSPITALIZED].
+     *
+     * @return The checkpoint, in a partially serialized form, or null if not found.
      */
     fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized?
 
