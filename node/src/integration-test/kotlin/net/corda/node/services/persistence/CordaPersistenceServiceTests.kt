@@ -4,12 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.vault.SessionScope
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -18,6 +22,7 @@ import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.sql.DriverManager
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -73,13 +78,32 @@ class CordaPersistenceServiceTests {
                             progressStep = "",
                             ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
                             checkpointInstant = Instant.now(),
-                            flowMetadata = null
+                            flowMetadata = createMetadataRecord(UUID.randomUUID(), now)
                         )
                     )
                 }
             }
 
             return count
+        }
+
+        private fun SessionScope.createMetadataRecord(invocationId: UUID, timestamp: Instant): DBCheckpointStorage.DBFlowMetadata {
+            val metadata = DBCheckpointStorage.DBFlowMetadata(
+                invocationId = invocationId.toString(),
+                flowId = null,
+                flowName = "random.flow",
+                userSuppliedIdentifier = null,
+                startType = DBCheckpointStorage.StartReason.RPC,
+                launchingCordapp = "this cordapp",
+                platformVersion = PLATFORM_VERSION,
+                rpcUsername = "Batman",
+                invocationInstant = Instant.now(),
+                receivedInstant = Instant.now(),
+                startInstant = timestamp,
+                finishInstant = null
+            )
+            session.save(metadata)
+            return metadata
         }
     }
 }

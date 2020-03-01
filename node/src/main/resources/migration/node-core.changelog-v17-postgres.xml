@@ -20,7 +20,7 @@
                 <constraints nullable="true"/>
             </column>
             <column name="invocation_id" type="NVARCHAR(128)">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="status" type="TINYINT">
                 <constraints nullable="false"/>

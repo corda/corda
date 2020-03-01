@@ -91,9 +91,9 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @JoinColumn(name = "error_id", referencedColumnName = "id")
         var exceptionDetails: DBFlowException?,
 
-        @OneToOne(fetch = FetchType.LAZY, optional = true)
-        @JoinColumn(name = "invocation_id", referencedColumnName = "invocation_id", nullable = true)
-        var flowMetadata: DBFlowMetadata?,
+        @OneToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "invocation_id", referencedColumnName = "invocation_id")
+        var flowMetadata: DBFlowMetadata,
 
         @Column(name = "status", nullable = false)
         var status: FlowStatus,
