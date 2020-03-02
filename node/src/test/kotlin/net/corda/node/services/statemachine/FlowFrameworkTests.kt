@@ -17,6 +17,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
@@ -26,6 +27,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
@@ -53,7 +55,6 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
@@ -71,6 +72,17 @@ class FlowFrameworkTests {
     private lateinit var bob: Party
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
+
+    private fun dbCheckpointStorageWithStubPerfRecorder() : DBCheckpointStorage {
+        return DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+            override fun record(
+                    serializedCheckpointState: SerializedBytes<CheckpointState>,
+                    serializedFlowState: SerializedBytes<FlowState>
+            ) {
+                // do nothing
+            }
+        })
+    }
 
     @Before
     fun setUpMockNet() {
@@ -178,10 +190,10 @@ class FlowFrameworkTests {
             bobFlowMonitor.updateDbAndLogWaitingFlows()
 
             aliceNode.database.transaction {
-                assert(DBCheckpointStorage().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
+                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
             }
             bobNode.database.transaction{
-                assertNull(DBCheckpointStorage().getCheckpointIoRequest(bobFlowId))
+                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(bobFlowId))
             }
 
             // continue bob's NoOpFlow, it will send an EndSessionMessage to alice
@@ -191,7 +203,7 @@ class FlowFrameworkTests {
             aliceFlowMonitor.updateDbAndLogWaitingFlows()
 
             aliceNode.database.transaction {
-                assertNull(DBCheckpointStorage().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
             }
 
         }
@@ -211,10 +223,10 @@ class FlowFrameworkTests {
             bobFlowMonitor.updateDbAndLogWaitingFlows()
             // both flows are suspended on a receive from the counter party
             aliceNode.database.transaction {
-                assert(DBCheckpointStorage().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
+                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
             }
             bobNode.database.transaction {
-                assert(DBCheckpointStorage().getCheckpointIoRequest(bobFlowId) == FlowIORequest.Receive::class.java)
+                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(bobFlowId) == FlowIORequest.Receive::class.java)
             }
         }
     }
@@ -229,23 +241,23 @@ class FlowFrameworkTests {
 
             val aliceFlowId = aliceFlow.id
             aliceNode.database.transaction {
-                assertNull(DBCheckpointStorage().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
             }
             // "take a long time" flow continues ...
             terminationSignal.release()
             aliceNode.database.transaction {
-                assertNull(DBCheckpointStorage().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
             }
         }
     }
 
-    private fun DBCheckpointStorage.getCheckpointIoRequest(id: StateMachineRunId): Class<FlowIORequest<*>>? {
+    private fun DBCheckpointStorage.getCheckpointIoRequest(id: StateMachineRunId): Class<out FlowIORequest<*>>? {
         return getDBCheckpoint(id)?.ioRequestType
     }
 
     private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
-        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO, aliceNode.database),
-                FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO, bobNode.database))
+        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO, aliceNode.database, dbCheckpointStorageWithStubPerfRecorder()),
+                FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO, bobNode.database, dbCheckpointStorageWithStubPerfRecorder()))
     }
 
     @Test(timeout=300_000)

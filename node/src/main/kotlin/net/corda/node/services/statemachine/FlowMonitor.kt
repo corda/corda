@@ -21,6 +21,7 @@ internal class FlowMonitor(
     private val monitoringPeriod: Duration,
     private val suspensionLoggingThreshold: Duration,
     private val database: CordaPersistence,
+    private val checkpointStorage: DBCheckpointStorage,
     private var scheduler: ScheduledExecutorService? = null
 ) : LifecycleSupport {
 
@@ -35,8 +36,6 @@ internal class FlowMonitor(
     override var started = false
 
     private var shutdownScheduler = false
-
-    private var checkpointStorage = DBCheckpointStorage()
 
     override fun start() {
         synchronized(this) {
