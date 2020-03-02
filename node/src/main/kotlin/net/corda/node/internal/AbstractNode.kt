@@ -527,7 +527,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val flowMonitor = FlowMonitor(
                     smm,
                     configuration.flowMonitorPeriodMillis,
-                    configuration.flowMonitorSuspensionLoggingThresholdMillis
+                    configuration.flowMonitorSuspensionLoggingThresholdMillis,
+                    database
             )
             runOnStop += flowMonitor::stop
             flowMonitor.start()
