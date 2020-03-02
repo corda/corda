@@ -78,7 +78,6 @@ fun CordaCliWrapper.start(args: Array<String>) {
             }
             override fun handleExecutionException(ex: ExecutionException, parseResult: ParseResult?): List<Any> {
 
-                super.handleExecutionException(ex, parseResult)
                 val throwable = ex.cause ?: ex
                 if (this@start.verbose || this@start.subCommands.any { it.verbose }) {
                     throwable.printStackTrace()
