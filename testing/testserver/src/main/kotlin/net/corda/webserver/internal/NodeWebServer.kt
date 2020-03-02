@@ -35,7 +35,8 @@ import javax.servlet.http.HttpServletRequest
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
         private val log = contextLogger()
-        const val retryDelay = 1000L // Milliseconds
+        private const val NODE_CONNECT_RETRY_COUNT = 30
+        private const val NODE_CONNECT_WAIT_BETWEEN_RETRYS = 2000L
     }
 
     val address = config.webAddress
@@ -187,9 +188,7 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private lateinit var rpc: CordaRPCConnection
     private fun reconnectingCordaRPCOps(): CordaRPCOps {
-        val RETRY_COUNT = 30
-        val WAIT_BETWEEN_RETRYS = 2000L
-        var retryCount = RETRY_COUNT
+        var retryCount = NODE_CONNECT_RETRY_COUNT
         while (true) {
             try {
                 rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
@@ -205,7 +204,7 @@ class NodeWebServer(val config: WebServerConfig) {
                     throw ex
                 }
                 else {
-                    Thread.sleep(WAIT_BETWEEN_RETRYS)
+                    Thread.sleep(NODE_CONNECT_WAIT_BETWEEN_RETRYS)
                 }
             }
         }
