@@ -29,8 +29,8 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
                         "parameters advertised by network map. Please update node to use correct network parameters file."
         )
         class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash) : Error(
-                "Node uses parameters with hash: $previousParametersHash but network map is advertising: " +
-                        "$advertisedParametersHash. Please update node to use correct network parameters file."
+                """Node is using network parameters with hash $previousParametersHash but the network map is advertising $advertisedParametersHash.
+                To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart."""
         )
     }
 
