@@ -43,6 +43,7 @@ class CertificateStoreStubs {
 
         companion object {
 
+            @Suppress("LongParameterList")
             @JvmStatic
             fun withCertificatesDirectory(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME,
                                           keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword,
