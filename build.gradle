@@ -663,7 +663,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     nodeTaints "big"
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
-    testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
+    testGroups "test", "integrationTest", "smokeTest"
     numberOfShards 15
     streamOutput false
     coresPerFork 2
