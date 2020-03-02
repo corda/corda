@@ -46,8 +46,9 @@ class CertificateStoreStubs {
             @JvmStatic
             fun withCertificatesDirectory(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME,
                                           keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword,
-                                          trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD, trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD,
-                                          @Suppress("UNUSED_PARAMETER") useOpenSsl: Boolean = false): MutualSslConfiguration {
+                                          trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME,
+                                          trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD,
+                                          trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD): MutualSslConfiguration {
 
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword, keyPassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword, trustStoreKeyPassword)
