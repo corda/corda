@@ -6,6 +6,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.RPCException
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
@@ -186,13 +187,28 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private lateinit var rpc: CordaRPCConnection
     private fun reconnectingCordaRPCOps(): CordaRPCOps {
-        rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
-                .start(
-                        config.runAs.username,
-                        config.runAs.password,
-                        GracefulReconnect()
-                )
-        return rpc.proxy
+        val RETRY_COUNT = 30
+        val WAIT_BETWEEN_RETRYS = 2000L
+        var retryCount = RETRY_COUNT
+        while (true) {
+            try {
+                rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
+                        .start(
+                                config.runAs.username,
+                                config.runAs.password,
+                                GracefulReconnect()
+                        )
+                return rpc.proxy
+            }
+            catch (ex: RPCException) {
+                if (retryCount-- == 0) {
+                    throw ex
+                }
+                else {
+                    Thread.sleep(WAIT_BETWEEN_RETRYS)
+                }
+            }
+        }
     }
 
     /**
