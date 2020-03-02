@@ -109,6 +109,7 @@ import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.AttachmentStorageInternal
+import net.corda.node.services.persistence.DBCheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -251,7 +252,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
-    val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -318,6 +318,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     protected val network: MessagingService = makeMessagingService().tokenize()
     val services = ServiceHubInternalImpl().tokenize()
+    val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics))
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
@@ -1276,7 +1277,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         start(dataSource)
     } catch (ex: Exception) {
         when {

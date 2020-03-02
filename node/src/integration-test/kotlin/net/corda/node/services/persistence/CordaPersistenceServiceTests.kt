@@ -3,11 +3,17 @@ package net.corda.node.services.persistence
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.vault.SessionScope
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.Checkpoint.FlowStatus
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -15,6 +21,8 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.sql.DriverManager
+import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -50,16 +58,52 @@ class CordaPersistenceServiceTests {
 
     @CordaService
     class MultiThreadedDbLoader(private val services: AppServiceHub) : SingletonSerializeAsToken() {
-        fun createObjects(count: Int) : Int {
+        fun createObjects(count: Int): Int {
             (1..count).toList().parallelStream().forEach {
+                val now = Instant.now()
                 services.database.transaction {
-                    session.save(DBCheckpointStorage.DBCheckpoint().apply {
-                        checkpointId = it.toString()
-                    })
+                    session.save(
+                        DBCheckpointStorage.DBFlowCheckpoint(
+                            id = it.toString(),
+                            blob = DBCheckpointStorage.DBFlowCheckpointBlob(
+                                checkpoint = ByteArray(8192),
+                                flowStack = ByteArray(8192),
+                                hmac = ByteArray(16),
+                                persistedInstant = now
+                            ),
+                            result = DBCheckpointStorage.DBFlowResult(value = ByteArray(16), persistedInstant = now),
+                            exceptionDetails = null,
+                            status = FlowStatus.RUNNABLE,
+                            compatible = false,
+                            progressStep = "",
+                            ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
+                            checkpointInstant = Instant.now(),
+                            flowMetadata = createMetadataRecord(UUID.randomUUID(), now)
+                        )
+                    )
                 }
             }
 
             return count
+        }
+
+        private fun SessionScope.createMetadataRecord(invocationId: UUID, timestamp: Instant): DBCheckpointStorage.DBFlowMetadata {
+            val metadata = DBCheckpointStorage.DBFlowMetadata(
+                invocationId = invocationId.toString(),
+                flowId = null,
+                flowName = "random.flow",
+                userSuppliedIdentifier = null,
+                startType = DBCheckpointStorage.StartReason.RPC,
+                launchingCordapp = "this cordapp",
+                platformVersion = PLATFORM_VERSION,
+                rpcUsername = "Batman",
+                invocationInstant = Instant.now(),
+                receivedInstant = Instant.now(),
+                startInstant = timestamp,
+                finishInstant = null
+            )
+            session.save(metadata)
+            return metadata
         }
     }
 }

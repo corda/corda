@@ -590,7 +590,7 @@ class SingleThreadedStateMachineManager(
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
             checkpointStorage.getCheckpoint(flowId)?.let { serializedCheckpoint ->
-                val checkpoint = tryCheckpointDeserialize(serializedCheckpoint, flowId)
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
                 if (checkpoint == null) {
                     return openFuture<FlowStateMachine<A>>().mapError {
                         IllegalStateException("Unable to deserialize database checkpoint for flow $flowId. " +
@@ -758,14 +758,23 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
+        return try {
+            serializedCheckpoint.deserialize(checkpointSerializationContext!!)
+        } catch (e: Exception) {
+            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+            null
+        }
+    }
+
     private fun createFlowFromCheckpoint(
             id: StateMachineRunId,
-            serializedCheckpoint: SerializedBytes<Checkpoint>,
+            serializedCheckpoint: Checkpoint.Serialized,
             isAnyCheckpointPersisted: Boolean,
             isStartIdempotent: Boolean,
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
-        val checkpoint = tryCheckpointDeserialize(serializedCheckpoint, id) ?: return null
+        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return null
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
         val fiber = when (flowState) {
@@ -865,8 +874,7 @@ class SingleThreadedStateMachineManager(
                 checkpointStorage,
                 flowMessaging,
                 this,
-                checkpointSerializationContext,
-                metrics
+                checkpointSerializationContext
         )
     }
 

@@ -7,7 +7,12 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
@@ -57,9 +62,10 @@ data class Checkpoint(
         val result: Any? = null,
         val status: FlowStatus = FlowStatus.RUNNABLE,
         val progressStep: String? = null,
-        val flowIoRequest: FlowIORequest<*>? = null,
+        val flowIoRequest: Class<out FlowIORequest<*>>? = null,
         val compatible: Boolean = true
 ) {
+    @CordaSerializable
     enum class FlowStatus {
         RUNNABLE,
         FAILED,
@@ -84,9 +90,15 @@ data class Checkpoint(
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
-                        checkpointState = CheckpointState(invocationContext, ourIdentity, emptyMap(), listOf(topLevelSubFlow), numberOfSuspends = 0),
-                        flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
-                        errorState = ErrorState.Clean
+                    checkpointState = CheckpointState(
+                        invocationContext,
+                        ourIdentity,
+                        emptyMap(),
+                        listOf(topLevelSubFlow),
+                        numberOfSuspends = 0
+                    ),
+                    errorState = ErrorState.Clean,
+                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
                 )
             }
         }
@@ -123,6 +135,41 @@ data class Checkpoint(
     fun addSubflow(subFlow: SubFlow) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(subFlowStack = checkpointState.subFlowStack + subFlow))
     }
+
+    /**
+     * A partially serialized form of [Checkpoint].
+     *
+     * [Checkpoint.Serialized] contains the same fields as [Checkpoint] except that some of its fields are still serialized. The checkpoint
+     * can then be deserialized as needed.
+     */
+    data class Serialized(
+        val serializedCheckpointState: SerializedBytes<CheckpointState>,
+        val serializedFlowState: SerializedBytes<FlowState>,
+        val errorState: ErrorState,
+        val result: SerializedBytes<Any>?,
+        val status: FlowStatus,
+        val progressStep: String?,
+        val flowIoRequest: Class<out FlowIORequest<*>>?,
+        val compatible: Boolean
+    ) {
+        /**
+         * Deserializes the serialized fields contained in [Checkpoint.Serialized].
+         *
+         * @return A [Checkpoint] with all its fields filled in from [Checkpoint.Serialized]
+         */
+        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
+            return Checkpoint(
+                checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
+                flowState = serializedFlowState.checkpointDeserialize(checkpointSerializationContext),
+                errorState = errorState,
+                result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
+                status = status,
+                progressStep = progressStep,
+                flowIoRequest = flowIoRequest,
+                compatible = compatible
+            )
+        }
+    }
 }
 
 /**
@@ -132,12 +179,13 @@ data class Checkpoint(
  * @param subFlowStack the stack of currently executing subflows.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
+@CordaSerializable
 data class CheckpointState(
-        val invocationContext: InvocationContext,
-        val ourIdentity: Party,
-        val sessions: SessionMap, // This must preserve the insertion order!
-        val subFlowStack: List<SubFlow>,
-        val numberOfSuspends: Int
+    val invocationContext: InvocationContext,
+    val ourIdentity: Party,
+    val sessions: SessionMap, // This must preserve the insertion order!
+    val subFlowStack: List<SubFlow>,
+    val numberOfSuspends: Int
 )
 
 /**
@@ -254,17 +302,20 @@ sealed class FlowState {
  * @param exception the exception itself. Note that this may not contain information about the source error depending
  *   on whether the source error was a FlowException or otherwise.
  */
+@CordaSerializable
 data class FlowError(val errorId: Long, val exception: Throwable)
 
 /**
  * The flow's error state.
  */
+@CordaSerializable
 sealed class ErrorState {
     abstract fun addErrors(newErrors: List<FlowError>): ErrorState
 
     /**
      * The flow is in a clean state.
      */
+    @CordaSerializable
     object Clean : ErrorState() {
         override fun addErrors(newErrors: List<FlowError>): ErrorState {
             return Errored(newErrors, 0, false)
@@ -281,6 +332,7 @@ sealed class ErrorState {
      * @param propagating true if error propagation was triggered. If this is set the dirtiness is permanent as the
      *   sessions associated with the flow have been (or about to be) dirtied in counter-flows.
      */
+    @CordaSerializable
     data class Errored(
             val errors: List<FlowError>,
             val propagatedIndex: Int,
