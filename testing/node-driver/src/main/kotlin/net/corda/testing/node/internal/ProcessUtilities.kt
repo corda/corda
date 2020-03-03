@@ -39,7 +39,6 @@ object ProcessUtilities {
             identifier: String = "",
             environmentVariables: Map<String,String> = emptyMap(),
             inheritIO: Boolean = true
-
     ): Process {
         val command = mutableListOf<String>().apply {
             add(javaPath)

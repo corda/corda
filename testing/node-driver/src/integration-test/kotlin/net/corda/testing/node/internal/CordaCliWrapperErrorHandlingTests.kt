@@ -14,7 +14,7 @@ import java.util.stream.Collectors
 class CordaCliWrapperErrorHandlingTests(val arguments: List<String>, val outputRegexPattern: String) {
 
     companion object {
-        val className = "net.corda.cliutils.SampleCordaCliWrapper"
+        val className = "net.corda.testing.node.internal.SampleCordaCliWrapper"
 
         private val stackTraceRegex = "^.+Exception[^\\n]++(\\s+at .++)+[\\s\\S]*"
         private val exceptionWithoutStackTraceRegex ="${className}(\\s+.+)"
