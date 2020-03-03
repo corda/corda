@@ -228,9 +228,11 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     override fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>) {
         val checkpoint = getDBCheckpoint(id)
-        if (checkpoint?.ioRequestType != ioRequest) {
-            checkpoint?.ioRequestType = ioRequest.javaClass
-            currentDBSession().update(checkpoint)
+        checkpoint?.let {
+            if (it.ioRequestType != ioRequest.javaClass) {
+                it.ioRequestType = ioRequest.javaClass
+                currentDBSession().update(checkpoint)
+            }
         }
     }
 
@@ -258,7 +260,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
-        return currentDBSession().get(DBFlowCheckpoint::class.java, id.uuid.toString())
+        return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
     private fun createDBCheckpoint(
@@ -323,11 +325,10 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     private fun updateDBCheckpoint(
-        id: StateMachineRunId,
+        flowId: StateMachineRunId,
         checkpoint: Checkpoint,
         serializedFlowState: SerializedBytes<FlowState>
     ): DBFlowCheckpoint {
-        val flowId = id.uuid.toString()
         val now = Instant.now()
 
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
