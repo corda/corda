@@ -73,92 +73,92 @@ class QueryCriteriaUtilsBuilderTest {
     /** Sample `List` value to pass to the predicate expression */
     private val listValue = emptyList<String>()
 
-    @Test
+    @Test(timeout = 500)
     fun `equal predicate uses EQUAL operator`() {
         assertThat(fieldInfo.equal(stringValue)).usesOperator(EqualityComparisonOperator.EQUAL)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `equal predicate (exactMatch=false) uses EQUAL_IGNORE_CASE operator`() {
         assertThat(fieldInfo.equal(stringValue, exactMatch = false)).usesOperator(EqualityComparisonOperator.EQUAL_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notEqual predicate uses NOT_EQUAL operator`() {
         assertThat(fieldInfo.notEqual(stringValue)).usesOperator(EqualityComparisonOperator.NOT_EQUAL)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notEqual predicate (exactMatch=false) uses NOT_EQUAL_IGNORE_CASE operator`() {
         assertThat(fieldInfo.notEqual(stringValue, exactMatch = false)).usesOperator(EqualityComparisonOperator.NOT_EQUAL_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `lessThan predicate uses LESS_THAN operator`() {
         assertThat(fieldInfo.lessThan(stringValue)).usesOperator(BinaryComparisonOperator.LESS_THAN)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `lessThanOrEqual predicate uses LESS_THAN_OR_EQUAL operator`() {
         assertThat(fieldInfo.lessThanOrEqual(stringValue)).usesOperator(BinaryComparisonOperator.LESS_THAN_OR_EQUAL)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `greaterThan predicate uses GREATER_THAN operator`() {
         assertThat(fieldInfo.greaterThan(stringValue)).usesOperator(BinaryComparisonOperator.GREATER_THAN)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `greaterThanOrEqual predicate uses GREATER_THAN_OR_EQUAL operator`() {
         assertThat(fieldInfo.greaterThanOrEqual(stringValue)).usesOperator(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `in predicate uses IN operator`() {
         assertThat(fieldInfo.`in`(listValue)).usesOperator(CollectionOperator.IN)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `in predicate (exactMatch=false) uses IN_IGNORE_CASE operator`() {
         assertThat(fieldInfo.`in`(listValue, exactMatch = false)).usesOperator(CollectionOperator.IN_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notIn predicate uses NOT_IN operator`() {
         assertThat(fieldInfo.notIn(listValue)).usesOperator(CollectionOperator.NOT_IN)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notIn predicate (exactMatch=false) uses NOT_IN_IGNORE_CASE operator`() {
         assertThat(fieldInfo.notIn(listValue, exactMatch = false)).usesOperator(CollectionOperator.NOT_IN_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `like predicate uses LIKE operator`() {
         assertThat(fieldInfo.like(stringValue)).usesOperator(LikenessOperator.LIKE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `like predicate (exactMatch=false) uses LIKE_IGNORE_CASE operator`() {
         assertThat(fieldInfo.like(stringValue, exactMatch = false)).usesOperator(LikenessOperator.LIKE_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notLike predicate uses NOT_LIKE operator`() {
         assertThat(fieldInfo.notLike(stringValue)).usesOperator(LikenessOperator.NOT_LIKE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notLike predicate (exactMatch=false) uses NOT_LIKE_IGNORE_CASE operator`() {
         assertThat(fieldInfo.notLike(stringValue, exactMatch = false)).usesOperator(LikenessOperator.NOT_LIKE_IGNORE_CASE)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `isNull predicate uses IS_NULL operator`() {
         assertThat(fieldInfo.isNull()).usesOperator(NullOperator.IS_NULL)
     }
 
-    @Test
+    @Test(timeout = 500)
     fun `notNull predicate uses NOT_NULL operator`() {
         assertThat(fieldInfo.notNull()).usesOperator(NullOperator.NOT_NULL)
     }
