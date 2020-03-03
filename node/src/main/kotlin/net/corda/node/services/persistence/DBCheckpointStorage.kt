@@ -228,8 +228,10 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     override fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>) {
         val checkpoint = getDBCheckpoint(id)
-        checkpoint?.ioRequestType = ioRequest.javaClass
-        currentDBSession().update(checkpoint)
+        if (checkpoint?.ioRequestType != ioRequest) {
+            checkpoint?.ioRequestType = ioRequest.javaClass
+            currentDBSession().update(checkpoint)
+        }
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
