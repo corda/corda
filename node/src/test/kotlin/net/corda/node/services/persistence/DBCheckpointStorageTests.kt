@@ -445,17 +445,17 @@ class DBCheckpointStorageTests {
         database.transaction {
             val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
-            val checkpoint = checkpointStorage.getCheckpoint(id)
-            assertNull(checkpoint!!.flowIoRequest)
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertNull(checkpointFromStorage!!.flowIoRequest)
         }
         val instantNow = Instant.now()
         database.transaction {
             checkpointStorage.updateFlowIoRequest(id, FlowIORequest.Sleep(instantNow))
         }
         database.transaction {
-            val checkpoint = checkpointStorage.getCheckpoint(id)
-            assertNotNull(checkpoint?.flowIoRequest)
-            val classFromCheckpoint = checkpoint?.flowIoRequest!!
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertNotNull(checkpointFromStorage?.flowIoRequest)
+            val classFromCheckpoint = checkpointFromStorage?.flowIoRequest!!
             assertEquals(FlowIORequest.Sleep::class.java, classFromCheckpoint)
         }
     }
