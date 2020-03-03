@@ -320,7 +320,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            appClassLoader.loadClass(className).asSubclass(type.java)
+            Class.forName(className, false, appClassLoader).asSubclass(type.java)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null

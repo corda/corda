@@ -973,6 +973,7 @@ class DriverDSLImpl(
         // belong inside a Corda Node.
         private fun isTestArtifact(name: String): Boolean {
             return name.endsWith("-tests.jar")
+                    || name.endsWith("-test.jar")
                     || name.startsWith("corda-mock")
                     || name.startsWith("junit")
                     || name.startsWith("testng")

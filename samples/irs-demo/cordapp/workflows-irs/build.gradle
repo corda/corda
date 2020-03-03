@@ -56,7 +56,7 @@ jar {
 }
 
 task testJar(type: Jar) {
-    classifier "test"
+    classifier "tests"
     from sourceSets.main.output
     from sourceSets.test.output
 }
