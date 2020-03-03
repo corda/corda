@@ -57,6 +57,7 @@ import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertEquals
 
 class FlowFrameworkTests {
     companion object {
@@ -73,8 +74,7 @@ class FlowFrameworkTests {
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-    private fun dbCheckpointStorageWithStubPerfRecorder() : DBCheckpointStorage {
-        return DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+     private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
             override fun record(
                     serializedCheckpointState: SerializedBytes<CheckpointState>,
                     serializedFlowState: SerializedBytes<FlowState>
@@ -82,7 +82,7 @@ class FlowFrameworkTests {
                 // do nothing
             }
         })
-    }
+
 
     @Before
     fun setUpMockNet() {
@@ -176,7 +176,7 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
-	fun `FlowMonitor flow suspends on a FlowIORequest`() { // alice flow only, suspends on a FlowIORequest
+	fun `FlowMonitor records receiving flow on one side`() { // alice flow only, suspends on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             val terminationSignal = Semaphore(0)
             // bob's flow need to wait otherwise it could end the session prematurely
@@ -190,10 +190,10 @@ class FlowFrameworkTests {
             bobFlowMonitor.updateDbAndLogWaitingFlows()
 
             aliceNode.database.transaction {
-                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
+                assertEquals(FlowIORequest.Receive::class.java, dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId))
             }
             bobNode.database.transaction{
-                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(bobFlowId))
+                assertNull(dbCheckpointStorage.getCheckpointIoRequest(bobFlowId))
             }
 
             // continue bob's NoOpFlow, it will send an EndSessionMessage to alice
@@ -203,14 +203,13 @@ class FlowFrameworkTests {
             aliceFlowMonitor.updateDbAndLogWaitingFlows()
 
             aliceNode.database.transaction {
-                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId))
             }
-
         }
     }
 
     @Test(timeout=300_000)
-	fun `FlowMonitor flows suspend on a FlowIORequest`() { // alice and bob's flows, both suspend on a FlowIORequest
+	fun `FlowMonitor records receiving flow on both sides`() { // alice and bob's flows, both suspend on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedReceiveFlow(it) }
             val aliceFlow = aliceNode.services.startFlow(ReceiveFlow(bob))
@@ -223,16 +222,16 @@ class FlowFrameworkTests {
             bobFlowMonitor.updateDbAndLogWaitingFlows()
             // both flows are suspended on a receive from the counter party
             aliceNode.database.transaction {
-                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
+                assert(dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
             }
             bobNode.database.transaction {
-                assert(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(bobFlowId) == FlowIORequest.Receive::class.java)
+                assert(dbCheckpointStorage.getCheckpointIoRequest(bobFlowId) == FlowIORequest.Receive::class.java)
             }
         }
     }
 
     @Test(timeout=300_000)
-	fun `FlowMonitor flow is running`() { // flow is running a "take a long time" task
+	fun `FlowMonitor records nothing for long running flow`() { // flow is running a "take a long time" task
         monitorFlows { _, _ ->
             val terminationSignal = Semaphore(0)
             // "take a long time" task, implemented by a NoOpFlow stuck in call method
@@ -241,12 +240,12 @@ class FlowFrameworkTests {
 
             val aliceFlowId = aliceFlow.id
             aliceNode.database.transaction {
-                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId))
             }
             // "take a long time" flow continues ...
             terminationSignal.release()
             aliceNode.database.transaction {
-                assertNull(dbCheckpointStorageWithStubPerfRecorder().getCheckpointIoRequest(aliceFlowId))
+                assertNull(dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId))
             }
         }
     }
@@ -256,8 +255,8 @@ class FlowFrameworkTests {
     }
 
     private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
-        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO, aliceNode.database, dbCheckpointStorageWithStubPerfRecorder()),
-                FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO, bobNode.database, dbCheckpointStorageWithStubPerfRecorder()))
+        script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO, aliceNode.database, dbCheckpointStorage),
+                FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO, bobNode.database, dbCheckpointStorage))
     }
 
     @Test(timeout=300_000)

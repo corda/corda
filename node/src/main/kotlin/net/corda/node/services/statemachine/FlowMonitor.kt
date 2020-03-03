@@ -61,10 +61,9 @@ internal class FlowMonitor(
     fun updateDbAndLogWaitingFlows() {
         database.transaction {
             for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
-                val ioRequest = flow.ioRequest()
-                ioRequest?.let { request -> logger.info(warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)) }
-                if (ioRequest != null) {
-                    checkpointStorage.updateFlowIoRequest(flow.id, ioRequest)
+                flow.ioRequest()?.let {
+                    logger.info(warningMessageForFlowWaitingOnIo(it, flow, suspensionDuration))
+                    checkpointStorage.updateFlowIoRequest(flow.id, it)
                 }
             }
         }
