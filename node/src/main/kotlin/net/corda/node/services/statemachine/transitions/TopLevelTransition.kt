@@ -158,7 +158,9 @@ class TopLevelTransition(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     checkpointState = currentState.checkpoint.checkpointState.copy(
                             numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends + 1
-                    )
+                    ),
+                    // we have reached a suspension point without error => set/ switch status to RUNNABLE
+                    status = Checkpoint.FlowStatus.RUNNABLE
             )
             if (event.maySkipCheckpoint) {
                 actions.addAll(arrayOf(
