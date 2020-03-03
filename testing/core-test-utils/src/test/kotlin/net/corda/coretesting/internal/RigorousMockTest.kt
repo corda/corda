@@ -1,9 +1,5 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
-import net.corda.coretesting.internal.UndefinedMockBehaviorException
-import net.corda.coretesting.internal.participant
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.spectator
 import org.assertj.core.api.Assertions.catchThrowable
 import org.hamcrest.Matchers.isA
 import org.junit.Assert.assertThat

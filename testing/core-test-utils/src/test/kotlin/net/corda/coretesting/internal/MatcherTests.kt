@@ -1,4 +1,4 @@
-package net.corda.testing.internal
+package net.corda.coretesting.internal
 
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.equalTo

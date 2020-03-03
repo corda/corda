@@ -1,4 +1,4 @@
-package net.corda.testing
+package net.corda.coretesting
 
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
