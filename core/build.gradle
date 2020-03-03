@@ -82,7 +82,7 @@ dependencies {
     testCompile "org.ow2.asm:asm:$asm_version"
 
     // JDK11: required by Quasar at run-time
-    testRuntimeOnly "com.esotericsoftware:kryo:4.0.2"
+    testRuntimeOnly "com.esotericsoftware:kryo:$kryo_version"
 
     testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
     testCompile "org.mockito:mockito-core:$mockito_version"

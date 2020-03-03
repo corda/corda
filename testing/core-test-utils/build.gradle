@@ -1,15 +1,16 @@
-apply plugin: 'kotlin'
-apply plugin: 'kotlin-jpa'
-apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'net.corda.plugins.api-scanner'
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'net.corda.plugins.publish-utils'
+    id 'net.corda.plugins.api-scanner'
+    id 'com.jfrog.artifactory'
+}
 
 description 'Core test types and helpers for testing Corda'
 
 dependencies {
-    compile project(':core')
-    compile project(':test-common')
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    implementation project(':core')
+    implementation project(':test-common')
+    implementation "org.jetbrains.kotlin:kotlin-test"
 }
 
 jar {
