@@ -251,7 +251,7 @@ class FlowFrameworkTests {
     }
 
     private fun DBCheckpointStorage.getCheckpointIoRequest(id: StateMachineRunId): Class<out FlowIORequest<*>>? {
-        return getDBCheckpoint(id)?.ioRequestType
+        return getCheckpoint(id)?.flowIoRequest
     }
 
     private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
