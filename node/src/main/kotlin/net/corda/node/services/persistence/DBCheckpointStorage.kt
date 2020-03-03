@@ -231,7 +231,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         checkpoint?.let {
             if (it.ioRequestType != ioRequest.javaClass) {
                 it.ioRequestType = ioRequest.javaClass
-                currentDBSession().update(checkpoint)
+                currentDBSession().update(it)
             }
         }
     }
