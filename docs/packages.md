@@ -92,55 +92,73 @@ Corda utility classes, providing a broad range of functionality to help implemen
 Some simple testing utilities like pre-defined top-level values for common currencies. Mostly useful for
 writing unit tests in Kotlin.
 
-WARNING: NOT API STABLE.
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.utils
 
 A collection of utilities for summing financial states, for example, summing obligations to get total debts.
 
-WARNING: NOT API STABLE.
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.contracts
 
 Various types for common financial concepts like day roll conventions, fixes, etc. 
 
-WARNING: NOT API STABLE.
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.contracts.asset
 
 Cash states, obligations and commodities. 
 
-WARNING: NOT API STABLE. 
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.contracts.asset.cash.selection
 
 Provisional support for pluggable cash selectors, needed for different database backends. 
 
-WARNING: NOT API STABLE. 
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.contracts.math
 
 Splines and interpolation.
 
-WARNING: NOT API STABLE. 
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.flows
 
 Cash payments and issuances. Two party "delivery vs payment" atomic asset swaps.
 
-WARNING: NOT API STABLE. 
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.plugin
 
 JSON/Jackson plugin for business calendars.
 
-WARNING: NOT API STABLE.
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.finance.schemas
 
 JPA (Java Persistence Architecture) schemas for the financial state types.
 
-WARNING: NOT API STABLE.
+__WARNING:__ This library is not suitable for production use and should not be used in real CorDapps.
+Instead, use the [Token SDK](https://github.com/corda/token-sdk), or implement your own library. This
+library may be removed in a future release without warning.
 
 # Package net.corda.testing.core
 
