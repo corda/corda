@@ -222,10 +222,10 @@ class FlowFrameworkTests {
             bobFlowMonitor.updateDbAndLogWaitingFlows()
             // both flows are suspended on a receive from the counter party
             aliceNode.database.transaction {
-                assert(dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId) == FlowIORequest.Receive::class.java)
+                assertEquals(FlowIORequest.Receive::class.java, dbCheckpointStorage.getCheckpointIoRequest(aliceFlowId))
             }
             bobNode.database.transaction {
-                assert(dbCheckpointStorage.getCheckpointIoRequest(bobFlowId) == FlowIORequest.Receive::class.java)
+                assertEquals(FlowIORequest.Receive::class.java, dbCheckpointStorage.getCheckpointIoRequest(bobFlowId))
             }
         }
     }
