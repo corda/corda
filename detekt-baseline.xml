@@ -1198,7 +1198,7 @@
     <ID>MagicNumber:X509Utilities.kt$X509Utilities$3650</ID>
     <ID>MagicNumber:errorAndTerminate.kt$10</ID>
     <ID>MatchingDeclarationName:AMQPSerializerFactories.kt$net.corda.serialization.internal.amqp.AMQPSerializerFactories.kt</ID>
-    <ID>MatchingDeclarationName:AMQPTestSerialiationScheme.kt$net.corda.node.internal.serialization.testutils.AMQPTestSerialiationScheme.kt</ID>
+    <ID>MatchingDeclarationName:AMQPTestSerialiationScheme.kt$net.corda.nodeapi.internal.serialization.testutils.AMQPTestSerialiationScheme.kt</ID>
     <ID>MatchingDeclarationName:AttachmentDemo.kt$net.corda.attachmentdemo.AttachmentDemo.kt</ID>
     <ID>MatchingDeclarationName:AzureRegistryLocator.kt$net.corda.networkbuilder.containers.push.azure.AzureRegistryLocator.kt</ID>
     <ID>MatchingDeclarationName:CheckpointSerializationScheme.kt$net.corda.serialization.internal.CheckpointSerializationScheme.kt</ID>
@@ -2113,7 +2113,7 @@
     <ID>WildcardImport:FlowFrameworkTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowFrameworkTripartyTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowLogicRefFactoryImpl.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:FlowMatchers.kt$import net.corda.testing.internal.matchers.*</ID>
+    <ID>WildcardImport:FlowMatchers.kt$import net.corda.coretesting.internal.matchers.*</ID>
     <ID>WildcardImport:FlowOverrideTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowRetryTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowStackSnapshotTest.kt$import net.corda.core.flows.*</ID>

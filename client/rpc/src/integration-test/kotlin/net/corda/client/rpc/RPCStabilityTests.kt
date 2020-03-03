@@ -20,7 +20,7 @@ import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.succeeds
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.testThreadFactory
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.RpcBrokerHandle
 import net.corda.testing.node.internal.RpcServerHandle

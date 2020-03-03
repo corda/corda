@@ -1,12 +1,12 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SerializedBytes
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
 import net.corda.serialization.internal.AllWhitelist

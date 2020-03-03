@@ -25,10 +25,10 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.DEV_INTERMEDIATE_CA
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*

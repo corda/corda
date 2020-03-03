@@ -26,8 +26,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_AL
 import net.corda.nodeapi.internal.crypto.X509Utilities.createSelfSignedCACertificate
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree

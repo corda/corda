@@ -21,7 +21,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.core.utilities.hours
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
@@ -37,11 +37,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.NettyTestClient
-import net.corda.testing.internal.NettyTestHandler
-import net.corda.testing.internal.NettyTestServer
+import net.corda.coretesting.internal.NettyTestClient
+import net.corda.coretesting.internal.NettyTestHandler
+import net.corda.coretesting.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*

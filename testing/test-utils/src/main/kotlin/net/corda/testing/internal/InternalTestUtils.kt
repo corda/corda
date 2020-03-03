@@ -17,6 +17,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.coretesting.internal.asTestContextEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool
@@ -38,7 +40,7 @@ import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.ServerSocket

@@ -13,8 +13,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.testing.core.*
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

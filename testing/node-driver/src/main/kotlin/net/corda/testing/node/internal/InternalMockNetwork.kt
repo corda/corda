@@ -51,9 +51,9 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
-import net.corda.testing.internal.testThreadFactory
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch

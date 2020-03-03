@@ -73,7 +73,7 @@ import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient

@@ -11,7 +11,7 @@ import net.corda.node.internal.NetworkParametersReader
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

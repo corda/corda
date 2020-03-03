@@ -30,9 +30,9 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork

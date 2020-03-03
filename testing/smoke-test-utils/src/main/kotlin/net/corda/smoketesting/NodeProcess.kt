@@ -2,7 +2,7 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NotaryInfo

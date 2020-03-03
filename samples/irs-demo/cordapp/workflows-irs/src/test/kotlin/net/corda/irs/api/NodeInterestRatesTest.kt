@@ -14,7 +14,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.createMockCordaService

@@ -1,0 +1,22 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'net.corda.plugins.publish-utils'
+    id 'net.corda.plugins.api-scanner'
+    id 'com.jfrog.artifactory'
+}
+
+description 'Core test types and helpers for testing Corda'
+
+dependencies {
+    implementation project(':core')
+    implementation project(':test-common')
+    compile "org.jetbrains.kotlin:kotlin-test"
+}
+
+jar {
+    baseName 'corda-core-test-utils'
+}
+
+publish {
+    name jar.baseName
+}

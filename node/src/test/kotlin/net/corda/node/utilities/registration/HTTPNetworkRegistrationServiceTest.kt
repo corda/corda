@@ -6,7 +6,7 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.junit.Test
 import java.io.InputStream

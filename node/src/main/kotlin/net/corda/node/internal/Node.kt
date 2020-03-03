@@ -8,7 +8,7 @@ import com.jcabi.manifests.Manifests
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -44,9 +44,9 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.node.serialization.kryo.KryoCheckpointSerializer
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal

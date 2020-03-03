@@ -19,8 +19,8 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.TEST_TX_TIME
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule

@@ -15,9 +15,9 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.testing.core.*
-import net.corda.testing.internal.matchers.allOf
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.hasOnlyEntries
+import net.corda.coretesting.internal.matchers.allOf
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.hasOnlyEntries
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp

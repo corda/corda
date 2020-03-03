@@ -30,8 +30,8 @@ import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals

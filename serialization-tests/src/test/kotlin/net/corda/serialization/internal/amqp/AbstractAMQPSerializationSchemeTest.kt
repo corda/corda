@@ -8,7 +8,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.testutils.serializationProperties
-import net.corda.testing.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.createTestSerializationEnv
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers
