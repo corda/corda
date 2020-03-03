@@ -805,6 +805,12 @@ internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), Da
 
 @InitiatingFlow
 internal open class SendFlow(private val payload: Any, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
+
+    companion object {
+        var hookBeforeCheckpoint: () -> Unit = {}
+        var hookAfterCheckpoint: () -> Unit = {}
+    }
+
     init {
         require(otherParties.isNotEmpty())
     }
@@ -813,7 +819,9 @@ internal open class SendFlow(private val payload: Any, private vararg val otherP
     override fun call(): FlowInfo {
         val flowInfos = otherParties.map {
             val session = initiateFlow(it)
+            hookBeforeCheckpoint()
             session.send(payload)
+            hookAfterCheckpoint()
             session.getCounterpartyFlowInfo()
         }.toList()
         return flowInfos.first()
