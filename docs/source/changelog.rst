@@ -83,6 +83,8 @@ Unreleased
 * :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
   :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
 
+* Fixed the operator used by the ``notEqual`` predicate
+
 .. _changelog_v4.1:
 
 Version 4.1
