@@ -1,7 +1,5 @@
 package net.corda.node.services.persistence
 
-import junit.framework.Assert.assertNotNull
-import junit.framework.Assert.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -34,6 +32,8 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
