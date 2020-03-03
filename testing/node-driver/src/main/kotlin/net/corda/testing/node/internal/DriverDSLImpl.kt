@@ -21,8 +21,20 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VENDOR
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VENDOR
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
@@ -80,24 +92,26 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
-import java.io.File
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Random
-import java.util.UUID
+import java.util.*
+import java.util.Collections.unmodifiableList
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.jar.JarInputStream
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -792,6 +806,17 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::killFlow)
         )
 
+        private val CORDAPP_MANIFEST_ATTRIBUTES: List<String> = unmodifiableList(listOf(
+            CORDAPP_CONTRACT_NAME,
+            CORDAPP_CONTRACT_LICENCE,
+            CORDAPP_CONTRACT_VENDOR,
+            CORDAPP_CONTRACT_VERSION,
+            CORDAPP_WORKFLOW_NAME,
+            CORDAPP_WORKFLOW_LICENCE,
+            CORDAPP_WORKFLOW_VENDOR,
+            CORDAPP_WORKFLOW_VERSION
+        ))
+
         /**
          * Add the DJVM's sources to the node's configuration file.
          * These will all be ignored unless devMode is also true.
@@ -923,12 +948,11 @@ class DriverDSLImpl(
 
             // The following dependencies are excluded from the classpath of the created JVM,
             // so that the environment resembles a real one as close as possible.
-            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.)
-            // or irrelevant testing libraries (test, corda-mock etc.).
-            // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
-            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
-            val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
-                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
+           val cp = ProcessUtilities.defaultClassPath.filter { cpEntry ->
+                val cpPathEntry = Paths.get(cpEntry)
+                cpPathEntry.isRegularFile()
+                    && !isTestArtifact(cpPathEntry.fileName.toString())
+                    && !cpPathEntry.isCorDapp
             }
 
             return ProcessUtilities.startJavaProcess(
@@ -942,6 +966,26 @@ class DriverDSLImpl(
                     identifier = identifier,
                     environmentVariables = environmentVariables
             )
+        }
+
+        // Obvious test artifacts. This is NOT intended to be an exhaustive list!
+        // It is only intended to remove those FEW jars which BLATANTLY do not
+        // belong inside a Corda Node.
+        private fun isTestArtifact(name: String): Boolean {
+            return name.endsWith("-tests.jar")
+                    || name.startsWith("corda-mock")
+                    || name.startsWith("junit")
+                    || name.startsWith("testng")
+                    || name.startsWith("mockito")
+        }
+
+        // Identify CorDapp JARs by their attributes in MANIFEST.MF.
+        private val Path.isCorDapp: Boolean get() {
+            return JarInputStream(Files.newInputStream(this).buffered()).use { jar ->
+                val manifest = jar.manifest ?: return false
+                CORDAPP_MANIFEST_ATTRIBUTES.any { manifest[it] != null }
+                    || (manifest[TARGET_PLATFORM_VERSION] != null && manifest[MIN_PLATFORM_VERSION] != null)
+            }
         }
 
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
