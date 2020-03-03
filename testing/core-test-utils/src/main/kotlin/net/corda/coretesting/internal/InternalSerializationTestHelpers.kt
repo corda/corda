@@ -5,9 +5,9 @@ import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.nodeapi.internal.serilialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serilialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.nodeapi.internal.serilialization.kryo.KryoCheckpointSerializer
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT

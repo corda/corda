@@ -11,7 +11,7 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.toSynchronised
 import net.corda.nodeapi.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
-import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.rpc.ObservableSubscription
 import net.corda.serialization.internal.amqp.*

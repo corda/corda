@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serilialization.amqp
+package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.toSynchronised

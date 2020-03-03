@@ -7,7 +7,7 @@ import net.corda.core.context.Trace
 import net.corda.nodeapi.internal.serialization.testutils.TestObservableContext
 import net.corda.nodeapi.internal.serialization.testutils.serializationContext
 import net.corda.nodeapi.internal.rpc.ObservableSubscription
-import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder

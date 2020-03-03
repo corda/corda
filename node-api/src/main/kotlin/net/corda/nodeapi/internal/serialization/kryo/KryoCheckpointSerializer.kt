@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serilialization.kryo
+package net.corda.nodeapi.internal.serialization.kryo
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer

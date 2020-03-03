@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serilialization.amqp
+package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext

@@ -5,7 +5,7 @@ import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
-import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.AllWhitelist

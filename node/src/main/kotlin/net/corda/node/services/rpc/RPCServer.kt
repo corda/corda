@@ -40,7 +40,7 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
 import net.corda.nodeapi.internal.rpc.ObservableContextInterface
 import net.corda.nodeapi.internal.rpc.ObservableSubscription
-import net.corda.nodeapi.internal.serilialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.internal.serialization.amqp.RpcServerObservableSerializer
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
