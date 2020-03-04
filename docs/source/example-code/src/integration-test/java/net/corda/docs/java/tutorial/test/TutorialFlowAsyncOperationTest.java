@@ -1,6 +1,5 @@
 package net.corda.docs.java.tutorial.test;
 
-import kotlin.Unit;
 import net.corda.client.rpc.CordaRPCClient;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.utilities.KotlinUtilsKt;
@@ -10,24 +9,24 @@ import net.corda.testing.driver.*;
 import net.corda.testing.node.User;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.concurrent.Future;
 
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
+import static net.corda.testing.driver.Driver.driver;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappWithPackages;
 import static org.junit.Assert.assertEquals;
 
-public final class TutorialFlowAsyncOperationTest {
+public class TutorialFlowAsyncOperationTest {
     // DOCSTART summingWorks
     @Test
-    public final void summingWorks() {
-        Driver.driver(new DriverParameters(), (DriverDSL dsl) -> {
-            User aliceUser = new User("aliceUser", "testPassword1",
-                    new HashSet<>(Collections.singletonList(Permissions.all()))
-            );
+    public void summingWorks() {
+        driver(new DriverParameters(singletonList(cordappWithPackages("net.corda.docs.java.tutorial.flowstatemachines"))), (DriverDSL dsl) -> {
+            User aliceUser = new User("aliceUser", "testPassword1", singleton(Permissions.all()));
             Future<NodeHandle> aliceFuture = dsl.startNode(new NodeParameters()
                     .withProvidedName(ALICE_NAME)
-                    .withRpcUsers(Collections.singletonList(aliceUser))
+                    .withRpcUsers(singletonList(aliceUser))
             );
             NodeHandle alice = KotlinUtilsKt.getOrThrow(aliceFuture, null);
             CordaRPCClient aliceClient = new CordaRPCClient(alice.getRpcAddress());
@@ -35,7 +34,7 @@ public final class TutorialFlowAsyncOperationTest {
             Future<Integer> answerFuture = aliceProxy.startFlowDynamic(ExampleSummingFlow.class).getReturnValue();
             int answer = KotlinUtilsKt.getOrThrow(answerFuture, null);
             assertEquals(3, answer);
-            return Unit.INSTANCE;
+            return null;
         });
     }
     // DOCEND summingWorks

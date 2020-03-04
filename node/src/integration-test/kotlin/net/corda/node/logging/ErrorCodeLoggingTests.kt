@@ -1,6 +1,5 @@
 package net.corda.node.logging
 
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -23,7 +22,13 @@ class ErrorCodeLoggingTests {
             node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
 
-            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.filter { line -> line.contains("moreInformationAt=https://errors.corda.net/") }.toList() }
+            val linesWithErrorCode = logFile.useLines { lines ->
+                lines.filter { line ->
+                    line.contains("[errorCode=")
+                }.filter { line ->
+                    line.contains("moreInformationAt=https://errors.corda.net/")
+                }.toList()
+            }
 
             assertThat(linesWithErrorCode).isNotEmpty
         }
@@ -35,10 +40,11 @@ class ErrorCodeLoggingTests {
 	fun `When logging is set to error level, there are no other levels logged after node startup`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
-            node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
+            val lengthAfterStart = logFile.length()
+            node.rpc.startFlow(::MyFlow).waitForCompletion()
             // An exception thrown in a flow will log at the "INFO" level.
-            assertThat(logFile.length()).isEqualTo(0)
+            assertThat(logFile.length()).isEqualTo(lengthAfterStart)
         }
     }
 

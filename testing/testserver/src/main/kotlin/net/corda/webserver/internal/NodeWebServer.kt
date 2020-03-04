@@ -6,6 +6,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.RPCException
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
@@ -34,7 +35,8 @@ import javax.servlet.http.HttpServletRequest
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
         private val log = contextLogger()
-        const val retryDelay = 1000L // Milliseconds
+        private const val NODE_CONNECT_RETRY_COUNT = 30
+        private const val NODE_CONNECT_WAIT_BETWEEN_RETRYS = 2000L
     }
 
     val address = config.webAddress
@@ -186,13 +188,26 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private lateinit var rpc: CordaRPCConnection
     private fun reconnectingCordaRPCOps(): CordaRPCOps {
-        rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
-                .start(
-                        config.runAs.username,
-                        config.runAs.password,
-                        GracefulReconnect()
-                )
-        return rpc.proxy
+        var retryCount = NODE_CONNECT_RETRY_COUNT
+        while (true) {
+            try {
+                rpc = CordaRPCClient(config.rpcAddress, null, javaClass.classLoader)
+                        .start(
+                                config.runAs.username,
+                                config.runAs.password,
+                                GracefulReconnect()
+                        )
+                return rpc.proxy
+            }
+            catch (ex: RPCException) {
+                if (retryCount-- == 0) {
+                    throw ex
+                }
+                else {
+                    Thread.sleep(NODE_CONNECT_WAIT_BETWEEN_RETRYS)
+                }
+            }
+        }
     }
 
     /**

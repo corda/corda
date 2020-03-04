@@ -13,7 +13,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
@@ -95,7 +94,7 @@ private constructor(private val otherSideSession: FlowSession?,
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         val session = if (otherParty != null && otherParty != otherSideSession?.counterparty) {
             logger.warnOnce("The current usage of SwapIdentitiesFlow is unsafe. Please consider upgrading your CorDapp to use " +
-                    "SwapIdentitiesFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
+                    "SwapIdentitiesFlow with FlowSessions. (${serviceHub.getAppContext().cordapp.info})")
             initiateFlow(otherParty)
         } else {
             otherSideSession!!

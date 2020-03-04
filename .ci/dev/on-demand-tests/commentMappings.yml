@@ -1,4 +1,5 @@
 integration: { allParallelIntegrationTest }
 pr-merge: { parallelRegressionTest }
 smoke: { allParallelSmokeTest }
+slow: { allParallelSlowIntegrationTest }
 unit: { allParallelUnitTest }
