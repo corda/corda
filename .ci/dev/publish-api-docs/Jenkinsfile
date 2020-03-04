@@ -1,0 +1,39 @@
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent { label 'local-k8s' }
+
+    options {
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    environment {
+        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+    }
+
+    stages {
+        stage('Build and publish API docs') {
+            steps {
+                script {
+                    stage('Build and publish API docs and publish .tar.gz to Artifactory') {
+                        sh "./gradlew :docs:artifactoryPublish " +
+                                "-PpublishApiDocs " +
+                                "-PartifactoryUsername=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-PartifactoryPassword=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" "
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
