@@ -8,11 +8,11 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
 import io.netty.channel.DefaultEventLoop
 import io.netty.channel.EventLoop
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.internal.rigorousMock
 import org.apache.qpid.proton.amqp.transport.Begin
 import org.apache.qpid.proton.amqp.transport.Open
 import org.apache.qpid.proton.engine.impl.TransportImpl
