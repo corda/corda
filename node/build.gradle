@@ -109,6 +109,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
+    compile "org.fusesource.jansi:jansi:$jansi_version"
     compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava
