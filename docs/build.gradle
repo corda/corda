@@ -4,9 +4,15 @@ import java.nio.file.Files
 
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'kotlin'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'maven-publish'
 
 dependencies {
     compile rootProject
+}
+
+ext {
+    baseFileName = "corda-docs"
 }
 
 def internalPackagePrefixes(sourceDirs) {
@@ -30,11 +36,12 @@ ext {
 }
 
 dokka {
+    outputFormat = findProperty("publishApiDocs") != null ? "gfm" : "html"
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    outputFormat = "javadoc"
+    outputFormat = findProperty("publishApiDocs") != null ? "gfm" : "javadoc"
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
 }
 
@@ -78,3 +85,23 @@ task makeDocs(type: Exec) {
 }
 
 apidocs.shouldRunAfter makeDocs
+
+task zipApiDocs(type: Tar) {
+    dependsOn apidocs
+    from './build'
+    exclude '*publications'
+    destinationDir = file('.')
+    compression = Compression.GZIP
+    archiveName = baseFileName + ".tgz"
+}
+
+publishing {
+    publications {
+        mavenZipApiDocs(MavenPublication) {
+            artifact zipApiDocs {
+                artifactId baseFileName
+            }
+        }
+    }
+}
+

@@ -215,6 +215,11 @@ if (ext.versionSuffix != ""){
     ext.corda_release_version = "${ext.baseVersion}".toString()
 }
 
+// Need to remove -SNAPSHOT suffix for publishing API docs to Artifactory
+if (findProperty("publishApiDocs") != null) {
+    ext.corda_release_version = "${ext.baseVersion}".toString()
+}
+
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
 // with the run configurations. It also doesn't realise that the project is a Java 8 project and misconfigures
@@ -564,10 +569,23 @@ artifactory {
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
             if (project != rootProject) {
-                publications(project.extensions.publish.name())
+                if (project.name.toString() == 'docs') {
+                    publications('mavenZipApiDocs')
+                    publishPom = false
+                } else {
+                    publications(project.extensions.publish.name())
+                }
             }
         }
     }
+}
+
+artifactoryPublish {
+    clientConfig.publisher.repoKey = findProperty('publishApiDocs') != null ? 'corda-dependencies-dev' : 'corda-dev'
+    clientConfig.publisher.username = findProperty('publishApiDocs') != null ?
+            getProperty('artifactoryUsername') : System.getenv('CORDA_ARTIFACTORY_USERNAME')
+    clientConfig.publisher.password = findProperty('publishApiDocs') != null ?
+            getProperty('artifactoryPassword') : System.getenv('CORDA_ARTIFACTORY_PASSWORD')
 }
 
 task generateApi(type: net.corda.plugins.GenerateApi) {
