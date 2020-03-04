@@ -1,7 +1,10 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.nodeapitests.internal.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.MissingMigrationException
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.schema.NodeSchemaService

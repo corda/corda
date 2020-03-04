@@ -18,7 +18,6 @@ import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.serialization.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
@@ -196,20 +195,6 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val logger2 = logger.checkpointSerialize(storageContext).checkpointDeserialize(storageContext)
         assertEquals(logger.name, logger2.name)
         assertTrue(logger === logger2)
-    }
-
-    @Test(timeout=300_000)
-	fun `HashCheckingStream (de)serialize`() {
-        val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
-        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(
-                SecureHash.sha256(rubbish),
-                rubbish.size,
-                rubbish.inputStream()
-        ).checkpointSerialize(context).checkpointDeserialize(context)
-        for (i in 0..12344) {
-            assertEquals(rubbish[i], readRubbishStream.read().toByte())
-        }
-        assertEquals(-1, readRubbishStream.read())
     }
 
     @CordaSerializable

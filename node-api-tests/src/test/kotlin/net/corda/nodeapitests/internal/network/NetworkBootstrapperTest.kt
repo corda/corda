@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.network
+package net.corda.nodeapitests.internal.network
 
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.secureRandomBytes
@@ -24,6 +24,14 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.nodeapi.internal.network.CopyCordapps
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkBootstrapper
+import net.corda.nodeapi.internal.network.NetworkParametersOverrides
+import net.corda.nodeapi.internal.network.PackageOwner
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.TestContractsJar
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -72,7 +80,9 @@ class NetworkBootstrapperTest {
 
     private val bootstrapper = NetworkBootstrapper(
             initSerEnv = false,
-            embeddedCordaJar = { fakeEmbeddedCordaJar.toUri().toURL() },
+            embeddedCordaJar = {
+                fakeEmbeddedCordaJar.toUri().toURL()
+            },
             nodeInfosGenerator = { nodeDirs ->
                 nodeDirs.map { nodeDir ->
                     val name = nodeDir.fakeNodeConfig.myLegalName
