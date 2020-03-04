@@ -36,12 +36,12 @@ ext {
 }
 
 dokka {
-    outputFormat = findProperty("publishAPIDocs") != null ? "gfm" : "html"
+    outputFormat = findProperty("publishApiDocs") != null ? "gfm" : "html"
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    outputFormat = findProperty("publishAPIDocs") != null ? "gfm" : "javadoc"
+    outputFormat = findProperty("publishApiDocs") != null ? "gfm" : "javadoc"
     outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
 }
 
