@@ -22,7 +22,6 @@ import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
-import org.apache.commons.collections4.map.LRUMap
 import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.net.URL
@@ -293,9 +292,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
-        val whitelists = URLClassLoader(arrayOf(cordappJarPath.url)).use {
-            ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
-        }
+        val whitelists = ServiceLoader.load(SerializationWhitelist::class.java, appClassLoader).toList()
         return whitelists.filter {
             it.javaClass.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
@@ -309,19 +306,21 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return scanResult.getClassesWithSuperclass(MappedSchema::class).instances().toSet()
     }
 
-    private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
-
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
-        logger.info("Scanning CorDapp in ${cordappJarPath.url}")
-        return cachedScanResult.computeIfAbsent(cordappJarPath) {
-            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().pooledScan()
-            RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
-        }
+        val cordappElement = cordappJarPath.url.toString()
+        logger.info("Scanning CorDapp in $cordappElement")
+        val scanResult = ClassGraph()
+            .filterClasspathElements { elt -> elt == cordappElement }
+            .overrideClassLoaders(appClassLoader)
+            .ignoreParentClassLoaders()
+            .enableAllInfo()
+            .pooledScan()
+        return RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
     }
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            appClassLoader.loadClass(className).asSubclass(type.java)
+            Class.forName(className, false, appClassLoader).asSubclass(type.java)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null
