@@ -3,14 +3,15 @@ plugins {
     id 'net.corda.plugins.publish-utils'
     id 'net.corda.plugins.api-scanner'
     id 'com.jfrog.artifactory'
+    id 'java-library'
 }
 
 description 'Core test types and helpers for testing Corda'
 
 dependencies {
     implementation project(':core')
-    compile project(':test-common')
-    compile "org.jetbrains.kotlin:kotlin-test"
+    api project(':test-common')
+    api "org.jetbrains.kotlin:kotlin-test"
 }
 
 jar {
