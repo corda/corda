@@ -227,12 +227,12 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     override fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>) {
-        val checkpoint = getDBCheckpoint(id)
-        checkpoint?.let {
-            if (it.ioRequestType != ioRequest.javaClass) {
-                it.ioRequestType = ioRequest.javaClass
-                currentDBSession().update(it)
-            }
+        val checkpoint = requireNotNull(getDBCheckpoint(id)) {
+            "Checkpoint with ${id.uuid} does not exist in database."
+        }
+        checkpoint.takeIf{ it.ioRequestType !=  ioRequest.javaClass }?.apply {
+            ioRequestType = ioRequest.javaClass
+            currentDBSession().update(this)
         }
     }
 
