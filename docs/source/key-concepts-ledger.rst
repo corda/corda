@@ -65,4 +65,4 @@ Corda guarantees that whenever one of these facts is shared by multiple nodes on
 
 **Note:** Not all on-ledger facts are shared between peers. For example, Alice's fact 11 is not shared with Bob. Fact 11 could, in fact, not be shared with any other node at all. If this is the case, it is deemed a unilateral fact.
 
-**Note:** Although there is no central ledger, it is possible to broadcast a basic fact to all participants should you wish to. You would do this by using the network map service to loop over all parties.De
+**Note:** Although there is no central ledger, it is possible to broadcast a basic fact to all participants should you wish to. You would do this by using the network map service to loop over all parties.
