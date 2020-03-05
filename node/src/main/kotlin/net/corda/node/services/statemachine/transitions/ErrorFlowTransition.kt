@@ -54,16 +54,26 @@ class ErrorFlowTransition(
 
             // If we're errored but not propagating keep processing events.
             if (remainingErrorsToPropagate.isNotEmpty() && !errorState.propagating) {
+                // TODO: kyriakos after this there could be a RetryFromPreviousCheckpoint or nothing (which is Observation)
+                //  maybe this block of code could be moved before the previous one, to make things more clear
+                //  , unless some other thread modifies errorState.propagating somehow in the meantime, which should is not happening i guess(?)
                 return@builder FlowContinuation.ProcessEvents
             }
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
+                // TODO: kyriakos: maybe this block of code could be merged with the previous than the above
+                val newCheckpoint = currentState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+                currentState = currentState.copy(checkpoint = newCheckpoint)
+
                 actions.add(Action.CreateTransaction)
-                if (currentState.isAnyCheckpointPersisted) {
-                    actions.add(Action.RemoveCheckpoint(context.id))
-                }
+                // TODO: kyriakos: this is after propagating and removing the flow
+
+//                if (currentState.isAnyCheckpointPersisted) {
+//                    actions.add(Action.RemoveCheckpoint(context.id))
+//                }
                 actions.addAll(arrayOf(
+                        Action.UpdateCheckpointContext(context.id, newCheckpoint),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,

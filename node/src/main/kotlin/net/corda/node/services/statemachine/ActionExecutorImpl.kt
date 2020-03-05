@@ -53,6 +53,7 @@ class ActionExecutorImpl(
         return when (action) {
             is Action.TrackTransaction -> executeTrackTransaction(fiber, action)
             is Action.PersistCheckpoint -> executePersistCheckpoint(action)
+            is Action.UpdateCheckpointContext -> executeUpdateCheckpointContext(action)
             is Action.PersistDeduplicationFacts -> executePersistDeduplicationIds(action)
             is Action.AcknowledgeMessages -> executeAcknowledgeMessages(action)
             is Action.PropagateErrors -> executePropagateErrors(action)
@@ -100,6 +101,13 @@ class ActionExecutorImpl(
         } else {
             checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState)
         }
+    }
+
+    @Suspendable
+    private fun executeUpdateCheckpointContext(action: Action.UpdateCheckpointContext) {
+        // checkpoint context:
+        val checkpointContext = action.checkpointContext
+        checkpointStorage.updateCheckpointContext(action.id, checkpointContext)
     }
 
     @Suspendable

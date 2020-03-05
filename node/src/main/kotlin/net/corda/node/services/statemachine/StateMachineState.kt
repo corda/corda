@@ -51,20 +51,42 @@ data class StateMachineState(
 )
 
 /**
+ * Needs to be in sync when a flow retries from previous checkpoint
+ */
+interface CheckpointActual {
+    val checkpointState: CheckpointState
+    val flowState: FlowState
+    val errorState: ErrorState
+}
+
+/**
+ * Can be out of sync when a flow retries from previous checkpoint
+ */
+interface CheckpointContext {
+    val result: Any?
+    val status: Checkpoint.FlowStatus
+    val progressStep: String?
+    val flowIoRequest: Class<out FlowIORequest<*>>?
+    val compatible: Boolean
+}
+
+/**
  * @param checkpointState the state of the checkpoint
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
  */
 data class Checkpoint(
-        val checkpointState: CheckpointState,
-        val flowState: FlowState,
-        val errorState: ErrorState,
-        val result: Any? = null,
-        val status: FlowStatus = FlowStatus.RUNNABLE,
-        val progressStep: String? = null,
-        val flowIoRequest: Class<out FlowIORequest<*>>? = null,
-        val compatible: Boolean = true
-) {
+        // Actual
+        override val checkpointState: CheckpointState,
+        override val flowState: FlowState,
+        override val errorState: ErrorState,
+        // Context
+        override val result: Any? = null,
+        override val status: FlowStatus = FlowStatus.RUNNABLE,
+        override val progressStep: String? = null,
+        override val flowIoRequest: Class<out FlowIORequest<*>>? = null,
+        override val compatible: Boolean = true
+): CheckpointActual, CheckpointContext {
     @CordaSerializable
     enum class FlowStatus {
         RUNNABLE,

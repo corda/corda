@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.core.ALICE_NAME
@@ -20,7 +21,9 @@ import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*
+import kotlin.streams.toList
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlowFrameworkPersistenceTests {
@@ -146,6 +149,26 @@ class FlowFrameworkPersistenceTests {
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
         assertEquals(payload, secondFlow.getOrThrow().receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
         assertEquals(payload + 1, secondFlow.getOrThrow().receivedPayload2, "Received payload does not match the expected second value on Node 2")
+    }
+
+    @Test
+    fun `Checkpoint status is being changed to FAILED after failure`() {
+        SendFlow.hookBeforeCheckpoint = {
+            throw IllegalStateException("Flow will fail")
+        }
+
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlow(SendFlow("Hello", bob)).resultFuture.getOrThrow() // wait for flow to finish
+        }
+
+        aliceNode.database.transaction {
+            val persistedCheckpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single()
+            assertEquals(Checkpoint.FlowStatus.FAILED, persistedCheckpoint.second.status)
+        }
+
+        // clear SendFlow companion object
+        SendFlow.hookBeforeCheckpoint = {}
+        SendFlow.hookAfterCheckpoint = {}
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////

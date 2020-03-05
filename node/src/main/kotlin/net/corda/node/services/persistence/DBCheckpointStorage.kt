@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
+import net.corda.node.services.statemachine.CheckpointContext
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.FlowState
@@ -17,8 +18,6 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.hibernate.annotations.Type
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Instant
@@ -219,12 +218,41 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     )
 
+    // TODO: kyriakos: creating a new checkpoint, should not need distinction between checkpoint and checkpointContext
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedFlowState))
     }
 
+    // TODO: kyriakos: this could update both, checkpoint and checkpointContext
+    //                  perhaps for simplicity updateCheckpoint should update only the checkpoint
     override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
+    }
+
+    // TODO: kyriakos: there are cases when we need to update CheckpointContext alone - WITHOUT updating the actual checkpoint
+    override fun updateCheckpointContext(id: StateMachineRunId, checkpointContext: CheckpointContext) {
+        val now = Instant.now()
+        val flowId = id.uuid.toString()
+
+        // Load the previous entity from the hibernate cache so the meta data join does not get updated TODO: kyriakos: (?)
+        val dbFlowCheckpoint = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
+
+        requireNotNull(dbFlowCheckpoint) { "Required DBFlowCheckpoint $flowId was null." }
+
+        currentDBSession().update(dbFlowCheckpoint.apply {
+            // TODO: kyriakos result should get a value only once (?)
+            checkpointContext.result?.let {
+                // result can only be inserted and cannot then be updated
+                if (result == null) {
+                    result = createDBFlowResult(it, now)
+                }
+            }
+
+            status = checkpointContext.status
+            progressStep = checkpointContext.progressStep
+            ioRequestType = checkpointContext.flowIoRequest
+            compatible = checkpointContext.compatible
+        })
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
@@ -319,11 +347,13 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val flowId = id.uuid.toString()
         val now = Instant.now()
 
+        // Actual
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
-
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+        // Context
         val result = checkpoint.result?.let { createDBFlowResult(it, now) }
+        // Actual
         val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(it, now) }
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
