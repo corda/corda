@@ -99,7 +99,7 @@ Issues Fixed
 * Use the connectionMaxRetryInterval configuration when reconnection the RPC client [`CORDA-3576 <https://r3-cev.atlassian.net/browse/CORDA-3576>`_]
 * Update docs for X500 name and SSH hostkey [`CORDA-3585 <https://r3-cev.atlassian.net/browse/CORDA-3585>`_]
 * hashLookup command help misspelling [`CORDA-3587 <https://r3-cev.atlassian.net/browse/CORDA-3587>`_] 
-* Exit the InteractiveShell on shutdown command [`CORDA-3593 <https://r3-cev.atlassian.net/browse/CORDA-3593>`_]* A failure response from Doorman during initial registration causes a class cast exception [`CORDA-2744 <https://r3-cev.atlassian.net/browse/CORDA-2744>`_]
+* Exit the InteractiveShell on shutdown command [`CORDA-3593 <https://r3-cev.atlassian.net/browse/CORDA-3593>`_]
 
 .. _release_notes_v4_3:
 
