@@ -328,7 +328,7 @@ class FlowFrameworkTests {
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint!!.status)
-            val result = checkpoint!!.result?.bytes?.deserialize<Any>()
+            val result = checkpoint.result?.bytes?.deserialize<Any>()
             assertTrue(result is Unit)
         }
     }
