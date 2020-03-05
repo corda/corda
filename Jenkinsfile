@@ -45,6 +45,8 @@ pipeline {
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
+                                "-Ddependx.branch.origin=${env.GIT_COMMIT}" +
+                                "-Ddependx.branch.target=${CHANGE_TARGET}" +
                                 " allParallelIntegrationTest  --stacktrace"
                     }
                 }
@@ -58,6 +60,8 @@ pipeline {
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
+                                "-Ddependx.branch.origin=${env.GIT_COMMIT}" +
+                                "-Ddependx.branch.target=${CHANGE_TARGET}" +
                                 " allParallelUnitTest --stacktrace"
                     }
                 }
