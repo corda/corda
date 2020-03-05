@@ -48,6 +48,8 @@ import org.assertj.core.api.Condition
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import rx.Notification
 import rx.Observable
 import java.time.Duration
@@ -73,15 +75,14 @@ class FlowFrameworkTests {
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-     private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-            override fun record(
-                    serializedCheckpointState: SerializedBytes<CheckpointState>,
-                    serializedFlowState: SerializedBytes<FlowState>
-            ) {
-                // do nothing
-            }
-        })
-
+    private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+        override fun record(
+                serializedCheckpointState: SerializedBytes<CheckpointState>,
+                serializedFlowState: SerializedBytes<FlowState>
+        ) {
+            // do nothing
+        }
+    })
 
     @Before
     fun setUpMockNet() {
@@ -310,6 +311,25 @@ class FlowFrameworkTests {
                     it
                 ).value == bob
             }, "FlowException's private peer field has value set"))
+    }
+
+    @Test(timeout = 300_000)
+    fun `Result is stored in database when the flow finishes`() {
+        val terminationSignal = Semaphore(0)
+        // "take a long time" task, implemented by a NoOpFlow stuck in call method
+        val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
+        mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
+        aliceNode.database.transaction {
+            val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
+            assertNull(checkpoint!!.result)
+        }
+        terminationSignal.release()
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
+            val result = checkpoint!!.result?.bytes?.deserialize<Any>()
+            assertTrue(result is Unit)
+        }
     }
 
     private class ConditionalExceptionFlow(val otherPartySession: FlowSession, val sendPayload: Any) : FlowLogic<Unit>() {

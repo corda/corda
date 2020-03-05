@@ -198,17 +198,15 @@ class TopLevelTransition(
                     currentState = currentState.copy(
                             checkpoint = checkpoint.copy(
                                 checkpointState = checkpoint.checkpointState.copy(
-                                        numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
-                            )),
+                                        numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1),
+                                        result = event.returnValue, status = Checkpoint.FlowStatus.COMPLETED),
                             pendingDeduplicationHandlers = emptyList(),
                             isFlowResumed = false,
                             isRemoved = true
                     )
                     val allSourceSessionIds = checkpoint.checkpointState.sessions.keys
-                    if (currentState.isAnyCheckpointPersisted) {
-                        actions.add(Action.RemoveCheckpoint(context.id))
-                    }
                     actions.addAll(arrayOf(
+                            Action.PersistCheckpoint(context.id, currentState.checkpoint, currentState.isAnyCheckpointPersisted),
                             Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.ReleaseSoftLocks(event.softLocksId),
                             Action.CommitTransaction,
