@@ -18,6 +18,7 @@ import java.io.FileOutputStream
 import java.lang.IllegalStateException
 import java.net.URL
 import java.nio.file.Files
+import java.util.Arrays.asList
 import java.util.jar.JarOutputStream
 import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
@@ -200,8 +201,11 @@ class CordappProviderImplTests {
             val duplicateJarPath = signedJarPath.parent.resolve("duplicate-" + signedJarPath.fileName)
 
             Files.copy(signedJarPath, duplicateJarPath)
-            assertFailsWith<IllegalStateException> {
-                newCordappProvider(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            val urls = asList(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
+            JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
+                assertFailsWith<IllegalStateException> {
+                    CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
+                }
             }
         }
     }
@@ -212,8 +216,11 @@ class CordappProviderImplTests {
         SelfCleaningDir().use { file ->
             val jarA = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForA"), generateManifest = false, jarFileName = "sampleA.jar")
             val jarB = ContractJarTestUtils.makeTestContractJar(file.path, listOf("com.example.MyContract", "com.example.AnotherContractForB"), generateManifest = false, jarFileName = "sampleB.jar")
-            assertFailsWith<IllegalStateException> {
-                newCordappProvider(jarA.toUri().toURL(), jarB.toUri().toURL())
+            val urls = asList(jarA.toUri().toURL(), jarB.toUri().toURL())
+            JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
+                assertFailsWith<IllegalStateException> {
+                    CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
+                }
             }
         }
     }
