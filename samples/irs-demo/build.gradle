@@ -1,14 +1,6 @@
-buildscript {
-    ext {
-        springBootVersion = '1.5.21.RELEASE'
-    }
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
-        classpath "io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE"
-    }
+plugins {
+    id "org.springframework.boot" version "1.5.21.RELEASE"
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE' apply false
 }
 
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
@@ -23,7 +15,6 @@ ext['mockito.version'] = "$mockito_version"
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
-apply plugin: 'org.springframework.boot'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'application'
 

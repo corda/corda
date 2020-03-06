@@ -91,6 +91,8 @@ The host key is loaded from the ``<node root directory>/sshkey/hostkey.pem`` fil
 generated automatically. In development mode, the seed may be specified to give the same results on the same computer
 in order to avoid host-checking errors.
 
+Only RSA key is currently supported as a host key. If ``hostkey.pem`` is not RSA, it will be replaced by the newly generated RSA key.
+
 Connecting to the shell
 ***********************
 
