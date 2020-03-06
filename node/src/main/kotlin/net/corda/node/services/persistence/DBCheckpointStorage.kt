@@ -364,7 +364,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
      * A [DBFlowResult] is created if [DBFlowCheckpoint.result] does not exist and the [Checkpoint] has a result..
      * The existing [DBFlowResult] is updated if [DBFlowCheckpoint.result] exists and the [Checkpoint] has a result.
      * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
-     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result..
+     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
      */
     private fun updateDBFlowResult(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
         val result = checkpoint.result?.let { createDBFlowResult(it, now) }
