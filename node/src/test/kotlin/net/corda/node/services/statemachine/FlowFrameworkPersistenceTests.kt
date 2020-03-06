@@ -161,7 +161,7 @@ class FlowFrameworkPersistenceTests {
                         status = Checkpoint.FlowStatus.FAILED
                    )
             )
-            (this as? FlowStateMachineImpl<*>)!!.transientState = TransientReference(newState)
+            flowFiber.transientState = TransientReference(newState)
         }
         SuspendingFlow.hookAfterCheckpoint = {
             // assert checkpoint is changed to RUNNABLE
