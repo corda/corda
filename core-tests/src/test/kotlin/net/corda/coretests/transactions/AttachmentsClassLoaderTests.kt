@@ -78,7 +78,7 @@ class AttachmentsClassLoaderTests {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var storage: MockAttachmentStorage
     private lateinit var internalStorage: InternalMockAttachmentStorage
