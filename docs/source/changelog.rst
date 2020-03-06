@@ -109,6 +109,8 @@ Unreleased
   options, as well as ``extensions.sshd`` configuration entry, have been removed from the standalone shell.
   Available alternatives are either to use the standalone shell directly, or connect to the node embedded shell via SSH.
 
+* Fixed the operator used by the ``notEqual`` predicate
+
 .. _changelog_v4.1:
 
 Version 4.1
