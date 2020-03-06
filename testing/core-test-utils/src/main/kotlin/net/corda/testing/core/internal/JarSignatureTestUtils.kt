@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
@@ -88,12 +89,13 @@ object JarSignatureTestUtils {
             JarInputStream(FileInputStream((this / fileName).toFile())).use(JarSignatureCollector::collectSigners)
 
     fun Path.addManifest(fileName: String, vararg entries: Pair<Attributes.Name, String>) {
+        val outputFile = this / (fileName + "Output")
         JarInputStream(FileInputStream((this / fileName).toFile())).use { input ->
             val manifest = input.manifest ?: Manifest()
             entries.forEach { (attributeName, value) ->
                 manifest.mainAttributes[attributeName] = value
             }
-            val output = JarOutputStream(FileOutputStream((this / fileName).toFile()), manifest)
+            val output = JarOutputStream(FileOutputStream(outputFile.toFile()), manifest)
             var entry = input.nextEntry
             val buffer = ByteArray(1 shl 14)
             while (true) {
@@ -108,5 +110,6 @@ object JarSignatureTestUtils {
             }
             output.close()
         }
+        Files.copy(outputFile, this / fileName, REPLACE_EXISTING)
     }
 }

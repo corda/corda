@@ -1,3 +1,4 @@
+@file:Suppress("TooManyFunctions")
 package net.corda.testing.node.internal
 
 import co.paralleluniverse.fibers.instrument.JavaAgent
@@ -112,6 +113,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarInputStream
+import java.util.jar.Manifest
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -806,6 +808,8 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::killFlow)
         )
 
+        private const val CORDA_TESTING_ATTRIBUTE = "Corda-Testing"
+
         private val CORDAPP_MANIFEST_ATTRIBUTES: List<String> = unmodifiableList(listOf(
             CORDAPP_CONTRACT_NAME,
             CORDAPP_CONTRACT_LICENCE,
@@ -952,7 +956,7 @@ class DriverDSLImpl(
                 val cpPathEntry = Paths.get(cpEntry)
                 cpPathEntry.isRegularFile()
                     && !isTestArtifact(cpPathEntry.fileName.toString())
-                    && !cpPathEntry.isCorDapp
+                    && !cpPathEntry.isExcludedJar
             }
 
             return ProcessUtilities.startJavaProcess(
@@ -980,12 +984,21 @@ class DriverDSLImpl(
                     || name.startsWith("mockito")
         }
 
+        // Identify Corda's own testing framework by attribute in MANIFEST.MF.
+        private fun isTestArtifact(manifest: Manifest): Boolean {
+            return manifest[CORDA_TESTING_ATTRIBUTE] != null
+        }
+
         // Identify CorDapp JARs by their attributes in MANIFEST.MF.
-        private val Path.isCorDapp: Boolean get() {
+        private fun isCordapp(manifest: Manifest): Boolean {
+            return CORDAPP_MANIFEST_ATTRIBUTES.any { manifest[it] != null }
+                    || (manifest[TARGET_PLATFORM_VERSION] != null && manifest[MIN_PLATFORM_VERSION] != null)
+        }
+
+        private val Path.isExcludedJar: Boolean get() {
             return JarInputStream(Files.newInputStream(this).buffered()).use { jar ->
                 val manifest = jar.manifest ?: return false
-                CORDAPP_MANIFEST_ATTRIBUTES.any { manifest[it] != null }
-                    || (manifest[TARGET_PLATFORM_VERSION] != null && manifest[MIN_PLATFORM_VERSION] != null)
+                isCordapp(manifest) || isTestArtifact(manifest)
             }
         }
 
