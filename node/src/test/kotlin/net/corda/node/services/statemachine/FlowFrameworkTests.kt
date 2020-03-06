@@ -34,6 +34,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -805,12 +806,6 @@ internal fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), Da
 
 @InitiatingFlow
 internal open class SendFlow(private val payload: Any, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
-
-    companion object {
-        var hookBeforeCheckpoint: () -> Unit = {}
-        var hookAfterCheckpoint: () -> Unit = {}
-    }
-
     init {
         require(otherParties.isNotEmpty())
     }
@@ -819,9 +814,7 @@ internal open class SendFlow(private val payload: Any, private vararg val otherP
     override fun call(): FlowInfo {
         val flowInfos = otherParties.map {
             val session = initiateFlow(it)
-            hookBeforeCheckpoint()
             session.send(payload)
-            hookAfterCheckpoint()
             session.getCounterpartyFlowInfo()
         }.toList()
         return flowInfos.first()
@@ -956,5 +949,20 @@ internal class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<
         progressTracker.currentStep = START_STEP
         exceptionThrown = exception()
         throw exceptionThrown
+    }
+}
+
+internal class SuspendingFlow : FlowLogic<Unit>() {
+
+    companion object {
+        var hookBeforeCheckpoint: () -> Unit = {}
+        var hookAfterCheckpoint: () -> Unit = {}
+    }
+
+    @Suspendable
+    override fun call() {
+        hookBeforeCheckpoint()
+        sleep(1.seconds)
+        hookAfterCheckpoint()
     }
 }
