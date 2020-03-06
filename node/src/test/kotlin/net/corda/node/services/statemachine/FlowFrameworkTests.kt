@@ -20,6 +20,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
@@ -955,14 +956,14 @@ internal class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<
 internal class SuspendingFlow : FlowLogic<Unit>() {
 
     companion object {
-        var hookBeforeCheckpoint: () -> Unit = {}
+        var hookBeforeCheckpoint: FlowStateMachine<*>.() -> Unit = {}
         var hookAfterCheckpoint: () -> Unit = {}
     }
 
     @Suspendable
     override fun call() {
-        hookBeforeCheckpoint()
-        sleep(1.seconds)
+        stateMachine.hookBeforeCheckpoint()
+        sleep(1.seconds) // flow checkpoints => checkpoint is in DB
         hookAfterCheckpoint()
     }
 }

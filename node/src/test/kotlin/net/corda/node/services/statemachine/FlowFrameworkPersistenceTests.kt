@@ -153,16 +153,15 @@ class FlowFrameworkPersistenceTests {
     @Test
     fun `Checkpoint status is being changed to RUNNABLE after suspension`() {
         SuspendingFlow.hookBeforeCheckpoint = {
-            val idCheckpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single()
-            // update the Checkpoint.status to some random value, to assert it changes to RUNNABLE after suspension.
-            val checkpoint = idCheckpoint.second
-            val updatedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
-            aliceNode.internals.checkpointStorage.updateCheckpoint(idCheckpoint.first,
-                    updatedCheckpoint.deserialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT),
-                    updatedCheckpoint.serializedFlowState)
-            // assert checkpoint is persisted with status FAILED
-            val persistedCheckpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single()
-            assertEquals(Checkpoint.FlowStatus.FAILED, persistedCheckpoint.second.status)
+            val flowFiber = (this as? FlowStateMachineImpl<*>)
+
+            // manually change the -in memory- Checkpoint.status to FAILED
+            val newState = flowFiber!!.transientState!!.value.copy(
+                   checkpoint =  flowFiber.transientState!!.value.checkpoint.copy(
+                        status = Checkpoint.FlowStatus.FAILED
+                   )
+            )
+            (this as? FlowStateMachineImpl<*>)!!.transientState = TransientReference(newState)
         }
         SuspendingFlow.hookAfterCheckpoint = {
             // assert checkpoint is changed to RUNNABLE
