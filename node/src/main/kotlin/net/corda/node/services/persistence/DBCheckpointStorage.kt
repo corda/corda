@@ -37,6 +37,7 @@ import javax.persistence.OneToOne
 /**
  * Simple checkpoint key value storage in DB.
  */
+@Suppress("TooManyFunctions")
 class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointPerformanceRecorder) : CheckpointStorage {
 
     companion object {
