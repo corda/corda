@@ -30,8 +30,8 @@ class SandboxMapSerializer(
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Map::class.java)) {
     @Suppress("unchecked_cast")
-    private val creator: Function<Array<Any>, out Any?>
-        = taskFactory.apply(CreateMap::class.java) as Function<Array<Any>, out Any?>
+    private val creator: Function<Array<out Any>, out Any?>
+        = taskFactory.apply(CreateMap::class.java) as Function<Array<out Any>, out Any?>
 
     // The order matters here - the first match should be the most specific one.
     // Kotlin preserves the ordering for us by associating into a LinkedHashMap.
@@ -77,7 +77,7 @@ class SandboxMapSerializer(
 private class ConcreteMapSerializer(
     declaredType: ParameterizedType,
     private val matchingType: Map.Entry<Class<Any>, Class<out Map<*, *>>>,
-    private val creator: Function<Array<Any>, out Any?>,
+    private val creator: Function<Array<out Any>, out Any?>,
     factory: LocalSerializerFactory
 ) : AMQPSerializer<Any> {
     override val type: ParameterizedType = declaredType
