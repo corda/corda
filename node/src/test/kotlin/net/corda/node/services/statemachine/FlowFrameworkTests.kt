@@ -73,6 +73,8 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
+import kotlin.streams.toList
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FlowFrameworkTests {
@@ -597,6 +599,32 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
         bobResponderFlow.getOrThrow()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint status is being changed to RUNNABLE after suspension`() {
+        SuspendingFlow.hookBeforeCheckpoint = {
+            val flowFiber = (this as? FlowStateMachineImpl<*>)
+
+            // manually change the -in memory- Checkpoint.status to FAILED
+            val newState = flowFiber!!.transientState!!.value.copy(
+                    checkpoint =  flowFiber.transientState!!.value.checkpoint.copy(
+                            status = Checkpoint.FlowStatus.FAILED
+                    )
+            )
+            flowFiber.transientState = TransientReference(newState)
+        }
+        SuspendingFlow.hookAfterCheckpoint = {
+            // assert checkpoint is changed to RUNNABLE
+            val persistedCheckpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single()
+            assertEquals(Checkpoint.FlowStatus.RUNNABLE, persistedCheckpoint.second.status)
+        }
+
+        aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
+
+        // clear SendFlow companion object
+        SuspendingFlow.hookBeforeCheckpoint = {}
+        SuspendingFlow.hookAfterCheckpoint = {}
     }
 
     //region Helpers
