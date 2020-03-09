@@ -314,7 +314,7 @@ You can enable the DJVM for your node by adding the following line to your node'
 
   systemProperties = { "net.corda.djvm" = true }
 
-This will cause your node to sandbox every call to ``Contract.verify``. If your transaction contains any source of non-determinism,
+This will cause your node to sandbox every call to ``Contract.verify``. If your transaction contains a source of non-determinism,
 transaction verification will fail.
 
 Alternatively, you can enable the DJVM when creating nodes via DemoBench by ticking the ``Deterministic Contract Verification`` checkbox
