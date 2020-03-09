@@ -138,6 +138,17 @@ class FlowParallelMessagingTests {
         assertEquals("ok", result)
     }
 
+    @Test(timeout=300_000)
+    fun `a flow cannot invoke receiveAll with duplicate sessions`() {
+        val flow = senderNode.services.startFlow(InvalidReceiveFlow(listOf(recipientParty1), String::class.java))
+
+        mockNet.runNetwork()
+
+        assertThatThrownBy{ flow.resultFuture.getOrThrow() }
+                .isInstanceOf(java.lang.IllegalArgumentException::class.java)
+                .hasMessage("A flow session can only appear once as argument.")
+    }
+
     fun TestStartedNode.createConfidentialIdentity(party: Party) =
             services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name }, false)
 
@@ -216,6 +227,20 @@ class FlowParallelMessagingTests {
                 StagedMessageType.REGULAR_RECIPIENT -> otherPartySession.send("pong")
             }
 
+            return "ok"
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class InvalidReceiveFlow<R: Any>(private val parties: List<Party>, private val payloadType: Class<R>): FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            val sessions = parties.flatMap { party ->
+                val session = initiateFlow(party)
+                listOf(session, session)
+            }
+            receiveAll(payloadType, sessions)
             return "ok"
         }
     }
