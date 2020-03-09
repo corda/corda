@@ -199,13 +199,13 @@ class FlowParallelMessagingTests {
                 throw IllegalArgumentException("at least two parties required for staged execution")
             }
 
-            val sessions = parties.map { initiateFlow(it) }
+            val sessions = parties.map { initiateFlow(it) }.toSet()
 
             sessions.first().send(StagedMessageType.INITIAL_RECIPIENT)
             sessions.first().receive<String>().unwrap{ payload -> assertEquals("pong", payload) }
 
             sendAll(StagedMessageType.REGULAR_RECIPIENT, sessions)
-            val messages = receiveAll(String::class.java, sessions)
+            val messages = receiveAll(String::class.java, sessions.toList())
 
             messages.map { it.unwrap { payload -> assertEquals("pong", payload) } }
 

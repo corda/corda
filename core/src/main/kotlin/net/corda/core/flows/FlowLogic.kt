@@ -331,7 +331,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     @JvmOverloads
-    fun sendAll(payload: Any, sessions: List<FlowSession>, maySkipCheckpoint: Boolean = false) {
+    fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
         val sessionToPayload = sessions.map { it to payload }.toMap()
         return sendAll(sessionToPayload, maySkipCheckpoint)
     }

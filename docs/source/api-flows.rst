@@ -270,7 +270,7 @@ In addition ``FlowLogic`` provides functions that can receive messages from mult
     * Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
 * ``receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>``
     * Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
-* ``sendAll(payload: Any, sessions: List<FlowSession>)``
+* ``sendAll(payload: Any, sessions: Set<FlowSession>)``
     * Sends the ``payload`` object to all the provided ``FlowSession``\s.
 * ``sendAll(payloadsPerSession: Map<FlowSession, Any>)``
     * Sends a potentially different payload to each ``FlowSession``, as specified by the provided ``payloadsPerSession``.
