@@ -6,8 +6,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.LifecycleSupport
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -20,8 +18,6 @@ internal class FlowMonitor(
     private val smm: StateMachineManager,
     private val monitoringPeriod: Duration,
     private val suspensionLoggingThreshold: Duration,
-    private val database: CordaPersistence,
-    private val checkpointStorage: DBCheckpointStorage,
     private var scheduler: ScheduledExecutorService? = null
 ) : LifecycleSupport {
 
@@ -43,7 +39,7 @@ internal class FlowMonitor(
                 scheduler = defaultScheduler()
                 shutdownScheduler = true
             }
-            scheduler!!.scheduleAtFixedRate({ updateDbAndLogWaitingFlows() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
+            scheduler!!.scheduleAtFixedRate({ logFlowsWaitingForParty() }, 0, monitoringPeriod.toMillis(), TimeUnit.MILLISECONDS)
             started = true
         }
     }
@@ -57,15 +53,9 @@ internal class FlowMonitor(
         }
     }
 
-    @VisibleForTesting
-    fun updateDbAndLogWaitingFlows() {
-        database.transaction {
-            for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
-                flow.ioRequest()?.let {
-                    logger.info(warningMessageForFlowWaitingOnIo(it, flow, suspensionDuration))
-                    checkpointStorage.updateFlowIoRequest(flow.id, it)
-                }
-            }
+    private fun logFlowsWaitingForParty() {
+        for ((flow, suspensionDuration) in waitingFlowDurations(suspensionLoggingThreshold)) {
+            flow.ioRequest()?.let { request -> logger.info(warningMessageForFlowWaitingOnIo(request, flow, suspensionDuration)) }
         }
     }
 
