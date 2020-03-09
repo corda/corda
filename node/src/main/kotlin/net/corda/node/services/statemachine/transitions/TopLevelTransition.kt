@@ -158,7 +158,8 @@ class TopLevelTransition(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     checkpointState = currentState.checkpoint.checkpointState.copy(
                             numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends + 1
-                    )
+                    ),
+                    flowIoRequest = event.ioRequest::class.java
             )
             if (event.maySkipCheckpoint) {
                 actions.addAll(arrayOf(

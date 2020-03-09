@@ -42,9 +42,4 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
-
-    /**
-     * Update a specific checkpoints ioRequest
-     */
-    fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>)
 }

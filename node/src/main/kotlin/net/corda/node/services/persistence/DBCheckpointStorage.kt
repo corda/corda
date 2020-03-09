@@ -35,7 +35,6 @@ import javax.persistence.OneToOne
 /**
  * Simple checkpoint key value storage in DB.
  */
-@Suppress("TooManyFunctions")
 class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointPerformanceRecorder) : CheckpointStorage {
 
     companion object {
@@ -224,16 +223,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
-    }
-
-    override fun updateFlowIoRequest(id: StateMachineRunId, ioRequest: FlowIORequest<*>) {
-        val checkpoint = requireNotNull(getDBCheckpoint(id)) {
-            "Checkpoint with ${id.uuid} does not exist in database."
-        }
-        checkpoint.takeIf{ it.ioRequestType !=  ioRequest.javaClass }?.apply {
-            ioRequestType = ioRequest.javaClass
-            currentDBSession().update(this)
-        }
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
