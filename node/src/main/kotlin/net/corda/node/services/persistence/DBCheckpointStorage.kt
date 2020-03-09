@@ -37,6 +37,7 @@ import javax.persistence.OneToOne
 /**
  * Simple checkpoint key value storage in DB.
  */
+@Suppress("TooManyFunctions")
 class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointPerformanceRecorder) : CheckpointStorage {
 
     companion object {
@@ -83,11 +84,11 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
         var blob: DBFlowCheckpointBlob,
 
-        @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+        @OneToOne(fetch = FetchType.LAZY, optional = true)
         @JoinColumn(name = "result_id", referencedColumnName = "id")
         var result: DBFlowResult?,
 
-        @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+        @OneToOne(fetch = FetchType.LAZY, optional = true)
         @JoinColumn(name = "error_id", referencedColumnName = "id")
         var exceptionDetails: DBFlowException?,
 
@@ -117,7 +118,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         @Column(name = "id", nullable = false)
-        private var id: Long = 0,
+        var id: Long = 0,
 
         @Type(type = "corda-blob")
         @Column(name = "checkpoint_value", nullable = false)
@@ -141,7 +142,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Id
         @Column(name = "id", nullable = false)
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        private var id: Long = 0,
+        var id: Long = 0,
 
         @Type(type = "corda-blob")
         @Column(name = "result_value", nullable = false)
@@ -157,7 +158,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Id
         @Column(name = "id", nullable = false)
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        private var id: Long = 0,
+        var id: Long = 0,
 
         @Column(name = "type", nullable = false)
         var type: Class<out Throwable>,
@@ -319,14 +320,16 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val flowId = id.uuid.toString()
         val now = Instant.now()
 
+        // Load the previous entity from the hibernate cache so the meta data join does not get updated
+        val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
+
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
-        val result = checkpoint.result?.let { createDBFlowResult(it, now) }
-        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(it, now) }
-        // Load the previous entity from the hibernate cache so the meta data join does not get updated
-        val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
+        val result = updateDBFlowResult(entity, checkpoint, now)
+        val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
+
         return entity.apply {
             this.blob = blob
             this.result = result
@@ -354,11 +357,61 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         )
     }
 
+    /**
+     * Creates, updates or deletes the result related to the current flow/checkpoint.
+     *
+     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
+     *
+     * A [DBFlowResult] is created if [DBFlowCheckpoint.result] does not exist and the [Checkpoint] has a result..
+     * The existing [DBFlowResult] is updated if [DBFlowCheckpoint.result] exists and the [Checkpoint] has a result.
+     * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
+     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
+     */
+    private fun updateDBFlowResult(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
+        val result = checkpoint.result?.let { createDBFlowResult(it, now) }
+        if (entity.result != null) {
+            if (result != null) {
+                result.id = entity.result!!.id
+                currentDBSession().update(result)
+            } else {
+                currentDBSession().delete(entity.result)
+            }
+        } else if (result != null) {
+            currentDBSession().save(result)
+        }
+        return result
+    }
+
     private fun createDBFlowResult(result: Any, now: Instant): DBFlowResult {
         return DBFlowResult(
             value = result.storageSerialize().bytes,
             persistedInstant = now
         )
+    }
+
+    /**
+     * Creates, updates or deletes the error related to the current flow/checkpoint.
+     *
+     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
+     *
+     * A [DBFlowException] is created if [DBFlowCheckpoint.exceptionDetails] does not exist and the [Checkpoint] has an error attached to it.
+     * The existing [DBFlowException] is updated if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has an error.
+     * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
+     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
+     */
+    private fun updateDBFlowException(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowException? {
+        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(it, now) }
+        if (entity.exceptionDetails != null) {
+            if (exceptionDetails != null) {
+                exceptionDetails.id = entity.exceptionDetails!!.id
+                currentDBSession().update(exceptionDetails)
+            } else {
+                currentDBSession().delete(entity.exceptionDetails)
+            }
+        } else if (exceptionDetails != null) {
+            currentDBSession().save(exceptionDetails)
+        }
+        return exceptionDetails
     }
 
     private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
