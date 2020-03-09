@@ -47,8 +47,7 @@ class QuasarExcludePackagesTest {
         val nodeConfiguration :NodeConfiguration = V1NodeConfigurationSpec.parse(config).value()
 
         // Act
-        val node = Node(nodeConfiguration, VersionInfo.UNKNOWN)
-        node.stop()
+        Node(nodeConfiguration, VersionInfo.UNKNOWN)
 
         // Assert
         Assert.assertTrue(Retransform.getInstrumentor().isExcluded("net.corda.node.internal.QuasarExcludePackagesTest.Test"))
