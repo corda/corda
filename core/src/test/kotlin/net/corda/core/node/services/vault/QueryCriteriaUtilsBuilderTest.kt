@@ -1,4 +1,4 @@
-package net.corda.node.services.vault
+package net.corda.core.node.services.vault
 
 import net.corda.core.node.services.vault.BinaryComparisonOperator
 import net.corda.core.node.services.vault.Builder.`in`
