@@ -64,6 +64,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
             .optional()
             .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
     private val flowExternalOperationThreadPoolSize by int().optional().withDefaultValue(Defaults.flowExternalOperationThreadPoolSize)
+    private val quasarExcludePackages by string().list().optional().withDefaultValue(Defaults.quasarExcludePackages)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -128,7 +129,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     blacklistedAttachmentSigningKeys = configuration[blacklistedAttachmentSigningKeys],
                     networkParameterAcceptanceSettings = configuration[networkParameterAcceptanceSettings],
                     configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Validation.Options.defaults),
-                    flowExternalOperationThreadPoolSize = configuration[flowExternalOperationThreadPoolSize]
+                    flowExternalOperationThreadPoolSize = configuration[flowExternalOperationThreadPoolSize],
+                    quasarExcludePackages = configuration[quasarExcludePackages]
             ))
         } catch (e: Exception) {
             return when (e) {

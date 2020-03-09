@@ -461,6 +461,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
+            doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
             parameters.configOverrides(it)
         }
 
