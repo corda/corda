@@ -264,14 +264,18 @@ In order to create a communication session between your initiator flow and the r
 * ``sendAndReceive(receiveType: Class<R>, payload: Any): R``
     * Sends the ``payload`` object and receives an object of type ``receiveType`` back
 
-In addition ``FlowLogic`` provides functions that batch receives:
+In addition ``FlowLogic`` provides functions that can receive messages from multiple sessions and send messages to multiple sessions:
 
 * ``receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>``
-  Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
+    * Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
 * ``receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>``
-  Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
+    * Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
+* ``sendAll(payload: Any, sessions: Set<FlowSession>)``
+    * Sends the ``payload`` object to all the provided ``FlowSession``\s.
+* ``sendAll(payloadsPerSession: Map<FlowSession, Any>)``
+    * Sends a potentially different payload to each ``FlowSession``, as specified by the provided ``payloadsPerSession``.
 
-The batched functions are implemented more efficiently by the flow framework.
+.. note:: It's more efficient to call ``sendAndReceive`` instead of calling ``send`` and then ``receive``. It's also more efficient to call ``sendAll``/``receiveAll`` instead of multiple ``send``/``receive`` respectively.
 
 InitiateFlow
 ~~~~~~~~~~~~
