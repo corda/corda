@@ -200,7 +200,6 @@ class TopLevelTransition(
                                 checkpointState = checkpoint.checkpointState.copy(
                                         numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
                                 ),
-                                result = event.returnValue,
                                 status = Checkpoint.FlowStatus.COMPLETED
                             ),
                             pendingDeduplicationHandlers = emptyList(),

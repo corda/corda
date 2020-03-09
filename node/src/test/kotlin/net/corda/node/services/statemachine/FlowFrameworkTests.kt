@@ -17,6 +17,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -30,6 +31,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -49,7 +51,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotEquals
 import rx.Notification
 import rx.Observable
 import java.time.Duration
@@ -313,23 +317,23 @@ class FlowFrameworkTests {
             }, "FlowException's private peer field has value set"))
     }
 
+    //We should update this test when we do the work to persists the flow result.
     @Test(timeout = 300_000)
-    fun `Result is stored in database when the flow finishes`() {
+    fun `Flow status is set to completed in database when the flow finishes`() {
         val terminationSignal = Semaphore(0)
-        // "take a long time" task, implemented by a NoOpFlow stuck in call method
         val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
         mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
+            assertNotEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
         }
         terminationSignal.release()
         mockNet.waitQuiescent()
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
-            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint!!.status)
-            val result = checkpoint.result?.bytes?.deserialize<Any>()
-            assertTrue(result is Unit)
+            assertNull(checkpoint!!.result)
+            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
         }
     }
 
