@@ -604,7 +604,7 @@ class SingleThreadedStateMachineManager(
             // This is a brand new flow
             null
         }
-        val checkpoint = existingCheckpoint ?: Checkpoint.create(
+        val checkpoint = existingCheckpoint?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: Checkpoint.create(
                 invocationContext,
                 flowStart,
                 flowLogic.javaClass,
@@ -774,7 +774,7 @@ class SingleThreadedStateMachineManager(
             isStartIdempotent: Boolean,
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
-        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return null
+        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
         val fiber = when (flowState) {
