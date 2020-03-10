@@ -230,7 +230,7 @@ class FlowFrameworkTests {
         mockNet.runNetwork()
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flowId)
-            assertEquals(FlowIORequest.Receive::class.java, checkpoint?.flowIoRequest)
+            assertEquals(FlowIORequest.Receive::class.java.simpleName, checkpoint?.flowIoRequest)
         }
         terminationSignal.release()
     }
