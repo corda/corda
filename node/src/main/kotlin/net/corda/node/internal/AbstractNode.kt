@@ -150,8 +150,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
+import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor

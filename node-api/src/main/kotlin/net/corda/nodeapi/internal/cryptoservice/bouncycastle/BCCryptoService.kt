@@ -17,7 +17,6 @@ import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.cryptoservice.*
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
 import org.bouncycastle.operator.ContentSigner
 import java.nio.file.Path
 import java.security.*
@@ -40,8 +39,6 @@ class BCCryptoService(private val legalName: X500Principal,
     private companion object {
         val detailedLogger = detailedLogger()
     }
-
-    override fun getType(): SupportedCryptoServices = SupportedCryptoServices.BC_SIMPLE
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
