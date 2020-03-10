@@ -223,7 +223,7 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout = 300_000)
-    fun `flowstatus is updated in database when flow suspends on ioRequest`() {
+    fun `flow status is updated in database when flow suspends on ioRequest`() {
         val terminationSignal = Semaphore(0)
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow( terminateUponSignal = terminationSignal) }
         val flowId = aliceNode.services.startFlow(ReceiveFlow(bob)).id

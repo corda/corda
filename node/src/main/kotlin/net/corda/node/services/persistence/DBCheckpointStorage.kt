@@ -313,10 +313,11 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     private fun updateDBCheckpoint(
-        flowId: StateMachineRunId,
+        id: StateMachineRunId,
         checkpoint: Checkpoint,
         serializedFlowState: SerializedBytes<FlowState>
     ): DBFlowCheckpoint {
+        val flowId = id.uuid.toString()
         val now = Instant.now()
 
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
