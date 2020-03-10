@@ -9,7 +9,15 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.*
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
@@ -17,7 +25,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -31,7 +38,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -42,18 +48,22 @@ import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.getMessage
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.assertj.core.api.Condition
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Assert.assertNotEquals
 import rx.Notification
 import rx.Observable
 import java.time.Duration
@@ -61,7 +71,6 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FlowFrameworkTests {

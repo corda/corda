@@ -1,11 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.context.InvocationContext
-import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
@@ -13,7 +8,6 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.core.transactions.SignedTransaction
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.services.api.CheckpointStorage
@@ -32,11 +26,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.createWireTransaction
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -45,6 +36,7 @@ import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -61,9 +53,7 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
 class DBCheckpointStorageTests {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME).party
     }
-
 
     @Rule
     @JvmField
@@ -282,6 +272,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
+    @Ignore
     fun `update checkpoint with result information creates new result database record`() {
         val result = "This is the result"
         val (id, checkpoint) = newCheckpoint()
@@ -309,6 +300,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
+    @Ignore
     fun `update checkpoint with result information updates existing result database record`() {
         val result = "This is the result"
         val somehowThereIsANewResult = "Another result (which should not be possible!)"
