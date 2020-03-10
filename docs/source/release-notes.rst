@@ -59,6 +59,14 @@ The "out-of-process" nodes spawned through Driver DSL (see :doc:`tutorial-integr
 * Directories (only regular files are allowed)
 * Jars with Maven classifiers ``tests`` or ``test``
 * Jars with any Cordapp attributes in their manifests (any of those listed in :doc:`cordapp-build-systems` or ``Target-Platform-Version`` and ``Min-Platform-Version`` if both are present)
+* Jars with the ``Corda-Testing`` attribute in their manifests. The manifest of the following artifacts has been updated to include the ``Corda-Testing`` attribute:
+
+	* ``corda-node-driver``
+	* ``corda-test-utils``
+	* ``corda-test-common``
+	* ``corda-test-db``
+	* ``corda-mock``
+
 * Files whose names start with ``corda-mock``, ``junit``, ``testng`` or ``mockito``
 
 Some of your existing integration tests might implicitly be relying on the presence of the above files, so please keep this in mind when upgrading your version of Corda.
