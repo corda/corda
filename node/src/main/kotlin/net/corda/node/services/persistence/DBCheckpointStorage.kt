@@ -1,7 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -41,6 +40,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val log = contextLogger()
 
         private const val HMAC_SIZE_BYTES = 16
+        private const val MAX_SIMPLE_NAME_LENGTH = 128
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -103,7 +103,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         var progressStep: String?,
 
         @Column(name = "flow_io_request")
-        var ioRequestType: Class<out FlowIORequest<*>>?,
+        var ioRequestType: String?,
 
         @Column(name = "timestamp", nullable = false)
         var checkpointInstant: Instant
@@ -248,6 +248,12 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         }
     }
 
+    override fun getFlowIoRequest(id: StateMachineRunId): String? {
+        return requireNotNull(getDBCheckpoint(id)) {
+            "Checkpoint with id: ${id.uuid} does not exist in database."
+        }.ioRequestType
+    }
+
     private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
@@ -339,7 +345,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             this.status = checkpoint.status
             this.compatible = checkpoint.compatible
             this.progressStep = checkpoint.progressStep
-            this.ioRequestType = checkpoint.flowIoRequest
+            this.ioRequestType = checkpoint.flowIoRequest?.simpleName?.take(MAX_SIMPLE_NAME_LENGTH)
             this.checkpointInstant = now
         }
     }
@@ -435,7 +441,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             result = result?.let { SerializedBytes<Any>(it.value) },
             status = status,
             progressStep = progressStep,
-            flowIoRequest = ioRequestType,
+            flowIoRequest = null,
             compatible = compatible
         )
     }

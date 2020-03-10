@@ -42,4 +42,10 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    /**
+     * Get the simpleName of the flowIoRequest which the flow suspended on. Returns null if the flow didn't suspend
+     * on an flowIoRequest.
+     */
+    fun getFlowIoRequest(id: StateMachineRunId): String?
 }

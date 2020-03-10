@@ -459,9 +459,9 @@ class DBCheckpointStorageTests {
         }
         database.transaction {
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
-            assertNotNull(checkpointFromStorage?.flowIoRequest)
-            val classFromCheckpoint = checkpointFromStorage?.flowIoRequest!!
-            assertEquals(FlowIORequest.Sleep::class.java, classFromCheckpoint)
+            assertNull(checkpointFromStorage!!.flowIoRequest)
+            val flowIORequest = checkpointStorage.getFlowIoRequest(id)
+            assertEquals(FlowIORequest.Sleep::class.java.simpleName, flowIORequest)
         }
     }
 
