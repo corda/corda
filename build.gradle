@@ -633,7 +633,7 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-enum GeneralPurpose {
+class GeneralPurpose {
     protected def numberOfShards = 10
     protected def streamOutput = false
     protected def coresPerFork = 2
@@ -641,7 +641,7 @@ enum GeneralPurpose {
     protected def nodeTaints = "small"
 }
 
-enum LargeScaleSet {
+class LargeScaleSet {
     protected def numberOfShards = 15
     protected def streamOutput = false
     protected def coresPerFork = 6
