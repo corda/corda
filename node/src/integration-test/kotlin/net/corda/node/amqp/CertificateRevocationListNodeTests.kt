@@ -380,7 +380,6 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -412,7 +411,6 @@ class CertificateRevocationListNodeTests {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(

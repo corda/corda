@@ -22,6 +22,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -206,13 +207,22 @@ class AMQPBridgeTest {
         val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, artemisConfig.crlCheckSoftFail)
+        val bridgeManager = AMQPBridgeManager(
+                artemisConfig.p2pSslOptions.keyStore.get(),
+                artemisConfig.p2pSslOptions.trustStore.get(),
+                false,
+                null,
+                MAX_MESSAGE_SIZE,
+                artemisConfig.crlCheckSoftFail.toRevocationConfig(),
+                false, { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE) }, trace = false,
+                sslHandshakeTimeout = null,
+                bridgeConnectionTTLSeconds = 0)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
             artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
-            bridgeManager.deployBridge(sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
+            bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)
     }
@@ -228,7 +238,6 @@ class AMQPBridgeTest {
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(true).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -238,7 +247,6 @@ class AMQPBridgeTest {
             override val trustStore  = serverConfig.p2pSslOptions.trustStore.get()
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
         }
         return AMQPServer("0.0.0.0",
                 amqpAddress.port,

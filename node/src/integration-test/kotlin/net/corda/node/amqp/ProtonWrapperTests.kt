@@ -447,7 +447,6 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
@@ -479,7 +478,6 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
@@ -513,7 +511,6 @@ class ProtonWrapperTests {
             override val trustStore = serverTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
         }
         return AMQPServer(
                 "0.0.0.0",
