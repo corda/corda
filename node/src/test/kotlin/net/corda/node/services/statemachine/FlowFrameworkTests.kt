@@ -687,9 +687,6 @@ class FlowFrameworkTests {
         contextTransaction.close()
         contextTransactionOrNull = null
         contextDatabase.newTransaction()
-        // assert checkpoint is persisted with status FAILED
-        val persistedCheckpoint = node.internals.checkpointStorage.getAllCheckpoints().toList().single()
-        assertEquals(Checkpoint.FlowStatus.FAILED, persistedCheckpoint.second.status)
     }
 
     //region Helpers
