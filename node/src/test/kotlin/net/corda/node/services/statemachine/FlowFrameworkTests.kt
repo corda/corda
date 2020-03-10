@@ -619,7 +619,7 @@ class FlowFrameworkTests {
             assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Unstarted)
 
             if (firstExecution) {
-                // TODO: the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
+                // T-O-D-O: the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
                 manuallyFailCheckpointInDB(aliceNode)
 
                 firstExecution = false
@@ -656,7 +656,7 @@ class FlowFrameworkTests {
             assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Started)
 
             if (firstExecution) {
-                // TODO: the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
+                // T-O-D-O: the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
                 manuallyFailCheckpointInDB(aliceNode)
 
                 firstExecution = false
@@ -675,7 +675,7 @@ class FlowFrameworkTests {
         SuspendingFlow.hookAfterCheckpoint = {}
     }
 
-    // TODO: the following method should be removed when implementing CORDA-3604.
+    // T-O-D-O: the following method should be removed when implementing CORDA-3604.
     private fun manuallyFailCheckpointInDB(node: TestStartedNode) {
         val idCheckpoint = node.internals.checkpointStorage.getAllCheckpoints().toList().single()
         val checkpoint = idCheckpoint.second
