@@ -1,6 +1,7 @@
 package net.corda.node.services.api
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowState

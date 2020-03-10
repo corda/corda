@@ -12,10 +12,12 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
@@ -25,6 +27,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.services.persistence.CheckpointPerformanceRecorder
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -68,6 +72,16 @@ class FlowFrameworkTests {
     private lateinit var bob: Party
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
+
+     private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+            override fun record(
+                    serializedCheckpointState: SerializedBytes<CheckpointState>,
+                    serializedFlowState: SerializedBytes<FlowState>
+            ) {
+                // do nothing
+            }
+        })
+
 
     @Before
     fun setUpMockNet() {
@@ -206,6 +220,19 @@ class FlowFrameworkTests {
 
     private fun monitorFlows(script: (FlowMonitor, FlowMonitor) -> Unit) {
         script(FlowMonitor(aliceNode.smm, Duration.ZERO, Duration.ZERO), FlowMonitor(bobNode.smm, Duration.ZERO, Duration.ZERO))
+    }
+
+    @Test(timeout = 300_000)
+    fun `flow status is updated in database when flow suspends on ioRequest`() {
+        val terminationSignal = Semaphore(0)
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow( terminateUponSignal = terminationSignal) }
+        val flowId = aliceNode.services.startFlow(ReceiveFlow(bob)).id
+        mockNet.runNetwork()
+        aliceNode.database.transaction {
+            val checkpoint = dbCheckpointStorage.getCheckpoint(flowId)
+            assertEquals(FlowIORequest.Receive::class.java.simpleName, checkpoint?.flowIoRequest)
+        }
+        terminationSignal.release()
     }
 
     @Test(timeout=300_000)

@@ -32,14 +32,14 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import kotlin.streams.toList
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
@@ -121,7 +121,7 @@ class DBCheckpointStorageTests {
                 logic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             ),
             progressStep = "I have made progress",
-            flowIoRequest = FlowIORequest.SendAndReceive::class.java
+            flowIoRequest = FlowIORequest.SendAndReceive::class.java.simpleName
         )
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
         database.transaction {
@@ -436,6 +436,30 @@ class DBCheckpointStorageTests {
             val criteria = session.criteriaBuilder.createQuery(DBCheckpointStorage.DBFlowException::class.java)
             criteria.select(criteria.from(DBCheckpointStorage.DBFlowException::class.java))
             assertEquals(0, session.createQuery(criteria).resultList.size)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Checkpoint can be updated with flow io request information`() {
+        val (id, checkpoint) = newCheckpoint(1)
+        database.transaction {
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertNull(checkpointFromStorage!!.flowIoRequest)
+        }
+        database.transaction {
+            val newCheckpoint = checkpoint.copy(flowIoRequest = FlowIORequest.Sleep::class.java.simpleName)
+            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
+                    context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
+            )
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
+        }
+        database.transaction {
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertNotNull(checkpointFromStorage!!.flowIoRequest)
+            val flowIORequest = checkpointFromStorage.flowIoRequest
+            assertEquals(FlowIORequest.Sleep::class.java.simpleName, flowIORequest)
         }
     }
 

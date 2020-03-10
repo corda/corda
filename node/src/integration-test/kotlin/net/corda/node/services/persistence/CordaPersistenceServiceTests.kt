@@ -74,7 +74,7 @@ class CordaPersistenceServiceTests {
                             status = FlowStatus.RUNNABLE,
                             compatible = false,
                             progressStep = "",
-                            ioRequestType = FlowIORequest.ForceCheckpoint.javaClass,
+                            ioRequestType = FlowIORequest.ForceCheckpoint::class.java.simpleName,
                             checkpointInstant = Instant.now(),
                             flowMetadata = createMetadataRecord(UUID.randomUUID(), now)
                         )

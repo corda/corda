@@ -62,7 +62,7 @@ data class Checkpoint(
         val result: Any? = null,
         val status: FlowStatus = FlowStatus.RUNNABLE,
         val progressStep: String? = null,
-        val flowIoRequest: Class<out FlowIORequest<*>>? = null,
+        val flowIoRequest: String? = null,
         val compatible: Boolean = true
 ) {
     @CordaSerializable
@@ -149,7 +149,7 @@ data class Checkpoint(
         val result: SerializedBytes<Any>?,
         val status: FlowStatus,
         val progressStep: String?,
-        val flowIoRequest: Class<out FlowIORequest<*>>?,
+        val flowIoRequest: String?,
         val compatible: Boolean
     ) {
         /**

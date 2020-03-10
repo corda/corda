@@ -1,7 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -17,12 +16,10 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.hibernate.annotations.Type
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import java.util.stream.Stream
 import javax.persistence.CascadeType
 import javax.persistence.Column
@@ -106,7 +103,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         var progressStep: String?,
 
         @Column(name = "flow_io_request")
-        var ioRequestType: Class<out FlowIORequest<*>>?,
+        var ioRequestType: String?,
 
         @Column(name = "timestamp", nullable = false)
         var checkpointInstant: Instant
@@ -238,7 +235,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
-        return currentDBSession().get(DBFlowCheckpoint::class.java, id.uuid.toString())?.toSerializedCheckpoint()
+        return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
@@ -249,6 +246,10 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
+    }
+
+    private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
+        return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
     private fun createDBCheckpoint(
