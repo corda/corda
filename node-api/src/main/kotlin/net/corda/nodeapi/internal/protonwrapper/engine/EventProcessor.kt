@@ -38,7 +38,9 @@ internal class EventProcessor(private val channel: Channel,
                               userName: String?,
                               password: String?) {
     companion object {
-        private const val FLOW_WINDOW_SIZE = 10
+        private const val CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME = "net.corda.nodeapi.eventprocessor.FlowWindowSize"
+
+        private val FLOW_WINDOW_SIZE = Integer.getInteger(CORDA_AMQP_FLOW_WINDOW_SIZE_PROP_NAME, 5)
         private val log = contextLogger()
     }
 

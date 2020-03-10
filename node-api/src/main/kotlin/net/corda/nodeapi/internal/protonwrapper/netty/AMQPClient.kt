@@ -7,23 +7,44 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.handler.proxy.HttpProxyHandler
+import io.netty.handler.proxy.Socks4ProxyHandler
+import io.netty.handler.proxy.Socks5ProxyHandler
+import io.netty.resolver.NoopAddressResolverGroup
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPChannelHandler.Companion.PROXY_LOGGER_NAME
 import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
+import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
+
+enum class ProxyVersion {
+    SOCKS4,
+    SOCKS5,
+    HTTP
+}
+
+data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null, val proxyTimeoutMS: Long? = null) {
+    init {
+        if (version == ProxyVersion.SOCKS4) {
+            require(password == null) { "SOCKS4 does not support a password" }
+        }
+    }
+}
 
 /**
  * The AMQPClient creates a connection initiator that will try to connect in a round-robin fashion
@@ -42,15 +63,18 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         }
 
         val log = contextLogger()
-        const val MIN_RETRY_INTERVAL = 1000L
-        const val MAX_RETRY_INTERVAL = 60000L
-        const val BACKOFF_MULTIPLIER = 2L
-        const val NUM_CLIENT_THREADS = 2
+
+        private const val CORDA_AMQP_NUM_CLIENT_THREAD_PROP_NAME = "net.corda.nodeapi.amqpclient.NumClientThread"
+
+        private const val MIN_RETRY_INTERVAL = 1000L
+        private const val MAX_RETRY_INTERVAL = 60000L
+        private const val BACKOFF_MULTIPLIER = 2L
+        private val NUM_CLIENT_THREADS = Integer.getInteger(CORDA_AMQP_NUM_CLIENT_THREAD_PROP_NAME, 2)
     }
 
     private val lock = ReentrantLock()
     @Volatile
-    private var stopping: Boolean = false
+    private var started: Boolean = false
     private var workerGroup: EventLoopGroup? = null
     @Volatile
     private var clientChannel: Channel? = null
@@ -59,6 +83,13 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private var currentTarget: NetworkHostAndPort = targets.first()
     private var retryInterval = MIN_RETRY_INTERVAL
     private val badCertTargets = mutableSetOf<NetworkHostAndPort>()
+    @Volatile
+    private var amqpActive = false
+    @Volatile
+    private var amqpChannelHandler: ChannelHandler? = null
+
+    val localAddressString: String
+        get() = clientChannel?.localAddress()?.toString() ?: "<unknownLocalAddress>"
 
     private fun nextTarget() {
         val origIndex = targetIndex
@@ -80,29 +111,31 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     private val connectListener = object : ChannelFutureListener {
         override fun operationComplete(future: ChannelFuture) {
+            amqpActive = false
             if (!future.isSuccess) {
                 log.info("Failed to connect to $currentTarget")
 
-                if (!stopping) {
+                if (started) {
                     workerGroup?.schedule({
                         nextTarget()
                         restart()
                     }, retryInterval, TimeUnit.MILLISECONDS)
                 }
             } else {
-                log.info("Connected to $currentTarget")
                 // Connection established successfully
                 clientChannel = future.channel()
                 clientChannel?.closeFuture()?.addListener(closeListener)
+                log.info("Connected to $currentTarget, Local address: $localAddressString")
             }
         }
     }
 
     private val closeListener = ChannelFutureListener { future ->
-        log.info("Disconnected from $currentTarget")
+        log.info("Disconnected from $currentTarget, Local address: $localAddressString")
         future.channel()?.disconnect()
         clientChannel = null
-        if (!stopping) {
+        if (started && !amqpActive) {
+            log.debug { "Scheduling restart of $currentTarget (AMQP inactive)" }
             workerGroup?.schedule({
                 nextTarget()
                 restart()
@@ -114,42 +147,109 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         private val conf = parent.configuration
+        @Volatile
+        private lateinit var amqpChannelHandler: AMQPChannelHandler
 
         init {
             keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
+            val proxyConfig = conf.proxyConfig
+            if (proxyConfig != null) {
+                if (conf.trace) pipeline.addLast(PROXY_LOGGER_NAME, LoggingHandler(LogLevel.INFO))
+                val proxyAddress = InetSocketAddress(proxyConfig.proxyAddress.host, proxyConfig.proxyAddress.port)
+                val proxy = when (conf.proxyConfig!!.version) {
+                    ProxyVersion.SOCKS4 -> {
+                        Socks4ProxyHandler(proxyAddress, proxyConfig.userName)
+                    }
+                    ProxyVersion.SOCKS5 -> {
+                        Socks5ProxyHandler(proxyAddress, proxyConfig.userName, proxyConfig.password)
+                    }
+                    ProxyVersion.HTTP -> {
+                        val httpProxyHandler = if(proxyConfig.userName == null || proxyConfig.password == null) {
+                            HttpProxyHandler(proxyAddress)
+                        } else {
+                            HttpProxyHandler(proxyAddress, proxyConfig.userName, proxyConfig.password)
+                        }
+                        //httpProxyHandler.setConnectTimeoutMillis(3600000) // 1hr for debugging purposes
+                        httpProxyHandler
+                    }
+                }
+                val proxyTimeout = proxyConfig.proxyTimeoutMS
+                if (proxyTimeout != null) {
+                    proxy.setConnectTimeoutMillis(proxyTimeout)
+                }
+                pipeline.addLast("Proxy", proxy)
+                proxy.connectFuture().addListener {
+                    if (!it.isSuccess) {
+                        ch.disconnect()
+                    }
+                }
+            }
+
+            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, parent.configuration)
             val target = parent.currentTarget
-            val handler = createClientSslHelper(target, parent.allowedRemoteLegalNames, keyManagerFactory, trustManagerFactory)
+            val handler = if (parent.configuration.useOpenSsl) {
+                createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+            } else {
+                createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
+            }
+            handler.handshakeTimeoutMillis = conf.sslHandshakeTimeout
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
-            pipeline.addLast(AMQPChannelHandler(false,
+            amqpChannelHandler = AMQPChannelHandler(false,
                     parent.allowedRemoteLegalNames,
+                    // Single entry, key can be anything.
+                    mapOf(DEFAULT to wrappedKeyManagerFactory),
                     conf.userName,
                     conf.password,
                     conf.trace,
-                    {
-                        parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
-                        parent._onConnection.onNext(it.second)
-                    },
-                    {
-                        parent._onConnection.onNext(it.second)
-                        if (it.second.badCert) {
-                            log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
-                            parent.badCertTargets += target
+                    false,
+                    onOpen = { _, change ->
+                        parent.run {
+                            amqpActive = true
+                            retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
+                            _onConnection.onNext(change)
                         }
                     },
-                    { rcv -> parent._onReceive.onNext(rcv) }))
+                    onClose = { _, change ->
+                        if (parent.amqpChannelHandler == amqpChannelHandler) {
+                            parent.run {
+                                _onConnection.onNext(change)
+                                if (change.badCert) {
+                                    log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
+                                    badCertTargets += target
+                                }
+
+                                if (started && amqpActive) {
+                                    log.debug { "Scheduling restart of $currentTarget (AMQP active)" }
+                                    workerGroup?.schedule({
+                                        nextTarget()
+                                        restart()
+                                    }, retryInterval, TimeUnit.MILLISECONDS)
+                                }
+                                amqpActive = false
+                            }
+                        }
+                    },
+                    onReceive = { rcv -> parent._onReceive.onNext(rcv) })
+            parent.amqpChannelHandler = amqpChannelHandler
+            pipeline.addLast(amqpChannelHandler)
         }
     }
 
     fun start() {
         lock.withLock {
-            log.info("connect to: $currentTarget")
+            if (started) {
+                log.info("Already connected to: $currentTarget so returning")
+                return
+            }
+            log.info("Connect to: $currentTarget")
             workerGroup = sharedThreadPool ?: NioEventLoopGroup(NUM_CLIENT_THREADS)
+            started = true
             restart()
         }
     }
@@ -161,6 +261,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
         bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
+        // Delegate DNS Resolution to the proxy side, if we are using proxy.
+        if (configuration.proxyConfig != null) {
+            bootstrap.resolver(NoopAddressResolverGroup.INSTANCE)
+        }
         currentTarget = targets[targetIndex]
         val clientFuture = bootstrap.connect(currentTarget.host, currentTarget.port)
         clientFuture.addListener(connectListener)
@@ -168,21 +272,17 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     fun stop() {
         lock.withLock {
-            log.info("disconnect from: $currentTarget")
-            stopping = true
-            try {
-                if (sharedThreadPool == null) {
-                    workerGroup?.shutdownGracefully()
-                    workerGroup?.terminationFuture()?.sync()
-                } else {
-                    clientChannel?.close()?.sync()
-                }
-                clientChannel = null
-                workerGroup = null
-            } finally {
-                stopping = false
+            log.info("Stopping connection to: $currentTarget, Local address: $localAddressString")
+            started = false
+            if (sharedThreadPool == null) {
+                workerGroup?.shutdownGracefully()
+                workerGroup?.terminationFuture()?.sync()
+            } else {
+                clientChannel?.close()?.sync()
             }
-            log.info("stopped connection to $currentTarget")
+            clientChannel = null
+            workerGroup = null
+            log.info("Stopped connection to $currentTarget")
         }
     }
 
@@ -191,7 +291,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     val connected: Boolean
         get() {
             val channel = lock.withLock { clientChannel }
-            return channel?.isActive ?: false
+            return isChannelWritable(channel)
         }
 
     fun createMessage(payload: ByteArray,
@@ -204,11 +304,15 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
     fun write(msg: SendableMessage) {
         val channel = clientChannel
-        if (channel == null) {
+        if (channel == null || !isChannelWritable(channel)) {
             throw IllegalStateException("Connection to $targets not active")
         } else {
             channel.writeAndFlush(msg)
         }
+    }
+
+    private fun isChannelWritable(channel: Channel?): Boolean {
+        return channel?.let { channel.isOpen && channel.isActive && amqpActive } ?: false
     }
 
     private val _onReceive = PublishSubject.create<ReceivedMessage>().toSerialized()

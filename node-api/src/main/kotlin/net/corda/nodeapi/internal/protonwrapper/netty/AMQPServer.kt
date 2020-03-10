@@ -1,10 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.EventLoopGroup
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -14,6 +11,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -31,7 +29,6 @@ import kotlin.concurrent.withLock
 
 /**
  * This create a socket acceptor instance that can receive possibly multiple AMQP connections.
- * As of now this is not used outside of testing, but in future it will be used for standalone bridging components.
  */
 class AMQPServer(val hostName: String,
                  val port: Int,
@@ -42,8 +39,10 @@ class AMQPServer(val hostName: String,
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
         }
 
+        private const val CORDA_AMQP_NUM_SERVER_THREAD_PROP_NAME = "net.corda.nodeapi.amqpserver.NumServerThreads"
+
         private val log = contextLogger()
-        const val NUM_SERVER_THREADS = 4
+        private val NUM_SERVER_THREADS = Integer.getInteger(CORDA_AMQP_NUM_SERVER_THREAD_PROP_NAME, 4)
     }
 
     private val lock = ReentrantLock()
@@ -60,29 +59,59 @@ class AMQPServer(val hostName: String,
         private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(conf.keyStore)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
+            keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {
+            val amqpConfiguration = parent.configuration
             val pipeline = ch.pipeline()
-            val handler = createServerSslHelper(keyManagerFactory, trustManagerFactory)
-            pipeline.addLast("sslHandler", handler)
+            amqpConfiguration.healthCheckPhrase?.let { pipeline.addLast(ModeSelectingChannel.NAME, ModeSelectingChannel(it)) }
+            val (sslHandler, keyManagerFactoriesMap) = createSSLHandler(amqpConfiguration, ch)
+            pipeline.addLast("sslHandler", sslHandler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
+            val suppressLogs = ch.remoteAddress()?.hostString in amqpConfiguration.silencedIPs
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
+                    // Passing a mapping of legal names to key managers to be able to pick the correct one after
+                    // SNI completion event is fired up.
+                    keyManagerFactoriesMap,
                     conf.userName,
                     conf.password,
                     conf.trace,
-                    {
-                        parent.clientChannels[it.first.remoteAddress()] = it.first
-                        parent._onConnection.onNext(it.second)
+                    suppressLogs,
+                    onOpen = { channel, change ->
+                        parent.run {
+                            clientChannels[channel.remoteAddress()] = channel
+                            _onConnection.onNext(change)
+                        }
                     },
-                    {
-                        parent.clientChannels.remove(it.first.remoteAddress())
-                        parent._onConnection.onNext(it.second)
+                    onClose = { channel, change ->
+                        parent.run {
+                            val remoteAddress = channel.remoteAddress()
+                            clientChannels.remove(remoteAddress)
+                            _onConnection.onNext(change)
+                        }
                     },
-                    { rcv -> parent._onReceive.onNext(rcv) }))
+                    onReceive = { rcv -> parent._onReceive.onNext(rcv) }))
+        }
+
+        private fun createSSLHandler(amqpConfig: AMQPConfiguration, ch: SocketChannel): Pair<ChannelHandler, Map<String, CertHoldingKeyManagerFactoryWrapper>> {
+            return if (amqpConfig.useOpenSsl && amqpConfig.enableSNI && amqpConfig.keyStore.aliases().size > 1) {
+                val keyManagerFactoriesMap = splitKeystore(amqpConfig)
+                // SNI matching needed only when multiple nodes exist behind the server.
+                Pair(createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
+            } else {
+                val keyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfig)
+                val handler = if (amqpConfig.useOpenSsl) {
+                    createServerOpenSslHandler(keyManagerFactory, trustManagerFactory, ch.alloc())
+                } else {
+                    // For javaSSL, SNI matching is handled at key manager level.
+                    createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
+                }
+                handler.handshakeTimeoutMillis = amqpConfig.sslHandshakeTimeout
+                Pair(handler, mapOf(DEFAULT to keyManagerFactory))
+            }
         }
     }
 
@@ -95,7 +124,10 @@ class AMQPServer(val hostName: String,
 
             val server = ServerBootstrap()
             // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-            server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java).option(ChannelOption.SO_BACKLOG, 100).handler(LoggingHandler(LogLevel.INFO)).childHandler(ServerChannelInitializer(this))
+            server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(NettyServerEventLogger(LogLevel.INFO, configuration.silencedIPs))
+                    .childHandler(ServerChannelInitializer(this))
 
             log.info("Try to bind $port")
             val channelFuture = server.bind(hostName, port).sync() // block/throw here as better to know we failed to claim port than carry on
@@ -144,7 +176,7 @@ class AMQPServer(val hostName: String,
         requireMessageSize(payload.size, configuration.maxMessageSize)
         val dest = InetSocketAddress(destinationLink.host, destinationLink.port)
         require(dest in clientChannels.keys) {
-            "Destination not available"
+            "Destination $dest is not available"
         }
         return SendableMessageImpl(payload, topic, destinationLegalName, destinationLink, properties)
     }
@@ -155,21 +187,22 @@ class AMQPServer(val hostName: String,
         if (channel == null) {
             throw IllegalStateException("Connection to ${msg.destinationLink} not active")
         } else {
+            log.debug { "Writing message with payload of size ${msg.payload.size} into channel $channel" }
             channel.writeAndFlush(msg)
+            log.debug { "Done writing message with payload of size ${msg.payload.size} into channel $channel" }
         }
     }
 
     fun dropConnection(connectionRemoteHost: InetSocketAddress) {
-        val channel = clientChannels[connectionRemoteHost]
-        if (channel != null) {
-            channel.close()
-        }
+        clientChannels[connectionRemoteHost]?.close()
     }
 
     fun complete(delivery: Delivery, target: InetSocketAddress) {
         val channel = clientChannels[target]
         channel?.apply {
+            log.debug { "Writing delivery $delivery into channel $channel" }
             writeAndFlush(delivery)
+            log.debug { "Done writing delivery $delivery into channel $channel" }
         }
     }
 

@@ -5,11 +5,16 @@ import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.channel.socket.SocketChannel
+import io.netty.handler.proxy.ProxyConnectException
+import io.netty.handler.proxy.ProxyConnectionEvent
+import io.netty.handler.ssl.SniCompletionEvent
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
+import net.corda.nodeapi.internal.ArtemisConstants.MESSAGE_ID_KEY
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.engine.EventProcessor
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
@@ -23,6 +28,8 @@ import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
+import javax.net.ssl.ExtendedSSLSession
+import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLException
 
 /**
@@ -32,21 +39,26 @@ import javax.net.ssl.SSLException
  */
 internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val allowedRemoteLegalNames: Set<CordaX500Name>?,
+                                  private val keyManagerFactoriesMap: Map<String, CertHoldingKeyManagerFactoryWrapper>,
                                   private val userName: String?,
                                   private val password: String?,
                                   private val trace: Boolean,
-                                  private val onOpen: (Pair<SocketChannel, ConnectionChange>) -> Unit,
-                                  private val onClose: (Pair<SocketChannel, ConnectionChange>) -> Unit,
+                                  private val suppressLogs: Boolean,
+                                  private val onOpen: (SocketChannel, ConnectionChange) -> Unit,
+                                  private val onClose: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
     companion object {
         private val log = contextLogger()
+        const val PROXY_LOGGER_NAME = "preProxyLogger"
     }
 
     private lateinit var remoteAddress: InetSocketAddress
-    private var localCert: X509Certificate? = null
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
+    private var suppressClose: Boolean = false
     private var badCert: Boolean = false
+    private var localCert: X509Certificate? = null
+    private var requestedServerName: String? = null
 
     private fun withMDC(block: () -> Unit) {
         val oldMDC = MDC.getCopyOfContextMap() ?: emptyMap<String, String>()
@@ -62,39 +74,50 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         }
     }
 
-    private fun logDebugWithMDC(msg: () -> String) {
-        if (log.isDebugEnabled) {
-            withMDC { log.debug(msg()) }
+    private fun logDebugWithMDC(msgFn: () -> String) {
+        if (!suppressLogs) {
+            if (log.isDebugEnabled) {
+                withMDC { log.debug(msgFn()) }
+            }
+        } else {
+            withMDC { log.trace(msgFn) }
         }
     }
 
-    private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
+    private fun logInfoWithMDC(msgFn: () -> String) {
+        if (!suppressLogs) {
+            if (log.isInfoEnabled) {
+                withMDC { log.info(msgFn()) }
+            }
+        } else {
+            withMDC { log.trace(msgFn) }
+        }
+    }
 
-    private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
+    private fun logWarnWithMDC(msg: String) = withMDC { if (!suppressLogs) log.warn(msg) else log.trace { msg } }
 
-    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.error(msg, ex) }
-
+    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { if (!suppressLogs) log.error(msg, ex) else log.trace(msg, ex) }
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         remoteAddress = ch.remoteAddress() as InetSocketAddress
         val localAddress = ch.localAddress() as InetSocketAddress
-        logInfoWithMDC("New client connection ${ch.id()} from $remoteAddress to $localAddress")
+        logInfoWithMDC { "New client connection ${ch.id()} from $remoteAddress to $localAddress" }
     }
 
     private fun createAMQPEngine(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         eventProcessor = EventProcessor(ch, serverMode, localCert!!.subjectX500Principal.toString(), remoteCert!!.subjectX500Principal.toString(), userName, password)
-        val connection = eventProcessor!!.connection
-        val transport = connection.transport as ProtonJTransport
         if (trace) {
+            val connection = eventProcessor!!.connection
+            val transport = connection.transport as ProtonJTransport
             transport.protocolTracer = object : ProtocolTracer {
                 override fun sentFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC("${transportFrame.body}")
+                    logInfoWithMDC { "${transportFrame.body}" }
                 }
 
                 override fun receivedFrame(transportFrame: TransportFrame) {
-                    logInfoWithMDC("${transportFrame.body}")
+                    logInfoWithMDC { "${transportFrame.body}" }
                 }
             }
         }
@@ -104,51 +127,60 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
-        logInfoWithMDC("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
-        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert)))
+        logInfoWithMDC { "Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}" }
+        if (!suppressClose) {
+            onClose(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert))
+        }
         eventProcessor?.close()
         ctx.fireChannelInactive()
     }
 
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
-        if (evt is SslHandshakeCompletionEvent) {
-            if (evt.isSuccess) {
-                val sslHandler = ctx.pipeline().get(SslHandler::class.java)
-                localCert = sslHandler.engine().session.localCertificates[0].x509
-                remoteCert = sslHandler.engine().session.peerCertificates[0].x509
-                val remoteX500Name = try {
-                    CordaX500Name.build(remoteCert!!.subjectX500Principal)
-                } catch (ex: IllegalArgumentException) {
-                    badCert = true
-                    logErrorWithMDC("Certificate subject not a valid CordaX500Name", ex)
-                    ctx.close()
-                    return
+        when (evt) {
+            is ProxyConnectionEvent -> {
+                if (trace) {
+                    log.info("ProxyConnectionEvent received: $evt")
+                    try {
+                        ctx.pipeline().remove(PROXY_LOGGER_NAME)
+                    } catch (ex: NoSuchElementException) {
+                        // ignore
+                    }
                 }
-                if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
-                    badCert = true
-                    logErrorWithMDC("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
-                    ctx.close()
-                    return
-                }
-                logInfoWithMDC("Handshake completed with subject: $remoteX500Name")
-                createAMQPEngine(ctx)
-                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
-            } else {
-                val cause = evt.cause()
-                // This happens when the peer node is closed during SSL establishment.
-                if (cause is ClosedChannelException) {
-                    logWarnWithMDC("SSL Handshake closed early.")
-                } else if (cause is SSLException && cause.message == "handshake timed out") { // Sadly the exception thrown by Netty wrapper requires that we check the message.
-                    logWarnWithMDC("SSL Handshake timed out")
-                } else {
-                    badCert = true
-                }
-                logErrorWithMDC("Handshake failure ${evt.cause().message}")
-                if (log.isTraceEnabled) {
-                    withMDC { log.trace("Handshake failure", evt.cause()) }
-                }
-                ctx.close()
+                // update address to the real target address
+                remoteAddress = evt.destinationAddress()
             }
+            is SniCompletionEvent -> {
+                if (evt.isSuccess) {
+                    // The SniCompletionEvent is fired up before context is switched (after SslHandshakeCompletionEvent)
+                    // so we save the requested server name now to be able log it once the handshake is completed successfully
+                    // Note: this event is only triggered when using OpenSSL.
+                    requestedServerName = evt.hostname()
+                    logInfoWithMDC { "SNI completion success." }
+                } else {
+                    logErrorWithMDC("SNI completion failure: ${evt.cause().message}")
+                }
+            }
+            is SslHandshakeCompletionEvent -> {
+                if (evt.isSuccess) {
+                    handleSuccessfulHandshake(ctx)
+                } else {
+                    handleFailedHandshake(ctx, evt)
+                }
+            }
+        }
+    }
+
+    private fun SslHandler.getRequestedServerName(): String? {
+        return if (serverMode) {
+            val session = engine().session
+            when (session) {
+                // Server name can be obtained from SSL session when using JavaSSL.
+                is ExtendedSSLSession -> (session.requestedServerNames.firstOrNull() as? SNIHostName)?.asciiName
+                // For Open SSL server name is obtained from SniCompletionEvent
+                else -> requestedServerName
+            }
+        } else {
+            (engine().sslParameters?.serverNames?.firstOrNull() as? SNIHostName)?.asciiName
         }
     }
 
@@ -157,6 +189,10 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         logWarnWithMDC("Closing channel due to nonrecoverable exception ${cause.message}")
         if (log.isTraceEnabled) {
             withMDC { log.trace("Pipeline uncaught exception", cause) }
+        }
+        if (cause is ProxyConnectException) {
+            log.warn("Proxy connection failed ${cause.message}")
+            suppressClose = true // The pipeline gets marked as active on connection to the proxy rather than to the target, which causes excess close events
         }
         ctx.close()
     }
@@ -176,27 +212,27 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         try {
             try {
                 when (msg) {
-                // Transfers application packet into the AMQP engine.
+                    // Transfers application packet into the AMQP engine.
                     is SendableMessageImpl -> {
                         val inetAddress = InetSocketAddress(msg.destinationLink.host, msg.destinationLink.port)
-                       logDebugWithMDC { "Message for endpoint $inetAddress , expected $remoteAddress "}
+                        logDebugWithMDC { "Message for endpoint $inetAddress , expected $remoteAddress " }
 
                         require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert!!.subjectX500Principal)) {
                             "Message for incorrect legal identity ${msg.destinationLegalName} expected ${remoteCert!!.subjectX500Principal}"
                         }
-                        logDebugWithMDC { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }
+                        logDebugWithMDC { "channel write ${msg.applicationProperties[MESSAGE_ID_KEY]}" }
                         eventProcessor!!.transportWriteMessage(msg)
                     }
-                // A received AMQP packet has been completed and this self-posted packet will be signalled out to the
-                // external application.
+                    // A received AMQP packet has been completed and this self-posted packet will be signalled out to the
+                    // external application.
                     is ReceivedMessage -> {
                         onReceive(msg)
                     }
-                // A general self-posted event that triggers creation of AMQP frames when required.
+                    // A general self-posted event that triggers creation of AMQP frames when required.
                     is Transport -> {
                         eventProcessor!!.transportProcessOutput(ctx)
                     }
-                // A self-posted event that forwards status updates for delivered packets to the application.
+                    // A self-posted event that forwards status updates for delivered packets to the application.
                     is ReceivedMessageImpl.MessageCompleter -> {
                         eventProcessor!!.complete(msg)
                     }
@@ -209,5 +245,66 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             ReferenceCountUtil.release(msg)
         }
         eventProcessor!!.processEventsAsync()
+    }
+
+    private fun handleSuccessfulHandshake(ctx: ChannelHandlerContext) {
+        val sslHandler = ctx.pipeline().get(SslHandler::class.java)
+        val sslSession = sslHandler.engine().session
+        // Depending on what matching method is used, getting the local certificate is done by selecting the
+        // appropriate keyManagerFactory
+        val keyManagerFactory = requestedServerName?.let {
+            keyManagerFactoriesMap[it]
+        } ?: keyManagerFactoriesMap.values.single()
+
+        localCert = keyManagerFactory.getCurrentCertChain()?.first()
+
+        if (localCert == null) {
+            log.error("SSL KeyManagerFactory failed to provide a local cert")
+            ctx.close()
+            return
+        }
+        if (sslSession.peerCertificates == null || sslSession.peerCertificates.isEmpty()) {
+            log.error("No peer certificates")
+            ctx.close()
+            return
+        }
+        remoteCert = sslHandler.engine().session.peerCertificates.first().x509
+        val remoteX500Name = try {
+            CordaX500Name.build(remoteCert!!.subjectX500Principal)
+        } catch (ex: IllegalArgumentException) {
+            badCert = true
+            logErrorWithMDC("Certificate subject not a valid CordaX500Name", ex)
+            ctx.close()
+            return
+        }
+        if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
+            badCert = true
+            logErrorWithMDC("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
+            ctx.close()
+            return
+        }
+
+        logInfoWithMDC { "Handshake completed with subject: $remoteX500Name, requested server name: ${sslHandler.getRequestedServerName()}." }
+        createAMQPEngine(ctx)
+        onOpen(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, connected = true, badCert = false))
+    }
+
+    private fun handleFailedHandshake(ctx: ChannelHandlerContext, evt: SslHandshakeCompletionEvent) {
+        val cause = evt.cause()
+        // This happens when the peer node is closed during SSL establishment.
+        when {
+            cause is ClosedChannelException -> logWarnWithMDC("SSL Handshake closed early.")
+            // Sadly the exception thrown by Netty wrapper requires that we check the message.
+            cause is SSLException && cause.message == "handshake timed out" -> logWarnWithMDC("SSL Handshake timed out")
+            cause is SSLException && (cause.message?.contains("close_notify") == true)
+                                                                           -> logWarnWithMDC("Received close_notify during handshake")
+
+            else -> badCert = true
+        }
+        logWarnWithMDC("Handshake failure: ${evt.cause().message}")
+        if (log.isTraceEnabled) {
+            withMDC { log.trace("Handshake failure", evt.cause()) }
+        }
+        ctx.close()
     }
 }
