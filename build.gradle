@@ -633,76 +633,76 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-class GeneralPurpose {
-    protected def numberOfShards = 10
-    protected def streamOutput = false
-    protected def coresPerFork = 2
-    protected def memoryInGbPerFork = 12
-    protected def nodeTaints = "small"
-}
+ext.generalPurpose  = [
+        numberOfShards: 10,
+        streamOutput: false,
+        coresPerFork: 2,
+        memoryInGbPerFork: 12,
+        nodeTaints: "small"
+]
 
-class LargeScaleSet {
-    protected def numberOfShards = 15
-    protected def streamOutput = false
-    protected def coresPerFork = 6
-    protected def memoryInGbPerFork = 10
-    protected def nodeTaints = "big"
-}
+ext.largeScaleSet  = [
+        numberOfShards: 15,
+        streamOutput: false,
+        coresPerFork: 6,
+        memoryInGbPerFork: 10,
+        nodeTaints: "big"
+]
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
-    numberOfShards GeneralPurpose.numberOfShards
-    streamOutput GeneralPurpose.streamOutput
-    coresPerFork GeneralPurpose.coresPerFork
-    memoryInGbPerFork GeneralPurpose.memoryInGbPerFork
-    nodeTaints GeneralPurpose.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     podLogLevel PodLogLevel.INFO
     testGroups "test"
-    numberOfShards GeneralPurpose.numberOfShards
-    streamOutput GeneralPurpose.streamOutput
-    coresPerFork GeneralPurpose.coresPerFork
-    memoryInGbPerFork GeneralPurpose.memoryInGbPerFork
-    nodeTaints GeneralPurpose.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
-    numberOfShards LargeScaleSet.numberOfShards
-    streamOutput LargeScaleSet.streamOutput
-    coresPerFork LargeScaleSet.coresPerFork
-    memoryInGbPerFork LargeScaleSet.memoryInGbPerFork
-    nodeTaints LargeScaleSet.nodeTaints
+    numberOfShards largeScaleSet.numberOfShards
+    streamOutput largeScaleSet.streamOutput
+    coresPerFork largeScaleSet.coresPerFork
+    memoryInGbPerFork largeScaleSet.memoryInGbPerFork
+    nodeTaints largeScaleSet.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "smokeTest"
-    numberOfShards LargeScaleSet.numberOfShards
-    streamOutput LargeScaleSet.streamOutput
-    coresPerFork LargeScaleSet.coresPerFork
-    memoryInGbPerFork LargeScaleSet.memoryInGbPerFork
-    nodeTaints LargeScaleSet.nodeTaints
+    numberOfShards largeScaleSet.numberOfShards
+    streamOutput largeScaleSet.streamOutput
+    coresPerFork largeScaleSet.coresPerFork
+    memoryInGbPerFork largeScaleSet.memoryInGbPerFork
+    nodeTaints largeScaleSet.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "smokeTest"
-    numberOfShards GeneralPurpose.numberOfShards
-    streamOutput GeneralPurpose.streamOutput
-    coresPerFork GeneralPurpose.coresPerFork
-    memoryInGbPerFork GeneralPurpose.memoryInGbPerFork
-    nodeTaints GeneralPurpose.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest"
-    numberOfShards GeneralPurpose.numberOfShards
-    streamOutput GeneralPurpose.streamOutput
-    coresPerFork GeneralPurpose.coresPerFork
-    memoryInGbPerFork GeneralPurpose.memoryInGbPerFork
-    nodeTaints GeneralPurpose.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 apply plugin: 'com.r3.testing.distributed-testing'
