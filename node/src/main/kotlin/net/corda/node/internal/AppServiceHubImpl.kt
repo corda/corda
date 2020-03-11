@@ -117,7 +117,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(
             startedType = DBCheckpointStorage.StartReason.SERVICE,
             // the name of the service starting the flow (qualified name is too long)
             // make the field longer or limit the name (the service name could be long as well)
-            rpcUser = serviceInstance::class.simpleName!!
+            startedBy = serviceInstance::class.simpleName!!
         )
         return flowStarter.startFlow(flow, context).getOrThrow()
     }

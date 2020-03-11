@@ -1,7 +1,6 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -200,8 +199,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Column(name = "platform_version", nullable = false)
         var platformVersion: Int,
 
-        @Column(name = "rpc_user", nullable = false)
-        var rpcUsername: String,
+        @Column(name = "started_by", nullable = false)
+        var startedBy: String,
 
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
@@ -259,7 +258,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
                 initialParameters = metadata.parameters.storageSerialize().bytes,
                 launchingCordapp = launchingCordapp,
                 platformVersion = platformVersion,
-                rpcUsername = rpcUser,
+                startedBy = startedBy,
                 invocationInstant = invocationInstant,
                 receivedInstant = receivedInstant,
                 startInstant = null,
@@ -287,7 +286,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
         // Need to update the metadata record to join it to the main checkpoint record
-
         val metadata = requireNotNull(
             currentDBSession().find(
                 DBFlowMetadata::class.java,

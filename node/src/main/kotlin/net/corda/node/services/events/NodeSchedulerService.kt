@@ -290,7 +290,7 @@ class NodeSchedulerService(
                         invocationContext = context,
                         startedType = DBCheckpointStorage.StartReason.SCHEDULED,
                         // Would be great to have the name of the state that triggered this scheduled operation
-                        rpcUser = serviceHub.myInfo.legalIdentities[0].name.toString()
+                        startedBy = serviceHub.myInfo.legalIdentities[0].name.toString()
                     )
                     flowStarter.startFlow(startFlowEvent)
                 }

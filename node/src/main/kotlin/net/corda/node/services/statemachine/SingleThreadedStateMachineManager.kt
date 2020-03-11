@@ -557,7 +557,7 @@ class SingleThreadedStateMachineManager(
             flow = flowLogic::class.java,
             invocationContext = invocationContext,
             startedType = DBCheckpointStorage.StartReason.INITIATED,
-            rpcUser = peerSession.counterparty.name.toString()
+            startedBy = peerSession.counterparty.name.toString()
         )
         val ourIdentity = ourFirstIdentity
         startFlowInternal(

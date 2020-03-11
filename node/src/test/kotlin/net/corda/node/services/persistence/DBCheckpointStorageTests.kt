@@ -525,7 +525,7 @@ class DBCheckpointStorageTests {
             startType = DBCheckpointStorage.StartReason.RPC,
             launchingCordapp = "this cordapp",
             platformVersion = PLATFORM_VERSION,
-            rpcUsername = "Batman",
+            startedBy = "Batman",
             invocationInstant = checkpoint.checkpointState.invocationContext.trace.invocationId.timestamp,
             receivedInstant = Instant.now(),
             startInstant = null,

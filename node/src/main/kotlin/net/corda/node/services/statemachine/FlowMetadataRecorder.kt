@@ -18,7 +18,7 @@ class FlowMetadataRecorder(
         flow: Class<out FlowLogic<*>>,
         invocationContext: InvocationContext,
         startedType: DBCheckpointStorage.StartReason,
-        rpcUser: String,
+        startedBy: String,
         parameters: List<Any?> = emptyList(),
         userSuppliedIdentifier: String? = null
     ) {
@@ -39,7 +39,7 @@ class FlowMetadataRecorder(
                     launchingCordapp = "where do I get this info?",
                     platformVersion = PLATFORM_VERSION,
                     // might be able to keep the code above depends on what the context contains in it
-                    rpcUser = rpcUser,
+                    startedBy = startedBy,
                     invocationInstant = invocationContext.trace.invocationId.timestamp,
                     // Just take now's time or record it earlier and pass it to here?
                     receivedInstant = clock.instant()

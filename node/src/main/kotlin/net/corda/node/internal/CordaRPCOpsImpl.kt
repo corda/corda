@@ -264,7 +264,7 @@ internal class CordaRPCOpsImpl(
             flow = logicType,
             invocationContext = context,
             startedType = DBCheckpointStorage.StartReason.RPC,
-            rpcUser = context.actor?.id?.value ?: UNKNOWN_RPC_USER,
+            startedBy = context.actor?.id?.value ?: UNKNOWN_RPC_USER,
             parameters = args.toList(),
             // This is will need to be filled in by the actual userSuppliedIdentifier in future changes
             userSuppliedIdentifier = null

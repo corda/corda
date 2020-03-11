@@ -60,7 +60,7 @@ interface CheckpointStorage {
         val parameters: List<Any?>,
         val launchingCordapp: String,
         val platformVersion: Int,
-        val rpcUser: String,
+        val startedBy: String,
         val invocationInstant: Instant,
         val receivedInstant: Instant
     )

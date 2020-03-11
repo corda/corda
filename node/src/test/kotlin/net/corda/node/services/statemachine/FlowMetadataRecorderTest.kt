@@ -105,7 +105,7 @@ class FlowMetadataRecorderTest {
                 // Needs to be filled in
                 assertEquals("where do I get this info?", it.launchingCordapp)
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
-                assertEquals(user.username, it.rpcUsername)
+                assertEquals(user.username, it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.receivedInstant >= it.invocationInstant)
                 assertNull(it.startInstant)
@@ -153,7 +153,7 @@ class FlowMetadataRecorderTest {
                 // needs to be filled in
                 assertEquals("where do I get this info?", it.launchingCordapp)
                 assertEquals(6, it.platformVersion)
-                assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.rpcUsername)
+                assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.receivedInstant >= it.invocationInstant)
                 assertNull(it.startInstant)
@@ -201,7 +201,7 @@ class FlowMetadataRecorderTest {
                 // needs to be filled in
                 assertEquals("where do I get this info?", it.launchingCordapp)
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
-                assertEquals(MyService::class.simpleName, it.rpcUsername)
+                assertEquals(MyService::class.simpleName, it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.receivedInstant >= it.invocationInstant)
                 assertNull(it.startInstant)
@@ -259,7 +259,7 @@ class FlowMetadataRecorderTest {
                 // needs to be filled in
                 assertEquals("where do I get this info?", it.launchingCordapp)
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
-                assertEquals(nodeAHandle.nodeInfo.singleIdentity().toString(), it.rpcUsername)
+                assertEquals(nodeAHandle.nodeInfo.singleIdentity().toString(), it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.receivedInstant >= it.invocationInstant)
                 assertNull(it.startInstant)

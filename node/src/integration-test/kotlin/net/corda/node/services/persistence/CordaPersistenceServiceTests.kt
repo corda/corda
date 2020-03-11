@@ -94,7 +94,7 @@ class CordaPersistenceServiceTests {
                 startType = DBCheckpointStorage.StartReason.RPC,
                 launchingCordapp = "this cordapp",
                 platformVersion = PLATFORM_VERSION,
-                rpcUsername = "Batman",
+                startedBy = "Batman",
                 invocationInstant = Instant.now(),
                 receivedInstant = Instant.now(),
                 startInstant = timestamp,
