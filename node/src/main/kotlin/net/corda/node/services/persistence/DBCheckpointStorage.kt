@@ -248,6 +248,28 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         }
     }
 
+    override fun addMetadata(metadata: CheckpointStorage.FlowMetadata) {
+        metadata.run {
+            DBFlowMetadata(
+                invocationId = invocationId,
+                flowId = null,
+                flowName = flowName,
+                userSuppliedIdentifier = userSuppliedIdentifier,
+                startType = startedType,
+                initialParameters = metadata.parameters.storageSerialize().bytes,
+                launchingCordapp = launchingCordapp,
+                platformVersion = platformVersion,
+                rpcUsername = rpcUser,
+                invocationInstant = invocationInstant,
+                receivedInstant = receivedInstant,
+                startInstant = null,
+                finishInstant = null
+            ).apply {
+                currentDBSession().save(this)
+            }
+        }
+    }
+
     private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
@@ -260,22 +282,18 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val flowId = id.uuid.toString()
         val now = Instant.now()
         val invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value
-
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
         // Need to update the metadata record to join it to the main checkpoint record
 
-        // This code needs to be added back in once the metadata record is properly created (remove the code below it)
-        //        val metadata = requireNotNull(currentDBSession().find(
-        //            DBFlowMetadata::class.java,
-        //            invocationId
-        //        )) { "The flow metadata record for flow [$flowId] with invocation id [$invocationId] does not exist"}
-        val metadata = (currentDBSession().find(
-            DBFlowMetadata::class.java,
-            invocationId
-        )) ?: createTemporaryMetadata(checkpoint)
+        val metadata = requireNotNull(
+            currentDBSession().find(
+                DBFlowMetadata::class.java,
+                invocationId
+            )
+        ) { "The flow metadata record for flow [$flowId] with invocation id [$invocationId] does not exist" }
         metadata.flowId = flowId
         currentDBSession().update(metadata)
         // Most fields are null as they cannot have been set when creating the initial checkpoint
@@ -291,26 +309,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             ioRequestType = null,
             checkpointInstant = Instant.now()
         )
-    }
-
-    // Remove this when saving of metadata is properly handled
-    private fun createTemporaryMetadata(checkpoint: Checkpoint): DBFlowMetadata {
-        return DBFlowMetadata(
-            invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value,
-            flowId = null,
-            flowName = "random.flow",
-            userSuppliedIdentifier = null,
-            startType = DBCheckpointStorage.StartReason.RPC,
-            launchingCordapp = "this cordapp",
-            platformVersion = PLATFORM_VERSION,
-            rpcUsername = "Batman",
-            invocationInstant = checkpoint.checkpointState.invocationContext.trace.invocationId.timestamp,
-            receivedInstant = Instant.now(),
-            startInstant = null,
-            finishInstant = null
-        ).apply {
-            currentDBSession().save(this)
-        }
     }
 
     private fun updateDBCheckpoint(

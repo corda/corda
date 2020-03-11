@@ -51,8 +51,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
+import net.corda.node.services.statemachine.FlowMetadataRecorder
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
@@ -72,12 +74,14 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
+        private val flowMetadataRecorder: FlowMetadataRecorder,
         private val checkpointDumper: CheckpointDumperImpl,
         private val shutdownNode: () -> Unit
 ) : InternalCordaRPCOps, AutoCloseable {
 
     private companion object {
-        private val logger = loggerFor<CordaRPCOpsImpl>()
+        val logger = loggerFor<CordaRPCOpsImpl>()
+        val UNKNOWN_RPC_USER = "Unknown RPC user"
     }
 
     private val drainingShutdownHook = AtomicReference<Subscription?>()
@@ -255,6 +259,16 @@ internal class CordaRPCOpsImpl(
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
+        val context = context()
+        flowMetadataRecorder.record(
+            flow = logicType,
+            invocationContext = context,
+            startedType = DBCheckpointStorage.StartReason.RPC,
+            rpcUser = context.actor?.id?.value ?: UNKNOWN_RPC_USER,
+            parameters = args.toList(),
+            // This is will need to be filled in by the actual userSuppliedIdentifier in future changes
+            userSuppliedIdentifier = null
+        )
         return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
     }
 

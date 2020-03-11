@@ -121,6 +121,7 @@ import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.statemachine.FlowMetadataRecorder
 import net.corda.node.services.statemachine.FlowMonitor
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
@@ -319,18 +320,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected val network: MessagingService = makeMessagingService().tokenize()
     val services = ServiceHubInternalImpl().tokenize()
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics))
+    val flowMetadataRecorder = FlowMetadataRecorder(checkpointStorage, platformClock, database)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
     private val schedulerService = NodeSchedulerService(
-            platformClock,
-            database,
-            flowStarter,
-            servicesForResolution,
-            flowLogicRefFactory,
-            nodeProperties,
-            configuration.drainingModePollPeriod,
-            unfinishedSchedules = busyNodeLatch
+        platformClock,
+        database,
+        flowStarter,
+        services,
+        flowLogicRefFactory,
+        flowMetadataRecorder,
+        nodeProperties,
+        configuration.drainingModePollPeriod,
+        unfinishedSchedules = busyNodeLatch
     ).tokenize().closeOnStop()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
@@ -388,10 +391,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(cordappLoader: CordappLoader, checkpointDumper: CheckpointDumperImpl): CordaRPCOps {
         val ops: InternalCordaRPCOps = CordaRPCOpsImpl(
-                services,
-                smm,
-                flowStarter,
-                checkpointDumper
+            services,
+            smm,
+            flowStarter,
+            flowMetadataRecorder,
+            checkpointDumper
         ) {
             shutdownExecutor.submit(::stop)
         }.also { it.closeOnStop() }
@@ -680,13 +684,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun makeStateMachineManager(): StateMachineManager {
         return SingleThreadedStateMachineManager(
-                services,
-                checkpointStorage,
-                serverThread,
-                database,
-                newSecureRandom(),
-                busyNodeLatch,
-                cordappLoader.appClassLoader
+            services,
+            checkpointStorage,
+            serverThread,
+            database,
+            flowMetadataRecorder,
+            newSecureRandom(),
+            busyNodeLatch,
+            cordappLoader.appClassLoader
         )
     }
 
@@ -798,7 +803,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
-            val serviceContext = AppServiceHubImpl<T>(services, flowStarter, transactionSupport, nodeLifecycleEventsDistributor)
+            val serviceContext = AppServiceHubImpl<T>(
+                services,
+                flowStarter,
+                flowMetadataRecorder,
+                transactionSupport,
+                nodeLifecycleEventsDistributor
+            )
             val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
             val service = extendedServiceConstructor.newInstance(serviceContext)
             serviceContext.serviceInstance = service

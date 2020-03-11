@@ -34,6 +34,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
@@ -70,6 +71,7 @@ class SingleThreadedStateMachineManager(
         private val checkpointStorage: CheckpointStorage,
         val executor: ExecutorService,
         val database: CordaPersistence,
+        private val flowMetadataRecorder: FlowMetadataRecorder,
         private val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
         private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
@@ -550,15 +552,22 @@ class SingleThreadedStateMachineManager(
             initiatedFlowInfo: FlowInfo
     ) {
         val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
+        val invocationContext = InvocationContext.peer(peerSession.counterparty.name)
+        flowMetadataRecorder.record(
+            flow = flowLogic::class.java,
+            invocationContext = invocationContext,
+            startedType = DBCheckpointStorage.StartReason.INITIATED,
+            rpcUser = peerSession.counterparty.name.toString()
+        )
         val ourIdentity = ourFirstIdentity
         startFlowInternal(
-                flowId,
-                InvocationContext.peer(peerSession.counterparty.name),
-                flowLogic,
-                flowStart,
-                ourIdentity,
-                initiatingMessageDeduplicationHandler,
-                isStartIdempotent = false
+            flowId,
+            invocationContext,
+            flowLogic,
+            flowStart,
+            ourIdentity,
+            initiatingMessageDeduplicationHandler,
+            isStartIdempotent = false
         )
     }
 

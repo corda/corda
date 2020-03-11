@@ -3,8 +3,10 @@ package net.corda.node.services.api
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowState
+import java.time.Instant
 import java.util.stream.Stream
 
 /**
@@ -42,4 +44,24 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    fun addMetadata(metadata: FlowMetadata)
+
+    // should use the still serialized parameters to save extra serialization
+    // passing in serialized arguments means that the flow name will be included
+    // as that is one of the arguments to start flow
+    // this is correctness vs performance
+    // the flow name could always be removed on the client side
+    data class FlowMetadata(
+        val invocationId: String,
+        val flowName: String,
+        val userSuppliedIdentifier: String?,
+        val startedType: DBCheckpointStorage.StartReason,
+        val parameters: List<Any?>,
+        val launchingCordapp: String,
+        val platformVersion: Int,
+        val rpcUser: String,
+        val invocationInstant: Instant,
+        val receivedInstant: Instant
+    )
 }

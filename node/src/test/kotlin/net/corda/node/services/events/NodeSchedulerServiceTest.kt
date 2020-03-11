@@ -8,12 +8,18 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.CheckpointPerformanceRecorder
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.FlowMetadataRecorder
+import net.corda.node.services.statemachine.FlowState
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.configureDatabase
@@ -66,7 +72,7 @@ open class NodeSchedulerServiceTestBase {
     }
 
     protected val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
-    protected val servicesForResolution = rigorousMock<ServicesForResolution>().also {
+    protected val servicesForResolution = rigorousMock<ServiceHub>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
 
@@ -135,16 +141,30 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
         database.close()
     }
 
+    private val flowMetadataRecorder = FlowMetadataRecorder(
+        DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+            override fun record(
+                serializedCheckpointState: SerializedBytes<CheckpointState>,
+                serializedFlowState: SerializedBytes<FlowState>
+            ) {
+                // do nothing
+            }
+        }),
+        testClock,
+        database
+    )
+
     private val scheduler = NodeSchedulerService(
-            testClock,
-            database,
-            flowStarter,
-            servicesForResolution,
-            flowLogicRefFactory,
-            nodeProperties,
-            Duration.ofSeconds(5),
-            log,
-            schedulerRepo = MockScheduledFlowRepository()
+        testClock,
+        database,
+        flowStarter,
+        servicesForResolution,
+        flowLogicRefFactory,
+        flowMetadataRecorder,
+        nodeProperties,
+        Duration.ofSeconds(5),
+        log,
+        schedulerRepo = MockScheduledFlowRepository()
     ).apply { start() }
 
     @Rule
@@ -256,16 +276,31 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     private val databaseConfig: DatabaseConfig = DatabaseConfig()
 
+
     private fun createScheduler(db: CordaPersistence): NodeSchedulerService {
+        val flowMetadataRecorder = FlowMetadataRecorder(
+            DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+                override fun record(
+                    serializedCheckpointState: SerializedBytes<CheckpointState>,
+                    serializedFlowState: SerializedBytes<FlowState>
+                ) {
+                    // do nothing
+                }
+            }),
+            testClock,
+            db
+        )
         return NodeSchedulerService(
-                testClock,
-                db,
-                flowStarter,
-                servicesForResolution,
-                flowLogicRefFactory = flowLogicRefFactory,
-                nodeProperties = nodeProperties,
-                drainingModePollPeriod = Duration.ofSeconds(5),
-                log = log).apply { start() }
+            testClock,
+            db,
+            flowStarter,
+            servicesForResolution,
+            flowLogicRefFactory = flowLogicRefFactory,
+            flowMetadataRecorder = flowMetadataRecorder,
+            nodeProperties = nodeProperties,
+            drainingModePollPeriod = Duration.ofSeconds(5),
+            log = log
+        ).apply { start() }
     }
 
     private fun transactionStateMock(logicRef: FlowLogicRef, time: Instant): TransactionState<*> {

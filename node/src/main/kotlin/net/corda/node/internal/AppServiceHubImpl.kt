@@ -19,6 +19,8 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.statemachine.FlowMetadataRecorder
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver
@@ -29,10 +31,13 @@ import java.util.*
 /**
  * This customizes the ServiceHub for each [net.corda.core.node.services.CordaService] that is initiating flows.
  */
-internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter,
-                                                       override val database: CordaTransactionSupport,
-                                                       private val nodeLifecycleEventsDistributor: NodeLifecycleEventsDistributor)
-        : AppServiceHub, ServiceHub by serviceHub {
+internal class AppServiceHubImpl<T : SerializeAsToken>(
+    private val serviceHub: ServiceHub,
+    private val flowStarter: FlowStarter,
+    private val flowMetadataRecorder: FlowMetadataRecorder,
+    override val database: CordaTransactionSupport,
+    private val nodeLifecycleEventsDistributor: NodeLifecycleEventsDistributor
+) : AppServiceHub, ServiceHub by serviceHub {
 
     companion object {
 
@@ -105,6 +110,15 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
                     "Please consider registering your service to node's lifecycle event: `STATE_MACHINE_STARTED`")
         }
         val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
+        // We cannot get the parameters because the [FlowLogic] instance has already been created
+        flowMetadataRecorder.record(
+            flow = flow::class.java,
+            invocationContext = context,
+            startedType = DBCheckpointStorage.StartReason.SERVICE,
+            // the name of the service starting the flow (qualified name is too long)
+            // make the field longer or limit the name (the service name could be long as well)
+            rpcUser = serviceInstance::class.simpleName!!
+        )
         return flowStarter.startFlow(flow, context).getOrThrow()
     }
 

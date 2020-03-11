@@ -15,7 +15,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
@@ -27,7 +27,9 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.FlowMetadataRecorder
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -57,17 +59,19 @@ import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
  * but that starts to sound a lot like off-ledger state.
  */
 @ThreadSafe
-class NodeSchedulerService(private val clock: CordaClock,
-                           private val database: CordaPersistence,
-                           private val flowStarter: FlowStarter,
-                           private val servicesForResolution: ServicesForResolution,
-                           private val flowLogicRefFactory: FlowLogicRefFactory,
-                           private val nodeProperties: NodePropertiesStore,
-                           private val drainingModePollPeriod: Duration,
-                           private val log: Logger = staticLog,
-                           private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database))
-    : SchedulerService, AutoCloseable, SingletonSerializeAsToken() {
+class NodeSchedulerService(
+    private val clock: CordaClock,
+    private val database: CordaPersistence,
+    private val flowStarter: FlowStarter,
+    private val serviceHub: ServiceHub,
+    private val flowLogicRefFactory: FlowLogicRefFactory,
+    private val flowMetadataRecorder: FlowMetadataRecorder,
+    private val nodeProperties: NodePropertiesStore,
+    private val drainingModePollPeriod: Duration,
+    private val log: Logger = staticLog,
+    private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
+    private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database)
+) : SchedulerService, AutoCloseable, SingletonSerializeAsToken() {
 
     companion object {
         private val staticLog get() = contextLogger()
@@ -281,6 +285,13 @@ class NodeSchedulerService(private val clock: CordaClock,
                     // TODO refactor the scheduler to store and propagate the original invocation context
                     val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
                     val startFlowEvent = FlowStartDeduplicationHandler(scheduledState, scheduledFlow, context)
+                    flowMetadataRecorder.record(
+                        flow = scheduledFlow::class.java,
+                        invocationContext = context,
+                        startedType = DBCheckpointStorage.StartReason.SCHEDULED,
+                        // Would be great to have the name of the state that triggered this scheduled operation
+                        rpcUser = serviceHub.myInfo.legalIdentities[0].name.toString()
+                    )
                     flowStarter.startFlow(startFlowEvent)
                 }
             }
@@ -325,7 +336,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     private fun getScheduledActivity(scheduledState: ScheduledStateRef): ScheduledActivity? {
-        val txState = servicesForResolution.loadState(scheduledState.ref)
+        val txState = serviceHub.loadState(scheduledState.ref)
         val state = txState.data as SchedulableState
         return try {
             // This can throw as running contract code.
