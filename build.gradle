@@ -187,6 +187,7 @@ buildscript {
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
+        classpath group: "com.r3.dependx", name: "gradle-dependx", version: "0.1.12", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
@@ -204,6 +205,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
+apply plugin: "com.r3.dependx.dependxies"
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
@@ -583,6 +585,11 @@ artifactory {
     }
 }
 
+dependxiesModule {
+    mode = "monitor"
+    skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
+}
+
 task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
@@ -629,6 +636,7 @@ buildScan {
 }
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards 10
@@ -639,6 +647,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     nodeTaints "big"
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "test"
     numberOfShards 10
@@ -649,6 +658,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     nodeTaints "small"
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     testGroups "test", "integrationTest"
     numberOfShards 15
     streamOutput false
@@ -659,6 +669,7 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "smokeTest"
+    dependsOn dependxiesModule
     numberOfShards 15
     streamOutput false
     coresPerFork 2
@@ -668,6 +679,7 @@ task parallelRegressionTest(type: ParallelTestGroup) {
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "smokeTest"
+    dependsOn dependxiesModule
     numberOfShards 4
     streamOutput false
     coresPerFork 6
@@ -677,6 +689,7 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest"
+    dependsOn dependxiesModule
     numberOfShards 4
     streamOutput false
     coresPerFork 6
