@@ -305,6 +305,10 @@ And applying it to individual modules of your CorDapp using:
 
 Uses of Corda's core or serialization APIs that are unavailable inside the sandbox will then cause compilation errors.
 
+Note however that successful compilation against ``corda-core-deterministic`` and ``corda-serialization-deterministic`` is 
+not sufficient. The only way to be sure that a piece of code is deterministic is to actually run it inside a DJVM sandbox, 
+as described below.
+
 Enabling Use of the DJVM for a Node
 ...................................
 
