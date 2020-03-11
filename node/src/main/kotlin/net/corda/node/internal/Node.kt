@@ -48,9 +48,6 @@ import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.Permissions
-import net.corda.node.services.api.FlowStarter
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.config.MB
 import net.corda.node.services.config.NodeConfiguration
@@ -104,12 +101,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-
-class NodeWithInfo(val node: Node, val info: NodeInfo) {
-    val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
-    fun dispose() = node.stop()
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(node.smm, initiatedFlowClass)
-}
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],

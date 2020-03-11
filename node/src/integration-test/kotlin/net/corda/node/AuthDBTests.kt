@@ -10,7 +10,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.DataSourceFactory
-import net.corda.node.internal.NodeWithInfo
+import net.corda.testing.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.core.ALICE_NAME

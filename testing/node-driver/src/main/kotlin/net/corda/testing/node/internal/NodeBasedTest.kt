@@ -14,7 +14,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.FlowManager
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeFlowManager
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig

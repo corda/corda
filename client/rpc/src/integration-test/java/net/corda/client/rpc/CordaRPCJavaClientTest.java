@@ -9,7 +9,7 @@ import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.node.internal.NodeWithInfo;
+import net.corda.testing.node.internal.NodeWithInfo;
 import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
 import net.corda.testing.node.internal.NodeBasedTest;

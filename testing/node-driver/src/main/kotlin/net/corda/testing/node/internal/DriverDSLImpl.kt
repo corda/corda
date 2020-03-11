@@ -41,7 +41,6 @@ import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.ConfigHelper

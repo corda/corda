@@ -2,10 +2,8 @@ package net.corda.client.rpc
 
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
-import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.finance.schemas.CashSchemaV1
-import net.corda.node.internal.NodeWithInfo
+import net.corda.testing.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.User

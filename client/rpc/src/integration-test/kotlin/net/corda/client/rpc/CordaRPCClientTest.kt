@@ -20,7 +20,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.workflows.getCashBalances
-import net.corda.node.internal.NodeWithInfo
+import net.corda.testing.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
