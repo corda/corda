@@ -17,6 +17,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
@@ -463,7 +464,8 @@ class GeneralExternalFailureResponder(private val session: FlowSession) : FlowLo
 @StartableByRPC
 class GetNumberOfCheckpointsFlow : FlowLogic<Long>() {
     override fun call(): Long {
-        return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints").use { ps ->
+        val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
+        return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
             ps.executeQuery().use { rs ->
                 rs.next()
                 rs.getLong(1)
