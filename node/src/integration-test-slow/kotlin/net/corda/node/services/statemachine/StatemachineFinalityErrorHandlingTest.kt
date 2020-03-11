@@ -89,9 +89,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(1, charlieClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -160,9 +160,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(1, charlieClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -252,9 +252,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(0, charlieClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -349,9 +349,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             assertEquals(1, charlieClient.stateMachinesSnapshot().size)
             // 1 for CashIssueAndPaymentFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 }

@@ -274,7 +274,7 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
     return completable
 }
 
-fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
+fun DriverDSL.assertUncompletedCheckpoints(name: CordaX500Name, expected: Long) {
     val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
     DriverManager.getConnection("jdbc:h2:file:${baseDirectory(name) / "persistence"}", "sa", "").use { connection ->
         connection.createStatement().executeQuery(sqlStatement).use { rs ->
