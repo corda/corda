@@ -26,7 +26,7 @@ class FlowMetadataRecorder(
             checkpointStorage.addMetadata(
                 CheckpointStorage.FlowMetadata(
                     invocationId = invocationContext.trace.invocationId.value,
-                    flowName = flow.canonicalName,
+                    flowName = flow.canonicalName ?: flow.name,
                     // Is this the right value to pass in?
                     userSuppliedIdentifier = userSuppliedIdentifier,
                     startedType = startedType,
