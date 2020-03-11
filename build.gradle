@@ -671,20 +671,20 @@ task allParallelUnitTest(type: ParallelTestGroup) {
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest"
-    numberOfShards largeScaleSet.numberOfShards
-    streamOutput largeScaleSet.streamOutput
-    coresPerFork largeScaleSet.coresPerFork
-    memoryInGbPerFork largeScaleSet.memoryInGbPerFork
-    nodeTaints largeScaleSet.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "smokeTest"
-    numberOfShards largeScaleSet.numberOfShards
-    streamOutput largeScaleSet.streamOutput
-    coresPerFork largeScaleSet.coresPerFork
-    memoryInGbPerFork largeScaleSet.memoryInGbPerFork
-    nodeTaints largeScaleSet.nodeTaints
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
