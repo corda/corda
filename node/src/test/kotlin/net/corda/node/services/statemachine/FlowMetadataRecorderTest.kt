@@ -64,6 +64,7 @@ class FlowMetadataRecorderTest {
     fun before() {
         MyFlow.hook = null
         MyResponder.hook = null
+        MyFlowWithoutParameters.hook
     }
 
     @Test(timeout = 300_000)
@@ -101,6 +102,49 @@ class FlowMetadataRecorderTest {
                 assertEquals(DBCheckpointStorage.StartReason.RPC, it.startType)
                 assertEquals(
                     listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
+                    it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                )
+                assertThat(it.launchingCordapp).contains("custom-cordapp")
+                assertEquals(PLATFORM_VERSION, it.platformVersion)
+                assertEquals(user.username, it.startedBy)
+                assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
+                assertTrue(it.receivedInstant >= it.invocationInstant)
+                assertNull(it.startInstant)
+                assertNull(it.finishInstant)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `rpc started flows have metadata recorded - no parameters`() {
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            var flowId: StateMachineRunId? = null
+            var context: InvocationContext? = null
+            var metadata: DBCheckpointStorage.DBFlowMetadata? = null
+            MyFlowWithoutParameters.hook =
+                { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
+                    flowId = flowIdFromHook
+                    context = contextFromHook
+                    metadata = metadataFromHook
+                }
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::MyFlowWithoutParameters).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+            }
+
+            metadata!!.let {
+                assertEquals(context!!.trace.invocationId.value, it.invocationId)
+                assertEquals(flowId!!.uuid.toString(), it.flowId)
+                assertEquals(MyFlowWithoutParameters::class.qualifiedName, it.flowName)
+                // Should be changed when [userSuppliedIdentifier] gets filled in future changes
+                assertNull(it.userSuppliedIdentifier)
+                assertEquals(DBCheckpointStorage.StartReason.RPC, it.startType)
+                assertEquals(
+                    emptyList<Any?>(),
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
@@ -315,6 +359,29 @@ class FlowMetadataRecorderTest {
                 )
             }
             session.send("Hello there")
+        }
+    }
+
+    @StartableByRPC
+    class MyFlowWithoutParameters : FlowLogic<Unit>() {
+
+        companion object {
+            var hook: ((
+                flowId: StateMachineRunId,
+                context: InvocationContext,
+                metadata: DBCheckpointStorage.DBFlowMetadata
+            ) -> Unit)? = null
+        }
+
+        @Suspendable
+        override fun call() {
+            hook?.let {
+                it(
+                    stateMachine.id,
+                    stateMachine.context,
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                )
+            }
         }
     }
 
