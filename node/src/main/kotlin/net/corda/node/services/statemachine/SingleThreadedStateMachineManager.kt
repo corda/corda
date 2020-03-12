@@ -800,7 +800,7 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
-                        checkpoint = checkpoint.copy(),
+                        checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                         isFlowResumed = false,
                         isTransactionTracked = false,
