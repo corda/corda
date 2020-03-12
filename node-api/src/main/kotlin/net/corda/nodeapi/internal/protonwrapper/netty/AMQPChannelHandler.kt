@@ -37,6 +37,7 @@ import javax.net.ssl.SSLException
  *  It also add some extra checks to the SSL handshake to support our non-standard certificate checks of legal identity.
  *  When a valid SSL connections is made then it initialises a proton-j engine instance to handle the protocol layer.
  */
+@Suppress("TooManyFunctions")
 internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val allowedRemoteLegalNames: Set<CordaX500Name>?,
                                   private val keyManagerFactoriesMap: Map<String, CertHoldingKeyManagerFactoryWrapper>,

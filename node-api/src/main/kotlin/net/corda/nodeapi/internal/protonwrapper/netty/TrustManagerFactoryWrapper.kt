@@ -1,7 +1,11 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import java.security.KeyStore
-import javax.net.ssl.*
+import javax.net.ssl.ManagerFactoryParameters
+import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.TrustManagerFactorySpi
+import javax.net.ssl.X509ExtendedTrustManager
 
 class LoggingTrustManagerFactorySpiWrapper(private val factorySpi: TrustManagerFactorySpi) : TrustManagerFactorySpi() {
     override fun engineGetTrustManagers(): Array<TrustManager> {

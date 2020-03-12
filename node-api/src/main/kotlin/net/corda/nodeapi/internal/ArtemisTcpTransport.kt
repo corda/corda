@@ -120,6 +120,7 @@ class ArtemisTcpTransport {
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
+        @Suppress("LongParameterList")
         fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true, useOpenSsl: Boolean = false, keyStoreProvider: String? = null): TransportConfiguration {
 
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()

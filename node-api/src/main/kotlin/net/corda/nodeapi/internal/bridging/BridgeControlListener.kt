@@ -1,3 +1,4 @@
+@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions
 package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name

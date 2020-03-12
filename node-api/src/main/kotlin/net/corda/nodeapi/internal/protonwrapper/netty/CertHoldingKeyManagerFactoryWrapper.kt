@@ -2,8 +2,12 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import javax.net.ssl.*
-
+import javax.net.ssl.KeyManager
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.KeyManagerFactorySpi
+import javax.net.ssl.ManagerFactoryParameters
+import javax.net.ssl.X509ExtendedKeyManager
+import javax.net.ssl.X509KeyManager
 
 class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerFactorySpi, private val amqpConfig: AMQPConfiguration) : KeyManagerFactorySpi() {
     override fun engineInit(keyStore: KeyStore?, password: CharArray?) {

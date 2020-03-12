@@ -7,7 +7,11 @@ import net.corda.nodeapi.internal.crypto.x509
 import org.slf4j.MDC
 import java.net.Socket
 import java.security.Principal
-import javax.net.ssl.*
+import javax.net.ssl.SNIMatcher
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.X509ExtendedKeyManager
+import javax.net.ssl.X509KeyManager
 
 internal class SNIKeyManager(private val keyManager: X509ExtendedKeyManager, private val amqpConfig: AMQPConfiguration) : X509ExtendedKeyManager(), X509KeyManager by keyManager, AliasProvidingKeyMangerWrapper {
 

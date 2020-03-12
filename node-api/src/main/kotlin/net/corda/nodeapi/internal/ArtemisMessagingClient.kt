@@ -48,6 +48,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             log.info("Back-up message broker addresses: $backupServerAddressPool")
         }
         // If back-up artemis addresses are configured, the locator will be created using HA mode.
+        @Suppress("SpreadOperator")
         val locator = ActiveMQClient.createServerLocator(backupTransports.isNotEmpty(), *(listOf(tcpTransport) + backupTransports).toTypedArray()).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.

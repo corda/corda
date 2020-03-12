@@ -155,6 +155,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.revocationConfig))
         }
 
+        @Suppress("ComplexMethod")
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
             val proxyConfig = conf.proxyConfig

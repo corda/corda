@@ -1,3 +1,4 @@
+@file:Suppress("TooGenericExceptionCaught") // needs to catch and handle/rethrow *all* exceptions in many places
 package net.corda.nodeapi.internal.bridging
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
@@ -93,6 +94,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
      * If the delivery fails the session is rolled back to prevent loss of the message. This may cause duplicate delivery,
      * however Artemis and the remote Corda instanced will deduplicate these messages.
      */
+    @Suppress("TooManyFunctions")
     private class AMQPBridge(val sourceX500Name: String,
                              val queueName: String,
                              val targets: List<NetworkHostAndPort>,
@@ -142,11 +144,13 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
                 logDebugWithMDC { "State change $field to $value" }
                 field = value
             }
+        @Suppress("MagicNumber")
         private var artemisHeartbeatPlusBackoff = TimeUnit.SECONDS.toMillis(90)
         private var amqpRestartEvent: ScheduledFuture<Unit>? = null
         private var scheduledExecutorService: ScheduledExecutorService
                 = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("bridge-connection-reset-%d").build())
 
+        @Suppress("ClassNaming")
         private sealed class ArtemisState {
             object STARTING : ArtemisState()
             data class STARTED(override val pending: ScheduledFuture<Unit>) : ArtemisState()
@@ -158,7 +162,6 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             object AMQP_STOPPED : ArtemisState()
             object AMQP_STARTING : ArtemisState()
             object AMQP_STARTED : ArtemisState()
-            @Suppress("ClassNaming")
             object AMQP_RESTARTED : ArtemisState()
 
             object STOPPING : ArtemisState()
@@ -233,6 +236,7 @@ open class AMQPBridgeManager(keyStore: CertificateStore,
             amqpClient.stop()
         }
 
+        @Suppress("ComplexMethod")
         private fun onSocketConnected(connected: Boolean) {
             if (connected) {
                 logInfoWithMDC("Bridge Connected")

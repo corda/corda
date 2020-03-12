@@ -3,7 +3,13 @@ package net.corda.nodeapi.internal.protonwrapper.netty.revocation
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.netty.ExternalCrlSource
 import org.bouncycastle.asn1.x509.Extension
-import java.security.cert.*
+import java.security.cert.CRLReason
+import java.security.cert.CertPathValidatorException
+import java.security.cert.Certificate
+import java.security.cert.CertificateRevokedException
+import java.security.cert.PKIXRevocationChecker
+import java.security.cert.X509CRL
+import java.security.cert.X509Certificate
 import java.util.*
 
 /**
@@ -24,6 +30,7 @@ class ExternalSourceRevocationChecker(private val externalCrlSource: ExternalCrl
     /**
      * Borrowed from `RevocationChecker.checkApprovedCRLs()`
      */
+    @Suppress("NestedBlockDepth")
     @Throws(CertPathValidatorException::class)
     private fun checkApprovedCRLs(cert: X509Certificate, approvedCRLs: Set<X509CRL>) {
         // See if the cert is in the set of approved crls.

@@ -1,7 +1,11 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.buffer.ByteBufAllocator
-import io.netty.handler.ssl.*
+import io.netty.handler.ssl.ClientAuth
+import io.netty.handler.ssl.SniHandler
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslHandler
+import io.netty.handler.ssl.SslProvider
 import io.netty.util.DomainNameMappingBuilder
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
@@ -18,8 +22,13 @@ import net.corda.nodeapi.internal.protonwrapper.netty.revocation.ExternalSourceR
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.DEROctetString
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
+import org.bouncycastle.asn1.x509.CRLDistPoint
+import org.bouncycastle.asn1.x509.DistributionPointName
 import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralNames
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.net.Socket
@@ -170,6 +179,7 @@ private object LoggingImmediateExecutor : Executor {
             throw NullPointerException("command")
         }
 
+        @Suppress("TooGenericExceptionCaught", "MagicNumber") // log and rethrow all exceptions
         try {
             val commandName = command::class.qualifiedName?.let { "[$it]" } ?: ""
             log.debug("Entering SSL command $commandName")
@@ -301,6 +311,7 @@ internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, K
     return SniHandler(mapping.build())
 }
 
+@Suppress("SpreadOperator")
 private fun getServerSslContextBuilder(keyManagerFactory: KeyManagerFactory, trustManagerFactory: TrustManagerFactory): SslContextBuilder {
     return SslContextBuilder.forServer(keyManagerFactory)
             .sslProvider(SslProvider.OPENSSL)
