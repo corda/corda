@@ -1,41 +1,58 @@
 package net.corda.node.services.events
 
-import com.nhaarman.mockito_kotlin.*
-import net.corda.core.contracts.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.anyOrNull
+import com.nhaarman.mockito_kotlin.argForWhich
+import com.nhaarman.mockito_kotlin.doAnswer
+import com.nhaarman.mockito_kotlin.doNothing
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.same
+import com.nhaarman.mockito_kotlin.timeout
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.contracts.SchedulableState
+import net.corda.core.contracts.ScheduledActivity
+import net.corda.core.contracts.ScheduledStateRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.days
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.persistence.CheckpointPerformanceRecorder
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowMetadataRecorder
-import net.corda.node.services.statemachine.FlowState
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -72,8 +89,22 @@ open class NodeSchedulerServiceTestBase {
     }
 
     protected val transactionStates = mutableMapOf<StateRef, TransactionState<*>>()
+
+    private val party = rigorousMock<Party>().also {
+        doReturn(ALICE_NAME.toString()).whenever(it).toString()
+    }
+
+    private val nodeInfo = rigorousMock<NodeInfo>().also {
+        doReturn(listOf(party)).whenever(it).legalIdentities
+    }
+
     protected val servicesForResolution = rigorousMock<ServiceHub>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
+        doReturn(nodeInfo).whenever(it).myInfo
+    }
+
+    protected val flowMetadataRecorder = rigorousMock<FlowMetadataRecorder>().also {
+        doNothing().whenever(it).record(any(), any(), any(), any(), anyOrNull(), anyOrNull())
     }
 
     private val traces = Collections.synchronizedList(mutableListOf<ScheduledStateRef>())
@@ -140,19 +171,6 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     fun closeDatabase() {
         database.close()
     }
-
-    private val flowMetadataRecorder = FlowMetadataRecorder(
-        DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-            override fun record(
-                serializedCheckpointState: SerializedBytes<CheckpointState>,
-                serializedFlowState: SerializedBytes<FlowState>
-            ) {
-                // do nothing
-            }
-        }),
-        database,
-        testClock
-    )
 
     private val scheduler = NodeSchedulerService(
         testClock,
@@ -278,18 +296,6 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
 
     private fun createScheduler(db: CordaPersistence): NodeSchedulerService {
-        val flowMetadataRecorder = FlowMetadataRecorder(
-            DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-                override fun record(
-                    serializedCheckpointState: SerializedBytes<CheckpointState>,
-                    serializedFlowState: SerializedBytes<FlowState>
-                ) {
-                    // do nothing
-                }
-            }),
-            db,
-            testClock
-        )
         return NodeSchedulerService(
             testClock,
             db,

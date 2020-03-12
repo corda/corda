@@ -320,7 +320,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected val network: MessagingService = makeMessagingService().tokenize()
     val services = ServiceHubInternalImpl().tokenize()
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics))
-    val flowMetadataRecorder = FlowMetadataRecorder(checkpointStorage, database, platformClock)
+    val flowMetadataRecorder = FlowMetadataRecorder(checkpointStorage, cordappProvider, database, platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)

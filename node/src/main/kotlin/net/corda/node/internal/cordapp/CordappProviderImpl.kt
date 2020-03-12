@@ -217,4 +217,6 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
 
     override fun getCordappForFlow(flowLogic: FlowLogic<*>) = cordappLoader.flowCordappMap[flowLogic.javaClass]
+
+    override fun getCordappForFlow(flowLogicClass: Class<out FlowLogic<*>>) = cordappLoader.flowCordappMap[flowLogicClass]
 }

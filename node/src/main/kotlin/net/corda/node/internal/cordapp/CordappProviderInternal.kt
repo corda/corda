@@ -10,5 +10,6 @@ import net.corda.core.internal.cordapp.CordappImpl
 interface CordappProviderInternal : CordappProvider, CordappFixupInternal {
     val cordapps: List<CordappImpl>
     fun getCordappForFlow(flowLogic: FlowLogic<*>): Cordapp?
+    fun getCordappForFlow(flowLogicClass: Class<out FlowLogic<*>>): Cordapp?
     fun fixupAttachments(attachments: Collection<Attachment>): Collection<Attachment>
 }

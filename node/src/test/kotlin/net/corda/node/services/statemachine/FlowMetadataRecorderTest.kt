@@ -39,6 +39,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.time.Duration
@@ -102,8 +103,7 @@ class FlowMetadataRecorderTest {
                     listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
-                // Needs to be filled in
-                assertEquals("where do I get this info?", it.launchingCordapp)
+                assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(user.username, it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
@@ -150,8 +150,7 @@ class FlowMetadataRecorderTest {
                     emptyList<Any?>(),
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
-                // needs to be filled in
-                assertEquals("where do I get this info?", it.launchingCordapp)
+                assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(6, it.platformVersion)
                 assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
@@ -198,8 +197,7 @@ class FlowMetadataRecorderTest {
                     emptyList<Any?>(),
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
-                // needs to be filled in
-                assertEquals("where do I get this info?", it.launchingCordapp)
+                assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(MyService::class.simpleName, it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
@@ -256,8 +254,7 @@ class FlowMetadataRecorderTest {
                     emptyList<Any?>(),
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
-                // needs to be filled in
-                assertEquals("where do I get this info?", it.launchingCordapp)
+                assertThat(it.launchingCordapp).contains("custom-cordapp")
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(nodeAHandle.nodeInfo.singleIdentity().toString(), it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
