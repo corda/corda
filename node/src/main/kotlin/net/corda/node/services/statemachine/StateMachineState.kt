@@ -75,7 +75,12 @@ data class Checkpoint(
         PAUSED
     }
 
-    val timestamp: Instant = Instant.now() // This will get updated every time a Checkpoint object is created/ created by copy.
+    /**
+     * [timestamp] will get updated every time a [Checkpoint] object is created/ created by copy.
+     * It will be updated, therefore, for example when a flow is being suspended or whenever a flow
+     * is being loaded from [Checkpoint] through [Serialized.deserialize].
+     */
+    val timestamp: Instant = Instant.now()
 
     companion object {
 

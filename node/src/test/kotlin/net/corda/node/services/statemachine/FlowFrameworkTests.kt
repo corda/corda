@@ -20,6 +20,7 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
@@ -27,6 +28,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -34,10 +36,14 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -66,12 +72,16 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
+import kotlin.streams.toList
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
     companion object {
@@ -597,6 +607,88 @@ class FlowFrameworkTests {
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
+    @Test(timeout=300_000)
+    fun `Checkpoint status changes to RUNNABLE when flow is loaded from checkpoint - FlowState Unstarted`() {
+        var firstExecution = true
+        var checkpointStatusInDBBeforeSuspension: Checkpoint.FlowStatus? = null
+        var checkpointStatusInDBAfterSuspension: Checkpoint.FlowStatus? = null
+        var checkpointStatusInMemoryBeforeSuspension: Checkpoint.FlowStatus? = null
+
+        SuspendingFlow.hookBeforeCheckpoint = {
+            val flowFiber = this as? FlowStateMachineImpl<*>
+            assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Unstarted)
+
+            if (firstExecution) {
+                // the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
+                manuallyFailCheckpointInDB(aliceNode)
+
+                firstExecution = false
+                throw SQLException("deadlock") // will cause flow to retry
+            } else {
+                // The persisted Checkpoint should be still failed here -> it should change to RUNNABLE after suspension
+                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                checkpointStatusInMemoryBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
+            }
+        }
+
+        SuspendingFlow.hookAfterCheckpoint = {
+            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+        }
+
+        aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
+
+        assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatusInDBBeforeSuspension)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInMemoryBeforeSuspension)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInDBAfterSuspension)
+
+        SuspendingFlow.hookBeforeCheckpoint = {}
+        SuspendingFlow.hookAfterCheckpoint = {}
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint status changes to RUNNABLE when flow is loaded from checkpoint - FlowState Started`() {
+        var firstExecution = true
+        var checkpointStatusInDB: Checkpoint.FlowStatus? = null
+        var checkpointStatusInMemory: Checkpoint.FlowStatus? = null
+
+        SuspendingFlow.hookAfterCheckpoint = {
+            val flowFiber = this as? FlowStateMachineImpl<*>
+            assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Started)
+
+            if (firstExecution) {
+                // the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
+                manuallyFailCheckpointInDB(aliceNode)
+
+                firstExecution = false
+                throw SQLException("deadlock") // will cause flow to retry
+            } else {
+                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                checkpointStatusInMemory = flowFiber.transientState!!.value.checkpoint.status
+            }
+        }
+
+        aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
+
+        assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatusInDB)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInMemory)
+
+        SuspendingFlow.hookAfterCheckpoint = {}
+    }
+
+    // the following method should be removed when implementing CORDA-3604.
+    private fun manuallyFailCheckpointInDB(node: TestStartedNode) {
+        val idCheckpoint = node.internals.checkpointStorage.getAllCheckpoints().toList().single()
+        val checkpoint = idCheckpoint.second
+        val updatedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+        node.internals.checkpointStorage.updateCheckpoint(idCheckpoint.first,
+                updatedCheckpoint.deserialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT),
+                updatedCheckpoint.serializedFlowState)
+        contextTransaction.commit()
+        contextTransaction.close()
+        contextTransactionOrNull = null
+        contextDatabase.newTransaction()
+    }
+
     //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -948,5 +1040,20 @@ internal class ExceptionFlow<E : Exception>(val exception: () -> E) : FlowLogic<
         progressTracker.currentStep = START_STEP
         exceptionThrown = exception()
         throw exceptionThrown
+    }
+}
+
+internal class SuspendingFlow : FlowLogic<Unit>() {
+
+    companion object {
+        var hookBeforeCheckpoint: FlowStateMachine<*>.() -> Unit = {}
+        var hookAfterCheckpoint: FlowStateMachine<*>.() -> Unit = {}
+    }
+
+    @Suspendable
+    override fun call() {
+        stateMachine.hookBeforeCheckpoint()
+        sleep(1.seconds) // flow checkpoints => checkpoint is in DB
+        stateMachine.hookAfterCheckpoint()
     }
 }
