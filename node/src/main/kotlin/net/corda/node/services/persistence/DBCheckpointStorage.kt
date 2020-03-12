@@ -335,9 +335,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
 
-        println("PROGRESS STEP = ${checkpoint.progressStep}")
-        println("PROGRESS STEP = ${checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH)}")
-
         return entity.apply {
             this.blob = blob
             //Set the result to null for now.
