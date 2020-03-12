@@ -32,6 +32,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
@@ -39,6 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
@@ -341,6 +343,7 @@ class ProtonWrapperTests {
             val connection1ID = CordaX500Name.build(connection1.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection1ID.organisationUnit)
             val source1 = connection1.remoteAddress
+            val client2Connected = amqpClient2.onConnection.toFuture()
             amqpClient2.start()
             val connection2 = connectionEvents.next()
             assertEquals(true, connection2.connected)
@@ -353,6 +356,7 @@ class ProtonWrapperTests {
             assertEquals(false, connection3.connected)
             assertEquals(source1, connection3.remoteAddress)
             assertEquals(false, amqpClient1.connected)
+            client2Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient2.connected)
             // Now shutdown both
             amqpClient2.stop()
@@ -362,11 +366,13 @@ class ProtonWrapperTests {
             assertEquals(false, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
             // Now restarting one should work
+            val client1Connected = amqpClient1.onConnection.toFuture()
             amqpClient1.start()
             val connection5 = connectionEvents.next()
             assertEquals(true, connection5.connected)
             val connection5ID = CordaX500Name.build(connection5.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection5ID.organisationUnit)
+            client1Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
             // Cleanup
@@ -500,7 +506,6 @@ class ProtonWrapperTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -510,6 +515,7 @@ class ProtonWrapperTests {
             override val keyStore = serverKeystore
             override val trustStore = serverTruststore
             override val trace: Boolean = true
+            override val revocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
         }
         return AMQPServer(
