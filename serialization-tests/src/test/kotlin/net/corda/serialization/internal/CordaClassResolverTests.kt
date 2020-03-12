@@ -16,12 +16,12 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.CheckpointSerializationContext
-import net.corda.node.serialization.kryo.CordaClassResolver
-import net.corda.node.serialization.kryo.CordaKryo
+import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
+import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.internal.services.InternalMockAttachmentStorage
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule
@@ -125,7 +125,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Unannotated specialised enum does not work`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(BadFood.Mud::class.java)
     }
@@ -135,7 +135,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Simple.Easy::class.java)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Unannotated simple enum does not work`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(BadSimple.Nasty::class.java)
     }
@@ -146,7 +146,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Unannotated array elements do not work`() {
         val values = arrayOf(NotSerializable())
         CordaClassResolver(emptyWhitelistContext).getRegistration(values.javaClass)
@@ -168,13 +168,13 @@ class CordaClassResolverTests {
         kryo.register(NotSerializable::class.java)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Calling register method on unmodified Kryo does consult the whitelist`() {
         val kryo = Kryo(CordaClassResolver(emptyWhitelistContext), MapReferenceResolver())
         kryo.register(NotSerializable::class.java)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Annotation is needed without whitelisting`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(NotSerializable::class.java)
     }
@@ -195,19 +195,19 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Integer.TYPE)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Annotation does not work for custom serializable`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(CustomSerializable::class.java)
     }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Annotation does not work in conjunction with Kryo annotation`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(DefaultSerializable::class.java)
     }
 
     private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
 
-    @Test(expected = KryoException::class)
+    @Test(expected = KryoException::class, timeout=300_000)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
@@ -217,7 +217,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
-    @Test(expected = TransactionVerificationException.UntrustedAttachmentsException::class)
+    @Test(expected = TransactionVerificationException.UntrustedAttachmentsException::class, timeout=300_000)
     fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())

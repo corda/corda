@@ -13,6 +13,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
@@ -26,7 +27,6 @@ import net.corda.testing.core.*
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.driver.*
-import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages

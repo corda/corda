@@ -82,7 +82,8 @@ data class NodeConfigurationImpl(
                 Defaults.networkParameterAcceptanceSettings,
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
-        override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize
+        override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
+        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -119,6 +120,7 @@ data class NodeConfigurationImpl(
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
+        val quasarExcludePackages: List<String> = emptyList()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

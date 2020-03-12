@@ -15,6 +15,7 @@ import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
@@ -31,7 +32,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
-import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.*

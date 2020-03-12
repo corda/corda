@@ -38,6 +38,17 @@ sealed class Action {
     ) : Action()
 
     /**
+     * Send session messages to multiple destinations.
+     *
+     * @property sendInitial session messages to send in order to establish a session.
+     * @property sendExisting session messages to send to existing sessions.
+     */
+    data class SendMultiple(
+            val sendInitial: List<SendInitial>,
+            val sendExisting: List<SendExisting>
+    ): Action()
+
+    /**
      * Persist the specified [checkpoint].
      */
     data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()

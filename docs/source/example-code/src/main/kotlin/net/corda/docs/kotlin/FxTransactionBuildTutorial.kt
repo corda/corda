@@ -1,10 +1,23 @@
 package net.corda.docs.kotlin
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndContract
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.ReceiveStateAndRefFlow
+import net.corda.core.flows.ReceiveTransactionFlow
+import net.corda.core.flows.SendStateAndRefFlow
+import net.corda.core.flows.SendTransactionFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -24,7 +37,7 @@ private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
                              val owner: Party,
                              val counterparty: Party,
-                             val notary: Party? = null)
+                             val notary: Party)
 
 // DOCSTART 1
 // This is equivalent to the Cash.generateSpend
@@ -38,8 +51,7 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     val ourParties = ourKeys.map { serviceHub.identityService.partyFromKey(it) ?: throw IllegalStateException("Unable to resolve party from key") }
     val fungibleCriteria = QueryCriteria.FungibleAssetQueryCriteria(owner = ourParties)
 
-    val notaries = notary ?: serviceHub.networkMapCache.notaryIdentities.first()
-    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notaries as AbstractParty))
+    val vaultCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(notary as AbstractParty))
 
     val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal(amountRequired.token.product.currencyCode) }
     val cashCriteria = QueryCriteria.VaultCustomQueryCriteria(logicalExpression)
@@ -90,19 +102,20 @@ class ForeignExchangeFlow(private val tradeId: String,
                           private val baseCurrencyAmount: Amount<Issued<Currency>>,
                           private val quoteCurrencyAmount: Amount<Issued<Currency>>,
                           private val counterparty: Party,
-                          private val weAreBaseCurrencySeller: Boolean) : FlowLogic<SecureHash>() {
+                          private val weAreBaseCurrencySeller: Boolean,
+                          private val notary: Party) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
         // Specifically we own the assets we wish to sell.
         // Also prepare the other side query
         val (localRequest, remoteRequest) = if (weAreBaseCurrencySeller) {
-            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity, counterparty)
-            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity)
+            val local = FxRequest(tradeId, baseCurrencyAmount, ourIdentity, counterparty, notary)
+            val remote = FxRequest(tradeId, quoteCurrencyAmount, counterparty, ourIdentity, notary)
             Pair(local, remote)
         } else {
-            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity, counterparty)
-            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity)
+            val local = FxRequest(tradeId, quoteCurrencyAmount, ourIdentity, counterparty, notary)
+            val remote = FxRequest(tradeId, baseCurrencyAmount, counterparty, ourIdentity, notary)
             Pair(local, remote)
         }
 

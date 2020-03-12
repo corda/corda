@@ -9,7 +9,6 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
@@ -23,13 +22,13 @@ import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
-import org.apache.commons.collections4.map.LRUMap
 import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipInputStream
@@ -52,7 +51,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
         }
     }
-
+    private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
     override val cordapps: List<CordappImpl> by lazy { loadCordapps() + extraCordapps }
 
     override val appClassLoader: URLClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
@@ -128,8 +127,33 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         }
                     }
                 }
-        cordapps.forEach(CordappResolver::register)
+        cordapps.forEach(::register)
         return cordapps
+    }
+
+    private fun register(cordapp: Cordapp) {
+        val contractClasses = cordapp.contractClassNames.toSet()
+        val existingClasses = cordappClasses.keys
+        val classesToRegister = cordapp.cordappClasses.toSet()
+        val notAlreadyRegisteredClasses = classesToRegister - existingClasses
+        val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
+
+        notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
+
+        for ((registeredClassName, registeredCordapps) in alreadyRegistered) {
+            val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
+
+            if (duplicateCordapps.isNotEmpty()) {
+                throw IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
+                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+                        "${duplicateCordapps.map { it.name }}")
+            }
+            if (registeredClassName in contractClasses) {
+                throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
+                        "Please remove the previous version when upgrading to a new version.")
+            }
+            cordappClasses[registeredClassName] = registeredCordapps + cordapp
+        }
     }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
@@ -219,7 +243,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         // present in the CorDapp.
         val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
                 scanResult.getClassesWithSuperclass(SinglePartyNotaryService::class)
-        if(!result.isEmpty()) {
+        if (result.isNotEmpty()) {
             logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
         }
         return result.firstOrNull()
@@ -268,9 +292,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
-        val whitelists = URLClassLoader(arrayOf(cordappJarPath.url)).use {
-            ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
-        }
+        val whitelists = ServiceLoader.load(SerializationWhitelist::class.java, appClassLoader).toList()
         return whitelists.filter {
             it.javaClass.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
@@ -284,19 +306,21 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return scanResult.getClassesWithSuperclass(MappedSchema::class).instances().toSet()
     }
 
-    private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
-
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
-        logger.info("Scanning CorDapp in ${cordappJarPath.url}")
-        return cachedScanResult.computeIfAbsent(cordappJarPath) {
-            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().pooledScan()
-            RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
-        }
+        val cordappElement = cordappJarPath.url.toString()
+        logger.info("Scanning CorDapp in $cordappElement")
+        val scanResult = ClassGraph()
+            .filterClasspathElements { elt -> elt == cordappElement }
+            .overrideClassLoaders(appClassLoader)
+            .ignoreParentClassLoaders()
+            .enableAllInfo()
+            .pooledScan()
+        return RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
     }
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
-            appClassLoader.loadClass(className).asSubclass(type.java)
+            Class.forName(className, false, appClassLoader).asSubclass(type.java)
         } catch (e: ClassCastException) {
             logger.warn("As $className must be a sub-type of ${type.java.name}")
             null

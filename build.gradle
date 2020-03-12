@@ -25,14 +25,14 @@ buildscript {
 
     ext.quasar_group = 'co.paralleluniverse'
     // Set version of Quasar according to version of Java used:
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
-        ext.quasar_version = constants.getProperty("quasarVersion11")
-        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
-        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
-    } else {
+    if (JavaVersion.current().isJava8()) {
         ext.quasar_version = constants.getProperty("quasarVersion")
         ext.quasar_classifier = constants.getProperty("quasarClassifier")
         ext.jdkClassifier = constants.getProperty("jdkClassifier")
+    } else {
+        ext.quasar_version = constants.getProperty("quasarVersion11")
+        ext.quasar_classifier = constants.getProperty("quasarClassifier11")
+        ext.jdkClassifier = constants.getProperty("jdkClassifier11")
     }
     ext.cordaScanApiClassifier = jdkClassifier
     ext.quasar_exclusions = [
@@ -83,6 +83,8 @@ buildscript {
     ext.tcnative_version = '2.0.14.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
+    ext.kryo_version = '4.0.2'
+    ext.kryo_serializer_version = '0.43'
     // Legacy JUnit 4 version
     ext.junit_version = '4.12'
     // Need this version to access classpath scanning error handling fix -
@@ -104,7 +106,7 @@ buildscript {
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = '1.7.2'
+    ext.crash_version = '1.7.4'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -125,13 +127,14 @@ buildscript {
     ext.commons_lang_version = '3.9'
     ext.commons_io_version = '2.6'
     ext.controlsfx_version = '8.40.15'
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+    ext.detekt_version = constants.getProperty('detektVersion')
+    if (JavaVersion.current().isJava8()) {
+        ext.fontawesomefx_commons_version = '8.15'
+        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
+    } else {
         // has been compiled by a more recent version of the Java Runtime (class file version 55.0)
         ext.fontawesomefx_commons_version = '11.0'
         ext.fontawesomefx_fontawesome_version = '4.7.0-11'
-    } else {
-        ext.fontawesomefx_commons_version = '8.15'
-        ext.fontawesomefx_fontawesome_version = '4.7.0-5'
     }
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
@@ -184,6 +187,7 @@ buildscript {
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
+        classpath group: "com.r3.dependx", name: "gradle-dependx", version: "0.1.12", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
     }
 }
@@ -201,6 +205,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
+apply plugin: "com.r3.dependx.dependxies"
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
@@ -224,11 +229,7 @@ apply plugin: 'java'
 
 logger.lifecycle("Java version: {}", JavaVersion.current())
 sourceCompatibility = VERSION_1_8
-if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-    targetCompatibility = VERSION_1_8
-} else {
-    targetCompatibility = VERSION_11
-}
+targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
 logger.lifecycle("Java source compatibility: {}", sourceCompatibility)
 logger.lifecycle("Java target compatibility: {}", targetCompatibility)
 logger.lifecycle("Quasar version: {}", quasar_version)
@@ -264,11 +265,7 @@ allprojects {
         }
     }
     sourceCompatibility = VERSION_1_8
-    if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
-        targetCompatibility = VERSION_1_8
-    } else {
-        targetCompatibility = VERSION_11
-    }
+    targetCompatibility = JavaVersion.current().isJava8() ? VERSION_1_8 : VERSION_11
 
     jacoco {
         // JDK11 official support (https://github.com/jacoco/jacoco/releases/tag/v0.8.3)
@@ -291,7 +288,7 @@ allprojects {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
-            jvmTarget = "1.8"
+            jvmTarget = VERSION_1_8
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
             allWarningsAsErrors = warnings_as_errors
@@ -464,17 +461,20 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     }
 }
 
-task detekt(type: JavaExec) {
-    main = "io.gitlab.arturbosch.detekt.cli.Main"
-    classpath = configurations.detekt
+tasks.register('detekt', JavaExec) {
     def input = "$projectDir"
     def config = "$projectDir/detekt-config.yml"
     def baseline = "$projectDir/detekt-baseline.xml"
-    def params = ['-i', input, '-c', config, '-b', baseline]
+    def detektPluginsJar = project(':detekt-plugins').tasks.jar
+    def plugins = detektPluginsJar.outputs.files.singleFile
+    def params = ['-i', input, '-c', config, '-b', baseline, '--plugins', plugins]
+    inputs.files(detektPluginsJar, config, baseline)
+    main = "io.gitlab.arturbosch.detekt.cli.Main"
+    classpath = configurations.detekt
     args(params)
 }
 
-task detektBaseline(type: JavaExec) {
+tasks.register('detektBaseline', JavaExec) {
     main = "io.gitlab.arturbosch.detekt.cli.Main"
     classpath = configurations.detekt
     def input = "$projectDir"
@@ -519,6 +519,7 @@ bintrayConfig {
             'corda-node-api',
             'corda-node-djvm',
             'corda-test-common',
+            'corda-core-test-utils',
             'corda-test-utils',
             'corda-test-db',
             'corda-jackson',
@@ -584,6 +585,11 @@ artifactory {
     }
 }
 
+dependxiesModule {
+    mode = "monitor"
+    skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
+}
+
 task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
@@ -630,6 +636,7 @@ buildScan {
 }
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards 10
@@ -640,6 +647,7 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     nodeTaints "big"
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "test"
     numberOfShards 10
@@ -650,6 +658,7 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     nodeTaints "small"
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
+    dependsOn dependxiesModule
     testGroups "test", "integrationTest"
     numberOfShards 15
     streamOutput false
@@ -659,7 +668,8 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     nodeTaints "big"
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
-    testGroups "test", "integrationTest", "slowIntegrationTest", "smokeTest"
+    testGroups "test", "integrationTest", "smokeTest"
+    dependsOn dependxiesModule
     numberOfShards 15
     streamOutput false
     coresPerFork 2
@@ -668,7 +678,18 @@ task parallelRegressionTest(type: ParallelTestGroup) {
     nodeTaints "big"
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
-    testGroups "slowIntegrationTest", "smokeTest"
+    testGroups "smokeTest"
+    dependsOn dependxiesModule
+    numberOfShards 4
+    streamOutput false
+    coresPerFork 6
+    memoryInGbPerFork 10
+    distribute DistributeTestsBy.CLASS
+    nodeTaints "big"
+}
+task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
+    testGroups "slowIntegrationTest"
+    dependsOn dependxiesModule
     numberOfShards 4
     streamOutput false
     coresPerFork 6

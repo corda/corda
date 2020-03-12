@@ -77,7 +77,7 @@ class FlowLogicRefFactoryImplTest {
         flowLogicRefFactory.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
-    @Test(expected = IllegalFlowLogicException::class)
+    @Test(expected = IllegalFlowLogicException::class, timeout=300_000)
     fun `create for non-schedulable flow logic`() {
         flowLogicRefFactory.create(NonSchedulableFlow::class.jvmName)
     }

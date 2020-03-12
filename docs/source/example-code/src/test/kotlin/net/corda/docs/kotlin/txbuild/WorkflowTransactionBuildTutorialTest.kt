@@ -51,7 +51,7 @@ class WorkflowTransactionBuildTutorialTest {
         // Setup a vault subscriber to wait for successful upload of the proposal to NodeB
         val nodeBVaultUpdate = bobNode.services.vaultService.updates.toFuture()
         // Kick of the proposal flow
-        val flow1 = aliceNode.startFlow(SubmitTradeApprovalFlow("1234", bob))
+        val flow1 = aliceNode.startFlow(SubmitTradeApprovalFlow("1234", bob, mockNet.defaultNotaryIdentity))
         // Wait for the flow to finish
         val proposalRef = flow1.getOrThrow()
         val proposalLinearId = proposalRef.state.data.linearId

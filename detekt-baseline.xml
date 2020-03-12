@@ -1198,7 +1198,7 @@
     <ID>MagicNumber:X509Utilities.kt$X509Utilities$3650</ID>
     <ID>MagicNumber:errorAndTerminate.kt$10</ID>
     <ID>MatchingDeclarationName:AMQPSerializerFactories.kt$net.corda.serialization.internal.amqp.AMQPSerializerFactories.kt</ID>
-    <ID>MatchingDeclarationName:AMQPTestSerialiationScheme.kt$net.corda.node.internal.serialization.testutils.AMQPTestSerialiationScheme.kt</ID>
+    <ID>MatchingDeclarationName:AMQPTestSerialiationScheme.kt$net.corda.nodeapi.internal.serialization.testutils.AMQPTestSerialiationScheme.kt</ID>
     <ID>MatchingDeclarationName:AttachmentDemo.kt$net.corda.attachmentdemo.AttachmentDemo.kt</ID>
     <ID>MatchingDeclarationName:AzureRegistryLocator.kt$net.corda.networkbuilder.containers.push.azure.AzureRegistryLocator.kt</ID>
     <ID>MatchingDeclarationName:CheckpointSerializationScheme.kt$net.corda.serialization.internal.CheckpointSerializationScheme.kt</ID>
@@ -1656,6 +1656,7 @@
     <ID>TooGenericExceptionThrown:ClassLoadingUtilsTest.kt$ClassLoadingUtilsTest$throw RuntimeException()</ID>
     <ID>TooGenericExceptionThrown:CommandParsers.kt$AzureParser.RegionConverter$throw Error("Unknown azure region: $value")</ID>
     <ID>TooGenericExceptionThrown:ContractHierarchyTest.kt$ContractHierarchyTest.IndirectContractParent$throw RuntimeException("Boom!")</ID>
+    <ID>TooGenericExceptionThrown:CordaRPCClientReconnectionTest.kt$CordaRPCClientReconnectionTest$throw RuntimeException()</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated exit of ${request.amount} from $issuer, however there is no cash to exit!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from $issuer, " + "however they only have $issuerQuantity!" )</ID>
     <ID>TooGenericExceptionThrown:CrossCashTest.kt$throw Exception( "Generated payment of ${request.amount} from ${node.mainIdentity}, " + "however there is no cash from $issuer!" )</ID>
@@ -1715,7 +1716,7 @@
     <ID>TooManyFunctions:LedgerTransaction.kt$LedgerTransaction : FullTransaction</ID>
     <ID>TooManyFunctions:LocalSerializerFactory.kt$DefaultLocalSerializerFactory : LocalSerializerFactory</ID>
     <ID>TooManyFunctions:LocalTypeInformationBuilder.kt$LocalTypeInformationBuilder</ID>
-    <ID>TooManyFunctions:MockNodeMessagingService.kt$MockNodeMessagingService : SingletonSerializeAsTokenMessagingService</ID>
+    <ID>TooManyFunctions:MockNodeMessagingService.kt$MockNodeMessagingService : SingletonSerializeAsTokenMessagingServiceServiceStateSupport</ID>
     <ID>TooManyFunctions:NetworkBootstrapper.kt$NetworkBootstrapper : NetworkBootstrapperWithOverridableParameters</ID>
     <ID>TooManyFunctions:Node.kt$Node : AbstractNode</ID>
     <ID>TooManyFunctions:NodeAttachmentService.kt$NodeAttachmentService : AttachmentStorageInternalSingletonSerializeAsToken</ID>
@@ -1724,7 +1725,7 @@
     <ID>TooManyFunctions:NodeVaultService.kt$NodeVaultService : SingletonSerializeAsTokenVaultServiceInternal</ID>
     <ID>TooManyFunctions:OGSwapPricingExample.kt$SwapPricingExample</ID>
     <ID>TooManyFunctions:ObservableUtilities.kt$net.corda.client.jfx.utils.ObservableUtilities.kt</ID>
-    <ID>TooManyFunctions:P2PMessagingClient.kt$P2PMessagingClient : SingletonSerializeAsTokenMessagingServiceAddressToArtemisQueueResolver</ID>
+    <ID>TooManyFunctions:P2PMessagingClient.kt$P2PMessagingClient : SingletonSerializeAsTokenMessagingServiceAddressToArtemisQueueResolverServiceStateSupport</ID>
     <ID>TooManyFunctions:PathUtils.kt$net.corda.core.internal.PathUtils.kt</ID>
     <ID>TooManyFunctions:Perceivable.kt$net.corda.finance.contracts.universal.Perceivable.kt</ID>
     <ID>TooManyFunctions:PersistentIdentityService.kt$PersistentIdentityService : SingletonSerializeAsTokenIdentityServiceInternal</ID>
@@ -2112,7 +2113,7 @@
     <ID>WildcardImport:FlowFrameworkTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowFrameworkTripartyTests.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:FlowLogicRefFactoryImpl.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:FlowMatchers.kt$import net.corda.testing.internal.matchers.*</ID>
+    <ID>WildcardImport:FlowMatchers.kt$import net.corda.coretesting.internal.matchers.*</ID>
     <ID>WildcardImport:FlowOverrideTests.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowRetryTest.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowStackSnapshotTest.kt$import net.corda.core.flows.*</ID>

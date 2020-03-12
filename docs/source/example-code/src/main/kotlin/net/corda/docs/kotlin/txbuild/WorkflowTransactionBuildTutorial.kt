@@ -3,9 +3,24 @@
 package net.corda.docs.kotlin.txbuild
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.StateAndContract
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.requireSingleCommand
+import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
@@ -95,13 +110,12 @@ data class TradeApprovalContract(val blank: Unit? = null) : Contract {
  */
 @InitiatingFlow
 class SubmitTradeApprovalFlow(private val tradeId: String,
-                              private val counterparty: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
+                              private val counterparty: Party,
+                              private val notary: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
         // Manufacture an initial state
         val tradeProposal = TradeApprovalContract.State(tradeId, ourIdentity, counterparty)
-        // identify a notary. This might also be done external to the flow
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
         // Create the TransactionBuilder and populate with the new state.
         val tx = TransactionBuilder(notary).withItems(
                 StateAndContract(tradeProposal, TRADE_APPROVAL_PROGRAM_ID),

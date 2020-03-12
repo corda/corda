@@ -2,9 +2,9 @@ package net.corda.networkbuilder.serialization
 
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.node.serialization.kryo.KryoCheckpointSerializer
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl

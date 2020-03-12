@@ -42,8 +42,8 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
-import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before

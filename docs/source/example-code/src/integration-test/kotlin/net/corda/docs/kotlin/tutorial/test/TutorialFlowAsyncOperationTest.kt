@@ -10,7 +10,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
-import net.corda.testing.node.internal.findCordapp
 import org.junit.Test
 import kotlin.test.assertEquals
 

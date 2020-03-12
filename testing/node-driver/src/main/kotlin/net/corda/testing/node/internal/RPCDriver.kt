@@ -3,7 +3,7 @@ package net.corda.testing.node.internal
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.Trace

@@ -50,7 +50,7 @@ class CustomNotaryTest {
         mockNet.stopNodes()
     }
 
-    @Test(expected = CustomNotaryException::class)
+    @Test(expected = CustomNotaryException::class, timeout=300_000)
     fun `custom notary service is active`() {
         val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
         val stx = aliceNode.services.signInitialTransaction(tx)

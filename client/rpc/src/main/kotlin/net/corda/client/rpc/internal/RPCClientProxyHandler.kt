@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
@@ -11,7 +10,7 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -33,6 +32,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCApi.CLASS_METHOD_DIVIDER
 import net.corda.nodeapi.internal.DeduplicationChecker
+import net.corda.nodeapi.internal.rpc.client.CallSite
+import net.corda.nodeapi.internal.rpc.client.CallSiteMap
+import net.corda.nodeapi.internal.rpc.client.ObservableContext
+import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -256,9 +259,6 @@ class RPCClientProxyHandler(
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         startSessions()
     }
-
-    /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
-    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
@@ -666,20 +666,5 @@ class RPCClientProxyHandler(
     }
 }
 
-private typealias RpcObservableMap = Cache<InvocationId, UnicastSubject<Notification<*>>>
-private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<Any?>>
-private typealias CallSiteMap = ConcurrentHashMap<InvocationId, RPCClientProxyHandler.CallSite?>
-
-/**
- * Holds a context available during de-serialisation of messages that are expected to contain Observables.
- *
- * @property observableMap holds the Observables that are ultimately exposed to the user.
- * @property hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
- * @property callSiteMap keeps stack traces captured when an RPC was invoked, useful for debugging when an observable leaks.
- */
-data class ObservableContext(
-        val callSiteMap: CallSiteMap?,
-        val observableMap: RpcObservableMap,
-        val hardReferenceStore: MutableSet<Observable<*>>
-)
+private typealias RpcReplyMap = ConcurrentHashMap<Trace.InvocationId, SettableFuture<Any?>>
 

@@ -1,3 +1,4 @@
+@file:Suppress("TooManyFunctions")
 package net.corda.testing.node.internal
 
 import co.paralleluniverse.fibers.instrument.JavaAgent
@@ -21,8 +22,20 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VENDOR
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VENDOR
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
 import net.corda.core.internal.packageName_
 import net.corda.core.internal.readObject
@@ -73,31 +86,34 @@ import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
-import java.io.File
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Random
-import java.util.UUID
+import java.util.*
+import java.util.Collections.unmodifiableList
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.jar.JarInputStream
+import java.util.jar.Manifest
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -142,11 +158,7 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
-    override val cordappsClassLoader: ClassLoader? = if (!startNodesInProcess) {
-        createCordappsClassLoader(cordappsForAllNodes)
-    } else {
-        null
-    }
+    override val cordappsClassLoader: URLClassLoader? = createCordappsClassLoader(cordappsForAllNodes)
 
     interface Waitable {
         @Throws(InterruptedException::class)
@@ -195,14 +207,15 @@ class DriverDSLImpl(
     }
 
     override fun shutdown() {
-        if (waitForAllNodesToFinish) {
-            state.locked {
-                processes.forEach { it.waitFor() }
+        cordappsClassLoader.use { _ ->
+            if (waitForAllNodesToFinish) {
+                state.locked {
+                    processes.forEach { it.waitFor() }
+                }
             }
+            _shutdownManager?.shutdown()
+            _executorService?.shutdownNow()
         }
-        _shutdownManager?.shutdown()
-        _executorService?.shutdownNow()
-        (cordappsClassLoader as? AutoCloseable)?.close()
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
@@ -795,6 +808,19 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::killFlow)
         )
 
+        private const val CORDA_TESTING_ATTRIBUTE = "Corda-Testing"
+
+        private val CORDAPP_MANIFEST_ATTRIBUTES: List<String> = unmodifiableList(listOf(
+            CORDAPP_CONTRACT_NAME,
+            CORDAPP_CONTRACT_LICENCE,
+            CORDAPP_CONTRACT_VENDOR,
+            CORDAPP_CONTRACT_VERSION,
+            CORDAPP_WORKFLOW_NAME,
+            CORDAPP_WORKFLOW_LICENCE,
+            CORDAPP_WORKFLOW_VENDOR,
+            CORDAPP_WORKFLOW_VERSION
+        ))
+
         /**
          * Add the DJVM's sources to the node's configuration file.
          * These will all be ignored unless devMode is also true.
@@ -926,12 +952,11 @@ class DriverDSLImpl(
 
             // The following dependencies are excluded from the classpath of the created JVM,
             // so that the environment resembles a real one as close as possible.
-            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.)
-            // or irrelevant testing libraries (test, corda-mock etc.).
-            // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
-            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
-            val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
-                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
+           val cp = ProcessUtilities.defaultClassPath.filter { cpEntry ->
+                val cpPathEntry = Paths.get(cpEntry)
+                cpPathEntry.isRegularFile()
+                    && !isTestArtifact(cpPathEntry.fileName.toString())
+                    && !cpPathEntry.isExcludedJar
             }
 
             return ProcessUtilities.startJavaProcess(
@@ -945,6 +970,36 @@ class DriverDSLImpl(
                     identifier = identifier,
                     environmentVariables = environmentVariables
             )
+        }
+
+        // Obvious test artifacts. This is NOT intended to be an exhaustive list!
+        // It is only intended to remove those FEW jars which BLATANTLY do not
+        // belong inside a Corda Node.
+        private fun isTestArtifact(name: String): Boolean {
+            return name.endsWith("-tests.jar")
+                    || name.endsWith("-test.jar")
+                    || name.startsWith("corda-mock")
+                    || name.startsWith("junit")
+                    || name.startsWith("testng")
+                    || name.startsWith("mockito")
+        }
+
+        // Identify Corda's own testing framework by attribute in MANIFEST.MF.
+        private fun isTestArtifact(manifest: Manifest): Boolean {
+            return manifest[CORDA_TESTING_ATTRIBUTE] != null
+        }
+
+        // Identify CorDapp JARs by their attributes in MANIFEST.MF.
+        private fun isCordapp(manifest: Manifest): Boolean {
+            return CORDAPP_MANIFEST_ATTRIBUTES.any { manifest[it] != null }
+                    || (manifest[TARGET_PLATFORM_VERSION] != null && manifest[MIN_PLATFORM_VERSION] != null)
+        }
+
+        private val Path.isExcludedJar: Boolean get() {
+            return JarInputStream(Files.newInputStream(this).buffered()).use { jar ->
+                val manifest = jar.manifest ?: return false
+                isCordapp(manifest) || isTestArtifact(manifest)
+            }
         }
 
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
@@ -992,7 +1047,7 @@ class DriverDSLImpl(
             return config
         }
 
-        private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): ClassLoader? {
+        private fun createCordappsClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
             if (cordapps == null || cordapps.isEmpty()) {
                 return null
             }
@@ -1132,18 +1187,18 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization(driverDsl.cordappsClassLoader)
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
-    try {
-        driverDsl.start()
-        return dsl(coerce(driverDsl))
-    } catch (exception: Throwable) {
-        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        throw exception
-    } finally {
-        driverDsl.shutdown()
-        shutdownHook.cancel()
-        serializationEnv?.close()
+    setDriverSerialization(driverDsl.cordappsClassLoader).use { _ ->
+        val shutdownHook = addShutdownHook(driverDsl::shutdown)
+        try {
+            driverDsl.start()
+            return dsl(coerce(driverDsl))
+        } catch (exception: Throwable) {
+            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+            throw exception
+        } finally {
+            driverDsl.shutdown()
+            shutdownHook.cancel()
+        }
     }
 }
 
@@ -1160,8 +1215,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setDriverSerialization()
-    val driverDsl = driverDslWrapper(
+    setDriverSerialization().use { _ ->
+        val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                 portAllocation = defaultParameters.portAllocation,
                 debugPortAllocation = defaultParameters.debugPortAllocation,
@@ -1183,18 +1238,18 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                 djvmCordaSource = defaultParameters.djvmCordaSource,
                 environmentVariables = defaultParameters.environmentVariables
             )
-    )
-    val shutdownHook = addShutdownHook(driverDsl::shutdown)
-    try {
-        driverDsl.start()
-        return dsl(coerce(driverDsl))
-    } catch (exception: Throwable) {
-        DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        throw exception
-    } finally {
-        driverDsl.shutdown()
-        shutdownHook.cancel()
-        serializationEnv?.close()
+        )
+        val shutdownHook = addShutdownHook(driverDsl::shutdown)
+        try {
+            driverDsl.start()
+            return dsl(coerce(driverDsl))
+        } catch (exception: Throwable) {
+            DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+            throw exception
+        } finally {
+            driverDsl.shutdown()
+            shutdownHook.cancel()
+        }
     }
 }
 

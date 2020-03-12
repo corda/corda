@@ -26,8 +26,8 @@ import net.corda.node.services.messaging.Message
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
-import net.corda.testing.internal.createTestSerializationEnv
-import net.corda.testing.internal.inVMExecutors
+import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User

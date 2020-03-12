@@ -4,8 +4,8 @@ import net.corda.serialization.internal.amqp.custom.OptionalSerializer.OptionalP
 import java.util.Optional
 import java.util.function.Function
 
-class OptionalDeserializer : Function<OptionalProxy, Optional<Any>> {
-    override fun apply(proxy: OptionalProxy): Optional<Any> {
+class OptionalDeserializer : Function<OptionalProxy, Optional<out Any>> {
+    override fun apply(proxy: OptionalProxy): Optional<out Any> {
         return Optional.ofNullable(proxy.item)
     }
 }

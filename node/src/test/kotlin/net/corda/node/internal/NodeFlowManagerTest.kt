@@ -57,7 +57,7 @@ class NodeFlowManagerTest {
     }
 
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout = 300_000)
     fun `should fail to validate if more than one registration with equal weight`() {
         val nodeFlowManager = NodeFlowManager()
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp::class.java)
@@ -65,7 +65,7 @@ class NodeFlowManagerTest {
         nodeFlowManager.validateRegistrations()
     }
 
-    @Test()
+    @Test(timeout = 300_000)
     fun `should allow registration of flows with different weights`() {
         val nodeFlowManager = NodeFlowManager()
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp::class.java)
@@ -76,7 +76,7 @@ class NodeFlowManagerTest {
         Assert.assertThat(flow, `is`(instanceOf(RespSub::class.java)))
     }
 
-    @Test()
+    @Test(timeout = 300_000)
     fun `should allow updating of registered responder at runtime`() {
         val nodeFlowManager = NodeFlowManager()
         nodeFlowManager.registerInitiatedFlow(Init::class.java, Resp::class.java)

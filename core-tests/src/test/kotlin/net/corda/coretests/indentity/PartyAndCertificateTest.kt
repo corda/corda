@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test

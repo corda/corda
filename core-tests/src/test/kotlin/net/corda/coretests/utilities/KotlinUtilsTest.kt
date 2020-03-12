@@ -7,7 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.transient
-import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat

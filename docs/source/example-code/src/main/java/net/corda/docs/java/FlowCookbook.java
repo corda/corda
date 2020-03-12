@@ -117,19 +117,14 @@ public class FlowCookbook {
             progressTracker.setCurrentStep(ID_OTHER_NODES);
             // DOCEND 18
 
-            // A transaction generally needs a notary:
+            // Every transaction needs a notary:
             //   - To prevent double-spends if the transaction has inputs
             //   - To serve as a timestamping authority if the transaction has a
             //     time-window
             // We retrieve a notary from the network map.
             // DOCSTART 01
             CordaX500Name notaryName = new CordaX500Name("Notary Service", "London", "GB");
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
-            // Alternatively, we can pick an arbitrary notary from the notary
-            // list. However, it is always preferable to specify the notary
-            // explicitly, as the notary list might change when new notaries are
-            // introduced, or old ones decommissioned.
-            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+            Party notary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
             // DOCEND 01
 
             // We may also need to identify a specific counterparty. We do so
@@ -328,7 +323,7 @@ public class FlowCookbook {
             // If our transaction has input states or a time-window, we must instantiate it with a
             // notary.
             // DOCSTART 19
-            TransactionBuilder txBuilder = new TransactionBuilder(specificNotary);
+            TransactionBuilder txBuilder = new TransactionBuilder(notary);
             // DOCEND 19
 
             // Otherwise, we can choose to instantiate it without one:
@@ -362,7 +357,7 @@ public class FlowCookbook {
 
             // An output state can be added as a ``ContractState``, contract class name and notary.
             // DOCSTART 49
-            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
+            txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, notary);
             // DOCEND 49
             // We can also leave the notary field blank, in which case the transaction's default
             // notary is used.
@@ -372,7 +367,7 @@ public class FlowCookbook {
             // Or we can add the output state as a ``TransactionState``, which already specifies
             // the output's contract and notary.
             // DOCSTART 51
-            TransactionState txState = new TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
+            TransactionState txState = new TransactionState(ourOutputState, DummyContract.PROGRAM_ID, notary);
             // DOCEND 51
 
             // Commands can be added as ``Command``s.

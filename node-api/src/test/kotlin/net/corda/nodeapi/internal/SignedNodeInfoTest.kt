@@ -11,8 +11,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.signWith
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.signWith
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule

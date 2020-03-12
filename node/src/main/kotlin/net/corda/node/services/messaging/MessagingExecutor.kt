@@ -54,6 +54,11 @@ class MessagingExecutor(
     }
 
     @Synchronized
+    fun send(messages: Map<MessageRecipients, Message>) {
+        messages.forEach { recipients, message -> send(message, recipients) }
+    }
+
+    @Synchronized
     fun acknowledge(message: ClientMessage) {
         log.debug {
             val id = message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID)

@@ -30,8 +30,8 @@ class SandboxCollectionSerializer(
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Collection::class.java)) {
     @Suppress("unchecked_cast")
-    private val creator: Function<Array<Any>, out Any?>
-        = taskFactory.apply(CreateCollection::class.java) as Function<Array<Any>, out Any?>
+    private val creator: Function<Array<out Any>, out Any?>
+        = taskFactory.apply(CreateCollection::class.java) as Function<Array<out Any>, out Any?>
 
     private val unsupportedTypes: Set<Class<Any>> = listOf(
         EnumSet::class.java
@@ -87,7 +87,7 @@ class SandboxCollectionSerializer(
 private class ConcreteCollectionSerializer(
     declaredType: ParameterizedType,
     private val matchingType: Map.Entry<Class<Any>, Class<out Collection<*>>>,
-    private val creator: Function<Array<Any>, out Any?>,
+    private val creator: Function<Array<out Any>, out Any?>,
     factory: LocalSerializerFactory
 ) : AMQPSerializer<Any> {
     override val type: ParameterizedType = declaredType
