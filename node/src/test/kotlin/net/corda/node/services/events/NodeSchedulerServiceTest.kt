@@ -150,8 +150,8 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
                 // do nothing
             }
         }),
-        testClock,
-        database
+        database,
+        testClock
     )
 
     private val scheduler = NodeSchedulerService(
@@ -287,8 +287,8 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
                     // do nothing
                 }
             }),
-            testClock,
-            db
+            db,
+            testClock
         )
         return NodeSchedulerService(
             testClock,

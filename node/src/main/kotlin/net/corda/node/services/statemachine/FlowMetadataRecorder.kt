@@ -10,8 +10,8 @@ import java.time.Clock
 
 class FlowMetadataRecorder(
     private val checkpointStorage: CheckpointStorage,
-    private val clock: Clock,
-    private val database: CordaPersistence? = null
+    private val database: CordaPersistence,
+    private val clock: Clock
 ) {
 
     fun record(
@@ -22,7 +22,7 @@ class FlowMetadataRecorder(
         parameters: List<Any?> = emptyList(),
         userSuppliedIdentifier: String? = null
     ) {
-        database?.transaction {
+        database.transaction {
             checkpointStorage.addMetadata(
                 CheckpointStorage.FlowMetadata(
                     invocationId = invocationContext.trace.invocationId.value,
