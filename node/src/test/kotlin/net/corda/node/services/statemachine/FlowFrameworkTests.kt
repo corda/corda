@@ -20,8 +20,8 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
@@ -79,7 +79,6 @@ import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -353,6 +352,21 @@ class FlowFrameworkTests {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
             assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Flow persists progress tracker in the database when the flow suspends`() {
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedReceiveFlow(it) }
+        val aliceFlowId = aliceNode.services.startFlow(ReceiveFlow(bob)).id
+        mockNet.runNetwork()
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(aliceFlowId)
+            assertEquals(ReceiveFlow.START_STEP.label, checkpoint!!.progressStep)
+        }
+        bobNode.database.transaction {
+            val checkpoints = bobNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(InitiatedReceiveFlow.START_STEP.label, checkpoints.progressStep)
         }
     }
 

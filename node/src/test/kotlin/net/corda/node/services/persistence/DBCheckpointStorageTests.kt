@@ -23,7 +23,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.LogHelper
@@ -464,6 +463,33 @@ class DBCheckpointStorageTests {
             assertNotNull(checkpointFromStorage!!.flowIoRequest)
             val flowIORequest = checkpointFromStorage.flowIoRequest
             assertEquals(FlowIORequest.Sleep::class.java.simpleName, flowIORequest)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Checkpoint truncates long progressTracker step name`() {
+        val maxProgressStepLength = 256
+        val (id, checkpoint) = newCheckpoint(1)
+        database.transaction {
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertNull(checkpointFromStorage!!.progressStep)
+        }
+        val longString = """Long string Long string Long string Long string Long string Long string Long string Long string Long string
+            Long string Long string Long string Long string Long string Long string Long string Long string Long string Long string
+            Long string Long string Long string Long string Long string Long string Long string Long string Long string Long string
+        """.trimIndent()
+        database.transaction {
+            val newCheckpoint = checkpoint.copy(progressStep = longString)
+            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
+                    context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
+            )
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
+        }
+        database.transaction {
+            val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
+            assertEquals(longString.take(maxProgressStepLength), checkpointFromStorage!!.progressStep)
         }
     }
 
