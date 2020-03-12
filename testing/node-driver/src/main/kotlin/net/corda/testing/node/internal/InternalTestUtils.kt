@@ -23,6 +23,7 @@ import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
@@ -273,9 +274,10 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
     return completable
 }
 
-fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
+fun DriverDSL.assertUncompletedCheckpoints(name: CordaX500Name, expected: Long) {
+    val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
     DriverManager.getConnection("jdbc:h2:file:${baseDirectory(name) / "persistence"}", "sa", "").use { connection ->
-        connection.createStatement().executeQuery("select count(*) from NODE_CHECKPOINTS").use { rs ->
+        connection.createStatement().executeQuery(sqlStatement).use { rs ->
             rs.next()
             assertThat(rs.getLong(1)).isEqualTo(expected)
         }

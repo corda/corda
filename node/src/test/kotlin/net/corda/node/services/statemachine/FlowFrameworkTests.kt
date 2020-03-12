@@ -9,7 +9,15 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.flows.*
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowInfo
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
@@ -40,12 +48,20 @@ import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.getMessage
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
 import org.assertj.core.api.Condition
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import rx.Notification
@@ -55,7 +71,6 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 import kotlin.reflect.KClass
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FlowFrameworkTests {
@@ -73,15 +88,14 @@ class FlowFrameworkTests {
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-     private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-            override fun record(
-                    serializedCheckpointState: SerializedBytes<CheckpointState>,
-                    serializedFlowState: SerializedBytes<FlowState>
-            ) {
-                // do nothing
-            }
-        })
-
+    private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
+        override fun record(
+                serializedCheckpointState: SerializedBytes<CheckpointState>,
+                serializedFlowState: SerializedBytes<FlowState>
+        ) {
+            // do nothing
+        }
+    })
 
     @Before
     fun setUpMockNet() {
@@ -310,6 +324,26 @@ class FlowFrameworkTests {
                     it
                 ).value == bob
             }, "FlowException's private peer field has value set"))
+    }
+
+    //We should update this test when we do the work to persists the flow result.
+    @Test(timeout = 300_000)
+    fun `Flow status is set to completed in database when the flow finishes`() {
+        val terminationSignal = Semaphore(0)
+        val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
+        mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
+        aliceNode.database.transaction {
+            val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
+            assertNull(checkpoint!!.result)
+            assertNotEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        }
+        terminationSignal.release()
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
+            assertNull(checkpoint!!.result)
+            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        }
     }
 
     private class ConditionalExceptionFlow(val otherPartySession: FlowSession, val sendPayload: Any) : FlowLogic<Unit>() {

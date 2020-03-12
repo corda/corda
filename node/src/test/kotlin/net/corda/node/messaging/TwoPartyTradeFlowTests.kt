@@ -32,9 +32,10 @@ import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
+import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.checkpoints
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.*
 import net.corda.testing.dsl.LedgerDSL
@@ -56,9 +57,16 @@ import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
+import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+
+internal fun CheckpointStorage.getAllIncompleteCheckpoints(): List<Checkpoint.Serialized> {
+    return getAllCheckpoints().use {
+        it.map { it.second }.toList()
+    }.filter { it.status !=  Checkpoint.FlowStatus.COMPLETED }
+}
 
 /**
  * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do
@@ -135,11 +143,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.dispose()
 
             aliceNode.database.transaction {
-                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
             aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
-                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
             bobNode.internals.manuallyCloseDB()
         }
@@ -191,11 +199,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.dispose()
 
             aliceNode.database.transaction {
-                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
             aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
-                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
             bobNode.internals.manuallyCloseDB()
         }
@@ -245,7 +253,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             bobNode.database.transaction {
-                assertThat(bobNode.internals.checkpointStorage.checkpoints()).hasSize(1)
+                assertThat(bobNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).hasSize(1)
             }
 
             val storage = bobNode.services.validatedTransactions
@@ -278,10 +286,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
             bobNode.database.transaction {
-                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
             aliceNode.database.transaction {
-                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.getAllIncompleteCheckpoints()).isEmpty()
             }
 
             bobNode.database.transaction {
