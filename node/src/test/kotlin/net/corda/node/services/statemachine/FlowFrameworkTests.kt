@@ -296,7 +296,8 @@ class FlowFrameworkTests {
             .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
             .withStackTraceContaining("Received counter-flow exception from peer")
         bobNode.database.transaction {
-            assertEquals(bobNode.internals.checkpointStorage.checkpoints().single().status, Checkpoint.FlowStatus.FAILED)
+            val checkpoint = bobNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(checkpoint.status, Checkpoint.FlowStatus.FAILED)
         }
 
         assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
@@ -735,6 +736,10 @@ class FlowFrameworkTests {
         contextTransactionOrNull = null
         contextDatabase.newTransaction()
     }
+
+    // todo; needed tests for this change; i guess the test aligned before is enough to test that upon failing we get a FAILED Status
+
+
 
     //region Helpers
 
