@@ -1,4 +1,5 @@
 @file:JvmName("ConfigUtilities")
+@file:Suppress("LongParameterList")
 
 package net.corda.nodeapi.internal.config
 
@@ -52,21 +53,35 @@ const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 // This is to enable constructs like:
 // `val keyStorePassword: String by config`
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle, nestedPath = null, baseDirectory = null)
+    return getValueInternal(
+            metadata.name,
+            metadata.returnType,
+            UnknownConfigKeysPolicy.IGNORE::handle,
+            nestedPath = null,
+            baseDirectory = null
+    )
 }
 
 // Problems:
 // - Forces you to have a primary constructor with all fields of name and type matching the configuration file structure.
 // - Encourages weak bean-like types.
-// - Cannot support a many-to-one relationship between configuration file structures and configuration domain type. This is essential for versioning of the configuration files.
+// - Cannot support a many-to-one relationship between configuration file structures and configuration domain type. This is essential for
+//   versioning of the configuration files.
 // - It's complicated and based on reflection, meaning problems with it are typically found at runtime.
-// - It doesn't support validation errors in a structured way. If something goes wrong, it throws exceptions, which doesn't support good usability practices like displaying all the errors at once.
-fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle,
-                             nestedPath: String? = null, baseDirectory: Path? = null): T {
+// - It doesn't support validation errors in a structured way. If something goes wrong, it throws exceptions, which doesn't support good
+//   usability practices like displaying all the errors at once.
+fun <T : Any> Config.parseAs(
+        clazz: KClass<T>,
+        onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle,
+        nestedPath: String? = null,
+        baseDirectory: Path? = null
+): T {
     // Use custom parser if provided, instead of treating the object as data class.
     clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
 
-    require(clazz.isData) { "Only Kotlin data classes or class annotated with CustomConfigParser can be parsed. Offending: ${clazz.qualifiedName}" }
+    require(clazz.isData) {
+        "Only Kotlin data classes or class annotated with CustomConfigParser can be parsed. Offending: ${clazz.qualifiedName}"
+    }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
     val parameterNames = parameters.flatMap { param ->
@@ -104,24 +119,46 @@ class UnknownConfigurationKeysException private constructor(val unknownKeys: Set
 
     companion object {
         fun of(offendingKeys: Set<String>): UnknownConfigurationKeysException = UnknownConfigurationKeysException(offendingKeys)
-        private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
+        private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: " +
+                "${offendingKeys.joinToString(", ", "[", "]")}."
     }
 }
 
-inline fun <reified T : Any> Config.parseAs(noinline onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T = parseAs(T::class, onUnknownKeys)
+inline fun <reified T : Any> Config.parseAs(
+        noinline onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle
+): T = parseAs(T::class, onUnknownKeys)
 
 fun Config.toProperties(): Properties {
     return entrySet().associateByTo(
             Properties(),
             { ConfigUtil.splitPath(it.key).joinToString(".") },
-            { it.value.unwrapped().toString() })
+            { it.value.unwrapped() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit), nestedPath: String?, baseDirectory: Path?): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys, nestedPath, baseDirectory) else getCollectionValue(path, type, onUnknownKeys, nestedPath, baseDirectory))
+private fun <T : Any> Config.getValueInternal(
+        path: String,
+        type: KType,
+        onUnknownKeys: ((Set<String>, logger: Logger) -> Unit),
+        nestedPath: String?,
+        baseDirectory: Path?
+): T {
+    return uncheckedCast(
+            if (type.arguments.isEmpty()) {
+                getSingleValue(path, type, onUnknownKeys, nestedPath, baseDirectory)
+            } else {
+                getCollectionValue(path, type, onUnknownKeys, nestedPath, baseDirectory)
+            }
+    )
 }
 
-private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String?, baseDirectory: Path?): Any? {
+@Suppress("ComplexMethod")
+private fun Config.getSingleValue(
+        path: String,
+        type: KType,
+        onUnknownKeys: (Set<String>, logger: Logger) -> Unit,
+        nestedPath: String?,
+        baseDirectory: Path?
+): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return try {
@@ -153,7 +190,12 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             else -> if (typeClass.java.isEnum) {
                 parseEnum(typeClass.java, getString(path))
             } else {
-                getConfig(path).parseAs(typeClass, onUnknownKeys, nestedPath?.let { "$it.$path" } ?: path, baseDirectory = baseDirectory)
+                getConfig(path).parseAs(
+                        typeClass,
+                        onUnknownKeys,
+                        nestedPath?.let { "$it.$path" } ?: path,
+                        baseDirectory = baseDirectory
+                )
             }
         }
     } catch (e: ConfigException.Missing) {
@@ -164,7 +206,8 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
 private fun resolvePath(pathAsString: String, baseDirectory: Path?): Path {
     val path = Paths.get(pathAsString)
     return if (baseDirectory != null) {
-        // if baseDirectory been specified try resolving path against it. Note if `pathFromConfig` is an absolute path - this instruction has no effect.
+        // if baseDirectory been specified try resolving path against it. Note if `pathFromConfig` is an absolute path - this instruction
+        // has no effect.
         baseDirectory.resolve(path)
     } else {
         path
@@ -178,10 +221,18 @@ private fun ConfigException.Missing.relative(path: String, nestedPath: String?):
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit, nestedPath: String?, baseDirectory: Path?): Collection<Any> {
+@Suppress("ComplexMethod")
+private fun Config.getCollectionValue(
+        path: String,
+        type: KType,
+        onUnknownKeys: (Set<String>, logger: Logger) -> Unit,
+        nestedPath: String?,
+        baseDirectory: Path?
+): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
-    val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
+    val elementClass = type.arguments[0].type?.jvmErasure
+            ?: throw IllegalArgumentException("Cannot work with star projection: $type")
     if (!hasPath(path)) {
         return if (typeClass == List::class) emptyList() else emptySet()
     }
@@ -240,7 +291,13 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
  */
 fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
 
-fun Any?.toConfigValue(): ConfigValue = if (this is ConfigValue) this else if (this != null) ConfigValueFactory.fromAnyRef(convertValue(this)) else ConfigValueFactory.fromAnyRef(null)
+fun Any?.toConfigValue(): ConfigValue = if (this is ConfigValue) {
+    this
+} else if (this != null) {
+    ConfigValueFactory.fromAnyRef(convertValue(this))
+} else {
+    ConfigValueFactory.fromAnyRef(null)
+}
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.
@@ -253,7 +310,8 @@ private fun Any.toConfigMap(): Map<String, Any> {
         val configValue = if (value is String || value is Boolean || value is Number) {
             // These types are supported by Config as use as is
             value
-        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
+        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name ||
+                value is Path || value is URL || value is UUID || value is X500Principal) {
             // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
             value.toString()
         } else if (value is Enum<*>) {
@@ -278,7 +336,8 @@ private fun convertValue(value: Any): Any {
     return if (value is String || value is Boolean || value is Number) {
         // These types are supported by Config as use as is
         value
-    } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
+    } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name ||
+            value is Path || value is URL || value is UUID || value is X500Principal) {
         // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
         value.toString()
     } else if (value is Enum<*>) {
