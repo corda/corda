@@ -63,9 +63,10 @@ class FlowMetadataRecorderTest {
 
     @Before
     fun before() {
-        MyFlow.hook = null
-        MyResponder.hook = null
-        MyFlowWithoutParameters.hook
+        MyFlow.hookAfterInitialCheckpoint = null
+        MyFlow.hookAfterSuspend = null
+        MyResponder.hookAfterInitialCheckpoint = null
+        MyFlowWithoutParameters.hookAfterInitialCheckpoint = null
     }
 
     @Test(timeout = 300_000)
@@ -78,7 +79,7 @@ class FlowMetadataRecorderTest {
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
-            MyFlow.hook =
+            MyFlow.hookAfterInitialCheckpoint =
                 { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     flowId = flowIdFromHook
                     context = contextFromHook
@@ -126,7 +127,7 @@ class FlowMetadataRecorderTest {
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
-            MyFlowWithoutParameters.hook =
+            MyFlowWithoutParameters.hookAfterInitialCheckpoint =
                 { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     flowId = flowIdFromHook
                     context = contextFromHook
@@ -160,6 +161,60 @@ class FlowMetadataRecorderTest {
     }
 
     @Test(timeout = 300_000)
+    fun `rpc started flows have their arguments removed from in-memory checkpoint after zero'th checkpoint`() {
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            var flowId: StateMachineRunId? = null
+            var context: InvocationContext? = null
+            var metadata: DBCheckpointStorage.DBFlowMetadata? = null
+            MyFlow.hookAfterInitialCheckpoint =
+                { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
+                    flowId = flowIdFromHook
+                    context = contextFromHook
+                    metadata = metadataFromHook
+                }
+
+            var context2: InvocationContext? = null
+            var metadata2: DBCheckpointStorage.DBFlowMetadata? = null
+            MyFlow.hookAfterSuspend =
+                { contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
+                    context2 = contextFromHook
+                    metadata2 = metadataFromHook
+                }
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::MyFlow,
+                    nodeBHandle.nodeInfo.singleIdentity(),
+                    string,
+                    someObject
+                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+            }
+
+            assertEquals(
+                listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
+                (context!!.arguments[1] as Array<Any?>).toList()
+            )
+            assertEquals(
+                listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
+                metadata!!.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            )
+
+            assertEquals(
+                emptyList(),
+                context2!!.arguments
+            )
+            assertEquals(
+                listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
+                metadata2!!.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            )
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `initiated flows have metadata recorded`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
@@ -169,7 +224,7 @@ class FlowMetadataRecorderTest {
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
-            MyResponder.hook =
+            MyResponder.hookAfterInitialCheckpoint =
                 { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     flowId = flowIdFromHook
                     context = contextFromHook
@@ -216,7 +271,7 @@ class FlowMetadataRecorderTest {
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
-            MyFlow.hook =
+            MyFlow.hookAfterInitialCheckpoint =
                 { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     flowId = flowIdFromHook
                     context = contextFromHook
@@ -265,7 +320,7 @@ class FlowMetadataRecorderTest {
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
-            MyFlow.hook =
+            MyFlow.hookAfterInitialCheckpoint =
                 { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     flowId = flowIdFromHook
                     context = contextFromHook
@@ -318,8 +373,12 @@ class FlowMetadataRecorderTest {
         FlowLogic<Unit>() {
 
         companion object {
-            var hook: ((
+            var hookAfterInitialCheckpoint: ((
                 flowId: StateMachineRunId,
+                context: InvocationContext,
+                metadata: DBCheckpointStorage.DBFlowMetadata
+            ) -> Unit)? = null
+            var hookAfterSuspend: ((
                 context: InvocationContext,
                 metadata: DBCheckpointStorage.DBFlowMetadata
             ) -> Unit)? = null
@@ -327,7 +386,7 @@ class FlowMetadataRecorderTest {
 
         @Suspendable
         override fun call() {
-            hook?.let {
+            hookAfterInitialCheckpoint?.let {
                 it(
                     stateMachine.id,
                     stateMachine.context,
@@ -335,6 +394,12 @@ class FlowMetadataRecorderTest {
                 )
             }
             initiateFlow(party).sendAndReceive<String>("Hello there")
+            hookAfterSuspend?.let {
+                it(
+                    stateMachine.context,
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                )
+            }
         }
     }
 
@@ -342,7 +407,7 @@ class FlowMetadataRecorderTest {
     class MyResponder(private val session: FlowSession) : FlowLogic<Unit>() {
 
         companion object {
-            var hook: ((
+            var hookAfterInitialCheckpoint: ((
                 flowId: StateMachineRunId,
                 context: InvocationContext,
                 metadata: DBCheckpointStorage.DBFlowMetadata
@@ -352,7 +417,7 @@ class FlowMetadataRecorderTest {
         @Suspendable
         override fun call() {
             session.receive<String>()
-            hook?.let {
+            hookAfterInitialCheckpoint?.let {
                 it(
                     stateMachine.id,
                     stateMachine.context,
@@ -367,7 +432,7 @@ class FlowMetadataRecorderTest {
     class MyFlowWithoutParameters : FlowLogic<Unit>() {
 
         companion object {
-            var hook: ((
+            var hookAfterInitialCheckpoint: ((
                 flowId: StateMachineRunId,
                 context: InvocationContext,
                 metadata: DBCheckpointStorage.DBFlowMetadata
@@ -376,7 +441,7 @@ class FlowMetadataRecorderTest {
 
         @Suspendable
         override fun call() {
-            hook?.let {
+            hookAfterInitialCheckpoint?.let {
                 it(
                     stateMachine.id,
                     stateMachine.context,
