@@ -431,7 +431,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         ioRequest = ioRequest,
                         maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.checkpointSerialize(context = serializationContext.value),
-                        currentStep = logic.progressTracker?.currentStep
+                        progressStep = logic.progressTracker?.currentStep
                 )
             } catch (exception: Exception) {
                 Event.Error(exception)

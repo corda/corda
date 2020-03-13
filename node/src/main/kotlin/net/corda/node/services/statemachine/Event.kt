@@ -102,20 +102,20 @@ sealed class Event {
      * @param ioRequest the request triggering the suspension.
      * @param maySkipCheckpoint indicates whether the persistence may be skipped.
      * @param fiber the serialised stack of the flow.
-     * @param currentStep the current progress tracker step.
+     * @param progressStep the current progress tracker step.
      */
     data class Suspend(
             val ioRequest: FlowIORequest<*>,
             val maySkipCheckpoint: Boolean,
             val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
-            var currentStep: ProgressTracker.Step?
+            var progressStep: ProgressTracker.Step?
     ) : Event() {
         override fun toString() =
                 "Suspend(" +
                         "ioRequest=$ioRequest, " +
                         "maySkipCheckpoint=$maySkipCheckpoint, " +
                         "fiber=${fiber.hash}, " +
-                        "currentStep=${currentStep?.label}" +
+                        "currentStep=${progressStep?.label}" +
                         ")"
     }
 
