@@ -286,8 +286,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
 
         val metadata = createMetadata(flowId, checkpoint)
-        metadata.flowId = flowId
-        currentDBSession().update(metadata)
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         return DBFlowCheckpoint(
             id = flowId,
