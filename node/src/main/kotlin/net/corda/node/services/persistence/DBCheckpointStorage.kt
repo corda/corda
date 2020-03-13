@@ -1,5 +1,7 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializationDefaults
@@ -12,6 +14,7 @@ import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -281,17 +284,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
-        // Need to update the metadata record to join it to the main checkpoint record
 
-        // This code needs to be added back in once the metadata record is properly created (remove the code below it)
-        //        val metadata = requireNotNull(currentDBSession().find(
-        //            DBFlowMetadata::class.java,
-        //            invocationId
-        //        )) { "The flow metadata record for flow [$flowId] with invocation id [$invocationId] does not exist"}
-        val metadata = (currentDBSession().find(
-            DBFlowMetadata::class.java,
-            invocationId
-        )) ?: createTemporaryMetadata(checkpoint)
+        val metadata = createMetadata(flowId, checkpoint)
         metadata.flowId = flowId
         currentDBSession().update(metadata)
         // Most fields are null as they cannot have been set when creating the initial checkpoint
@@ -310,19 +304,25 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     // Remove this when saving of metadata is properly handled
-    private fun createTemporaryMetadata(checkpoint: Checkpoint): DBFlowMetadata {
+    private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+        val context = checkpoint.checkpointState.invocationContext
+        val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
-            invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value,
-            flowId = null,
-            flowName = "random.flow",
+            // will be no point having a PK of invocation id anymore
+            invocationId = context.trace.invocationId.value,
+            flowId = flowId,
+            flowName = flowInfo.flowClass.name,
+            // will come from the context
             userSuppliedIdentifier = null,
-            startType = DBCheckpointStorage.StartReason.RPC,
-            launchingCordapp = "this cordapp",
+            startType = context.getStartedType(),
+            initialParameters = context.getFlowParameters().storageSerialize().bytes,
+            launchingCordapp = (flowInfo.subFlowVersion as? SubFlowVersion.CorDappFlow)?.corDappName ?: "Core flow",
             platformVersion = PLATFORM_VERSION,
-            rpcUsername = "Batman",
-            invocationInstant = checkpoint.checkpointState.invocationContext.trace.invocationId.timestamp,
+            rpcUsername = context.principal().name,
+            invocationInstant = context.trace.invocationId.timestamp,
+            // [receivedInstant] makes no sense anymore as we have _started_ the flow
             receivedInstant = Instant.now(),
-            startInstant = null,
+            startInstant = Instant.now(),
             finishInstant = null
         ).apply {
             currentDBSession().save(this)
@@ -441,6 +441,24 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
                 value = it.storageSerialize().bytes,
                 persistedInstant = now
             )
+        }
+    }
+
+    private fun InvocationContext.getStartedType(): StartReason {
+        return when (origin) {
+            is InvocationOrigin.RPC, is InvocationOrigin.Shell -> StartReason.RPC
+            is InvocationOrigin.Peer -> StartReason.INITIATED
+            is InvocationOrigin.Service -> StartReason.SERVICE
+            is InvocationOrigin.Scheduled -> StartReason.SCHEDULED
+        }
+    }
+
+    private fun InvocationContext.getFlowParameters(): List<Any?> {
+        // Only RPC flows have parameters which are found in index 1
+        return if(arguments.isNotEmpty()) {
+            (arguments[1] as Array<Any?>).toList()
+        } else {
+            emptyList()
         }
     }
 

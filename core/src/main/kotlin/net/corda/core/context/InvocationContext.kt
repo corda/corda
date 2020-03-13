@@ -18,21 +18,41 @@ import java.security.Principal
  * @property impersonatedActor Optional impersonated actor, used for logging but not for authorisation.
  */
 @CordaSerializable
-data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
+data class InvocationContext(
+    val origin: InvocationOrigin,
+    val trace: Trace,
+    val actor: Actor?,
+    val externalTrace: Trace? = null,
+    val impersonatedActor: Actor? = null,
+    val arguments: List<Any?> = emptyList()
+) {
     companion object {
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
         @DeleteForDJVM
         @JvmStatic
-        fun newInstance(origin: InvocationOrigin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
+        fun newInstance(
+            origin: InvocationOrigin,
+            trace: Trace = Trace.newInstance(),
+            actor: Actor? = null,
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            arguments: List<Any?> = emptyList()
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
          */
         @DeleteForDJVM
         @JvmStatic
-        fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
+        fun rpc(
+            actor: Actor,
+            trace: Trace = Trace.newInstance(),
+            externalTrace: Trace? = null,
+            impersonatedActor: Actor? = null,
+            arguments: List<Any?> = emptyList()
+        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.

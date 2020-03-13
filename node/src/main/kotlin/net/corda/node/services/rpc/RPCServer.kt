@@ -372,10 +372,10 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
-                    val context = artemisMessage.context(clientToServer.sessionId)
-                    context.invocation.pushToLoggingContext()
                     when (arguments) {
                         is Try.Success -> {
+                            val context = artemisMessage.context(clientToServer.sessionId, arguments.value)
+                            context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
                             rpcExecutor!!.submit {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
@@ -460,12 +460,12 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
+    private fun ClientMessage.context(sessionId: Trace.SessionId, arguments: List<Any?>): RpcAuthContext {
         val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
         val impersonatedActor = impersonatedActor()
-        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor, arguments), rpcActor.second)
     }
 
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {
