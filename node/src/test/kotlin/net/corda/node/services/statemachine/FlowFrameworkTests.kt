@@ -339,16 +339,17 @@ class FlowFrameworkTests {
     //We should update this test when we do the work to persists the flow result.
     @Test(timeout = 300_000)
     fun `Flow status is set to completed in database when the flow finishes`() {
-        val terminationSignal = Semaphore(0)
-        val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
-        mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
-        aliceNode.database.transaction {
-            val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
-            assertNull(checkpoint!!.result)
-            assertNotEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        val meetUpSemaphore = MeetUpSemaphore()
+        val flow = aliceNode.services.startFlow(NoOpFlow(terminateUponSignal = meetUpSemaphore))
+        meetUpSemaphore.task = {
+            aliceNode.database.transaction {
+                val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
+                assertNull(checkpoint!!.result)
+                assertNotEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+            }
         }
-        terminationSignal.release()
-        mockNet.waitQuiescent()
+        meetUpSemaphore.executeTaskAndRelease()
+        flow.resultFuture.getOrThrow() // wait till flow finishes
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
@@ -1055,5 +1056,21 @@ internal class SuspendingFlow : FlowLogic<Unit>() {
         stateMachine.hookBeforeCheckpoint()
         sleep(1.seconds) // flow checkpoints => checkpoint is in DB
         stateMachine.hookAfterCheckpoint()
+    }
+}
+
+internal class MeetUpSemaphore(var task: (() -> Unit)? = null) : Semaphore(0) {
+    private val semaphore2 = Semaphore(0)
+
+    @Suspendable
+    override fun acquire() {
+        semaphore2.release() // reach meetUp point and notify the other thread
+        super.acquire() // wait here till other thread executed [executeTaskAndRelease] and then continue...
+    }
+
+    fun executeTaskAndRelease() {
+        semaphore2.acquire() // wait in meetUp point until other thread has also reached it
+        task?.invoke()
+        super.release() // task executed and other thread may continue now...
     }
 }
