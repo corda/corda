@@ -4,19 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaRuntimeException
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.IdempotentFlow
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.executeAsync
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
@@ -146,7 +143,7 @@ class FlowRetryTest {
                 }
                 assertEquals(3, TransientConnectionFailureFlow.retryCount)
                 // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-                assertEquals(2, it.proxy.startFlow(::GetNumberOfCheckpointsFlow).returnValue.get())
+                assertEquals(2, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             }
         }
     }
@@ -165,7 +162,7 @@ class FlowRetryTest {
                 }
                 assertEquals(3, WrappedTransientConnectionFailureFlow.retryCount)
                 // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-                assertEquals(2, it.proxy.startFlow(::GetNumberOfCheckpointsFlow).returnValue.get())
+                assertEquals(2, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             }
         }
     }
@@ -184,7 +181,7 @@ class FlowRetryTest {
                 }
                 assertEquals(0, GeneralExternalFailureFlow.retryCount)
                 // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-                assertEquals(1, it.proxy.startFlow(::GetNumberOfCheckpointsFlow).returnValue.get())
+                assertEquals(1, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             }
         }
     }
@@ -461,9 +458,10 @@ class GeneralExternalFailureResponder(private val session: FlowSession) : FlowLo
 }
 
 @StartableByRPC
-class GetNumberOfCheckpointsFlow : FlowLogic<Long>() {
+class GetNumberOfUncompletedCheckpointsFlow : FlowLogic<Long>() {
     override fun call(): Long {
-        return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints").use { ps ->
+        val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
+        return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
             ps.executeQuery().use { rs ->
                 rs.next()
                 rs.getLong(1)

@@ -11,6 +11,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.vault.SessionScope
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.testing.driver.DriverParameters
@@ -37,7 +38,9 @@ class CordaPersistenceServiceTests {
             assertEquals(sampleSize, count)
 
             DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
-                val resultSet = it.createStatement().executeQuery("SELECT count(*) from ${NODE_DATABASE_PREFIX}checkpoints")
+                val resultSet = it.createStatement().executeQuery(
+                        "SELECT count(*) from ${NODE_DATABASE_PREFIX}checkpoints where status not in (${FlowStatus.COMPLETED.ordinal})"
+                )
                 assertTrue(resultSet.next())
                 val resultSize = resultSet.getInt(1)
                 assertEquals(sampleSize, resultSize)

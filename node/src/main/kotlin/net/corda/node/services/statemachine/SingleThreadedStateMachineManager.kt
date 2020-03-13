@@ -609,7 +609,7 @@ class SingleThreadedStateMachineManager(
             // This is a brand new flow
             null
         }
-        val checkpoint = existingCheckpoint ?: Checkpoint.create(
+        val checkpoint = existingCheckpoint?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: Checkpoint.create(
                 invocationContext,
                 flowStart,
                 flowLogic.javaClass,
@@ -779,7 +779,7 @@ class SingleThreadedStateMachineManager(
             isStartIdempotent: Boolean,
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
-        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return null
+        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
         val fiber = when (flowState) {
@@ -805,12 +805,7 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
-                        // Do a trivial checkpoint copy below, to update the Checkpoint#timestamp value.
-                        // The Checkpoint#timestamp is being used by FlowMonitor as the starting time point of a potential suspension.
-                        // We need to refresh the Checkpoint#timestamp here, in case of an e.g. node start up after a long period.
-                        // If not then, there is a time window (until the next checkpoint update) in which the FlowMonitor
-                        // could log this flow as a waiting flow, from the last checkpoint update i.e. before the node's start up.
-                        checkpoint = checkpoint.copy(),
+                        checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                         isFlowResumed = false,
                         isTransactionTracked = false,

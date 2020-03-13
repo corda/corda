@@ -2,6 +2,7 @@ package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -328,12 +329,14 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
-        val result = updateDBFlowResult(entity, checkpoint, now)
+        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
+        //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
 
         return entity.apply {
             this.blob = blob
-            this.result = result
+            //Set the result to null for now.
+            this.result = null
             this.exceptionDetails = exceptionDetails
             // Do not update the meta data relationship on updates
             this.flowMetadata = entity.flowMetadata
