@@ -32,6 +32,7 @@ data class InvocationContext(
          */
         @DeleteForDJVM
         @JvmStatic
+        @Suppress("LongParameterList")
         fun newInstance(
             origin: InvocationOrigin,
             trace: Trace = Trace.newInstance(),
