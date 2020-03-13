@@ -737,9 +737,17 @@ class FlowFrameworkTests {
         contextDatabase.newTransaction()
     }
 
-    // todo; needed tests for this change; i guess the test aligned before is enough to test that upon failing we get a FAILED Status
+    @Test(timeout=300_000)
+    fun `Checkpoint status changes to FAILED when flow fails`() {
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlow(ExceptionFlow { IllegalStateException("Just an exception") }).resultFuture.getOrThrow()
+        }
 
-
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
+        }
+    }
 
     //region Helpers
 
