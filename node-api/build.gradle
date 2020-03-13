@@ -19,6 +19,8 @@ dependencies {
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
 
+    compile "io.netty:netty-handler-proxy:$netty_version"
+
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 

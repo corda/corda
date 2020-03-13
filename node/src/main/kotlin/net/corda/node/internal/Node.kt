@@ -79,6 +79,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -417,7 +418,15 @@ open class Node(configuration: NodeConfiguration,
                     failoverCallback = { errorAndTerminate("ArtemisMessagingClient failed. Shutting down.", null) }
             )
         }
-        return BridgeControlListener(configuration.p2pSslOptions, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, artemisMessagingClientFactory)
+        return BridgeControlListener(
+                configuration.p2pSslOptions.keyStore.get(),
+                configuration.p2pSslOptions.trustStore.get(),
+                false,
+                null,
+                networkParameters.maxMessageSize,
+                configuration.crlCheckSoftFail.toRevocationConfig(),
+                false,
+                artemisMessagingClientFactory)
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
