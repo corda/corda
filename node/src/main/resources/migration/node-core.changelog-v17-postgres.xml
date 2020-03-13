@@ -116,7 +116,7 @@
             <column name="flow_parameters" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
-            <column name="cordapp_name" type="NVARCHAR(64)">
+            <column name="cordapp_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
             <column name="platform_version" type="TINYINT">
