@@ -35,9 +35,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.node.serialization.kryo.LinkedHashMapEntrySerializer
-import net.corda.node.serialization.kryo.LinkedHashMapIteratorSerializer
-import net.corda.node.serialization.kryo.LinkedListItrSerializer
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.MutableClassWhitelist
