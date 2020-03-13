@@ -15,6 +15,8 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
+import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
+import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
@@ -118,6 +120,6 @@ val KRYO_CHECKPOINT_CONTEXT = CheckpointSerializationContextImpl(
         QuasarWhitelist,
         emptyMap(),
         true,
-        null,
+        SNAPPY,
         AlwaysAcceptEncodingWhitelist
 )
