@@ -9,16 +9,29 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.OutOfProcessSecurityRule
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 
+@Suppress("FunctionName")
 class CordaServiceFlowTests {
+    companion object {
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
+    }
+
     @Test(timeout=300_000)
 	fun `corda service can start a flow and wait for it`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(
+            startNodesInProcess = false,
+            systemProperties = security.systemProperties,
+            cordappsForAllNodes = listOf(enclosedCordapp())
+        )) {
             val node = startNode().getOrThrow()
             val text = "191ejodaimadc8i"
 

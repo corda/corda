@@ -8,6 +8,8 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
 import java.lang.reflect.Field
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 
 /**
  * A strategy for reading a property value during deserialization.
@@ -157,7 +159,7 @@ sealed class PropertyReader {
      */
     class GetterReader(private val getter: Method): PropertyReader() {
         init {
-            getter.isAccessible = true
+            doPrivileged(PrivilegedAction { getter.isAccessible = true })
         }
 
         override fun read(obj: Any?): Any? = if (obj == null) null else getter.invoke(obj)
@@ -168,7 +170,7 @@ sealed class PropertyReader {
      */
     class FieldReader(private val field: Field): PropertyReader() {
         init {
-            field.isAccessible = true
+            doPrivileged(PrivilegedAction { field.isAccessible = true })
         }
 
         override fun read(obj: Any?): Any? = if (obj == null) null else field.get(obj)

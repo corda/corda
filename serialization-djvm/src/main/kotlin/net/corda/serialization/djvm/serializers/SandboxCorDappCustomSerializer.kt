@@ -24,6 +24,8 @@ import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.Collections.singleton
 import java.util.function.Function
 
@@ -50,9 +52,10 @@ class SandboxCorDappCustomSerializer(
             )
         }
 
+        val customSerializer = doPrivileged(PrivilegedAction { customSerializerClass.kotlin.objectOrNewInstance() })
         val unproxyTask = classLoader.toSandboxClass(CorDappCustomDeserializer::class.java)
             .getConstructor(serializationCustomSerializer)
-            .newInstance(customSerializerClass.kotlin.objectOrNewInstance())
+            .newInstance(customSerializer)
         unproxy = rawTaskFactory.apply(unproxyTask)
     }
 

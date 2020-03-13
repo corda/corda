@@ -18,6 +18,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
+import org.junit.ClassRule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -39,10 +40,15 @@ class ContractWithSerializationWhitelistTest(private val runInProcess: Boolean) 
         @JvmField
         val workflowCordapp = cordappWithPackages("net.corda.flows.serialization.whitelist").signed()
 
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
+
         fun parametersFor(runInProcess: Boolean): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = runInProcess,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = listOf(contractCordapp, workflowCordapp)
             )

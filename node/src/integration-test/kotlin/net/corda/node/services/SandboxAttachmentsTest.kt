@@ -8,6 +8,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.djvm.code.asResourcePath
 import net.corda.flows.djvm.attachment.SandboxAttachmentFlow
 import net.corda.node.DeterministicSourcesRule
+import net.corda.node.OutOfProcessSecurityRule
 import net.corda.node.internal.djvm.DeterministicVerificationException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -32,10 +33,15 @@ class SandboxAttachmentsTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
+
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.djvm.attachment"),
@@ -57,7 +63,7 @@ class SandboxAttachmentsTest {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
                 alice.rpc.startFlow(::SandboxAttachmentFlow, extractFile)
-                        .returnValue.getOrThrow()
+                    .returnValue.getOrThrow()
             }
             logger.info("TX-ID: {}", txId)
         }
@@ -70,7 +76,7 @@ class SandboxAttachmentsTest {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val ex = assertThrows<DeterministicVerificationException> {
                 alice.rpc.startFlow(::SandboxAttachmentFlow, extractFile)
-                        .returnValue.getOrThrow()
+                    .returnValue.getOrThrow()
             }
             assertThat(ex)
                 .hasMessageStartingWith("sandbox.net.corda.core.contracts.TransactionVerificationException\$ContractRejection -> ")

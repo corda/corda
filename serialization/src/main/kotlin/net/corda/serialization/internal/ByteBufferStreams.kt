@@ -10,6 +10,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 import kotlin.math.min
 
 internal val serializeOutputStreamPool = LazyPool(
@@ -49,9 +51,11 @@ class ByteBufferInputStream(val byteBuffer: ByteBuffer) : InputStream() {
 @KeepForDJVM
 class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
     companion object {
-        private val ensureCapacity = ByteArrayOutputStream::class.java.getDeclaredMethod("ensureCapacity", Int::class.java).apply {
-            isAccessible = true
-        }
+        private val ensureCapacity = doPrivileged(PrivilegedExceptionAction {
+            ByteArrayOutputStream::class.java.getDeclaredMethod("ensureCapacity", Int::class.java).apply {
+                isAccessible = true
+            }
+        })
     }
 
     fun <T> alsoAsByteBuffer(remaining: Int, task: (ByteBuffer) -> T): T {

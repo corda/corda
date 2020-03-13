@@ -7,6 +7,8 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.internal.ContractUpgradeUtils
 import net.corda.core.transactions.SignedTransaction
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 
 /**
  * A flow to be used for authorising and upgrading state objects of an old contract to a new contract.
@@ -35,7 +37,9 @@ object ContractUpgradeFlow {
         // DOCEND 1
         @Suspendable
         override fun call(): Void? {
-            val upgrade = upgradedContractClass.getDeclaredConstructor().newInstance()
+            val upgrade = doPrivileged(PrivilegedExceptionAction {
+                upgradedContractClass.getDeclaredConstructor().newInstance()
+            })
             if (upgrade.legacyContract != stateAndRef.state.contract) {
                 throw FlowException("The contract state cannot be upgraded using provided UpgradedContract.")
             }

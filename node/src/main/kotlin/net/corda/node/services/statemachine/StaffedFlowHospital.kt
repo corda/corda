@@ -23,6 +23,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
 import java.time.Clock
@@ -442,11 +444,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         private fun isErrorPropagatedFromCounterparty(error: Throwable): Boolean {
             return when (error) {
                 is UnexpectedFlowEndException -> {
-                    val peer = DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
+                    val peer = doPrivileged(PrivilegedExceptionAction {
+                        DeclaredField<Party?>(UnexpectedFlowEndException::class.java, "peer", error).value
+                    })
                     peer != null
                 }
                 is FlowException -> {
-                    val peer = DeclaredField<Party?>(FlowException::class.java, "peer", error).value
+                    val peer = doPrivileged(PrivilegedExceptionAction {
+                        DeclaredField<Party?>(FlowException::class.java, "peer", error).value
+                    })
                     peer != null
                 }
                 else -> false

@@ -4,6 +4,8 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StatePointer
 import org.apache.commons.lang3.reflect.FieldUtils
 import java.lang.reflect.Field
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.*
 
 /**
@@ -30,7 +32,7 @@ class StatePointerSearch(val state: ContractState) {
 
     // Helper for adding all fields to the queue.
     private fun addAllFields(obj: Any) {
-        val fields = FieldUtils.getAllFieldsList(obj::class.java)
+        val fields = doPrivileged(PrivilegedAction { FieldUtils.getAllFieldsList(obj::class.java) })
 
         fields.mapNotNullTo(fieldQueue) { field ->
             if (field.isSynthetic || field.isStatic) return@mapNotNullTo null
@@ -74,7 +76,7 @@ class StatePointerSearch(val state: ContractState) {
         handleObject(state)
         while (fieldQueue.isNotEmpty()) {
             val (obj, field) = fieldQueue.pop()
-            field.isAccessible = true
+            doPrivileged(PrivilegedAction { field.isAccessible = true })
             handleObject(field.get(obj))
         }
         return statePointers

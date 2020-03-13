@@ -17,6 +17,8 @@ import net.corda.node.services.statemachine.RejectSessionMessage
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 
 /**
  * This transition handles incoming session messages. It handles the following cases:
@@ -125,12 +127,16 @@ class DeliverSessionMessageTransition(
             is SessionState.Initiated -> {
                 when (exception) {
                     // reflection used to access private field
-                    is UnexpectedFlowEndException -> DeclaredField<Party?>(
-                        UnexpectedFlowEndException::class.java,
-                        "peer",
-                        exception
-                    ).value = sessionState.peerParty
-                    is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = sessionState.peerParty
+                    is UnexpectedFlowEndException -> doPrivileged(PrivilegedExceptionAction {
+                        DeclaredField<Party?>(
+                            UnexpectedFlowEndException::class.java,
+                            "peer",
+                            exception
+                        ).value = sessionState.peerParty
+                    })
+                    is FlowException -> doPrivileged(PrivilegedExceptionAction {
+                        DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = sessionState.peerParty
+                    })
                 }
                 val checkpoint = currentState.checkpoint
                 val sessionId = event.sessionMessage.recipientSessionId

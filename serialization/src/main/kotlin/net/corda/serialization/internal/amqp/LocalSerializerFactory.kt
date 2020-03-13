@@ -11,6 +11,8 @@ import net.corda.serialization.internal.model.TypeIdentifier.Companion.classLoad
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 import java.util.*
 import java.util.function.Function
 import java.util.function.Predicate
@@ -268,7 +270,7 @@ class DefaultLocalSerializerFactory(
                 ArraySerializer.make(type, this)
             }
         else -> {
-            val singleton = clazz.kotlinObjectInstance
+            val singleton = doPrivileged(PrivilegedExceptionAction { clazz.kotlinObjectInstance })
             if (singleton != null) {
                 whitelist.requireWhitelisted(clazz)
                 SingletonSerializer(clazz, singleton, this)

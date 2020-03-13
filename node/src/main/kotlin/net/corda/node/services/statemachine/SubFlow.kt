@@ -2,6 +2,8 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.*
 import net.corda.core.utilities.Try
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 
 /**
  * A [SubFlow] contains metadata about a currently executing sub-flow. At any point the flow execution is
@@ -48,7 +50,7 @@ sealed class SubFlow {
                 }
                 1 -> {
                     val initiatingAnnotation = initiatingAnnotations[0]
-                    val flowContext = FlowInfo(initiatingAnnotation.second.version, flowClass.appName)
+                    val flowContext = doPrivileged(PrivilegedAction { FlowInfo(initiatingAnnotation.second.version, flowClass.appName) })
                     Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion, isEnabledTimedFlow))
                 }
                 else -> {

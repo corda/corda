@@ -7,6 +7,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.djvm.whitelist.DeterministicWhitelistFlow
 import net.corda.node.DeterministicSourcesRule
+import net.corda.node.OutOfProcessSecurityRule
 import net.corda.node.assertNotCordaSerializable
 import net.corda.node.internal.djvm.DeterministicVerificationException
 import net.corda.testing.core.ALICE_NAME
@@ -35,6 +36,10 @@ class DeterministicContractWithSerializationWhitelistTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
+
         @JvmField
         val flowCordapp = cordappWithPackages("net.corda.flows.djvm.whitelist").signed()
 
@@ -45,6 +50,7 @@ class DeterministicContractWithSerializationWhitelistTest {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = cordapps.toList(),
                 djvmBootstrapSource = djvmSources.bootstrap,

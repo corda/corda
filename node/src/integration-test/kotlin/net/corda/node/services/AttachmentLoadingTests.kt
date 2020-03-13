@@ -13,6 +13,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.OutOfProcessSecurityRule
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -24,15 +25,20 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
 
 class AttachmentLoadingTests {
-    private companion object {
+    companion object {
         val isolatedJar: URL = AttachmentLoadingTests::class.java.getResource("/isolated.jar")
         val isolatedClassLoader = URLClassLoader(arrayOf(isolatedJar))
         val issuanceFlowClass: Class<FlowLogic<StateRef>> = uncheckedCast(loadFromIsolated("net.corda.isolated.workflows.IsolatedIssuanceFlow"))
+
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
 
         init {
             checkNotOnClasspath("net.corda.isolated.contracts.AnotherDummyContract") {
@@ -48,6 +54,7 @@ class AttachmentLoadingTests {
 	fun `contracts downloaded from the network are not executed without the DJVM`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
                 cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
@@ -71,6 +78,7 @@ class AttachmentLoadingTests {
 	fun `contract is executed if installed locally`() {
         driver(DriverParameters(
                 startNodesInProcess = false,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
                 cordappsForAllNodes = listOf(enclosedCordapp())
         )) {

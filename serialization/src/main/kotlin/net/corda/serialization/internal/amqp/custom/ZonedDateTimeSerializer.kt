@@ -4,6 +4,8 @@ import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.lang.reflect.Method
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -22,16 +24,16 @@ class ZonedDateTimeSerializer(
     // Java deserialization of `ZonedDateTime` uses a private method.  We will resolve this somewhat statically
     // so that any change to internals of `ZonedDateTime` is detected early.
     companion object {
-        val ofLenient: Method = ZonedDateTime::class.java.getDeclaredMethod(
+        val ofLenient: Method = doPrivileged(PrivilegedExceptionAction {
+            ZonedDateTime::class.java.getDeclaredMethod(
                 "ofLenient",
                 LocalDateTime::class.java,
                 ZoneOffset::class.java,
                 ZoneId::class.java
-        )
-
-        init {
-            ofLenient.isAccessible = true
-        }
+            ).apply {
+                isAccessible = true
+            }
+        })
     }
 
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(

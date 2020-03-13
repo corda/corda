@@ -357,6 +357,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven { url "$artifactory_contextUrl/corda-dependencies-dev" }
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://repo.gradle.org/gradle/libs-releases' }
         maven { url "$artifactory_contextUrl/corda-dev" }

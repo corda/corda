@@ -2,6 +2,8 @@
 package net.corda.serialization.djvm.serializers
 
 import net.corda.serialization.internal.amqp.AMQPNotSerializableException
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 
 /**
  * Utility function which helps tracking the path in the object graph when exceptions are thrown.
@@ -28,9 +30,12 @@ internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () ->
  * Not a public property so will have to use reflection
  */
 private fun Throwable.resetMessage(newMsg: String) {
-    val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage")
-    detailMessageField.isAccessible = true
-    detailMessageField.set(this, newMsg)
+    doPrivileged(PrivilegedExceptionAction {
+        Throwable::class.java.getDeclaredField("detailMessage").apply {
+            isAccessible = true
+            set(this@resetMessage, newMsg)
+        }
+    })
 }
 
 /**

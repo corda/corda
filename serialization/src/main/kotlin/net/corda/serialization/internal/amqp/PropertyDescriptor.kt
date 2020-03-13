@@ -8,6 +8,8 @@ import net.corda.serialization.internal.amqp.MethodClassifier.*
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.*
 
 /**
@@ -114,14 +116,18 @@ internal fun Class<out Any?>.calculatedPropertyDescriptors(): Map<String, Proper
 private fun Class<*>.superclassChain() = generateSequence(this, Class<*>::getSuperclass)
 
 private fun Sequence<Class<*>>.withInterfaces() = flatMap {
-    sequenceOf(it) + it.genericInterfaces.asSequence().map { it.asClass() }
+    doPrivileged(PrivilegedAction{ sequenceOf(it) + it.genericInterfaces.asSequence().map { it.asClass() } })
 }
 
 // Obtain the fields declared by all classes in this sequence of classes.
-private fun Sequence<Class<*>>.declaredFields() = flatMap { it.declaredFields.asSequence() }
+private fun Sequence<Class<*>>.declaredFields() = flatMap {
+    doPrivileged(PrivilegedAction { it.declaredFields.asSequence() })
+}
 
 // Obtain the methods declared by all classes in this sequence of classes.
-private fun Sequence<Class<*>>.declaredMethods() = flatMap { it.declaredMethods.asSequence() }
+private fun Sequence<Class<*>>.declaredMethods() = flatMap {
+    doPrivileged(PrivilegedAction { it.declaredMethods.asSequence() })
+}
 
 // Map a sequence of fields by field name.
 private fun Sequence<Field>.byFieldName() = map { it.name to it }.toMap()

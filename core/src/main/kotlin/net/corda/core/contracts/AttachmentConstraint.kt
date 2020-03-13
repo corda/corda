@@ -11,6 +11,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
 import java.lang.annotation.Inherited
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.security.PublicKey
 
 private val log = loggerFor<AttachmentConstraint>()
@@ -48,7 +50,9 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
 @KeepForDJVM
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     companion object {
-        val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
+        val disableHashConstraints: Boolean = doPrivileged(PrivilegedAction {
+            System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
+        })
     }
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {

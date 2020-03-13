@@ -15,6 +15,8 @@ import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
 import java.lang.reflect.Method
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.*
 
 /**
@@ -116,7 +118,9 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    override val classloader = CarpenterClassLoader(cl)
+    override val classloader = doPrivileged(PrivilegedAction {
+        CarpenterClassLoader(cl)
+    })
 
     private val _loaded = HashMap<String, Class<*>>()
 

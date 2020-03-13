@@ -22,6 +22,9 @@ import net.corda.djvm.messages.Message
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.source.ClassSource
 import net.corda.node.djvm.LtxFactory
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
+import java.security.PrivilegedExceptionAction
 import java.util.function.Function
 import kotlin.collections.LinkedHashSet
 
@@ -48,8 +51,12 @@ class DeterministicVerifier(
     }
 
     override fun verifyContracts() {
-        val customSerializerNames = getNamesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
-        val serializationWhitelistNames = getSerializationWhitelistNames(transactionClassLoader)
+        val customSerializerNames = doPrivileged(PrivilegedAction {
+            getNamesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+        })
+        val serializationWhitelistNames = doPrivileged(PrivilegedExceptionAction {
+            getSerializationWhitelistNames(transactionClassLoader)
+        })
         val result = IsolatedTask(ltx.id.toString(), sandboxConfiguration).run<Any>(Function { classLoader ->
             (classLoader.parent as? SandboxClassLoader)?.apply {
                 /**

@@ -4,14 +4,18 @@ import net.corda.core.internal.VisibleForTesting
 import org.slf4j.Logger
 import java.io.NotSerializableException
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 
 /**
  * Not a public property so will have to use reflection
  */
 private fun Throwable.setMessage(newMsg: String) {
-    val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage")
-    detailMessageField.isAccessible = true
-    detailMessageField.set(this, newMsg)
+    doPrivileged(PrivilegedExceptionAction {
+        val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage")
+        detailMessageField.isAccessible = true
+        detailMessageField.set(this, newMsg)
+    })
 }
 
 /**

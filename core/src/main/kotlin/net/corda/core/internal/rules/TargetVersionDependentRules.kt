@@ -5,6 +5,8 @@ import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.warnOnce
 import org.slf4j.LoggerFactory
 import java.net.URL
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 
@@ -25,25 +27,27 @@ object StateContractValidationEnforcementRule {
     private val targetVersionCache = ConcurrentHashMap<URL, Int>()
 
     fun shouldEnforce(state: ContractState): Boolean {
-        val jarLocation = state::class.java.protectionDomain.codeSource.location
+        return doPrivileged(PrivilegedExceptionAction {
+            val jarLocation = state::class.java.protectionDomain.codeSource.location
 
-        if (jarLocation == null) {
-            logger.warnOnce("""
-                Unable to determine JAR location for contract state class ${state::class.java.name},
-                and consequently unable to determine target platform version.
-                Enforcing state/contract agreement validation by default.
+            if (jarLocation == null) {
+                logger.warnOnce("""
+            Unable to determine JAR location for contract state class ${state::class.java.name},
+            and consequently unable to determine target platform version.
+            Enforcing state/contract agreement validation by default.
 
-                For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
-            """.trimIndent().replace("\n", " "))
-            return true
-        }
-
-        val targetVersion = targetVersionCache.computeIfAbsent(jarLocation) {
-            jarLocation.openStream().use { inputStream ->
-                JarInputStream(inputStream).manifest?.targetPlatformVersion ?: 1
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+        """.trimIndent().replace("\n", " "))
+                return@PrivilegedExceptionAction true
             }
-        }
 
-        return targetVersion >= 4
+            val targetVersion = targetVersionCache.computeIfAbsent(jarLocation) {
+                jarLocation.openStream().use { inputStream ->
+                    JarInputStream(inputStream).manifest?.targetPlatformVersion ?: 1
+                }
+            }
+
+            targetVersion >= 4
+        })
     }
 }

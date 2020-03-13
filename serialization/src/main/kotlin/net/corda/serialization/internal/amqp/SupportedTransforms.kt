@@ -5,6 +5,8 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.serialization.CordaSerializationTransformRenames
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedExceptionAction
 
 /**
  * Utility class that defines an instance of a transform we support.
@@ -29,7 +31,9 @@ data class SupportedTransform(
  */
 @Suppress("UNCHECKED_CAST")
 private val wrapperExtract = { x: Annotation ->
-    (x::class.java.getDeclaredMethod("value").invoke(x) as Array<Annotation>).toList()
+    doPrivileged(PrivilegedExceptionAction{
+        (x::class.java.getDeclaredMethod("value").invoke(x) as Array<Annotation>).toList()
+    })
 }
 
 /**

@@ -19,6 +19,8 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -70,7 +72,9 @@ open class TransactionBuilder(
     private companion object {
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-        private val MISSING_CLASS_DISABLED = java.lang.Boolean.getBoolean("net.corda.transactionbuilder.missingclass.disabled")
+        private val MISSING_CLASS_DISABLED: Boolean = doPrivileged(PrivilegedAction {
+            java.lang.Boolean.getBoolean("net.corda.transactionbuilder.missingclass.disabled")
+        })
 
         private const val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
         private val FQCP: Pattern = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")

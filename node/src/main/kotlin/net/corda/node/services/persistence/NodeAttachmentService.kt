@@ -38,6 +38,9 @@ import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Paths
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedActionException
+import java.security.PrivilegedExceptionAction
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -384,55 +387,61 @@ class NodeAttachmentService @JvmOverloads constructor(
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
-            withContractsInJar(jar) { contractClassNames, inputStream ->
-                require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
+            try {
+                doPrivileged(PrivilegedExceptionAction {
+                    withContractsInJar(jar) { contractClassNames, inputStream ->
+                        require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
 
-                // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
-                // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
-                // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
-                // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
-                // set the hash field of the new attachment record.
+                        // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
+                        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+                        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+                        // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+                        // set the hash field of the new attachment record.
 
-                val bytes = inputStream.readFully()
-                val id = bytes.sha256()
-                if (!hasAttachment(id)) {
-                    checkIsAValidJAR(bytes.inputStream())
-                    val jarSigners = getSigners(bytes)
-                    val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
-                    val session = currentDBSession()
-                    val attachment = DBAttachment(
-                            attId = id.toString(),
-                            content = bytes,
-                            uploader = uploader,
-                            filename = filename,
-                            contractClassNames = contractClassNames,
-                            signers = jarSigners,
-                            version = contractVersion
-                    )
-                    session.save(attachment)
-                    attachmentCount.inc()
-                    log.info("Stored new attachment: id=$id uploader=$uploader filename=$filename")
-                    contractClassNames.forEach { contractsCache.invalidate(it) }
-                    return@withContractsInJar id
-                }
-                if (isUploaderTrusted(uploader)) {
-                    val session = currentDBSession()
-                    val attachment = session.get(DBAttachment::class.java, id.toString())
-                    // update the `uploader` field (as the existing attachment may have been resolved from a peer)
-                    if (attachment.uploader != uploader) {
-                        attachment.uploader = uploader
-                        log.info("Updated attachment $id with uploader $uploader")
-                        contractClassNames.forEach { contractsCache.invalidate(it) }
-                        loadAttachmentContent(id)?.let { attachmentAndContent ->
-                            // TODO: this is racey. ENT-2870
-                            attachmentContentCache.put(id, Optional.of(attachmentAndContent))
-                            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
+                        val bytes = inputStream.readFully()
+                        val id = bytes.sha256()
+                        if (!hasAttachment(id)) {
+                            checkIsAValidJAR(bytes.inputStream())
+                            val jarSigners = getSigners(bytes)
+                            val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
+                            val session = currentDBSession()
+                            val attachment = DBAttachment(
+                                    attId = id.toString(),
+                                    content = bytes,
+                                    uploader = uploader,
+                                    filename = filename,
+                                    contractClassNames = contractClassNames,
+                                    signers = jarSigners,
+                                    version = contractVersion
+                            )
+                            session.save(attachment)
+                            attachmentCount.inc()
+                            log.info("Stored new attachment: id=$id uploader=$uploader filename=$filename")
+                            contractClassNames.forEach { contractsCache.invalidate(it) }
+                            return@withContractsInJar id
                         }
-                        return@withContractsInJar id
+                        if (isUploaderTrusted(uploader)) {
+                            val session = currentDBSession()
+                            val attachment = session.get(DBAttachment::class.java, id.toString())
+                            // update the `uploader` field (as the existing attachment may have been resolved from a peer)
+                            if (attachment.uploader != uploader) {
+                                attachment.uploader = uploader
+                                log.info("Updated attachment $id with uploader $uploader")
+                                contractClassNames.forEach { contractsCache.invalidate(it) }
+                                loadAttachmentContent(id)?.let { attachmentAndContent ->
+                                    // TODO: this is racey. ENT-2870
+                                    attachmentContentCache.put(id, Optional.of(attachmentAndContent))
+                                    attachmentCache.put(id, Optional.of(attachmentAndContent.first))
+                                }
+                                return@withContractsInJar id
+                            }
+                            // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
+                        }
+                        throw DuplicateAttachmentException(id.toString())
                     }
-                    // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
-                }
-                throw DuplicateAttachmentException(id.toString())
+                })
+            } catch (e: PrivilegedActionException) {
+                throw e.cause ?: e
             }
         }
     }

@@ -253,6 +253,9 @@ tasks.withType(Test) {
     }
     systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
     systemProperty 'deterministic-sources.path', configurations.deterministic.asPath
+
+    systemProperty 'test.gradle.user.home', gradle.gradleUserHomeDir.toURI()
+    systemProperty 'test.rootProject.uri', rootProject.projectDir.toURI()
 }
 
 task integrationTest(type: Test) {

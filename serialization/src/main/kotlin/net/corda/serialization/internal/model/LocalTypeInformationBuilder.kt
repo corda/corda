@@ -25,6 +25,9 @@ import java.io.NotSerializableException
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
+import java.security.PrivilegedExceptionAction
 import kotlin.collections.LinkedHashMap
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
@@ -124,7 +127,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     getEnumTransforms(type, enumConstants)
                 )
             }
-            type.kotlinObjectInstance != null -> Singleton(
+            instanceOf(type) != null -> Singleton(
                     type,
                     typeIdentifier,
                     buildSuperclassInformation(type),
@@ -140,6 +143,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
+    }
+
+    private fun <T : Any> instanceOf(type: Class<T>): T? {
+        return doPrivileged(PrivilegedExceptionAction<T> { type.kotlinObjectInstance })
     }
 
     private fun getEnumTransforms(type: Class<*>, enumConstants: Array<out Any>): EnumTransforms {
@@ -463,22 +470,27 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         if (observedConstructor.javaConstructor?.parameters?.getOrNull(0)?.name == "this$0")
             throw NotSerializableException("Type '${type.typeName} has synthetic fields and is likely a nested inner class.")
 
-        return LocalConstructorInformation(
-                observedConstructor.javaConstructor!!.apply { isAccessible = true },
-                observedConstructor.parameters.map {
-                    val parameterType = it.type.javaType
-                    LocalConstructorParameterInformation(
-                            it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
-                            resolveAndBuild(parameterType),
-                            parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
-                })
+        return doPrivileged(PrivilegedExceptionAction { LocalConstructorInformation(
+            observedConstructor.javaConstructor!!.apply {
+                isAccessible = true
+            },
+            observedConstructor.parameters.map {
+                val parameterType = it.type.javaType
+                LocalConstructorParameterInformation(
+                    it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
+                    resolveAndBuild(parameterType),
+                    parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
+            }
+        )})
     }
 }
 
 private fun Method.returnsNullable(): Boolean = try {
-    val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull {
-        it.javaGetter == this
-    }?.returnType?.toString() ?: "?"
+    val returnTypeString = doPrivileged(PrivilegedExceptionAction {
+        declaringClass.kotlin.memberProperties.firstOrNull {
+            it.javaGetter == this
+        }
+    })?.returnType?.toString() ?: "?"
 
     returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
 } catch (e: KotlinReflectionInternalError) {
@@ -502,27 +514,30 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val clazz = type.asClass()
     if (!clazz.isConcreteClass || clazz.isSynthetic) return null
 
-    val kotlinCtors = clazz.kotlin.constructors
+    return doPrivileged(PrivilegedAction {
+        val kotlinCtors = clazz.kotlin.constructors
 
-    val annotatedCtors = kotlinCtors.filter { it.findAnnotation<ConstructorForDeserialization>() != null }
-    if (annotatedCtors.size > 1) return null
-    if (annotatedCtors.size == 1) return annotatedCtors.first().apply { isAccessible = true }
+        val annotatedCtors = kotlinCtors.filter { it.findAnnotation<ConstructorForDeserialization>() != null }
+        if (annotatedCtors.size > 1) return@PrivilegedAction null
+        if (annotatedCtors.size == 1) return@PrivilegedAction annotatedCtors.first().apply {
+            isAccessible = true
+        }
 
-    val defaultCtor = kotlinCtors.firstOrNull { it.parameters.isEmpty() }
-    val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
+        val defaultCtor = kotlinCtors.firstOrNull { it.parameters.isEmpty() }
+        val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
 
-    val preferredCandidate = clazz.kotlin.primaryConstructor ?:
-    when(nonDefaultCtors.size) {
-        1 -> nonDefaultCtors.first()
-        0 -> defaultCtor
-        else -> null
-    } ?: return null
+        val preferredCandidate = clazz.kotlin.primaryConstructor ?: when (nonDefaultCtors.size) {
+            1 -> nonDefaultCtors.first()
+            0 -> defaultCtor
+            else -> null
+        } ?: return@PrivilegedAction null
 
-    return try {
-        preferredCandidate.apply { isAccessible = true }
-    } catch (e: SecurityException) {
-        null
-    }
+        try {
+            preferredCandidate.apply { isAccessible = true }
+        } catch (e: SecurityException) {
+            null
+        }
+    })
 }
 
 /**
@@ -532,7 +547,8 @@ private fun evolutionConstructors(type: Type): List<KFunction<Any>> {
     val clazz = type.asClass()
     if (!clazz.isConcreteClass || clazz.isSynthetic) return emptyList()
 
-    return clazz.kotlin.constructors.asSequence()
+    return doPrivileged(PrivilegedAction {
+        clazz.kotlin.constructors.asSequence()
             .mapNotNull {
                 val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version
                 if (version == null) null else version to it
@@ -540,4 +556,5 @@ private fun evolutionConstructors(type: Type): List<KFunction<Any>> {
             .sortedBy { (version, _) -> version }
             .map { (_, ctor) -> ctor.apply { isAccessible = true} }
             .toList()
+    })
 }

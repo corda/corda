@@ -3,17 +3,79 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.location
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.security.CordaPermission
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
+import java.security.AccessControlException
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 
 typealias AttachmentId = SecureHash
 typealias AttachmentFixup = Pair<Set<AttachmentId>, Set<AttachmentId>>
+
+private val attachmentIdPermission = CordaPermission("getAttachmentId")
+
+/**
+ * Computes the [AttachmentId] for the class [type], provided that [type]
+ * belongs to this [ClassLoader]. This function relies on [SecurityManager]
+ * preventing a class from invoking [Class.getClassLoader] unless the
+ * caller belongs either to the same [ClassLoader] as the target or to one
+ * of its parents.
+ *
+ * @param type
+ * @return The [AttachmentId] of the attachment that contains [type].
+ */
+@StubOutForDJVM
+fun ClassLoader.getAttachmentFor(type: Class<*>): AttachmentId {
+    System.getSecurityManager()?.also {
+        if (this !== type.classLoader) {
+            throw AccessControlException("Boo(1)!", attachmentIdPermission)
+        }
+    }
+    return doPrivileged(PrivilegedAction {
+        type.location.readBytes().sha256()
+    })
+}
+
+/**
+ * Computes the [AttachmentId] for the class [type], or returns null
+ * if [type] and [unlessType] classes both belong to the same attachment.
+ * Both [type] and [unlessType] must also belong to this [ClassLoader].
+ *
+ * This function relies on [SecurityManager] preventing a class from
+ * invoking [Class.getClassLoader] unless the caller belongs either
+ * to the same [ClassLoader] as the target or to one of its parents.
+ *
+ * @param type
+ * @param unlessType
+ * @return The [AttachmentId] of the attachment that contains [type],
+ * or null if [type] and [unlessType] belong to the same attachment.
+ */
+@StubOutForDJVM
+fun ClassLoader.getAttachmentFor(type: Class<*>, unlessType: Class<*>): AttachmentId? {
+    System.getSecurityManager()?.also {
+        if (this !== type.classLoader || this !== unlessType.classLoader) {
+            throw AccessControlException("Boo(2)!", attachmentIdPermission)
+        }
+    }
+    return doPrivileged(PrivilegedAction {
+        val typeLocation = type.location
+        if (typeLocation == unlessType.location) {
+            null
+        } else {
+            typeLocation.readBytes().sha256()
+        }
+    })
+}
 
 /**
  * An attachment store records potentially large binary objects, identified by their hash.

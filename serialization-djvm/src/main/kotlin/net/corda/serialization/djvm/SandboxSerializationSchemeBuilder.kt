@@ -49,6 +49,8 @@ import net.corda.serialization.internal.amqp.SerializerFactoryFactory
 import net.corda.serialization.internal.amqp.addToWhitelist
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.Date
 import java.util.UUID
 import java.util.function.Function
@@ -135,7 +137,8 @@ class SandboxSerializationSchemeBuilder(
         }
 
         val serializationWhitelists = serializationWhitelistNames.map { whitelistClass ->
-            classLoader.toSandboxClass(whitelistClass).kotlin.objectOrNewInstance()
+            val sandboxClass = classLoader.toSandboxClass(whitelistClass)
+            doPrivileged(PrivilegedAction { sandboxClass.kotlin.objectOrNewInstance() })
         }.toArrayOf(classLoader.toSandboxClass(SerializationWhitelist::class.java))
         @Suppress("unchecked_cast")
         val mergeTask = taskFactory.apply(MergeWhitelists::class.java) as Function<in Array<*>, out Array<Class<*>>>

@@ -19,6 +19,8 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AMQPSerializer
 import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.model.BaseLocalTypes
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 import java.util.EnumSet
 import java.util.function.Function
 import java.util.function.Predicate
@@ -40,7 +42,7 @@ fun createSandboxSerializationEnv(
 ): SerializationEnvironment {
     val p2pContext: SerializationContext = SerializationContextImpl(
         preferredSerializationVersion = amqpMagic,
-        deserializationClassLoader = DelegatingClassLoader(classLoader),
+        deserializationClassLoader = doPrivileged(PrivilegedAction { DelegatingClassLoader(classLoader) }),
         whitelist = GlobalTransientClassWhiteList(SandboxWhitelist()),
         properties = emptyMap(),
         objectReferencesEnabled = true,

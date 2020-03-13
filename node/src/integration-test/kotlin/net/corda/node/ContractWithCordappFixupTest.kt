@@ -22,6 +22,7 @@ import net.corda.testing.node.internal.cordappWithFixups
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
@@ -30,10 +31,21 @@ class ContractWithCordappFixupTest {
     companion object {
         const val BEANS = 10001L
 
+        @JvmField
         val user = User("u", "p", setOf(Permissions.all()))
+
+        @JvmField
         val flowCorDapp = cordappWithPackages("net.corda.flows.fixup").signed()
+
+        @JvmField
         val dependentContractCorDapp = cordappWithPackages("net.corda.contracts.fixup.dependent").signed()
+
+        @JvmField
         val standaloneContractCorDapp = cordappWithPackages("net.corda.contracts.fixup.standalone").signed()
+
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
 
         fun driverParameters(cordapps: List<TestCordapp>): DriverParameters {
             return DriverParameters(
@@ -41,7 +53,9 @@ class ContractWithCordappFixupTest {
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = cordapps,
-                systemProperties = mapOf("net.corda.transactionbuilder.missingclass.disabled" to true.toString())
+                systemProperties = security.systemProperties + mapOf(
+                    "net.corda.transactionbuilder.missingclass.disabled" to true.toString()
+                )
             )
         }
 

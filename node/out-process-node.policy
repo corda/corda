@@ -1,0 +1,92 @@
+grant codeBase "file:${{java.ext.dirs}}/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:${java.home}/../lib/tools.jar" {
+    permission java.security.AllPermission;
+};
+
+// Local artifact caches:
+grant codeBase "file:${user.home}/.m2/repository/-" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.gradle.user.home}/caches/-" {
+    permission java.security.AllPermission;
+};
+
+// The Corda project:
+grant codeBase "${test.rootProject.uri}/core/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/core-deterministic/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/common/configuration-parsing/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/common/logging/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/common/validation/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/confidential-identities/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/node/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/node/djvm/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/node-api/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/serialization/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/serialization-deterministic/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/serialization-djvm/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/tools/cliutils/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "${test.rootProject.uri}/tools/shell/build/libs/*" {
+    permission java.security.AllPermission;
+};
+
+// The deployed node:
+grant codeBase "file:${user.dir}/drivers/*" {
+    permission java.security.AllPermission;
+};
+
+grant codeBase "file:${user.dir}/shell-commands/-" {
+    // Nothing!
+};
+
+grant codeBase "file:${user.dir}/cordapps/*" {
+   // Nothing!
+};
+
+grant {
+    // Required by the ScriptAppender inside log4j2.xml
+    permission java.util.PropertyPermission "consoleLogLevel", "read";
+    permission java.util.PropertyPermission "consoleLoggingEnabled", "read";
+};

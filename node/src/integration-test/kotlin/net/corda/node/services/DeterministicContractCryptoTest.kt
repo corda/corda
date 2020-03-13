@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import net.corda.contracts.djvm.crypto.DeterministicCryptoContract.Validate
+import net.corda.contracts.serialization.whitelist.WhitelistData
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.DEFAULT_SIGNATURE_SCHEME
 import net.corda.core.messaging.startFlow
@@ -9,6 +10,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.djvm.crypto.DeterministicCryptoFlow
 import net.corda.node.DeterministicSourcesRule
+import net.corda.node.OutOfProcessSecurityRule
+import net.corda.node.assertNotCordaSerializable
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
@@ -17,6 +20,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.cordappWithPackages
+import org.junit.BeforeClass
 import org.junit.ClassRule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -32,10 +36,15 @@ class DeterministicContractCryptoTest {
         @JvmField
         val djvmSources = DeterministicSourcesRule()
 
+        @ClassRule
+        @JvmField
+        val security = OutOfProcessSecurityRule()
+
         fun parametersFor(djvmSources: DeterministicSourcesRule): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
                 startNodesInProcess = false,
+                systemProperties = security.systemProperties,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = listOf(
                     cordappWithPackages("net.corda.flows.djvm.crypto"),
@@ -47,6 +56,12 @@ class DeterministicContractCryptoTest {
                 djvmBootstrapSource = djvmSources.bootstrap,
                 djvmCordaSource = djvmSources.corda
             )
+        }
+
+        @BeforeClass
+        @JvmStatic
+        fun checkData() {
+            assertNotCordaSerializable<WhitelistData>()
         }
     }
 
@@ -65,7 +80,7 @@ class DeterministicContractCryptoTest {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val txId = assertDoesNotThrow {
                 alice.rpc.startFlow(::DeterministicCryptoFlow, validate, importantData, signature)
-                        .returnValue.getOrThrow()
+                    .returnValue.getOrThrow()
             }
             logger.info("TX-ID: {}", txId)
         }
