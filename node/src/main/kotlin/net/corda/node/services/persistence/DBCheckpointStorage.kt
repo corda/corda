@@ -4,6 +4,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -275,7 +276,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     ): DBFlowCheckpoint {
         val flowId = id.uuid.toString()
         val now = Instant.now()
-        val invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value
 
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
@@ -448,7 +448,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     private fun InvocationContext.getFlowParameters(): List<Any?> {
         // Only RPC flows have parameters which are found in index 1
         return if(arguments.isNotEmpty()) {
-            (arguments[1] as Array<Any?>).toList()
+            uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
         } else {
             emptyList()
         }
