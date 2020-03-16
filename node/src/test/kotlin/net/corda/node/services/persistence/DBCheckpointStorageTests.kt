@@ -495,7 +495,7 @@ class DBCheckpointStorageTests {
 
     @Test(timeout = 300_000)
     fun `fetch runnable checkpoints`() {
-        val (id, checkpoint) = newCheckpoint(1)
+        val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val hospitalized = checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
