@@ -55,7 +55,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class FlowMetadataRecorderTest {
+class FlowMetadataRecordingTest {
 
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val string = "I must be delivered for 4.5"
