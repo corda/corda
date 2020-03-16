@@ -1,7 +1,6 @@
 package net.corda.node.services.api
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.FlowState
@@ -42,4 +41,10 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    /**
+     * Stream runnable checkpoints from the store. If this is backed by a database the stream will be valid
+     * until the underlying database connection is closed, so any processing should happen before it is closed.
+     */
+    fun getRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
 }

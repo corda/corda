@@ -646,7 +646,7 @@ class FlowFrameworkTests {
         }
 
         SuspendingFlow.hookAfterCheckpoint = {
-            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single().second.status
         }
 
         aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
@@ -691,7 +691,7 @@ class FlowFrameworkTests {
 
     // the following method should be removed when implementing CORDA-3604.
     private fun manuallyFailCheckpointInDB(node: TestStartedNode) {
-        val idCheckpoint = node.internals.checkpointStorage.getAllCheckpoints().toList().single()
+        val idCheckpoint = node.internals.checkpointStorage.getRunnableCheckpoints().toList().single()
         val checkpoint = idCheckpoint.second
         val updatedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
         node.internals.checkpointStorage.updateCheckpoint(idCheckpoint.first,

@@ -44,7 +44,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
-    return getAllCheckpoints().use {
+    return getRunnableCheckpoints().use {
         it.map { it.second }.toList()
     }
 }
@@ -490,6 +490,35 @@ class DBCheckpointStorageTests {
         database.transaction {
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
             assertEquals(longString.take(maxProgressStepLength), checkpointFromStorage!!.progressStep)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `fetch runnable checkpoints`() {
+        val (_, checkpoint) = newCheckpoint(1)
+        // runnables
+        val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
+        val hospitalized = checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+        // not runnables
+        val completed = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
+        val failed = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+        val killed = checkpoint.copy(status = Checkpoint.FlowStatus.KILLED)
+        // tentative
+        val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED) // is considered runnable
+
+        database.transaction {
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), runnable, serializedFlowState)
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), hospitalized, serializedFlowState)
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), completed, serializedFlowState)
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), failed, serializedFlowState)
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), killed, serializedFlowState)
+            checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), paused, serializedFlowState)
+        }
+
+        database.transaction {
+            assertEquals(3, checkpointStorage.getRunnableCheckpoints().count())
         }
     }
 

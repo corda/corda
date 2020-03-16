@@ -329,7 +329,7 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun restoreFlowsFromCheckpoints(): List<Flow> {
-        return checkpointStorage.getAllCheckpoints().use {
+        return checkpointStorage.getRunnableCheckpoints().use {
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
