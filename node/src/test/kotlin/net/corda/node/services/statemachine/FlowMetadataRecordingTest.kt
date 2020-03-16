@@ -21,6 +21,7 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
@@ -51,7 +52,6 @@ import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -121,7 +121,6 @@ class FlowMetadataRecordingTest {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
@@ -165,12 +164,10 @@ class FlowMetadataRecordingTest {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
             MyFlow.hookAfterInitialCheckpoint =
-                { flowIdFromHook: StateMachineRunId, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
-                    flowId = flowIdFromHook
+                { _, contextFromHook: InvocationContext, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
                     context = contextFromHook
                     metadata = metadataFromHook
                 }
@@ -194,7 +191,7 @@ class FlowMetadataRecordingTest {
 
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
-                (context!!.arguments[1] as Array<Any?>).toList()
+                uncheckedCast<Any?, Array<Any?>>(context!!.arguments[1]).toList()
             )
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
@@ -364,6 +361,7 @@ class FlowMetadataRecordingTest {
     @StartableByRPC
     @StartableByService
     @SchedulableFlow
+    @Suppress("UNUSED_PARAMETER")
     class MyFlow(private val party: Party, string: String, someObject: SomeObject) :
         FlowLogic<Unit>() {
 
