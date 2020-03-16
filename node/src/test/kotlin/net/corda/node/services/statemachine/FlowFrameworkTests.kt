@@ -17,6 +17,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
@@ -739,13 +740,22 @@ class FlowFrameworkTests {
 
     @Test(timeout=300_000)
     fun `Checkpoint status changes to FAILED when flow fails`() {
-        assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlow(ExceptionFlow { IllegalStateException("Just an exception") }).resultFuture.getOrThrow()
+        var flowId: StateMachineRunId? = null
+
+        assertFailsWith<FlowException> {
+            val fiber = aliceNode.services.startFlow(ExceptionFlow { FlowException("Just an exception") })
+            flowId = fiber.id
+            fiber.resultFuture.getOrThrow()
         }
 
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
             assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
+
+            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
+            assertEquals(persistedException!!.type.name, "net.corda.core.flows.FlowException") // type
+            persistedException.value.deserialize<FlowException>() // value
+            assertEquals(persistedException!!.message, "Just an exception") // exception message
         }
     }
 
