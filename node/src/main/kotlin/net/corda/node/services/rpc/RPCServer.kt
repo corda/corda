@@ -372,9 +372,10 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
+                    val context: RpcAuthContext
                     when (arguments) {
                         is Try.Success -> {
-                            val context = artemisMessage.context(clientToServer.sessionId, arguments.value)
+                            context = artemisMessage.context(clientToServer.sessionId, arguments.value)
                             context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
                             rpcExecutor!!.submit {
@@ -383,6 +384,8 @@ class RPCServer(
                             }
                         }
                         is Try.Failure -> {
+                            context = artemisMessage.context(clientToServer.sessionId, emptyList())
+                            context.invocation.pushToLoggingContext()
                             // We failed to deserialise the arguments, route back the error
                             log.warn("Inbound RPC failed", arguments.exception)
                             sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
