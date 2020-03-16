@@ -75,7 +75,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     enum class StartReason {
-        RPC, FLOW, SERVICE, SCHEDULED, INITIATED
+        RPC, SERVICE, SCHEDULED, INITIATED
     }
 
     @Entity
