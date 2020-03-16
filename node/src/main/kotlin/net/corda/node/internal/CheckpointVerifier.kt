@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
@@ -36,7 +35,7 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getAllCheckpoints().use {
+        checkpointStorage.getAllRunnableCheckpoints().use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
                     serializedCheckpoint.deserialize(checkpointSerializationContext)

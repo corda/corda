@@ -141,7 +141,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
-                    checkpointStorage.getAllCheckpoints().use { stream ->
+                    checkpointStorage.getAllRunnableCheckpoints().use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
 

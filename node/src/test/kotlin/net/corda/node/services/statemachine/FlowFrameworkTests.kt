@@ -640,13 +640,13 @@ class FlowFrameworkTests {
                 throw SQLException("deadlock") // will cause flow to retry
             } else {
                 // The persisted Checkpoint should be still failed here -> it should change to RUNNABLE after suspension
-                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getAllRunnableCheckpoints().toList().single().second.status
                 checkpointStatusInMemoryBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
             }
         }
 
         SuspendingFlow.hookAfterCheckpoint = {
-            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getAllRunnableCheckpoints().toList().single().second.status
         }
 
         aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
@@ -676,7 +676,7 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw SQLException("deadlock") // will cause flow to retry
             } else {
-                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getAllRunnableCheckpoints().toList().single().second.status
                 checkpointStatusInMemory = flowFiber.transientState!!.value.checkpoint.status
             }
         }
@@ -691,7 +691,7 @@ class FlowFrameworkTests {
 
     // the following method should be removed when implementing CORDA-3604.
     private fun manuallyFailCheckpointInDB(node: TestStartedNode) {
-        val idCheckpoint = node.internals.checkpointStorage.getAllCheckpoints().toList().single()
+        val idCheckpoint = node.internals.checkpointStorage.getAllRunnableCheckpoints().toList().single()
         val checkpoint = idCheckpoint.second
         val updatedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
         node.internals.checkpointStorage.updateCheckpoint(idCheckpoint.first,

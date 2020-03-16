@@ -242,15 +242,13 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
 
-    override fun getAllCheckpoints(runnableCheckpoints: Boolean): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+    override fun getAllRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
-        if (runnableCheckpoints) {
-            criteriaQuery.where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
-        }
+                .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }

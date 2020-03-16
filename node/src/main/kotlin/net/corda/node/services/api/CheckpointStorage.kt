@@ -37,10 +37,8 @@ interface CheckpointStorage {
     fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized?
 
     /**
-     * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the
-     * underlying database connection is closed, so any processing should happen before it is closed.
-     *
-     * To fetch every checkpoint from the database (not runnable and runnable ones) [runnableCheckpoints] must be set to false.
+     * Stream all runnable checkpoints from the store. If this is backed by a database the stream will be valid
+     * until the underlying database connection is closed, so any processing should happen before it is closed.
      */
-    fun getAllCheckpoints(runnableCheckpoints: Boolean = true): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+    fun getAllRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
 }
