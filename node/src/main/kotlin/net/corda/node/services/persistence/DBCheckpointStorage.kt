@@ -2,7 +2,6 @@ package net.corda.node.services.persistence
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -44,6 +43,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         private const val HMAC_SIZE_BYTES = 16
 
         private const val MAX_PROGRESS_STEP_LENGTH = 256
+
+        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -241,11 +242,15 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
 
-    override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+    override fun getAllCheckpoints(runnableCheckpoints: Boolean): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
+        if (runnableCheckpoints) {
+            criteriaQuery.where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
+        }
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
