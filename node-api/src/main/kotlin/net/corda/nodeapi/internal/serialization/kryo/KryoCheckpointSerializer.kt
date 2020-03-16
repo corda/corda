@@ -120,6 +120,6 @@ val KRYO_CHECKPOINT_CONTEXT = CheckpointSerializationContextImpl(
         QuasarWhitelist,
         emptyMap(),
         true,
-        SNAPPY,
+        null,
         AlwaysAcceptEncodingWhitelist
 )
