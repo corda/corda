@@ -44,7 +44,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
-    return getAllRunnableCheckpoints().use {
+    return getRunnableCheckpoints().use {
         it.map { it.second }.toList()
     }
 }
@@ -518,7 +518,7 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            assertEquals(3, checkpointStorage.getAllRunnableCheckpoints().count())
+            assertEquals(3, checkpointStorage.getRunnableCheckpoints().count())
         }
     }
 

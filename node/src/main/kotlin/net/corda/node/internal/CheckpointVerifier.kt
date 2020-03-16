@@ -35,7 +35,7 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getAllRunnableCheckpoints().use {
+        checkpointStorage.getRunnableCheckpoints().use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
                     serializedCheckpoint.deserialize(checkpointSerializationContext)
