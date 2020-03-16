@@ -220,6 +220,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Column(name = "finish_time", nullable = true)
         var finishInstant: Instant?
     ) {
+        @Suppress("ComplexMethod")
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
