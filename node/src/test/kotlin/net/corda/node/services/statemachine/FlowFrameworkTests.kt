@@ -640,7 +640,7 @@ class FlowFrameworkTests {
                 throw SQLException("deadlock") // will cause flow to retry
             } else {
                 // The persisted Checkpoint should be still failed here -> it should change to RUNNABLE after suspension
-                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single().second.status
+                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
                 checkpointStatusInMemoryBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
             }
         }
@@ -676,7 +676,7 @@ class FlowFrameworkTests {
                 firstExecution = false
                 throw SQLException("deadlock") // will cause flow to retry
             } else {
-                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single().second.status
+                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
                 checkpointStatusInMemory = flowFiber.transientState!!.value.checkpoint.status
             }
         }
