@@ -219,8 +219,45 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
         @Column(name = "finish_time", nullable = true)
         var finishInstant: Instant?
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-    )
+            other as DBFlowMetadata
+
+            if (flowId != other.flowId) return false
+            if (invocationId != other.invocationId) return false
+            if (flowName != other.flowName) return false
+            if (userSuppliedIdentifier != other.userSuppliedIdentifier) return false
+            if (startType != other.startType) return false
+            if (!initialParameters.contentEquals(other.initialParameters)) return false
+            if (launchingCordapp != other.launchingCordapp) return false
+            if (platformVersion != other.platformVersion) return false
+            if (rpcUsername != other.rpcUsername) return false
+            if (invocationInstant != other.invocationInstant) return false
+            if (startInstant != other.startInstant) return false
+            if (finishInstant != other.finishInstant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = flowId.hashCode()
+            result = 31 * result + invocationId.hashCode()
+            result = 31 * result + flowName.hashCode()
+            result = 31 * result + (userSuppliedIdentifier?.hashCode() ?: 0)
+            result = 31 * result + startType.hashCode()
+            result = 31 * result + initialParameters.contentHashCode()
+            result = 31 * result + launchingCordapp.hashCode()
+            result = 31 * result + platformVersion
+            result = 31 * result + rpcUsername.hashCode()
+            result = 31 * result + invocationInstant.hashCode()
+            result = 31 * result + startInstant.hashCode()
+            result = 31 * result + (finishInstant?.hashCode() ?: 0)
+            return result
+        }
+    }
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedFlowState))

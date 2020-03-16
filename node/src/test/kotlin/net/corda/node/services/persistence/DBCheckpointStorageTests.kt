@@ -1,6 +1,7 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
@@ -229,6 +230,46 @@ class DBCheckpointStorageTests {
         database.transaction {
             assertThat(checkpointStorage.checkpoints()).isEmpty()
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `adding a new checkpoint creates a metadata record`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+        database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+                assertNotNull(it)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `updating a checkpoint does not change the metadata record`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+        val metadata = database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+                assertNotNull(it)
+            }
+        }
+        val updatedCheckpoint = checkpoint.copy(
+            checkpointState = checkpoint.checkpointState.copy(
+                invocationContext = InvocationContext.newInstance(InvocationOrigin.Peer(ALICE_NAME))
+            )
+        )
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, updatedCheckpoint, serializedFlowState)
+        }
+        val potentiallyUpdatedMetadata = database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString())
+        }
+        assertEquals(metadata, potentiallyUpdatedMetadata)
     }
 
     @Test(timeout = 300_000)
