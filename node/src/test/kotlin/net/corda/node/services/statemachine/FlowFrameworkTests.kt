@@ -739,7 +739,7 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
-    fun `Checkpoint status changes to FAILED when flow fails`() {
+    fun `Checkpoint status changes to FAILED and error is persisted when flow fails`() {
         var flowId: StateMachineRunId? = null
 
         assertFailsWith<FlowException> {
