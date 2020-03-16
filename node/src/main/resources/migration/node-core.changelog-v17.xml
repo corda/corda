@@ -125,11 +125,8 @@
             <column name="invocation_time" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="received_time" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
             <column name="start_time" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="finish_time" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="true"/>

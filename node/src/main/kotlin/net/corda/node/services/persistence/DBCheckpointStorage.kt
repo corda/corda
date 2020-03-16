@@ -213,11 +213,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
 
-        @Column(name = "received_time", nullable = false)
-        var receivedInstant: Instant,
-
         @Column(name = "start_time", nullable = true)
-        var startInstant: Instant?,
+        var startInstant: Instant,
 
         @Column(name = "finish_time", nullable = true)
         var finishInstant: Instant?
@@ -317,8 +314,6 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             platformVersion = PLATFORM_VERSION,
             rpcUsername = context.principal().name,
             invocationInstant = context.trace.invocationId.timestamp,
-            // [receivedInstant] makes no sense anymore as we have _started_ the flow
-            receivedInstant = Instant.now(),
             startInstant = Instant.now(),
             finishInstant = null
         ).apply {

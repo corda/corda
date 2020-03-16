@@ -110,8 +110,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(user.username, it.rpcUsername)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
-                assertTrue(it.receivedInstant >= it.invocationInstant)
-                assertNotNull(it.startInstant)
+                assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
         }
@@ -153,8 +152,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(user.username, it.rpcUsername)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
-                assertTrue(it.receivedInstant >= it.invocationInstant)
-                assertNotNull(it.startInstant)
+                assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
         }
@@ -254,8 +252,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(6, it.platformVersion)
                 assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.rpcUsername)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
-                assertTrue(it.receivedInstant >= it.invocationInstant)
-                assertNotNull(it.startInstant)
+                assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
         }
@@ -301,8 +298,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals(MyService::class.java.name, it.rpcUsername)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
-                assertTrue(it.receivedInstant >= it.invocationInstant)
-                assertNotNull(it.startInstant)
+                assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
         }
@@ -358,8 +354,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(PLATFORM_VERSION, it.platformVersion)
                 assertEquals("Scheduler", it.rpcUsername)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
-                assertTrue(it.receivedInstant >= it.invocationInstant)
-                assertNotNull(it.startInstant)
+                assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
             }
         }
@@ -390,14 +385,14 @@ class FlowMetadataRecordingTest {
                 it(
                     stateMachine.id,
                     stateMachine.context,
-                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.id)
                 )
             }
             initiateFlow(party).sendAndReceive<String>("Hello there")
             hookAfterSuspend?.let {
                 it(
                     stateMachine.context,
-                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.id)
                 )
             }
         }
@@ -421,7 +416,7 @@ class FlowMetadataRecordingTest {
                 it(
                     stateMachine.id,
                     stateMachine.context,
-                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.id)
                 )
             }
             session.send("Hello there")
@@ -445,7 +440,7 @@ class FlowMetadataRecordingTest {
                 it(
                     stateMachine.id,
                     stateMachine.context,
-                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.context)
+                    serviceHub.cordaService(MyService::class.java).findMetadata(stateMachine.id)
                 )
             }
         }
@@ -485,9 +480,9 @@ class FlowMetadataRecordingTest {
 
         private val executorService = Executors.newFixedThreadPool(1)
 
-        fun findMetadata(context: InvocationContext): DBCheckpointStorage.DBFlowMetadata {
+        fun findMetadata(flowId: StateMachineRunId): DBCheckpointStorage.DBFlowMetadata {
             return services.database.transaction {
-                session.find(DBCheckpointStorage.DBFlowMetadata::class.java, context.trace.invocationId.value)
+                session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flowId.uuid.toString())
             }
         }
 

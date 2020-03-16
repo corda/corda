@@ -78,7 +78,7 @@ class CordaPersistenceServiceTests {
                             compatible = false,
                             progressStep = "",
                             ioRequestType = FlowIORequest.ForceCheckpoint::class.java.simpleName,
-                            checkpointInstant = Instant.now(),
+                            checkpointInstant = now,
                             flowMetadata = createMetadataRecord(flowId, now)
                         )
                     )
@@ -98,8 +98,7 @@ class CordaPersistenceServiceTests {
                 launchingCordapp = "this cordapp",
                 platformVersion = PLATFORM_VERSION,
                 rpcUsername = "Batman",
-                invocationInstant = Instant.now(),
-                receivedInstant = Instant.now(),
+                invocationInstant = timestamp,
                 startInstant = timestamp,
                 finishInstant = null
             )
