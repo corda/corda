@@ -97,7 +97,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         var exceptionDetails: DBFlowException?,
 
         @OneToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "invocation_id", referencedColumnName = "invocation_id")
+        @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
         var flowMetadata: DBFlowMetadata,
 
         @Column(name = "status", nullable = false)
@@ -183,11 +183,11 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     class DBFlowMetadata(
 
         @Id
+        @Column(name = "flow_id", nullable = false)
+        var flowId: String,
+
         @Column(name = "invocation_id", nullable = false)
         var invocationId: String,
-
-        @Column(name = "flow_id", nullable = true)
-        var flowId: String?,
 
         @Column(name = "flow_name", nullable = false)
         var flowName: String,
@@ -306,9 +306,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
-            // will be no point having a PK of invocation id anymore
-            invocationId = context.trace.invocationId.value,
             flowId = flowId,
+            invocationId = context.trace.invocationId.value,
             flowName = flowInfo.flowClass.name,
             // will come from the context
             userSuppliedIdentifier = null,

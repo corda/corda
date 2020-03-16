@@ -11,7 +11,6 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.vault.SessionScope
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.testing.driver.DriverParameters
@@ -63,9 +62,10 @@ class CordaPersistenceServiceTests {
             (1..count).toList().parallelStream().forEach {
                 val now = Instant.now()
                 services.database.transaction {
+                    val flowId = it.toString()
                     session.save(
                         DBCheckpointStorage.DBFlowCheckpoint(
-                            id = it.toString(),
+                            id = flowId,
                             blob = DBCheckpointStorage.DBFlowCheckpointBlob(
                                 checkpoint = ByteArray(8192),
                                 flowStack = ByteArray(8192),
@@ -79,7 +79,7 @@ class CordaPersistenceServiceTests {
                             progressStep = "",
                             ioRequestType = FlowIORequest.ForceCheckpoint::class.java.simpleName,
                             checkpointInstant = Instant.now(),
-                            flowMetadata = createMetadataRecord(UUID.randomUUID(), now)
+                            flowMetadata = createMetadataRecord(flowId, now)
                         )
                     )
                 }
@@ -88,10 +88,10 @@ class CordaPersistenceServiceTests {
             return count
         }
 
-        private fun SessionScope.createMetadataRecord(invocationId: UUID, timestamp: Instant): DBCheckpointStorage.DBFlowMetadata {
+        private fun SessionScope.createMetadataRecord(flowId: String, timestamp: Instant): DBCheckpointStorage.DBFlowMetadata {
             val metadata = DBCheckpointStorage.DBFlowMetadata(
-                invocationId = invocationId.toString(),
-                flowId = null,
+                invocationId = UUID.randomUUID().toString(),
+                flowId = flowId,
                 flowName = "random.flow",
                 userSuppliedIdentifier = null,
                 startType = DBCheckpointStorage.StartReason.RPC,

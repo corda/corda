@@ -19,9 +19,6 @@
             <column name="error_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
-            <column name="invocation_id" type="NVARCHAR(128)">
-                <constraints nullable="false"/>
-            </column>
             <column name="status" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
@@ -98,11 +95,11 @@
 
     <changeSet author="R3.Corda" id="add_new_flow_metadata_table" dbms="!postgresql">
         <createTable tableName="node_flow_metadata">
-            <column name="invocation_id" type="NVARCHAR(128)">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_id" type="NVARCHAR(64)">
-                <constraints nullable="true"/>
+            <column name="invocation_id" type="NVARCHAR(128)">
+                <constraints nullable="false"/>
             </column>
             <column name="flow_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
