@@ -147,7 +147,7 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
         val runningNodesInfo = runningNodes.map { it.info }
         for (node in runningNodes)
             for (nodeInfo in runningNodesInfo) {
-                node.services.networkMapCache.addNode(nodeInfo)
+                node.services.networkMapCache.addOrUpdateNode(nodeInfo)
             }
     }
 }

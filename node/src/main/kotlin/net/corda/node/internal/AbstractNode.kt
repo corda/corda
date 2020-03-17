@@ -633,7 +633,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
             val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
-            networkMapCache.addNode(newNodeInfo)
+            networkMapCache.addOrUpdateNode(newNodeInfo)
             log.info("New node-info: $newNodeInfo")
             newNodeInfo
         }
