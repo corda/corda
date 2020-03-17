@@ -1,10 +1,10 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -21,7 +21,6 @@ import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -38,7 +37,6 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -79,7 +77,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         database.transaction {
@@ -107,7 +104,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val logic: FlowLogic<*> = object : FlowLogic<String>() {
@@ -141,7 +137,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         database.transaction {
@@ -163,8 +158,6 @@ class DBCheckpointStorageTests {
         val (id2, checkpoint2) = newCheckpoint()
         val serializedFlowState2 = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
-            createMetadataRecord(checkpoint2)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
             checkpointStorage.addCheckpoint(id2, checkpoint2, serializedFlowState2)
             checkpointStorage.removeCheckpoint(id)
@@ -190,13 +183,11 @@ class DBCheckpointStorageTests {
         val serializedFirstFlowState = firstCheckpoint.serializeFlowState()
 
         database.transaction {
-            createMetadataRecord(firstCheckpoint)
             checkpointStorage.addCheckpoint(id, firstCheckpoint, serializedFirstFlowState)
         }
         val (id2, secondCheckpoint) = newCheckpoint()
         val serializedSecondFlowState = secondCheckpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(secondCheckpoint)
             checkpointStorage.addCheckpoint(id2, secondCheckpoint, serializedSecondFlowState)
         }
         database.transaction {
@@ -222,7 +213,6 @@ class DBCheckpointStorageTests {
         val (id, originalCheckpoint) = newCheckpoint()
         val serializedOriginalFlowState = originalCheckpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(originalCheckpoint)
             checkpointStorage.addCheckpoint(id, originalCheckpoint, serializedOriginalFlowState)
         }
         newCheckpointStorage()
@@ -243,12 +233,51 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
+    fun `adding a new checkpoint creates a metadata record`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+        database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+                assertNotNull(it)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `updating a checkpoint does not change the metadata record`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+        val metadata = database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
+                assertNotNull(it)
+            }
+        }
+        val updatedCheckpoint = checkpoint.copy(
+            checkpointState = checkpoint.checkpointState.copy(
+                invocationContext = InvocationContext.newInstance(InvocationOrigin.Peer(ALICE_NAME))
+            )
+        )
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, updatedCheckpoint, serializedFlowState)
+        }
+        val potentiallyUpdatedMetadata = database.transaction {
+            session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString())
+        }
+        assertEquals(metadata, potentiallyUpdatedMetadata)
+    }
+
+    @Test(timeout = 300_000)
     fun `verify checkpoints compatible`() {
         val mockServices = MockServices(emptyList(), ALICE.name)
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)
             val serializedFlowState = checkpoint.serializeFlowState()
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
 
@@ -259,7 +288,6 @@ class DBCheckpointStorageTests {
         database.transaction {
             val (id1, checkpoint1) = newCheckpoint(2)
             val serializedFlowState1 = checkpoint1.serializeFlowState()
-            createMetadataRecord(checkpoint1)
             checkpointStorage.addCheckpoint(id1, checkpoint1, serializedFlowState1)
         }
 
@@ -278,7 +306,6 @@ class DBCheckpointStorageTests {
         val serializedFlowState =
             checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint = checkpoint.copy(result = result)
@@ -307,7 +334,6 @@ class DBCheckpointStorageTests {
         val serializedFlowState =
             checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint = checkpoint.copy(result = result)
@@ -339,7 +365,6 @@ class DBCheckpointStorageTests {
         val serializedFlowState =
             checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint = checkpoint.copy(result = result)
@@ -367,7 +392,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint = checkpoint.addError(exception)
@@ -393,7 +417,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint1 = checkpoint.addError(illegalStateException)
@@ -421,7 +444,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
         val updatedCheckpoint = checkpoint.addError(exception)
@@ -454,7 +476,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             val newCheckpoint = checkpoint.copy(flowIoRequest = FlowIORequest.Sleep::class.java.simpleName)
             val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
-                    context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
+                context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
         }
@@ -573,23 +595,5 @@ class DBCheckpointStorageTests {
                 ), 0, false
             )
         )
-    }
-
-    private fun DatabaseTransaction.createMetadataRecord(checkpoint: Checkpoint) {
-        val metadata = DBCheckpointStorage.DBFlowMetadata(
-            invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value,
-            flowId = null,
-            flowName = "random.flow",
-            userSuppliedIdentifier = null,
-            startType = DBCheckpointStorage.StartReason.RPC,
-            launchingCordapp = "this cordapp",
-            platformVersion = PLATFORM_VERSION,
-            rpcUsername = "Batman",
-            invocationInstant = checkpoint.checkpointState.invocationContext.trace.invocationId.timestamp,
-            receivedInstant = Instant.now(),
-            startInstant = null,
-            finishInstant = null
-        )
-        session.save(metadata)
     }
 }

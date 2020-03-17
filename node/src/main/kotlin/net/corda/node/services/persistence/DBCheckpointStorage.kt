@@ -1,7 +1,10 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -12,6 +15,7 @@ import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -43,6 +47,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         private const val HMAC_SIZE_BYTES = 16
 
         private const val MAX_PROGRESS_STEP_LENGTH = 256
+        private const val MAX_FLOW_NAME_LENGTH = 128
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
@@ -71,7 +76,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     }
 
     enum class StartReason {
-        RPC, FLOW, SERVICE, SCHEDULED, INITIATED
+        RPC, SERVICE, SCHEDULED, INITIATED
     }
 
     @Entity
@@ -94,7 +99,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         var exceptionDetails: DBFlowException?,
 
         @OneToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "invocation_id", referencedColumnName = "invocation_id")
+        @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
         var flowMetadata: DBFlowMetadata,
 
         @Column(name = "status", nullable = false)
@@ -180,11 +185,11 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     class DBFlowMetadata(
 
         @Id
+        @Column(name = "flow_id", nullable = false)
+        var flowId: String,
+
         @Column(name = "invocation_id", nullable = false)
         var invocationId: String,
-
-        @Column(name = "flow_id", nullable = true)
-        var flowId: String?,
 
         @Column(name = "flow_name", nullable = false)
         var flowName: String,
@@ -210,16 +215,51 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
 
-        @Column(name = "received_time", nullable = false)
-        var receivedInstant: Instant,
-
         @Column(name = "start_time", nullable = true)
-        var startInstant: Instant?,
+        var startInstant: Instant,
 
         @Column(name = "finish_time", nullable = true)
         var finishInstant: Instant?
+    ) {
+        @Suppress("ComplexMethod")
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-    )
+            other as DBFlowMetadata
+
+            if (flowId != other.flowId) return false
+            if (invocationId != other.invocationId) return false
+            if (flowName != other.flowName) return false
+            if (userSuppliedIdentifier != other.userSuppliedIdentifier) return false
+            if (startType != other.startType) return false
+            if (!initialParameters.contentEquals(other.initialParameters)) return false
+            if (launchingCordapp != other.launchingCordapp) return false
+            if (platformVersion != other.platformVersion) return false
+            if (rpcUsername != other.rpcUsername) return false
+            if (invocationInstant != other.invocationInstant) return false
+            if (startInstant != other.startInstant) return false
+            if (finishInstant != other.finishInstant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = flowId.hashCode()
+            result = 31 * result + invocationId.hashCode()
+            result = 31 * result + flowName.hashCode()
+            result = 31 * result + (userSuppliedIdentifier?.hashCode() ?: 0)
+            result = 31 * result + startType.hashCode()
+            result = 31 * result + initialParameters.contentHashCode()
+            result = 31 * result + launchingCordapp.hashCode()
+            result = 31 * result + platformVersion
+            result = 31 * result + rpcUsername.hashCode()
+            result = 31 * result + invocationInstant.hashCode()
+            result = 31 * result + startInstant.hashCode()
+            result = 31 * result + (finishInstant?.hashCode() ?: 0)
+            return result
+        }
+    }
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
         currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedFlowState))
@@ -275,25 +315,13 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
     ): DBFlowCheckpoint {
         val flowId = id.uuid.toString()
         val now = Instant.now()
-        val invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value
 
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
-        // Need to update the metadata record to join it to the main checkpoint record
 
-        // This code needs to be added back in once the metadata record is properly created (remove the code below it)
-        //        val metadata = requireNotNull(currentDBSession().find(
-        //            DBFlowMetadata::class.java,
-        //            invocationId
-        //        )) { "The flow metadata record for flow [$flowId] with invocation id [$invocationId] does not exist"}
-        val metadata = (currentDBSession().find(
-            DBFlowMetadata::class.java,
-            invocationId
-        )) ?: createTemporaryMetadata(checkpoint)
-        metadata.flowId = flowId
-        currentDBSession().update(metadata)
+        val metadata = createMetadata(flowId, checkpoint)
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         return DBFlowCheckpoint(
             id = flowId,
@@ -309,20 +337,24 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         )
     }
 
-    // Remove this when saving of metadata is properly handled
-    private fun createTemporaryMetadata(checkpoint: Checkpoint): DBFlowMetadata {
+    private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+        val context = checkpoint.checkpointState.invocationContext
+        val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
-            invocationId = checkpoint.checkpointState.invocationContext.trace.invocationId.value,
-            flowId = null,
-            flowName = "random.flow",
+            flowId = flowId,
+            invocationId = context.trace.invocationId.value,
+            // Truncate the flow name to fit into the database column
+            // Flow names are unlikely to be this long
+            flowName = flowInfo.flowClass.name.take(MAX_FLOW_NAME_LENGTH),
+            // will come from the context
             userSuppliedIdentifier = null,
-            startType = DBCheckpointStorage.StartReason.RPC,
-            launchingCordapp = "this cordapp",
+            startType = context.getStartedType(),
+            initialParameters = context.getFlowParameters().storageSerialize().bytes,
+            launchingCordapp = (flowInfo.subFlowVersion as? SubFlowVersion.CorDappFlow)?.corDappName ?: "Core flow",
             platformVersion = PLATFORM_VERSION,
-            rpcUsername = "Batman",
-            invocationInstant = checkpoint.checkpointState.invocationContext.trace.invocationId.timestamp,
-            receivedInstant = Instant.now(),
-            startInstant = null,
+            rpcUsername = context.principal().name,
+            invocationInstant = context.trace.invocationId.timestamp,
+            startInstant = Instant.now(),
             finishInstant = null
         ).apply {
             currentDBSession().save(this)
@@ -441,6 +473,24 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
                 value = it.storageSerialize().bytes,
                 persistedInstant = now
             )
+        }
+    }
+
+    private fun InvocationContext.getStartedType(): StartReason {
+        return when (origin) {
+            is InvocationOrigin.RPC, is InvocationOrigin.Shell -> StartReason.RPC
+            is InvocationOrigin.Peer -> StartReason.INITIATED
+            is InvocationOrigin.Service -> StartReason.SERVICE
+            is InvocationOrigin.Scheduled -> StartReason.SCHEDULED
+        }
+    }
+
+    private fun InvocationContext.getFlowParameters(): List<Any?> {
+        // Only RPC flows have parameters which are found in index 1
+        return if(arguments.isNotEmpty()) {
+            uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
+        } else {
+            emptyList()
         }
     }
 

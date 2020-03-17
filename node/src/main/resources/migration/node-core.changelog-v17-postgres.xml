@@ -19,9 +19,6 @@
             <column name="error_id" type="BIGINT">
                 <constraints nullable="true"/>
             </column>
-            <column name="invocation_id" type="NVARCHAR(128)">
-                <constraints nullable="false"/>
-            </column>
             <column name="status" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
@@ -98,11 +95,11 @@
 
     <changeSet author="R3.Corda" id="add_new_flow_metadata_table-pg" dbms="postgresql">
         <createTable tableName="node_flow_metadata">
-            <column name="invocation_id" type="NVARCHAR(128)">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flow_id" type="NVARCHAR(64)">
-                <constraints nullable="true"/>
+            <column name="invocation_id" type="NVARCHAR(128)">
+                <constraints nullable="false"/>
             </column>
             <column name="flow_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
@@ -116,23 +113,20 @@
             <column name="flow_parameters" type="varbinary(33554432)">
                 <constraints nullable="false"/>
             </column>
-            <column name="cordapp_name" type="NVARCHAR(64)">
+            <column name="cordapp_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
             <column name="platform_version" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="rpc_user" type="NVARCHAR(64)">
+            <column name="rpc_user" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
             <column name="invocation_time" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="received_time" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
             <column name="start_time" type="java.sql.Types.TIMESTAMP">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="finish_time" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="true"/>
