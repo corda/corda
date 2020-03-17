@@ -79,6 +79,10 @@ Given the addition of new APIs, the platform version of Corda 4.4 has been bumpe
 
 For more information on platform version, please see :doc:`versioning`. For more details on upgrading a CorDapp to use platform version 5, please see :doc:`app-upgrade-notes`.
 
+Known Issues
+~~~~~~~~~~~~
+
+Changes introduced in Corda 4.4 to increase ledger integrity have highlighted limitations regarding database transactions. To prevent flows from continuing to process after a database transaction has failed to commit or suffered from a pre-commit persistence exception, extra database flushes have been added. These extra flushes can cause exceptions to be thrown where they were not before (or cause different exception types to be raised compared to Corda 4.3 or previous versions). In general, CorDapp developers should not expect to be able to catch exceptions thrown during a database transaction and then continue with further DB operations as part of the same flow. A safer pattern involves allowing the flow to fail and be retried
 
 Issues Fixed
 ~~~~~~~~~~~~
