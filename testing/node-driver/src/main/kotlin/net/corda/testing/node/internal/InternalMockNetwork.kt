@@ -352,8 +352,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             mockNet.nodes
                     .mapNotNull { it.started }
                     .forEach { existingNode ->
-                        newNode.services.networkMapCache.addNode(existingNode.info)
-                        existingNode.services.networkMapCache.addNode(newNode.info)
+                        newNode.services.networkMapCache.addOrUpdateNode(existingNode.info)
+                        existingNode.services.networkMapCache.addOrUpdateNode(newNode.info)
                     }
         }
 

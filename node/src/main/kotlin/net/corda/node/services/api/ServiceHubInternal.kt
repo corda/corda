@@ -40,10 +40,11 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
      * This is used for Artemis bridge lookup process. */
     fun getNodesByOwningKeyIndex(identityKeyIndex: String): List<NodeInfo>
 
-    /** Adds a node to the local cache (generally only used for adding ourselves). */
-    fun addNode(node: NodeInfo)
+    /** Adds (or updates) a node to the local cache (generally only used for adding ourselves). */
+    fun addOrUpdateNode(node: NodeInfo)
 
-    fun addNodes(nodes: List<NodeInfo>)
+    /** Adds (or updates) nodes to the local cache. */
+    fun addOrUpdateNodes(nodes: List<NodeInfo>)
 
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
