@@ -49,8 +49,7 @@ abstract class AbstractFlowExternalOperationTest {
     }
 
     fun blockUntilFlowKeptInForObservation(flow: () -> FlowHandle<*>) {
-        val lock = Semaphore(1)
-        lock.acquire()
+        val lock = Semaphore(0)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> lock.release() }
         flow()
         lock.acquire()

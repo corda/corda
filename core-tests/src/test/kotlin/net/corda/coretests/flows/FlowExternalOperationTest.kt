@@ -86,15 +86,13 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val lock = Semaphore(1)
-            lock.acquire()
-            StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> lock.release() }
-            alice.rpc.startFlow(
-                ::FlowWithExternalOperationPropagatesException,
-                bob.nodeInfo.singleIdentity(),
-                HospitalizeFlowException::class.java
-            ).returnValue
-            lock.acquire()
+            blockUntilFlowKeptInForObservation {
+                alice.rpc.startFlow(
+                    ::FlowWithExternalOperationPropagatesException,
+                    bob.nodeInfo.singleIdentity(),
+                    HospitalizeFlowException::class.java
+                )
+            }
             assertHospitalCounters(0, 1)
         }
     }
