@@ -26,12 +26,22 @@ data class InvocationContext(
     val impersonatedActor: Actor? = null,
     val arguments: List<Any?> = emptyList()
 ) {
+
+    constructor(
+        origin: InvocationOrigin,
+        trace: Trace,
+        actor: Actor?,
+        externalTrace: Trace? = null,
+        impersonatedActor: Actor? = null
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList())
+
     companion object {
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
         @DeleteForDJVM
         @JvmStatic
+        @JvmOverloads
         @Suppress("LongParameterList")
         fun newInstance(
             origin: InvocationOrigin,
@@ -47,6 +57,7 @@ data class InvocationContext(
          */
         @DeleteForDJVM
         @JvmStatic
+        @JvmOverloads
         fun rpc(
             actor: Actor,
             trace: Trace = Trace.newInstance(),
@@ -88,6 +99,23 @@ data class InvocationContext(
      * Associated security principal.
      */
     fun principal(): Principal = origin.principal()
+
+    fun copy(
+        origin: InvocationOrigin = this.origin,
+        trace: Trace = this.trace,
+        actor: Actor? = this.actor,
+        externalTrace: Trace? = this.externalTrace,
+        impersonatedActor: Actor? = this.impersonatedActor
+    ): InvocationContext {
+        return copy(
+            origin = origin,
+            trace = trace,
+            actor = actor,
+            externalTrace = externalTrace,
+            impersonatedActor = impersonatedActor,
+            arguments = arguments
+        )
+    }
 }
 
 /**
