@@ -302,7 +302,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> FieldInfo.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
+    fun <R> FieldInfo.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.notEqual(value, exactMatch))
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
