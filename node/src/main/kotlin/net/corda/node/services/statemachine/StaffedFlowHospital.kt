@@ -223,7 +223,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
-                    Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
+                    Triple(Outcome.OVERNIGHT_OBSERVATION, Event.OvernightObservation, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
@@ -239,14 +239,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             Pair(event, backOffForChronicCondition)
         }
 
-        if (event != null) {
-            if (backOffForChronicCondition.isZero) {
+
+        if (backOffForChronicCondition.isZero) {
+            flowFiber.scheduleEvent(event)
+        } else {
+            hospitalJobTimer.schedule(timerTask {
                 flowFiber.scheduleEvent(event)
-            } else {
-                hospitalJobTimer.schedule(timerTask {
-                    flowFiber.scheduleEvent(event)
-                }, backOffForChronicCondition.toMillis())
-            }
+            }, backOffForChronicCondition.toMillis())
         }
     }
 

@@ -15,6 +15,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StateMachineRunId
@@ -78,6 +79,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
@@ -755,7 +757,28 @@ class FlowFrameworkTests {
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
             assertEquals(persistedException!!.type.name, "net.corda.core.flows.FlowException") // type
             persistedException.value.deserialize<FlowException>() // value
-            assertEquals(persistedException!!.message, "Just an exception") // exception message
+            assertEquals(persistedException.message, "Just an exception") // exception message
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint is updated in DB with HOSPITALIZED status and the error when flow is kept for overnight observation` () {
+        var flowId: StateMachineRunId? = null
+
+        assertFailsWith<TimeoutException> {
+            val fiber = aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("Overnight observation") })
+            flowId = fiber.id
+            fiber.resultFuture.getOrThrow(20.seconds)
+        }
+
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+
+            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
+            assertEquals(persistedException!!.type.name, "net.corda.core.flows.HospitalizeFlowException") // type
+            persistedException.value.deserialize<HospitalizeFlowException>() // value
+            assertEquals(persistedException.message, "Overnight observation") // exception message
         }
     }
 
