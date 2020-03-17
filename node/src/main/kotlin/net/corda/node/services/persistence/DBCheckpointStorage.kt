@@ -47,6 +47,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         private const val HMAC_SIZE_BYTES = 16
 
         private const val MAX_PROGRESS_STEP_LENGTH = 256
+        private const val MAX_FLOW_NAME_LENGTH = 128
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
@@ -336,14 +337,15 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         )
     }
 
-    // Remove this when saving of metadata is properly handled
     private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
             flowId = flowId,
             invocationId = context.trace.invocationId.value,
-            flowName = flowInfo.flowClass.name,
+            // Truncate the flow name to fit into the database column
+            // Flow names are unlikely to be this long
+            flowName = flowInfo.flowClass.name.take(MAX_FLOW_NAME_LENGTH),
             // will come from the context
             userSuppliedIdentifier = null,
             startType = context.getStartedType(),
