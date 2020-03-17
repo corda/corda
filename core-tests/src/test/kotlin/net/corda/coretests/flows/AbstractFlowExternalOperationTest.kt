@@ -17,7 +17,6 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -211,31 +210,6 @@ abstract class AbstractFlowExternalOperationTest {
     object CustomSchema
 
     object CustomMappedSchema : MappedSchema(CustomSchema::class.java, 1, listOf(CustomTableEntity::class.java))
-
-    // Internal use for testing only!!
-    @StartableByRPC
-    class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
-        override fun call(): HospitalCounts =
-            HospitalCounts(
-                serviceHub.cordaService(HospitalCounter::class.java).dischargeCounter,
-                serviceHub.cordaService(HospitalCounter::class.java).observationCounter
-            )
-    }
-
-    @CordaSerializable
-    data class HospitalCounts(val discharge: Int, val observation: Int)
-
-    @Suppress("UNUSED_PARAMETER")
-    @CordaService
-    class HospitalCounter(services: AppServiceHub) : SingletonSerializeAsToken() {
-        var observationCounter: Int = 0
-        var dischargeCounter: Int = 0
-
-        init {
-            StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
-            StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
-        }
-    }
 
     class MyCordaException(message: String) : CordaException(message)
 
