@@ -30,7 +30,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -43,9 +42,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.nodeapi.internal.persistence.contextDatabase
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -74,7 +70,7 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
-import java.sql.SQLException
+import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -788,8 +784,27 @@ class FlowFrameworkTests {
         }
     }
 
-    // TODO ADD Test for discharge -> retries -> upon retrying doesnt have any error (transientconnection exception)
-    // with a flag (1st time throws) // assert that upon retrying it will not any persist checkpoint status nor will
+    @Test(timeout=300_000)
+    fun `Checkpoint status and error in memory and in DB are not dirtied upon flow retry`() {
+        var firstExecution = true
+        var dbCheckpointStatus: Checkpoint.FlowStatus? = null
+        var inMemoryCheckpointStatus: Checkpoint.FlowStatus? = null
+
+        SuspendingFlow.hookAfterCheckpoint = {
+            if (firstExecution) {
+                firstExecution = false
+                throw SQLTransientConnectionException("connection is not available")
+            } else {
+                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                inMemoryCheckpointStatus = (this as? FlowStateMachineImpl<*>)!!.transientState!!.value.checkpoint.status
+            }
+        }
+
+        aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
+        // checkpoint states ,after flow retried, after suspension
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+    }
 
     //region Helpers
 
