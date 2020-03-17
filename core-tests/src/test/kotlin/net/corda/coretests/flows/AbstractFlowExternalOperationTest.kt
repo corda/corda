@@ -12,6 +12,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.doOnComplete
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -21,16 +22,45 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.statemachine.StaffedFlowHospital
+import org.junit.Before
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
+import kotlin.test.assertEquals
 
 abstract class AbstractFlowExternalOperationTest {
+
+    var dischargeCounter = 0
+    var observationCounter = 0
+
+    @Before
+    fun before() {
+        StaffedFlowHospital.onFlowDischarged.clear()
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+        dischargeCounter = 0
+        observationCounter = 0
+    }
+
+    fun blockUntilFlowKeptInForObservation(flow: () -> FlowHandle<*>) {
+        val lock = Semaphore(1)
+        lock.acquire()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> lock.release() }
+        flow()
+        lock.acquire()
+    }
+
+    fun assertHospitalCounters(discharge: Int, observation: Int) {
+        assertEquals(discharge, dischargeCounter)
+        assertEquals(observation, observationCounter)
+    }
 
     @StartableByRPC
     @InitiatingFlow
