@@ -13,7 +13,7 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.dummyCommand
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.MockTransactionStorage
 import org.junit.Rule

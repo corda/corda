@@ -21,8 +21,8 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat

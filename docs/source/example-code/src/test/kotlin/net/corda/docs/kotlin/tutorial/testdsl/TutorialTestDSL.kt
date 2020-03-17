@@ -17,7 +17,6 @@ import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.*
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -77,7 +76,7 @@ class TutorialTestDSL {
 
     // DOCSTART 2
     // This example test will fail with this exception.
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun simpleCP() {
         val inState = getPaper()
         ledgerServices.ledger(dummyNotary.party) {
@@ -92,7 +91,7 @@ class TutorialTestDSL {
 
     // DOCSTART 3
     // This example test will fail with this exception.
-    @Test(expected = TransactionVerificationException.ContractRejection::class)
+    @Test(expected = TransactionVerificationException.ContractRejection::class, timeout=300_000)
     fun simpleCPMove() {
         val inState = getPaper()
         ledgerServices.ledger(dummyNotary.party) {

@@ -181,7 +181,7 @@ class CompositeKeyTests {
         assertFalse { engine.verify(CompositeSignaturesWithKeys(listOf(aliceSignature, brokenBobSignature)).serialize().bytes) }
     }
 
-    @Test()
+    @Test(timeout=300_000)
     fun `composite key constraints`() {
         // Zero weight.
         assertFailsWith(IllegalArgumentException::class) {
@@ -223,7 +223,7 @@ class CompositeKeyTests {
         }
     }
 
-    @Test()
+    @Test(timeout=300_000)
     fun `composite key validation with graph cycle detection`() = kryoSpecific("Cycle exists in the object graph which is not currently supported in AMQP mode") {
         val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
         val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey

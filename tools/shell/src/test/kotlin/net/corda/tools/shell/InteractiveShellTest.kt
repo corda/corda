@@ -23,12 +23,12 @@ import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.internal.DEV_ROOT_CA
 import org.crsh.command.InvocationContext
 import org.crsh.text.Color
 import org.crsh.text.Decoration
@@ -171,13 +171,13 @@ class InteractiveShellTest {
             expected = "10 (1)++200 (2)"
     )
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowStartNoArgs() = check("", "")
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowMissingParam() = check("d: Yo", "")
 
-    @Test(expected = InteractiveShell.NoApplicableConstructor::class)
+    @Test(expected = InteractiveShell.NoApplicableConstructor::class, timeout=300_000)
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test(timeout=300_000)

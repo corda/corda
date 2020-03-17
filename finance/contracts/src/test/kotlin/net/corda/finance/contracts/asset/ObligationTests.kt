@@ -24,7 +24,7 @@ import net.corda.finance.workflows.asset.ObligationUtils
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.dsl.*
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
@@ -253,7 +253,7 @@ class ObligationTests {
      * Test that the issuance builder rejects building into a transaction with existing
      * cash inputs.
      */
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun `reject issuance with inputs`() {
         // Issue some obligation
         val tx = TransactionBuilder(DUMMY_NOTARY).apply {
@@ -854,7 +854,7 @@ class ObligationTests {
                 fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuedProducts = miniCorpIssuer)).bilateralNetState)
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun `states cannot be netted if not in the normal state`() {
         inState.copy(lifecycle = Lifecycle.DEFAULTED).bilateralNetState
     }

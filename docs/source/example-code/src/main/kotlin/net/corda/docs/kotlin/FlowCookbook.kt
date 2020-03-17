@@ -97,7 +97,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         progressTracker.currentStep = ID_OTHER_NODES
         // DOCEND 18
 
-        // A transaction generally needs a notary:
+        // Every transaction needs a notary:
         //   - To prevent double-spends if the transaction has inputs
         //   - To serve as a timestamping authority if the transaction has a
         //     time-window
@@ -107,12 +107,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
                 organisation = "Notary Service",
                 locality = "London",
                 country = "GB")
-        val specificNotary: Party = serviceHub.networkMapCache.getNotary(notaryName)!!
-        // Alternatively, we can pick an arbitrary notary from the notary
-        // list. However, it is always preferable to specify the notary
-        // explicitly, as the notary list might change when new notaries are
-        // introduced, or old ones decommissioned.
-        val firstNotary: Party = serviceHub.networkMapCache.notaryIdentities.first()
+        val notary: Party = serviceHub.networkMapCache.getNotary(notaryName)!!
         // DOCEND 01
 
         // We may also need to identify a specific counterparty. We do so
@@ -328,7 +323,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // If our transaction has input states or a time-window, we must instantiate it with a
         // notary.
         // DOCSTART 19
-        val txBuilder: TransactionBuilder = TransactionBuilder(specificNotary)
+        val txBuilder: TransactionBuilder = TransactionBuilder(notary)
         // DOCEND 19
 
         // Otherwise, we can choose to instantiate it without one:
@@ -362,7 +357,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
 
         // An output state can be added as a ``ContractState``, contract class name and notary.
         // DOCSTART 49
-        txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
+        txBuilder.addOutputState(ourOutputState, DummyContract.PROGRAM_ID, notary)
         // DOCEND 49
         // We can also leave the notary field blank, in which case the transaction's default
         // notary is used.
@@ -372,7 +367,7 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // Or we can add the output state as a ``TransactionState``, which already specifies
         // the output's contract and notary.
         // DOCSTART 51
-        val txState: TransactionState<DummyState> = TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary)
+        val txState: TransactionState<DummyState> = TransactionState(ourOutputState, DummyContract.PROGRAM_ID, notary)
         // DOCEND 51
 
         // Commands can be added as ``Command``s.

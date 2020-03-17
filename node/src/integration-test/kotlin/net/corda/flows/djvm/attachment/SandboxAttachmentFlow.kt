@@ -6,11 +6,9 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.TransactionBuilder
 
-@InitiatingFlow
 @StartableByRPC
 class SandboxAttachmentFlow(private val command: CommandData) : FlowLogic<SecureHash>() {
     @Suspendable

@@ -18,7 +18,7 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.testutils.*
@@ -27,7 +27,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
@@ -322,7 +322,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class, timeout=300_000)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap())
         serdes(obj)
@@ -364,7 +364,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test whitelist`() {
         val obj = Woo2(4)
         serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
@@ -380,7 +380,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         ))
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test generic list subclass is not supported`() {
         val obj = FooList()
         serdes(obj)
@@ -458,13 +458,13 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test mismatched property and constructor naming`() {
         val obj = Mismatch(456)
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
         serdes(obj)

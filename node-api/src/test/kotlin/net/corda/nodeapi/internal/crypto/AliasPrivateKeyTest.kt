@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder

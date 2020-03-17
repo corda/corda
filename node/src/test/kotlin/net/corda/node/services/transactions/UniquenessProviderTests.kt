@@ -16,6 +16,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
+import net.corda.coretesting.internal.configureTestSSL
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -29,7 +30,6 @@ import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.MockKeyManagementService

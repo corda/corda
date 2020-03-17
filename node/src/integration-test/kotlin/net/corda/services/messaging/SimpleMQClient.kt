@@ -3,9 +3,9 @@ package net.corda.services.messaging
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.coretesting.internal.configureTestSSL
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.testing.internal.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*
 
 /**

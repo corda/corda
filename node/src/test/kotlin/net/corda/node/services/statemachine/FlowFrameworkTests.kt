@@ -622,6 +622,16 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
+    fun `initiating flow with anonymous party at the same node`() {
+        val anonymousBob = bobNode.services.keyManagementService.freshKeyAndCert(bobNode.info.legalIdentitiesAndCerts.single(), false)
+        val bobResponderFlow = bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = bobNode.services.startFlow(SendAndReceiveFlow(anonymousBob.party.anonymise(), "Hello")).resultFuture
+        mockNet.runNetwork()
+        bobResponderFlow.getOrThrow()
+        assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
+    @Test(timeout=300_000)
     fun `Checkpoint status changes to RUNNABLE when flow is loaded from checkpoint - FlowState Unstarted`() {
         var firstExecution = true
         var checkpointStatusInDBBeforeSuspension: Checkpoint.FlowStatus? = null

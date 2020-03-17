@@ -634,6 +634,10 @@ object InteractiveShell {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
+        if (cmd == "shutdown") {
+            out.println("Called 'shutdown' on the node.\nQuitting the shell now.").also { out.flush() }
+            onExit.invoke()
+        }
         return result
     }
 

@@ -1,0 +1,28 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'net.corda.plugins.publish-utils'
+    id 'net.corda.plugins.api-scanner'
+    id 'com.jfrog.artifactory'
+    id 'java-library'
+}
+
+description 'Core test types and helpers for testing Corda'
+
+dependencies {
+    implementation project(':core')
+    api project(':test-common')
+    api "org.jetbrains.kotlin:kotlin-test"
+}
+
+jar {
+    baseName 'corda-core-test-utils'
+    manifest {
+        // This JAR is part of Corda's testing framework.
+        // Driver will not include it as part of an out-of-process node.
+        attributes('Corda-Testing': true)
+    }
+}
+
+publish {
+    name jar.baseName
+}

@@ -17,6 +17,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
@@ -29,11 +30,9 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
-import net.corda.testing.internal.createNodeInfoAndSigned
+import net.corda.coretesting.internal.TestNodeInfoBuilder
+import net.corda.coretesting.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockPublicKeyToOwningIdentityCache
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat

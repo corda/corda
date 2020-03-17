@@ -17,7 +17,7 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

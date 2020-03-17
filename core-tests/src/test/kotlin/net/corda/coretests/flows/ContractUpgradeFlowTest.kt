@@ -20,8 +20,8 @@ import net.corda.testing.contracts.DummyContractV3
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
 import org.junit.Test

@@ -7,11 +7,9 @@ import net.corda.contracts.serialization.missing.MissingSerializerContract.Opera
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.TransactionBuilder
 
-@InitiatingFlow
 @StartableByRPC
 class MissingSerializerBuilderFlow(private val value: Long) : FlowLogic<SecureHash>() {
     @Suspendable

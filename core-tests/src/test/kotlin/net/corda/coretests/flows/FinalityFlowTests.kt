@@ -4,7 +4,6 @@ import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assertThat
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -13,8 +12,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
 import net.corda.testing.core.*
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
+import net.corda.coretesting.internal.matchers.flow.willReturn
+import net.corda.coretesting.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -25,7 +24,8 @@ class FinalityFlowTests : WithFinality {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
     }
 
-    override val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp()))
+    override val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp(),
+                                                       CustomCordapp(targetPlatformVersion = 3, classes = setOf(FinalityFlow::class.java))))
 
     private val aliceNode = makeNode(ALICE_NAME)
 
@@ -60,11 +60,8 @@ class FinalityFlowTests : WithFinality {
 	fun `allow use of the old API if the CorDapp target version is 3`() {
         val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
         val stx = aliceNode.issuesCashTo(oldBob)
-        val resultFuture = CordappResolver.withTestCordapp(targetPlatformVersion = 3) {
-            @Suppress("DEPRECATION")
-            aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
-        }
-        resultFuture.getOrThrow()
+        @Suppress("DEPRECATION")
+        aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture.getOrThrow()
         assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 

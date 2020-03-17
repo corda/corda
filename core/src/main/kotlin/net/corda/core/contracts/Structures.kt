@@ -134,8 +134,7 @@ interface LinearState : ContractState {
     val linearId: UniqueIdentifier
 }
 // DOCEND 2
-
-@KeepForDJVM
+@DeleteForDJVM
 interface SchedulableState : ContractState {
     /**
      * Indicate whether there is some activity to be performed at some future point in time with respect to this
@@ -146,7 +145,6 @@ interface SchedulableState : ContractState {
      *
      * @return null if there is no activity to schedule.
      */
-    @DeleteForDJVM
     fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity?
 }
 
@@ -176,6 +174,7 @@ data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, va
 // DOCEND 7
 
 /** A wrapper for a [StateAndRef] indicating that it should be added to a transaction as a reference input state. */
+@KeepForDJVM
 data class ReferencedStateAndRef<out T : ContractState>(val stateAndRef: StateAndRef<T>)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */

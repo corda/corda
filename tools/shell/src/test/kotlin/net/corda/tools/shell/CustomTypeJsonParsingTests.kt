@@ -49,7 +49,7 @@ class CustomTypeJsonParsingTests {
         assertEquals("26b37265-a1fd-4c77-b2e0-715917ef619f", state.linearId.id.toString())
     }
 
-    @Test(expected = JsonMappingException::class)
+    @Test(expected = JsonMappingException::class, timeout=300_000)
     fun `Deserializing by parsing string contain invalid uuid with underscore`() {
         val json = """{"linearId":"extkey564_26b37265-a1fd-4c77-b2e0"}"""
         objectMapper.readValue<State>(json)
@@ -63,7 +63,7 @@ class CustomTypeJsonParsingTests {
         assertEquals("26b37265-a1fd-4c77-b2e0-715917ef619f", state.uuid.toString())
     }
 
-    @Test(expected = JsonMappingException::class)
+    @Test(expected = JsonMappingException::class, timeout=300_000)
     fun `Deserializing UUID by parsing invalid uuid string`() {
         val json = """{"uuid":"26b37265-a1fd-4c77-b2e0"}"""
         objectMapper.readValue<UuidState>(json)

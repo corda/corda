@@ -30,9 +30,10 @@ object ErrorHandling {
             val txTarget = CreateStateFlow.getTxTarget(errorTarget)
             val state = DbFailureContract.TestState(
                 UniqueIdentifier(),
-                ourIdentity,
+                listOf(ourIdentity),
                 if (txTarget == CreateStateFlow.ErrorTarget.TxInvalidState) null else "valid hibernate value",
-                errorTarget)
+                errorTarget,
+                ourIdentity)
             val txCommand = Command(DbFailureContract.Commands.Create(), ourIdentity.owningKey)
             val txBuilder = TransactionBuilder(notary).addOutputState(state).addCommand(txCommand)
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
@@ -50,5 +51,4 @@ object ErrorHandling {
             hookAfterSecondCheckpoint.invoke() // should be never executed
         }
     }
-
 }

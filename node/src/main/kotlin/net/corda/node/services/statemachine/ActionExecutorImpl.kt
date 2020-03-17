@@ -61,6 +61,7 @@ class ActionExecutorImpl(
             is Action.RemoveCheckpoint -> executeRemoveCheckpoint(action)
             is Action.SendInitial -> executeSendInitial(action)
             is Action.SendExisting -> executeSendExisting(action)
+            is Action.SendMultiple -> executeSendMultiple(action)
             is Action.AddSessionBinding -> executeAddSessionBinding(action)
             is Action.RemoveSessionBindings -> executeRemoveSessionBindings(action)
             is Action.SignalFlowHasStarted -> executeSignalFlowHasStarted(action)
@@ -173,6 +174,13 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
         flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
+    }
+
+    @Suspendable
+    private fun executeSendMultiple(action: Action.SendMultiple) {
+        val messages = action.sendInitial.map { Message(it.destination, it.initialise, it.deduplicationId) } +
+                action.sendExisting.map { Message(it.peerParty, it.message, it.deduplicationId) }
+        flowMessaging.sendSessionMessages(messages)
     }
 
     @Suspendable

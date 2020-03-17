@@ -58,7 +58,8 @@ class FxTransactionBuildTutorialTest {
                 POUNDS(100).issuedBy(nodeB.info.singleIdentity().ref(0x01)),
                 DOLLARS(200).issuedBy(nodeA.info.singleIdentity().ref(0x01)),
                 nodeB.info.singleIdentity(),
-                weAreBaseCurrencySeller = false)).getOrThrow()
+                weAreBaseCurrencySeller = false,
+                notary = mockNet.defaultNotaryIdentity)).getOrThrow()
         // wait for the flow to finish and the vault updates to be done
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()

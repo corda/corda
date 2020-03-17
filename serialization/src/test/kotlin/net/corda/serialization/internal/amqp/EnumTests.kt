@@ -155,7 +155,7 @@ class EnumTests {
         assertEquals(c.c, obj.c)
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun changedEnum1() {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum1")
 
@@ -174,7 +174,7 @@ class EnumTests {
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test(expected = NotSerializableException::class, timeout=300_000)
     fun changedEnum2() {
         val url = EnumTests::class.java.getResource("EnumTests.changedEnum2")
 

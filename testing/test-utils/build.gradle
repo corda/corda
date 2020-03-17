@@ -9,15 +9,12 @@ description 'Testing utilities for Corda'
 
 dependencies {
     compile project(':test-common')
+    compile project(':core-test-utils')
     compile(project(':node')) {
         // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
     }
     compile project(':client:mock')
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -36,6 +33,11 @@ dependencies {
 
 jar {
     baseName 'corda-test-utils'
+    manifest {
+        // This JAR is part of Corda's testing framework.
+        // Driver will not include it as part of an out-of-process node.
+        attributes('Corda-Testing': true)
+    }
 }
 
 publish {

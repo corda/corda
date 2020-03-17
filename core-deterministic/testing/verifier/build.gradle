@@ -1,8 +1,10 @@
-apply plugin: 'java-library'
-apply from: '../../../deterministic.gradle'
-apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'idea'
+plugins {
+    id 'java-library'
+    id 'net.corda.plugins.publish-utils'
+    id 'com.jfrog.artifactory'
+    id 'idea'
+}
+apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Test utilities for deterministic contract verification'
 

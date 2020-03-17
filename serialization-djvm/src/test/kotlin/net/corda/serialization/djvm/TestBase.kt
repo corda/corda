@@ -13,16 +13,19 @@ import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.UserPathSource
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.fail
 import java.io.File
 import java.nio.file.Files.exists
 import java.nio.file.Files.isDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit.MINUTES
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
+@Timeout(5, unit = MINUTES)
 abstract class TestBase(type: SandboxType) {
     companion object {
         const val SANDBOX_STRING = "sandbox.java.lang.String"

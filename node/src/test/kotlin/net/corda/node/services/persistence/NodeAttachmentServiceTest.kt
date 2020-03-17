@@ -24,7 +24,6 @@ import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
@@ -34,7 +33,7 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow

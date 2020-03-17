@@ -25,6 +25,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -316,6 +317,53 @@ abstract class FlowLogic<out T> {
         enforceNoDuplicates(sessions)
         return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
     }
+
+    /**
+     * Queues the given [payload] for sending to the provided [sessions] and continues without suspending.
+     *
+     * Note that the other parties may receive the message at some arbitrary later point or not at all: if one of the provided [sessions]
+     * is offline then message delivery will be retried until the corresponding node comes back or until the message is older than the
+     * network's event horizon time.
+     *
+     * @param payload the payload to send.
+     * @param sessions the sessions to send the provided payload to.
+     * @param maySkipCheckpoint whether checkpointing should be skipped.
+     */
+    @Suspendable
+    @JvmOverloads
+    fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
+        val sessionToPayload = sessions.map { it to payload }.toMap()
+        return sendAll(sessionToPayload, maySkipCheckpoint)
+    }
+
+    /**
+     * Queues the given payloads for sending to the provided sessions and continues without suspending.
+     *
+     * Note that the other parties may receive the message at some arbitrary later point or not at all: if one of the provided [sessions]
+     * is offline then message delivery will be retried until the corresponding node comes back or until the message is older than the
+     * network's event horizon time.
+     *
+     * @param payloadsPerSession a mapping that contains the payload to be sent to each session.
+     * @param maySkipCheckpoint whether checkpointing should be skipped.
+     */
+    @Suspendable
+    @JvmOverloads
+    fun sendAll(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
+        val request = FlowIORequest.Send(
+                sessionToMessage = serializePayloads(payloadsPerSession)
+        )
+        stateMachine.suspend(request, maySkipCheckpoint)
+    }
+
+    @Suspendable
+    private fun serializePayloads(payloadsPerSession: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
+        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
+
+        return payloadsPerSession.mapValues { (_, payload) ->
+            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
+        }
+    }
+
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result

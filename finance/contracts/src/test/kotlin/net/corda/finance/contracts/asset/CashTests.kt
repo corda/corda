@@ -300,7 +300,7 @@ class CashTests {
      * Test that the issuance builder rejects building into a transaction with existing
      * cash inputs.
      */
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = IllegalStateException::class, timeout=300_000)
     fun `reject issuance with inputs`() {
         // Issue some cash
         var ptx = TransactionBuilder(dummyNotary.party)
@@ -762,7 +762,7 @@ class CashTests {
         assertEquals(6000.DOLLARS `issued by` defaultIssuer, states.sumCashBy(megaCorp.party))
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun `summing by owner throws`() {
         val states = listOf(
                 Cash.State(2000.DOLLARS `issued by` defaultIssuer, megaCorp.party),
@@ -778,7 +778,7 @@ class CashTests {
         assertNull(states.sumCashOrNull())
     }
 
-    @Test(expected = UnsupportedOperationException::class)
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun `summing no currencies throws`() {
         val states = emptyList<Cash.State>()
         states.sumCash()
@@ -797,7 +797,7 @@ class CashTests {
         assertEquals(expected, actual)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = IllegalArgumentException::class, timeout=300_000)
     fun `summing multiple currencies`() {
         val states = listOf(
                 Cash.State(1000.DOLLARS `issued by` defaultIssuer, megaCorp.party),

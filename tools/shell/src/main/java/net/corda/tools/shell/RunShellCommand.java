@@ -1,6 +1,5 @@
 package net.corda.tools.shell;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.corda.client.jackson.StringToMethodCallParser;
 import net.corda.core.messaging.CordaRPCOps;
@@ -13,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +56,9 @@ public class RunShellCommand extends InteractiveShellCommand {
         // Each element we emit is a map of column -> content.
         Set<Map.Entry<String, String>> entries = cordaRpcOpsParser.getAvailableCommands().entrySet();
         List<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
+
+        entryList.add(new AbstractMap.SimpleEntry<>("gracefulShutdown", ""));//Shell only command
+
         entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.
@@ -68,17 +71,6 @@ public class RunShellCommand extends InteractiveShellCommand {
                 throw new RuntimeException(e);
             }
         }
-
-        Lists.newArrayList(
-                commandAndDesc("shutdown", "Shuts node down (immediately)"),
-                commandAndDesc("gracefulShutdown", "Shuts node down gracefully, waiting for all flows to complete first.")
-        ).forEach(stringStringMap -> {
-            try {
-                context.provide(stringStringMap);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
     }
 
     @NotNull

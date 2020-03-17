@@ -24,7 +24,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -270,7 +270,7 @@ class PartialMerkleTreeTest {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test(expected = Exception::class)
+    @Test(expected = Exception::class, timeout=300_000)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
         hm1.serialize()

@@ -13,6 +13,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import java.io.NotSerializableException
@@ -27,11 +28,16 @@ interface FlowMessaging {
     @Suspendable
     fun sendSessionMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId)
 
+    @Suspendable
+    fun sendSessionMessages(messageData: List<Message>)
+
     /**
      * Start the messaging using the [onMessage] message handler.
      */
     fun start(onMessage: (ReceivedMessage, deduplicationHandler: DeduplicationHandler) -> Unit)
 }
+
+data class Message(val destination: Destination, val sessionMessage: SessionMessage, val dedupId: SenderDeduplicationId)
 
 /**
  * Implementation of [FlowMessaging] using a [ServiceHubInternal] to do the messaging and routing.
@@ -51,6 +57,17 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
 
     @Suspendable
     override fun sendSessionMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId) {
+        val addressedMessage = createMessage(destination, message, deduplicationId)
+        serviceHub.networkService.send(addressedMessage.message, addressedMessage.target, addressedMessage.sequenceKey)
+    }
+
+    @Suspendable
+    override fun sendSessionMessages(messageData: List<Message>) {
+        val addressedMessages = messageData.map { createMessage(it.destination, it.sessionMessage, it.dedupId) }
+        serviceHub.networkService.send(addressedMessages)
+    }
+
+    private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {
         val party = if (destination is Party) {
             log.trace { "Sending message $deduplicationId $message to $destination" }
             destination
@@ -69,7 +86,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             is InitialSessionMessage -> message.initiatorSessionId
             is ExistingSessionMessage -> message.recipientSessionId
         }
-        serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
+        return MessagingService.AddressedMessage(networkMessage, address, sequenceKey)
     }
 
     private fun SessionMessage.additionalHeaders(target: Party): Map<String, String> {

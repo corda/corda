@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
@@ -136,7 +135,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     override fun call(): SignedTransaction {
         if (!newApi) {
             logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
-                    "FinalityFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
+                    "FinalityFlow with FlowSessions. (${serviceHub.getAppContext().cordapp.info})")
         } else {
             require(sessions.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
                 "Do not provide flow sessions for the local node. FinalityFlow will record the notarised transaction locally."

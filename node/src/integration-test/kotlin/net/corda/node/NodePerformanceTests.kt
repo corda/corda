@@ -19,7 +19,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.internalServices
-import net.corda.testing.internal.performance.div
+import net.corda.coretesting.internal.performance.div
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS

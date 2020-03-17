@@ -17,6 +17,7 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConn
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.internal.min
 import net.corda.core.internal.times
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -262,11 +263,15 @@ class ReconnectingCordaRPCOps private constructor(
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
-            // TODO - make the exponential retry factor configurable.
             val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            val nextInterval = retryInterval * rpcConfiguration.connectionRetryIntervalMultiplier
+            val nextInterval = min(
+                    rpcConfiguration.connectionMaxRetryInterval,
+                    retryInterval * rpcConfiguration.connectionRetryIntervalMultiplier
+            )
+            log.info("Could not establish connection.  Next retry interval $nextInterval")
             return establishConnectionWithRetry(nextInterval, nextRoundRobinIndex, remainingRetries)
         }
+
         override val proxy: CordaRPCOps
             get() = current.proxy
         override val serverProtocolVersion
@@ -301,6 +306,7 @@ class ReconnectingCordaRPCOps private constructor(
          *
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
+        @Suppress("ThrowsCount", "ComplexMethod")
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
             checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
@@ -334,9 +340,8 @@ class ReconnectingCordaRPCOps private constructor(
                             throw RPCException("User does not have permission to perform operation ${method.name}.", e)
                         }
                         else -> {
-                            log.warn("Failed to perform operation ${method.name}. Unknown error. Retrying....", e)
-                            reconnectingRPCConnection.reconnectOnError(e)
-                            checkIfIsStartFlow(method, e)
+                            log.warn("Failed to perform operation ${method.name}.", e)
+                            throw e.targetException
                         }
                     }
                     lastException = e.targetException

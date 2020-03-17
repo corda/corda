@@ -25,6 +25,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
+import net.corda.coretesting.internal.TEST_TX_TIME
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
@@ -42,7 +43,6 @@ import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
@@ -153,7 +153,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
     }
 
-    @Test(expected = InsufficientBalanceException::class)
+    @Test(expected = InsufficientBalanceException::class, timeout=300_000)
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP), threadPerNode = true)
         val notaryNode = mockNet.defaultNotaryNode
@@ -714,10 +714,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             output(CommercialPaper.CP_PROGRAM_ID, "alice's paper", notary = notary,
-                    contractState = CommercialPaper.State(issuer, owner, amount, TEST_TX_TIME + 7.days))
+                    contractState = CommercialPaper.State(issuer, owner, amount, net.corda.coretesting.internal.TEST_TX_TIME + 7.days))
             command(issuer.party.owningKey, CommercialPaper.Commands.Issue())
             if (!withError)
-                timeWindow(time = TEST_TX_TIME)
+                timeWindow(time = net.corda.coretesting.internal.TEST_TX_TIME)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {

@@ -1,7 +1,7 @@
 package net.corda.demobench
 
 import javafx.scene.image.Image
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.demobench.views.DemoBenchView
