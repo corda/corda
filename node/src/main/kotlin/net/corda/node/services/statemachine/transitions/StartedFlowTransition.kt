@@ -289,7 +289,9 @@ class StartedFlowTransition(
             }
         } ?: emptyList()
 
-        actions.add(Action.SendMultiple(sendInitialActions, sendExistingActions))
+        if (sendInitialActions.isNotEmpty() || sendExistingActions.isNotEmpty()) {
+            actions.add(Action.SendMultiple(sendInitialActions, sendExistingActions))
+        }
         currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
     }
 
