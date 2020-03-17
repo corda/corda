@@ -46,7 +46,11 @@ sealed class Action {
     data class SendMultiple(
             val sendInitial: List<SendInitial>,
             val sendExisting: List<SendExisting>
-    ): Action()
+    ): Action() {
+        init {
+            check(sendInitial.isNotEmpty() || sendExisting.isNotEmpty()) { "At least one of the lists with initial or existing session messages should contain items." }
+        }
+    }
 
     /**
      * Persist the specified [checkpoint].
