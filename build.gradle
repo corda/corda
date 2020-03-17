@@ -635,67 +635,83 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
+ext.generalPurpose  = [
+        numberOfShards: 10,
+        streamOutput: false,
+        coresPerFork: 2,
+        memoryInGbPerFork: 12,
+        nodeTaints: "small"
+]
+
+ext.largeScaleSet  = [
+        numberOfShards: 15,
+        streamOutput: false,
+        coresPerFork: 6,
+        memoryInGbPerFork: 10,
+        nodeTaints: "big"
+]
+
 task allParallelIntegrationTest(type: ParallelTestGroup) {
     dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
-    numberOfShards 10
-    streamOutput false
-    coresPerFork 2
-    memoryInGbPerFork 12
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
-    nodeTaints "big"
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
     dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "test"
-    numberOfShards 10
-    streamOutput false
-    coresPerFork 2
-    memoryInGbPerFork 12
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.CLASS
-    nodeTaints "small"
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
     dependsOn dependxiesModule
     testGroups "test", "integrationTest"
-    numberOfShards 15
-    streamOutput false
-    coresPerFork 6
-    memoryInGbPerFork 10
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
-    nodeTaints "big"
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "smokeTest"
     dependsOn dependxiesModule
-    numberOfShards 15
-    streamOutput false
-    coresPerFork 2
-    memoryInGbPerFork 10
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
     distribute DistributeTestsBy.METHOD
-    nodeTaints "big"
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "smokeTest"
     dependsOn dependxiesModule
-    numberOfShards 4
-    streamOutput false
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
-    nodeTaints "big"
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
+    distribute DistributeTestsBy.METHOD
 }
 task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest"
     dependsOn dependxiesModule
-    numberOfShards 4
-    streamOutput false
-    coresPerFork 6
-    memoryInGbPerFork 10
-    distribute DistributeTestsBy.CLASS
-    nodeTaints "big"
+    numberOfShards generalPurpose.numberOfShards
+    streamOutput generalPurpose.streamOutput
+    coresPerFork generalPurpose.coresPerFork
+    memoryInGbPerFork generalPurpose.memoryInGbPerFork
+    nodeTaints generalPurpose.nodeTaints
+    distribute DistributeTestsBy.METHOD
 }
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: 'com.r3.testing.image-building'

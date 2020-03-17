@@ -111,6 +111,8 @@ Unreleased
 
 * Added new node configuration option to exclude packages from Quasar instrumentation.
 
+* Fixed the operator used by the ``notEqual`` predicate
+
 .. _changelog_v4.1:
 
 Version 4.1
