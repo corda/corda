@@ -757,10 +757,10 @@ class FlowFrameworkTests {
 
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
-            assertEquals(persistedException!!.type, "net.corda.core.flows.FlowException")
-            assertEquals(persistedException.message, "Just an exception")
-            assertEquals(persistedException.stackTrace, ExceptionUtils.getStackTrace(e))
-            assertEquals(persistedException.value, null)
+            assertEquals("net.corda.core.flows.FlowException", persistedException!!.type)
+            assertEquals("Just an exception", persistedException.message)
+            assertEquals(ExceptionUtils.getStackTrace(e), persistedException.stackTrace)
+            assertEquals(null, persistedException.value)
         }
     }
 
@@ -780,9 +780,9 @@ class FlowFrameworkTests {
 
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
-            assertEquals(persistedException!!.type, "net.corda.core.flows.HospitalizeFlowException")
-            assertEquals(persistedException.message, "Overnight observation")
-            assertEquals(persistedException.value, null)
+            assertEquals("net.corda.core.flows.HospitalizeFlowException", persistedException!!.type)
+            assertEquals("Overnight observation", persistedException.message)
+            assertEquals(null, persistedException.value)
         }
     }
 
