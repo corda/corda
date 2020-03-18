@@ -380,13 +380,20 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
 
+        val metadata = entity.flowMetadata.apply {
+            if (checkpoint.status == FlowStatus.COMPLETED && finishInstant == null) {
+                finishInstant = now
+                currentDBSession().update(this)
+            }
+        }
+
         return entity.apply {
             this.blob = blob
             //Set the result to null for now.
             this.result = null
             this.exceptionDetails = exceptionDetails
             // Do not update the meta data relationship on updates
-            this.flowMetadata = entity.flowMetadata
+            this.flowMetadata = metadata
             this.status = checkpoint.status
             this.compatible = checkpoint.compatible
             this.progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH)

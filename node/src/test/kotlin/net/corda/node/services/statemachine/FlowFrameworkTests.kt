@@ -80,6 +80,7 @@ import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
@@ -352,6 +353,24 @@ class FlowFrameworkTests {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
             assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Flow metadata finish time is set in database when the flow finishes`() {
+        val terminationSignal = Semaphore(0)
+        val flow = aliceNode.services.startFlow(NoOpFlow(terminateUponSignal = terminationSignal))
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
+            assertNull(metadata.finishInstant)
+        }
+        terminationSignal.release()
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
+            assertNotNull(metadata.finishInstant)
+            assertTrue(metadata.finishInstant!! >= metadata.startInstant)
         }
     }
 
