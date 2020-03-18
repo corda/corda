@@ -239,7 +239,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             Pair(event, backOffForChronicCondition)
         }
 
-
         if (backOffForChronicCondition.isZero) {
             flowFiber.scheduleEvent(event)
         } else {
