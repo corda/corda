@@ -82,7 +82,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="exception_value" type="blob">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="exception_message" type="NVARCHAR(512)">
                 <constraints nullable="true"/>

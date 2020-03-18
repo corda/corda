@@ -172,11 +172,11 @@ class DBCheckpointStorage(
         var id: Long = 0,
 
         @Column(name = "type", nullable = false)
-        var type: Class<out Throwable>,
-
+        var type: Class<out Throwable>, // TODO change it to exception java.name
+                                        // TODO new column for stacktrace -> to string -> truncate
         @Type(type = "corda-blob")
-        @Column(name = "exception_value", nullable = false)
-        var value: ByteArray = EMPTY_BYTE_ARRAY,
+        @Column(name = "exception_value")
+        var value: ByteArray? = null,
 
         @Column(name = "exception_message")
         var message: String? = null,
@@ -483,7 +483,7 @@ class DBCheckpointStorage(
             DBFlowException(
                 type = it::class.java,
                 message = it.message,
-                value = it.storageSerialize().bytes,
+                value = null, // TODO to be populated in Corda 4.6
                 persistedInstant = now
             )
         }
