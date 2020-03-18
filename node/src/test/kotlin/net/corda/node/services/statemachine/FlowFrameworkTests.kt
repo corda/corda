@@ -58,6 +58,7 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.getMessage
 import net.corda.testing.node.internal.startFlow
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -744,7 +745,7 @@ class FlowFrameworkTests {
     fun `Checkpoint is updated in DB with FAILED status and the error when flow fails`() {
         var flowId: StateMachineRunId? = null
 
-        assertFailsWith<FlowException> {
+        val e = assertFailsWith<FlowException> {
             val fiber = aliceNode.services.startFlow(ExceptionFlow { FlowException("Just an exception") })
             flowId = fiber.id
             fiber.resultFuture.getOrThrow()
@@ -757,8 +758,9 @@ class FlowFrameworkTests {
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
             assertEquals(persistedException!!.type, "net.corda.core.flows.FlowException")
-            assertEquals(persistedException.value, null)
             assertEquals(persistedException.message, "Just an exception")
+            assertEquals(persistedException.stackTrace, ExceptionUtils.getStackTrace(e))
+            assertEquals(persistedException.value, null)
         }
     }
 
@@ -779,8 +781,8 @@ class FlowFrameworkTests {
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
             assertEquals(persistedException!!.type, "net.corda.core.flows.HospitalizeFlowException")
-            assertEquals(persistedException.value, null)
             assertEquals(persistedException.message, "Overnight observation")
+            assertEquals(persistedException.value, null)
         }
     }
 
