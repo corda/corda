@@ -918,7 +918,7 @@ class DriverDSLImpl(
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
                     "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
-            val excludeClassloaderPattern = "l(net.corda.djvm.**)"
+            val excludeClassloaderPattern = "l(net.corda.djvm.**;net.corda.core.serialization.internal.**)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePackagePattern$excludeClassloaderPattern"
 
