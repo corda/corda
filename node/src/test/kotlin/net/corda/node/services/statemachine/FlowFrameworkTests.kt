@@ -791,14 +791,17 @@ class FlowFrameworkTests {
         var firstExecution = true
         var dbCheckpointStatus: Checkpoint.FlowStatus? = null
         var inMemoryCheckpointStatus: Checkpoint.FlowStatus? = null
+        var persistedException: DBCheckpointStorage.DBFlowException? = null
 
         SuspendingFlow.hookAfterCheckpoint = {
             if (firstExecution) {
                 firstExecution = false
                 throw SQLTransientConnectionException("connection is not available")
             } else {
+                val flowFiber = this as? FlowStateMachineImpl<*>
                 dbCheckpointStatus = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
-                inMemoryCheckpointStatus = (this as? FlowStateMachineImpl<*>)!!.transientState!!.value.checkpoint.status
+                inMemoryCheckpointStatus = flowFiber!!.transientState!!.value.checkpoint.status
+                persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowFiber.id)!!.exceptionDetails
             }
         }
 
@@ -806,6 +809,7 @@ class FlowFrameworkTests {
         // checkpoint states ,after flow retried, after suspension
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+        assertEquals(null, persistedException)
     }
 
     //region Helpers
