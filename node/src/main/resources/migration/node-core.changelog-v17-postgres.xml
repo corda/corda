@@ -81,10 +81,10 @@
             <column name="type" type="NVARCHAR(256)">
                 <constraints nullable="false"/>
             </column>
-            <column name="exception_value" type="varbinary(33554432)">
+            <column name="exception_message" type="NVARCHAR(512)">
                 <constraints nullable="true"/>
             </column>
-            <column name="exception_message" type="NVARCHAR(512)">
+            <column name="exception_value" type="varbinary(33554432)">
                 <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">

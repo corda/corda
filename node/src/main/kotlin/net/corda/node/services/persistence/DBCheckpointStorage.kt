@@ -174,12 +174,12 @@ class DBCheckpointStorage(
         @Column(name = "type", nullable = false)
         var type: String,
                                         // TODO new column for stacktrace -> to string -> truncate
+        @Column(name = "exception_message")
+        var message: String? = null,
+
         @Type(type = "corda-blob")
         @Column(name = "exception_value")
         var value: ByteArray? = null,
-
-        @Column(name = "exception_message")
-        var message: String? = null,
 
         @Column(name = "timestamp")
         val persistedInstant: Instant
