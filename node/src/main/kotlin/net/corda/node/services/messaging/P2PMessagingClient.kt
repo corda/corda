@@ -511,7 +511,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     @Suspendable
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
+    override fun sendAll(addressedMessages: List<MessagingService.AddressedMessage>) {
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }

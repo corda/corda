@@ -161,7 +161,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
     }
 
-    override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
+    override fun sendAll(addressedMessages: List<MessagingService.AddressedMessage>) {
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }

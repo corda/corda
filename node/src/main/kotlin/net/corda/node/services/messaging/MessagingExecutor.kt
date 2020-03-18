@@ -54,7 +54,7 @@ class MessagingExecutor(
     }
 
     @Synchronized
-    fun send(messages: Map<MessageRecipients, Message>) {
+    fun sendAll(messages: Map<MessageRecipients, Message>) {
         messages.forEach { recipients, message -> send(message, recipients) }
     }
 
