@@ -172,7 +172,7 @@ class DBCheckpointStorage(
         var id: Long = 0,
 
         @Column(name = "type", nullable = false)
-        var type: Class<out Throwable>, // TODO change it to exception java.name
+        var type: String,
                                         // TODO new column for stacktrace -> to string -> truncate
         @Type(type = "corda-blob")
         @Column(name = "exception_value")
@@ -481,7 +481,7 @@ class DBCheckpointStorage(
     private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
-                type = it::class.java,
+                type = it::class.java.name,
                 message = it.message,
                 value = null, // TODO to be populated in Corda 4.6
                 persistedInstant = now

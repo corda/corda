@@ -403,7 +403,7 @@ class DBCheckpointStorageTests {
             assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
             val exceptionDetails = session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
             assertNotNull(exceptionDetails)
-            assertEquals(exception::class.java, exceptionDetails!!.type)
+            assertEquals(exception::class.java.name, exceptionDetails!!.type)
             assertEquals(exception.message, exceptionDetails.message)
             val criteria = session.criteriaBuilder.createQuery(DBCheckpointStorage.DBFlowException::class.java)
             criteria.select(criteria.from(DBCheckpointStorage.DBFlowException::class.java))
@@ -431,7 +431,7 @@ class DBCheckpointStorageTests {
             assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
             val exceptionDetails = session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
             assertNotNull(exceptionDetails)
-            assertEquals(illegalArgumentException::class.java, exceptionDetails!!.type)
+            assertEquals(illegalArgumentException::class.java.name, exceptionDetails!!.type)
             assertEquals(illegalArgumentException.message, exceptionDetails.message)
             val criteria = session.criteriaBuilder.createQuery(DBCheckpointStorage.DBFlowException::class.java)
             criteria.select(criteria.from(DBCheckpointStorage.DBFlowException::class.java))
