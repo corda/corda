@@ -690,7 +690,7 @@ class FlowFrameworkTests {
         assertTrue(flowState is FlowState.Unstarted)
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second
-            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+            assertEquals(checkpoint.status, Checkpoint.FlowStatus.HOSPITALIZED)
         }
         // restart Node - flow will be loaded from checkpoint
         firstExecution = false
@@ -698,9 +698,9 @@ class FlowFrameworkTests {
         val (_, future) = aliceNode.getSingleFlow<SuspendingFlow>()
         future.getOrThrow()
         // checkpoint states ,after flow retried, before and after suspension
-        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatusBeforeSuspension)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatusBeforeSuspension)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatusAfterSuspension)
+        assertEquals(dbCheckpointStatusBeforeSuspension, Checkpoint.FlowStatus.HOSPITALIZED)
+        assertEquals(inMemoryCheckpointStatusBeforeSuspension, Checkpoint.FlowStatus.RUNNABLE)
+        assertEquals(dbCheckpointStatusAfterSuspension, Checkpoint.FlowStatus.RUNNABLE)
     }
 
     @Test(timeout=300_000)
@@ -729,7 +729,7 @@ class FlowFrameworkTests {
         assertTrue(flowState is FlowState.Started)
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second
-            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+            assertEquals(checkpoint.status, Checkpoint.FlowStatus.HOSPITALIZED)
         }
         // restart Node - flow will be loaded from checkpoint
         firstExecution = false
@@ -737,8 +737,8 @@ class FlowFrameworkTests {
         val (_, future) = aliceNode.getSingleFlow<SuspendingFlow>()
         future.getOrThrow()
         // checkpoint states ,after flow retried, after suspension
-        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatus)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+        assertEquals(dbCheckpointStatus, Checkpoint.FlowStatus.HOSPITALIZED)
+        assertEquals(inMemoryCheckpointStatus, Checkpoint.FlowStatus.RUNNABLE)
     }
 
     @Test(timeout=300_000)
@@ -753,7 +753,7 @@ class FlowFrameworkTests {
 
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
-            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
+            assertEquals(checkpoint.status, Checkpoint.FlowStatus.FAILED)
 
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
@@ -776,7 +776,7 @@ class FlowFrameworkTests {
 
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
-            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+            assertEquals(checkpoint.status, Checkpoint.FlowStatus.HOSPITALIZED)
 
             // assert all fields of DBFlowException
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
@@ -804,8 +804,8 @@ class FlowFrameworkTests {
 
         aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
         // checkpoint states ,after flow retried, after suspension
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+        assertEquals(dbCheckpointStatus, Checkpoint.FlowStatus.RUNNABLE)
+        assertEquals(inMemoryCheckpointStatus, Checkpoint.FlowStatus.RUNNABLE)
     }
 
     //region Helpers
