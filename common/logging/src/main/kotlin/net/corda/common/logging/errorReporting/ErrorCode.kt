@@ -1,4 +1,4 @@
-package net.corda.node.errorReporting
+package net.corda.common.logging.errorReporting
 
 /**
  * A type representing an error condition.

@@ -503,7 +503,10 @@ open class Node(configuration: NodeConfiguration,
             if (effectiveH2Settings?.address != null) {
                 if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
                         && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
-                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                    throw CouldNotCreateDataSourceException(
+                            "Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.",
+                            "password-required-for-h2",
+                            listOf(InetAddress.getByName(effectiveH2Settings.address.host).toString()))
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val baseDir = Paths.get(databaseName).parent.toString()

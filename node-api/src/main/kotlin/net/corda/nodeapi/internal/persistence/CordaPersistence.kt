@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.pool.HikariPool
 import com.zaxxer.hikari.util.ConcurrentBag
+import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
@@ -405,7 +406,12 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
             else -> cause?.hasSQLExceptionCause() ?: false
         }
 
-class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+class CouldNotCreateDataSourceException(override val message: String?,
+                                        override val code: String,
+                                        override val parameters: List<Any> = listOf(),
+                                        override val cause: Throwable? = null) : ErrorCode, Exception() {
+    override val namespace = "database"
+}
 
 class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
 
