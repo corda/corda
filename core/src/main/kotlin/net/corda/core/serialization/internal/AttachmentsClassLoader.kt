@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
+import java.security.Permission
 import java.util.*
 
 /**
@@ -378,6 +379,14 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
         override fun getContentLengthLong(): Long = attachment.size.toLong()
         override fun getInputStream(): InputStream = attachment.open()
+        /**
+         * Define the permissions that [AttachmentsClassLoader] will need to
+         * use this [URL]. The attachment is stored in memory, and so we
+         * don't need any extra permissions here. But if we don't override
+         * [getPermission] then we will get the default ALL_PERMISSIONS
+         * in the classes' [java.security.ProtectionDomain].
+         */
+        override fun getPermission(): Permission? = null
         override fun connect() {
             connected = true
         }
