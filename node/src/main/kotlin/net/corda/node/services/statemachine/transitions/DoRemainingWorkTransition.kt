@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine.transitions
 
 import net.corda.node.services.statemachine.*
+import java.lang.RuntimeException
 
 /**
  * This transition checks the current state of the flow and determines whether anything needs to be done.
@@ -28,6 +29,7 @@ class DoRemainingWorkTransition(
         return when (checkpoint.flowState) {
             is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, checkpoint.flowState).transition()
             is FlowState.Started -> StartedFlowTransition(context, startingState, checkpoint.flowState).transition()
+            null ->  throw RuntimeException("Tried to transition a deleted state.")
         }
     }
 

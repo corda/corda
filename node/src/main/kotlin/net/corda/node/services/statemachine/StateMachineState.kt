@@ -57,7 +57,7 @@ data class StateMachineState(
  */
 data class Checkpoint(
         val checkpointState: CheckpointState,
-        val flowState: FlowState,
+        val flowState: FlowState?,
         val errorState: ErrorState,
         val result: Any? = null,
         val status: FlowStatus = FlowStatus.RUNNABLE,
@@ -149,7 +149,7 @@ data class Checkpoint(
      */
     data class Serialized(
         val serializedCheckpointState: SerializedBytes<CheckpointState>,
-        val serializedFlowState: SerializedBytes<FlowState>,
+        val serializedFlowState: SerializedBytes<FlowState>?,
         val errorState: ErrorState,
         val result: SerializedBytes<Any>?,
         val status: FlowStatus,
@@ -165,7 +165,7 @@ data class Checkpoint(
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             return Checkpoint(
                 checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
-                flowState = serializedFlowState.checkpointDeserialize(checkpointSerializationContext),
+                flowState = serializedFlowState?.checkpointDeserialize(checkpointSerializationContext),
                 errorState = errorState,
                 result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                 status = status,

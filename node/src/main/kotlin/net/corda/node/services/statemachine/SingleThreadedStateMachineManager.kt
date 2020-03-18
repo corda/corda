@@ -49,6 +49,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Integer.min
+import java.lang.RuntimeException
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.*
@@ -820,6 +821,9 @@ class SingleThreadedStateMachineManager(
                 fiber.logic.stateMachine = fiber
                 fiber
             }
+            null -> {
+                return null
+            }
         }
 
         verifyFlowLogicIsSuspendable(fiber.logic)
@@ -853,6 +857,9 @@ class SingleThreadedStateMachineManager(
                     }
                     is FlowState.Started -> {
                         Fiber.unparkDeserialized(flow.fiber, scheduler)
+                    }
+                    null -> {
+                        //TODO: I should clean this up.
                     }
                 }
             }

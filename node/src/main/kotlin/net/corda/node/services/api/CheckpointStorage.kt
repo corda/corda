@@ -18,7 +18,7 @@ interface CheckpointStorage {
     /**
      * Update an existing checkpoint. Will throw if there is not checkpoint for this id.
      */
-    fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>)
+    fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?)
 
     /**
      * Remove existing checkpoint from the store.
