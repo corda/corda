@@ -571,8 +571,8 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            val checkpoint = checkpointStorage.getDBCheckpoint(id)
-            val persistedStackTrace = checkpoint!!.exceptionDetails!!.stackTrace
+            val persistedCheckpoint = checkpointStorage.getDBCheckpoint(id)
+            val persistedStackTrace = persistedCheckpoint!!.exceptionDetails!!.stackTrace
             assertEquals(3985, persistedStackTrace.length)
             assertEquals(ExceptionUtils.getStackTrace(dummyException), persistedStackTrace)
         }
@@ -603,8 +603,8 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            val checkpoint = checkpointStorage.getDBCheckpoint(id)
-            val persistedStackTrace = checkpoint!!.exceptionDetails!!.stackTrace
+            val persistedCheckpoint = checkpointStorage.getDBCheckpoint(id)
+            val persistedStackTrace = persistedCheckpoint!!.exceptionDetails!!.stackTrace
             assertEquals(DBCheckpointStorage.MAX_LENGTH_VARCHAR, persistedStackTrace.length)
             assertEquals(ExceptionUtils.getStackTrace(dummyException).subSequence(0, DBCheckpointStorage.MAX_LENGTH_VARCHAR), persistedStackTrace)
         }
