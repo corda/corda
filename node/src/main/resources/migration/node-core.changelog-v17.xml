@@ -119,7 +119,7 @@
             <column name="platform_version" type="TINYINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="rpc_user" type="NVARCHAR(128)">
+            <column name="started_by" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
             <column name="invocation_time" type="java.sql.Types.TIMESTAMP">
