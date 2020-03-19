@@ -45,7 +45,7 @@ class DBCheckpointPerformanceRecorder(metrics: MetricRegistry) : CheckpointPerfo
     }
 
     override fun record(serializedCheckpointState: SerializedBytes<CheckpointState>, serializedFlowState: SerializedBytes<FlowState>?) {
-        val flowStateSize = serializedFlowState?.size ?: 0 ;
+        val flowStateSize = serializedFlowState?.size ?: 0
         val totalSize = serializedCheckpointState.size.toLong() + flowStateSize.toLong()
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(totalSize)

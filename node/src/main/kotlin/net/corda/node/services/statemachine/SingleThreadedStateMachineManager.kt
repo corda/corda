@@ -781,7 +781,7 @@ class SingleThreadedStateMachineManager(
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
         val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
-        val flowState = checkpoint.flowState
+        val flowState = checkpoint.flowState ?: return null
         val resultFuture = openFuture<Any?>()
         val fiber = when (flowState) {
             is FlowState.Unstarted -> {
@@ -821,9 +821,6 @@ class SingleThreadedStateMachineManager(
                 fiber.logic.stateMachine = fiber
                 fiber
             }
-            null -> {
-                return null
-            }
         }
 
         verifyFlowLogicIsSuspendable(fiber.logic)
@@ -859,7 +856,7 @@ class SingleThreadedStateMachineManager(
                         Fiber.unparkDeserialized(flow.fiber, scheduler)
                     }
                     null -> {
-                        //TODO: I should clean this up.
+                        //Cannot start a flow with a null flow state.
                     }
                 }
             }

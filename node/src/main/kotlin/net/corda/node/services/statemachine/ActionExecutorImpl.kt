@@ -100,7 +100,7 @@ class ActionExecutorImpl(
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
         } else {
             val nonNullSerializedFlowState = requireNotNull(serializedFlowState) {
-                "Cannot create a new checkpoint with a null full state."
+                "Cannot create a new checkpoint with a null flow state."
             }
             checkpointStorage.addCheckpoint(action.id, checkpoint, nonNullSerializedFlowState)
         }

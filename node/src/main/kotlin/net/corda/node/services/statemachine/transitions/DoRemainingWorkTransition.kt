@@ -26,10 +26,12 @@ class DoRemainingWorkTransition(
     // If the flow is clean check the FlowState
     private fun cleanTransition(): TransitionResult {
         val checkpoint = startingState.checkpoint
-        return when (checkpoint.flowState) {
-            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, checkpoint.flowState).transition()
-            is FlowState.Started -> StartedFlowTransition(context, startingState, checkpoint.flowState).transition()
-            null ->  throw RuntimeException("Tried to transition a deleted state.")
+        val flowState = requireNotNull(checkpoint.flowState) {
+            "Cannot transition a state with null flow state."
+        }
+        return when (flowState) {
+            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, flowState).transition()
+            is FlowState.Started -> StartedFlowTransition(context, startingState, flowState).transition()
         }
     }
 

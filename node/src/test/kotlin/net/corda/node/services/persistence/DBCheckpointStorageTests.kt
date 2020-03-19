@@ -489,7 +489,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             val newCheckpoint = checkpoint.copy(flowIoRequest = FlowIORequest.Sleep::class.java.simpleName)
             val serializedFlowState = newCheckpoint.flowState?.checkpointSerialize(
-                    context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
+                context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
         }

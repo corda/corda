@@ -506,14 +506,14 @@ class DBCheckpointStorage(
 
     private fun DBFlowCheckpoint.toSerializedCheckpoint(): Checkpoint.Serialized {
         val flowStack = blob.flowStack
-        val flowState : SerializedBytes<FlowState>? = if (flowStack != null) {
+        val serialisedFlowState : SerializedBytes<FlowState>? = if (flowStack != null) {
             SerializedBytes(flowStack)
         } else {
             null
         }
         return Checkpoint.Serialized(
             serializedCheckpointState = SerializedBytes(blob.checkpoint),
-            serializedFlowState = flowState,
+            serializedFlowState = serialisedFlowState,
             // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
             errorState = ErrorState.Clean,
             // A checkpoint with a result should not normally be loaded (it should be [null] most of the time)
