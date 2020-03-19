@@ -383,8 +383,9 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
          * Define the permissions that [AttachmentsClassLoader] will need to
          * use this [URL]. The attachment is stored in memory, and so we
          * don't need any extra permissions here. But if we don't override
-         * [getPermission] then we will get the default ALL_PERMISSIONS
-         * in the classes' [java.security.ProtectionDomain].
+         * [getPermission] then [AttachmentsClassLoader] will assign the
+         * default permission of ALL_PERMISSION to these classes'
+         * [java.security.ProtectionDomain]. This would be a security hole!
          */
         override fun getPermission(): Permission? = null
         override fun connect() {
