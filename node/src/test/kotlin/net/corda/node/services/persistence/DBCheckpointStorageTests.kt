@@ -612,6 +612,8 @@ class DBCheckpointStorageTests {
         database.transaction {
             val persistedCheckpoint = checkpointStorage.getDBCheckpoint(id)
             val persistedStackTrace = persistedCheckpoint!!.exceptionDetails!!.stackTrace
+            // last line of DBFlowException.stackTrace was a half line; will be truncated to the last whole line,
+            // therefore it will have the exact same length as 'notGreaterThanDummyException' exception
             assertEquals(notGreaterThanSize, persistedStackTrace.length)
             assertEquals(ExceptionUtils.getStackTrace(notGreaterThanDummyException), persistedStackTrace)
         }
