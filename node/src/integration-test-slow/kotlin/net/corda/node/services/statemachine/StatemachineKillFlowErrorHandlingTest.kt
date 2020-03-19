@@ -208,15 +208,15 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             val rules = """
                 RULE Create Counter
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSendInitial action
+                RULE Throw exception on executeSendMultiple action
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")

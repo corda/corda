@@ -91,7 +91,7 @@ interface MessagingService : ServiceLifecycleSupport {
      * @param addressedMessages The list of messages together with the recipients, retry ids and sequence keys.
      */
     @Suspendable
-    fun send(addressedMessages: List<AddressedMessage>)
+    fun sendAll(addressedMessages: List<AddressedMessage>)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.

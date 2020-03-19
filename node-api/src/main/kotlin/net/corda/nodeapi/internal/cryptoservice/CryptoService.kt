@@ -61,11 +61,6 @@ interface CryptoService : SignOnlyCryptoService {
      */
     fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
 
-    /**
-     * Returns the type of the service.
-     */
-    fun getType(): SupportedCryptoServices
-
 
     // ******************************************************
     // ENTERPRISE ONLY CODE FOR WRAPPING KEYS API STARTS HERE

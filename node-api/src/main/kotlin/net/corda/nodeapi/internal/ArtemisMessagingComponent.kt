@@ -34,6 +34,7 @@ class ArtemisMessagingComponent {
         // This is a rough guess on the extra space needed on top of maxMessageSize to store the journal.
         // TODO: we might want to make this value configurable.
         const val JOURNAL_HEADER_SIZE = 1024
+
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
             // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
@@ -122,6 +123,11 @@ class ArtemisMessagingComponent {
             fun translateLocalQueueToInboxAddress(address: String): String {
                 require(address.startsWith(PEERS_PREFIX)) { "Failed to map address: $address to a remote topic as it is not in the $PEERS_PREFIX namespace" }
                 return P2P_PREFIX + address.substring(PEERS_PREFIX.length)
+            }
+
+            fun translateInboxAddressToLocalQueue(address: String): String {
+                require(address.startsWith(P2P_PREFIX)) { "Failed to map topic: $address to a local address as it is not in the $P2P_PREFIX namespace" }
+                return PEERS_PREFIX + address.substring(P2P_PREFIX.length)
             }
         }
 

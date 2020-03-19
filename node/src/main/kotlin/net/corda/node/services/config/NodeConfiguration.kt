@@ -217,7 +217,7 @@ data class FlowTimeoutConfiguration(
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
-fun Config.parseAsNodeConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
+fun Config.parseAsNodeConfiguration(options: Configuration.Options = Configuration.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
 
 data class NodeH2Settings(
         val address: NetworkHostAndPort?
