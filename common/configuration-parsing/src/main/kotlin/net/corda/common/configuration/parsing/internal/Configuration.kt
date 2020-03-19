@@ -21,7 +21,7 @@ object Configuration {
         /**
          * Describes a [Config] hiding sensitive data.
          */
-        fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }): ConfigValue?
+        fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }, options: Options): ConfigValue?
     }
 
     object Value {
@@ -36,10 +36,11 @@ object Configuration {
              *
              * @throws ConfigException.Missing if the [Config] does not specify the value.
              * @throws ConfigException.WrongType if the [Config] specifies a value of the wrong type.
-             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to application-level validation rules..
+             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to
+             * application-level validation rules.
              */
             @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
-            fun valueIn(configuration: Config): TYPE
+            fun valueIn(configuration: Config, options: Options): TYPE
 
             /**
              * Returns whether the value is specified by the [Config].
@@ -50,27 +51,28 @@ object Configuration {
              * Returns a value out of a [Config] if all is good, or null if no value is present. Otherwise, it throws an exception.
              *
              * @throws ConfigException.WrongType if the [Config] specifies a value of the wrong type.
-             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to application-level validation rules..
+             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to
+             * application-level validation rules.
              */
             @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
-            fun valueInOrNull(configuration: Config): TYPE? {
+            fun valueInOrNull(configuration: Config, options: Options): TYPE? {
 
                 return when {
-                    isSpecifiedBy(configuration) -> valueIn(configuration)
+                    isSpecifiedBy(configuration) -> valueIn(configuration, options)
                     else -> null
                 }
             }
         }
 
         /**
-         * Able to parse a value from a [Config] and [Configuration.Validation.Options], returning a [Valid] result containing either the value itself, or some [Configuration.Validation.Error]s.
+         * Able to parse a value from a [Config] and [Configuration.Options], returning a [Valid] result containing either the value itself, or some [Configuration.Validation.Error]s.
          */
         interface Parser<VALUE> {
 
             /**
              * Returns a [Valid] wrapper either around a valid value extracted from the [Config], or around a set of [Configuration.Validation.Error] with details about what went wrong.
              */
-            fun parse(configuration: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults): Valid<VALUE>
+            fun parse(configuration: Config, options: Options = Options.defaults): Valid<VALUE>
         }
     }
 
@@ -108,11 +110,6 @@ object Configuration {
          * Property definition, able to validate, describe and extract values from a [Config] object.
          */
         interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer, Configuration.Value.Parser<TYPE> {
-
-            /**
-             * Validates target [Config] with default [Configuration.Validation.Options].
-             */
-            fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
 
             override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -181,9 +178,8 @@ object Configuration {
                 fun <MAPPED> map(mappedTypeName: String, convert: (TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
             }
 
-            override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
-
-                return validate(configuration, options).mapValid { config -> valid(valueIn(config)) }
+            override fun parse(configuration: Config, options: Configuration.Options): Validated<TYPE, Validation.Error> {
+                return validate(configuration, options).mapValid { config -> valid(valueIn(config, options)) }
             }
 
             companion object {
@@ -199,7 +195,6 @@ object Configuration {
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Int].
                  */
                 fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { value ->
-
                     try {
                         valid(Math.toIntExact(value))
                     } catch (e: ArithmeticException) {
@@ -210,18 +205,17 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Boolean].
                  */
-                fun boolean(key: String, sensitive: Boolean = false): Standard<Boolean> = StandardProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
+                fun boolean(key: String, sensitive: Boolean = false): Standard<Boolean> = StandardProperty(key, Boolean::class.javaObjectType.simpleName, { config, path, _ -> config.getBoolean(path) }, { config, path, _ -> config.getBooleanList(path) }, sensitive)
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Double].
                  */
-                fun double(key: String, sensitive: Boolean = false): Standard<Double> = StandardProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
+                fun double(key: String, sensitive: Boolean = false): Standard<Double> = StandardProperty(key, Double::class.javaObjectType.simpleName, { config, path, _ -> config.getDouble(path) }, { config, path, _  -> config.getDoubleList(path) }, sensitive)
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Float].
                  */
                 fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { value ->
-
                     val floatValue = value.toFloat()
                     if (floatValue.isInfinite() || floatValue.isNaN()) {
                         invalid<Float, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(key, Float::class.javaObjectType.simpleName, "Provided value exceeds Float range."))
@@ -233,24 +227,43 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [String].
                  */
-                fun string(key: String, sensitive: Boolean = false): Standard<String> = StandardProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
+                fun string(key: String, sensitive: Boolean = false): Standard<String> = StandardProperty(
+                        key,
+                        String::class.java.simpleName,
+                        { config, path, _ -> config.getString(path) },
+                        { config, path, _ -> config.getStringList(path) },
+                        sensitive
+                )
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Duration].
                  */
-                fun duration(key: String, sensitive: Boolean = false): Standard<Duration> = StandardProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
+                fun duration(key: String, sensitive: Boolean = false): Standard<Duration> = StandardProperty(key, Duration::class.java.simpleName, { config, path, _ -> config.getDuration(path) }, { config, path, _ -> config.getDurationList(path) }, sensitive)
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [ConfigObject].
                  * It supports an optional [Configuration.Schema], which is used for validation and more when provided.
                  */
-                fun nestedObject(key: String, schema: Schema? = null, sensitive: Boolean = false): Standard<ConfigObject> = StandardProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
+                fun nestedObject(key: String, schema: Schema? = null, sensitive: Boolean = false): Standard<ConfigObject> = StandardProperty(
+                        key,
+                        ConfigObject::class.java.simpleName,
+                        { config, path, _ -> config.getObject(path) },
+                        { config, path, _ -> config.getObjectList(path) },
+                        sensitive,
+                        schema
+                )
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [ENUM].
                  * This property expects a value in the configuration matching one of the cases of [ENUM], as text, in uppercase.
                  */
-                fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Standard<ENUM> = StandardProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
+                fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Standard<ENUM> = StandardProperty(
+                        key,
+                        enumClass.java.simpleName,
+                        { conf: Config, propertyKey: String, _ -> conf.getEnum(enumClass.java, propertyKey) },
+                        { conf: Config, propertyKey: String, _ -> conf.getEnumList(enumClass.java, propertyKey) },
+                        sensitive
+                )
             }
         }
     }
@@ -275,12 +288,7 @@ object Configuration {
          */
         val properties: Set<Property.Definition<*>>
 
-        /**
-         * Validates target [Config] with default [Configuration.Validation.Options].
-         */
-        fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
-
-        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue
+        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue, options: Configuration.Options): ConfigValue
 
         companion object {
 
@@ -368,34 +376,34 @@ object Configuration {
 
         override fun description() = schema.description()
 
-        override fun validate(target: Config, options: Validation.Options) = schema.validate(target, options)
+        override fun validate(target: Config, options: Options) = schema.validate(target, options)
 
-        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue) = schema.describe(configuration, serialiseValue)
+        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue, options: Configuration.Options) = schema.describe(configuration, serialiseValue, options)
 
-        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).mapValid(::parseValid)
+        final override fun parse(configuration: Config, options: Options): Valid<VALUE> = validate(configuration, options).mapValid { parseValid(it, options) }
 
         /**
          * Implement to define further mapping and validation logic, assuming the underlying raw [Config] is correct in terms of this [Configuration.Specification].
          */
-        protected abstract fun parseValid(configuration: Config): Valid<VALUE>
+        protected abstract fun parseValid(configuration: Config, options: Options): Valid<VALUE>
+    }
+
+    /**
+     * Validation and processing options.
+     * @property strict whether to raise unknown property keys as errors.
+     */
+    class Options(val strict: Boolean = false) {
+
+        companion object {
+
+            /**
+             * Default [Config] options, without [strict] parsing enabled.
+             */
+            val defaults: Configuration.Options = Options()
+        }
     }
 
     object Validation {
-
-        /**
-         * [Config] validation options.
-         * @property strict whether to raise unknown property keys as errors.
-         */
-        data class Options(val strict: Boolean) {
-
-            companion object {
-
-                /**
-                 * Default [Config] validation options, without [strict] parsing enabled.
-                 */
-                val defaults: Configuration.Validation.Options = Options(strict = false)
-            }
-        }
 
         /**
          * Super-type for the errors raised by the parsing and validation of a [Config] object.
@@ -531,7 +539,7 @@ object Configuration {
             }
 
             /**
-             * Raised when a key-value pair appeared in the [Config] object without a matching property in the [Configuration.Schema], and [Configuration.Validation.Options.strict] was enabled.
+             * Raised when a key-value pair appeared in the [Config] object without a matching property in the [Configuration.Schema], and [Configuration.Options.strict] was enabled.
              */
             class Unknown private constructor(override val keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
 
@@ -586,5 +594,5 @@ object Configuration {
     /**
      * Defines the ability to validate a [Config] object, producing a valid [Config] or a set of [Configuration.Validation.Error].
      */
-    interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
+    interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Options>
 }
