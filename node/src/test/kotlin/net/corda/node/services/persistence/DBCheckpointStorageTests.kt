@@ -566,7 +566,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
             val serializedFlowState = checkpoint.serializeFlowState()
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(smallerStackTraceException), serializedFlowState)
         }
@@ -604,7 +603,6 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
             val serializedFlowState = checkpoint.serializeFlowState()
-            createMetadataRecord(checkpoint)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(biggerStackTraceException), serializedFlowState)
         }
