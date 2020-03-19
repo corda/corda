@@ -209,8 +209,8 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         @Column(name = "platform_version", nullable = false)
         var platformVersion: Int,
 
-        @Column(name = "rpc_user", nullable = false)
-        var rpcUsername: String,
+        @Column(name = "started_by", nullable = false)
+        var startedBy: String,
 
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
@@ -236,7 +236,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             if (!initialParameters.contentEquals(other.initialParameters)) return false
             if (launchingCordapp != other.launchingCordapp) return false
             if (platformVersion != other.platformVersion) return false
-            if (rpcUsername != other.rpcUsername) return false
+            if (startedBy != other.startedBy) return false
             if (invocationInstant != other.invocationInstant) return false
             if (startInstant != other.startInstant) return false
             if (finishInstant != other.finishInstant) return false
@@ -253,7 +253,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             result = 31 * result + initialParameters.contentHashCode()
             result = 31 * result + launchingCordapp.hashCode()
             result = 31 * result + platformVersion
-            result = 31 * result + rpcUsername.hashCode()
+            result = 31 * result + startedBy.hashCode()
             result = 31 * result + invocationInstant.hashCode()
             result = 31 * result + startInstant.hashCode()
             result = 31 * result + (finishInstant?.hashCode() ?: 0)
@@ -352,7 +352,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             initialParameters = context.getFlowParameters().storageSerialize().bytes,
             launchingCordapp = (flowInfo.subFlowVersion as? SubFlowVersion.CorDappFlow)?.corDappName ?: "Core flow",
             platformVersion = PLATFORM_VERSION,
-            rpcUsername = context.principal().name,
+            startedBy = context.principal().name,
             invocationInstant = context.trace.invocationId.timestamp,
             startInstant = Instant.now(),
             finishInstant = null
