@@ -131,6 +131,17 @@ class DBCheckpointStorageTests {
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
+        val finalCheckpoint = updatedCheckpoint.copy(flowState = null)
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, finalCheckpoint, updatedSerializedFlowState)
+
+        }
+        database.transaction {
+            assertEquals(
+                    updatedCheckpoint,
+                    checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
     }
 
     @Test(timeout = 300_000)
