@@ -57,7 +57,8 @@ class DBCheckpointStorage(
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
-        private val MAX_LENGTH_VARCHAR = 4000
+        @VisibleForTesting
+        const val MAX_LENGTH_VARCHAR = 4000
 
         /**
          * This needs to run before Hibernate is initialised.
