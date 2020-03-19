@@ -49,7 +49,6 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Integer.min
-import java.lang.RuntimeException
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.*
@@ -848,18 +847,20 @@ class SingleThreadedStateMachineManager(
                 val flowLogic = flow.fiber.logic
                 if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
-                when (checkpoint.flowState) {
-                    is FlowState.Unstarted -> {
-                        flow.fiber.start()
-                    }
-                    is FlowState.Started -> {
-                        Fiber.unparkDeserialized(flow.fiber, scheduler)
-                    }
-                    null -> {
-                        //Cannot start a flow with a null flow state.
-                    }
-                }
+                startOrResume(checkpoint, flow)
             }
+        }
+    }
+
+    private fun startOrResume(checkpoint: Checkpoint, flow: Flow) {
+        when (checkpoint.flowState) {
+            is FlowState.Unstarted -> {
+                flow.fiber.start()
+            }
+            is FlowState.Started -> {
+                Fiber.unparkDeserialized(flow.fiber, scheduler)
+            }
+            null -> { } //Cannot start a flow with a null flow state.
         }
     }
 
