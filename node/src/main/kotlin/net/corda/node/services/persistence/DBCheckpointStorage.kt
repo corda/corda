@@ -540,10 +540,12 @@ class DBCheckpointStorage(
     }
 
     private fun Throwable.stackTraceToString(): String {
-        val stackTraceStr = ExceptionUtils.getStackTrace(this)
-        return if (stackTraceStr.length > MAX_LENGTH_VARCHAR) {
-            stackTraceStr.substring(0, MAX_LENGTH_VARCHAR)
-        } else
-            stackTraceStr
+        var stackTraceStr = ExceptionUtils.getStackTrace(this)
+        if (stackTraceStr.length > MAX_LENGTH_VARCHAR) {
+            // cut off the last line, which will be a half line
+            val truncateIndex = stackTraceStr.lastIndexOf('\n', MAX_LENGTH_VARCHAR - 1)
+            stackTraceStr = stackTraceStr.substring(0, truncateIndex + 1) // include last '\n' in
+        }
+        return stackTraceStr
     }
 }

@@ -562,7 +562,8 @@ class DBCheckpointStorageTests {
             this.stackTrace = notGreaterThanDummyStackTrace.toTypedArray()
         }
 
-        assertTrue(ExceptionUtils.getStackTrace(dummyException).length < DBCheckpointStorage.MAX_LENGTH_VARCHAR)
+        val notGreaterThanSize = ExceptionUtils.getStackTrace(dummyException).length // = 3985
+        assertTrue(notGreaterThanSize < DBCheckpointStorage.MAX_LENGTH_VARCHAR)
 
         database.transaction {
             createMetadataRecord(checkpoint)
@@ -573,7 +574,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             val persistedCheckpoint = checkpointStorage.getDBCheckpoint(id)
             val persistedStackTrace = persistedCheckpoint!!.exceptionDetails!!.stackTrace
-            assertEquals(3985, persistedStackTrace.length)
+            assertEquals(notGreaterThanSize, persistedStackTrace.length)
             assertEquals(ExceptionUtils.getStackTrace(dummyException), persistedStackTrace)
         }
     }
@@ -586,15 +587,21 @@ class DBCheckpointStorageTests {
         for (i in 0..151) {
             notGreaterThanDummyStackTrace.add(dummyStackTraceElement)
         }
-        val greaterThanDummyStackTrace = notGreaterThanDummyStackTrace + dummyStackTraceElement
+
+        val notGreaterThanDummyException = java.lang.IllegalStateException().apply {
+            this.stackTrace = notGreaterThanDummyStackTrace.toTypedArray()
+        }
+        val notGreaterThanSize = ExceptionUtils.getStackTrace(notGreaterThanDummyException).length // = 3985
+        assertTrue(notGreaterThanSize < DBCheckpointStorage.MAX_LENGTH_VARCHAR)
 
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         val dummyException = java.lang.IllegalStateException().apply {
-            this.stackTrace = greaterThanDummyStackTrace.toTypedArray()
+            this.stackTrace = (notGreaterThanDummyStackTrace + dummyStackTraceElement).toTypedArray()
         }
 
-        assertTrue(ExceptionUtils.getStackTrace(dummyException).length > DBCheckpointStorage.MAX_LENGTH_VARCHAR)
+        val greaterThanSize = ExceptionUtils.getStackTrace(dummyException).length // = 4011
+        assertTrue(greaterThanSize > DBCheckpointStorage.MAX_LENGTH_VARCHAR)
 
         database.transaction {
             createMetadataRecord(checkpoint)
@@ -605,8 +612,8 @@ class DBCheckpointStorageTests {
         database.transaction {
             val persistedCheckpoint = checkpointStorage.getDBCheckpoint(id)
             val persistedStackTrace = persistedCheckpoint!!.exceptionDetails!!.stackTrace
-            assertEquals(DBCheckpointStorage.MAX_LENGTH_VARCHAR, persistedStackTrace.length)
-            assertEquals(ExceptionUtils.getStackTrace(dummyException).subSequence(0, DBCheckpointStorage.MAX_LENGTH_VARCHAR), persistedStackTrace)
+            assertEquals(notGreaterThanSize, persistedStackTrace.length)
+            assertEquals(ExceptionUtils.getStackTrace(notGreaterThanDummyException), persistedStackTrace)
         }
     }
 
