@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine.transitions
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.Try
@@ -60,10 +61,7 @@ class TopLevelTransition(
     private fun transactionCommittedTransition(event: Event.TransactionCommitted): TransitionResult {
         return builder {
             val checkpoint = currentState.checkpoint
-            if (currentState.isWaitingForFuture &&
-                    checkpoint.flowState is FlowState.Started &&
-                    checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &&
-                    checkpoint.flowState.flowIORequest.hash == event.transaction.id) {
+            if (isWaitingForLedgerCommit(currentState, checkpoint, event.transaction.id)) {
                 currentState = currentState.copy(isWaitingForFuture = false)
                 if (isErrored()) {
                     return@builder FlowContinuation.ProcessEvents
@@ -74,6 +72,17 @@ class TopLevelTransition(
                 FlowContinuation.ProcessEvents
             }
         }
+    }
+
+    private fun isWaitingForLedgerCommit(
+        currentState: StateMachineState,
+        checkpoint: Checkpoint,
+        transactionId: SecureHash
+    ): Boolean {
+        return currentState.isWaitingForFuture &&
+                checkpoint.flowState is FlowState.Started &&
+                checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &&
+                checkpoint.flowState.flowIORequest.hash == transactionId
     }
 
     private fun softShutdownTransition(): TransitionResult {
