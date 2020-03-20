@@ -60,11 +60,11 @@ class TopLevelTransition(
     private fun transactionCommittedTransition(event: Event.TransactionCommitted): TransitionResult {
         return builder {
             val checkpoint = currentState.checkpoint
-            if (currentState.isTransactionTracked &&
+            if (currentState.isWaitingForFuture &&
                     checkpoint.flowState is FlowState.Started &&
                     checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &&
                     checkpoint.flowState.flowIORequest.hash == event.transaction.id) {
-                currentState = currentState.copy(isTransactionTracked = false)
+                currentState = currentState.copy(isWaitingForFuture = false)
                 if (isErrored()) {
                     return@builder FlowContinuation.ProcessEvents
                 }
