@@ -21,7 +21,11 @@ inline fun <TYPE, reified MAPPED> Configuration.Property.Definition.RequiredList
 
 inline fun <TYPE, reified MAPPED> Configuration.Property.Definition.RequiredList<TYPE>.map(noinline convert: (List<TYPE>) -> MAPPED): Configuration.Property.Definition.Required<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
-operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(this)
+fun Config.withOptions(options: Configuration.Options) = ConfigurationWithOptions(this, options)
+
+data class ConfigurationWithOptions(private val config: Config, private val options: Configuration.Options) {
+    operator fun <TYPE> get(property: Configuration.Value.Extractor<TYPE>): TYPE = property.valueIn(config, options)
+}
 
 inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification, key = key, sensitive = sensitive).map(ConfigObject::toConfig).mapValid { value -> specification.parse(value) }
 
@@ -65,15 +69,6 @@ internal fun ConfigValue.serialize(options: ConfigRenderOptions = ConfigRenderOp
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
 internal fun <TYPE> valid(target: TYPE) = Validated.valid<TYPE, Configuration.Validation.Error>(target)
-
-/**
- * Value extracted from a configuration file is a function of the actual value specified and configuration options.
- * E.g. password value may be stored in the encrypted form rather than in a clear text.
- */
-data class ConfigurationWithOptions(private val config: Config, private val options: Configuration.Validation.Options) {
-    operator fun <TYPE> get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(config)
-    operator fun <TYPE> get(property: Configuration.Value.Extractor<TYPE>): TYPE = property.valueIn(config)
-}
 
 /**
  * Helper interface to mark objects that will have [ConfigurationWithOptions] in them.

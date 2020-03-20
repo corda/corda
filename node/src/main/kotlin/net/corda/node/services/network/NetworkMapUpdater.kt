@@ -4,7 +4,13 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.*
+import net.corda.core.internal.NetworkParametersStorage
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.readObject
+import net.corda.core.internal.sign
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.AutoAcceptable
@@ -20,7 +26,12 @@ import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.lang.Integer.max
@@ -118,7 +129,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 .subscribe {
                     for (update in it) {
                         when (update) {
-                            is NodeInfoUpdate.Add -> networkMapCache.addNode(update.nodeInfo)
+                            is NodeInfoUpdate.Add -> networkMapCache.addOrUpdateNode(update.nodeInfo)
                             is NodeInfoUpdate.Remove -> {
                                 if (update.hash != ourNodeInfoHash) {
                                     val nodeInfo = networkMapCache.getNodeByHash(update.hash)
@@ -177,11 +188,12 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (currentParametersHash != globalNetworkMap.networkParameterHash) {
             exitOnParametersMismatch(globalNetworkMap)
         }
-        val currentNodeHashes = networkMapCache.allNodeHashes
-        // Remove node info from network map.
-        (currentNodeHashes - allHashesFromNetworkMap - nodeInfoWatcher.processedNodeInfoHashes)
-                .mapNotNull { if (it != ourNodeInfoHash) networkMapCache.getNodeByHash(it) else null }
-                .forEach(networkMapCache::removeNode)
+        // Calculate any nodes that are now gone and remove _only_ them from the cache
+        // NOTE: We won't remove them until after the add/update cycle as only then will we definitely know which nodes are no longer
+        // in the network
+        val allNodeHashes = networkMapCache.allNodeHashes
+        val nodeHashesToBeDeleted = (allNodeHashes - allHashesFromNetworkMap - nodeInfoWatcher.processedNodeInfoHashes)
+                .filter { it != ourNodeInfoHash }
         //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24, as if we did not limit this on large machines it could result in 100's of concurrent requests
@@ -189,7 +201,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, NamedThreadFactory("NetworkMapUpdaterNodeInfoDownloadThread"))
         //DB insert is single threaded - use a single threaded executor for it.
         val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor(NamedThreadFactory("NetworkMapUpdateDBInsertThread"))
-        val hashesToFetch = (allHashesFromNetworkMap - currentNodeHashes)
+        val hashesToFetch = (allHashesFromNetworkMap - allNodeHashes)
         val networkMapDownloadStartTime = System.currentTimeMillis()
         if (hashesToFetch.isNotEmpty()) {
             val networkMapDownloadFutures = hashesToFetch.chunked(max(hashesToFetch.size / threadsToUseForNetworkMapDownload, 1))
@@ -207,7 +219,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                             }
                         }, executorToUseForDownloadingNodeInfos).thenAcceptAsync(Consumer { retrievedNodeInfos ->
                             // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
-                            networkMapCache.addNodes(retrievedNodeInfos)
+                            networkMapCache.addOrUpdateNodes(retrievedNodeInfos)
                         }, executorToUseForInsertionIntoDB)
                     }.toTypedArray()
             //wait for all the futures to complete
@@ -218,6 +230,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 executorToUseForInsertionIntoDB.shutdown()
             }.getOrThrow()
         }
+        // NOTE: We remove nodes after any new/updates because updated nodes will have a new hash and, therefore, any
+        // nodes that we can actually pull out of the cache (with the old hashes) should be a truly removed node.
+        nodeHashesToBeDeleted.mapNotNull { networkMapCache.getNodeByHash(it) }.forEach(networkMapCache::removeNode)
+
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
         // it's empty
         networkMapCache.nodeReady.set(null)

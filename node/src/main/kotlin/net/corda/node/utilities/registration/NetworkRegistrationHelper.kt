@@ -18,8 +18,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
-import net.corda.nodeapi.internal.cryptoservice.CryptoServiceFactory
-import net.corda.nodeapi.internal.cryptoservice.SupportedCryptoServices
+import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
+import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter

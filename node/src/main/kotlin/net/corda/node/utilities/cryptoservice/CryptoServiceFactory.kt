@@ -1,7 +1,8 @@
-package net.corda.nodeapi.internal.cryptoservice
+package net.corda.node.utilities.cryptoservice
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 
 class CryptoServiceFactory {

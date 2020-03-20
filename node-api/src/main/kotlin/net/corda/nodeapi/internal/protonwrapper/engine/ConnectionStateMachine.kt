@@ -45,7 +45,11 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                                       userName: String?,
                                       password: String?) : BaseHandler() {
     companion object {
-        private const val IDLE_TIMEOUT = 10000
+        private const val CORDA_AMQP_FRAME_SIZE_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpMaxFrameSize"
+        private const val CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME = "net.corda.nodeapi.connectionstatemachine.AmqpIdleTimeout"
+
+        private val MAX_FRAME_SIZE = Integer.getInteger(CORDA_AMQP_FRAME_SIZE_PROP_NAME, 128 * 1024)
+        private val IDLE_TIMEOUT = Integer.getInteger(CORDA_AMQP_IDLE_TIMEOUT_PROP_NAME, 10 * 1000)
         private val log = contextLogger()
     }
 
@@ -102,6 +106,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         transport.context = connection
         @Suppress("UsePropertyAccessSyntax")
         transport.setEmitFlowEventOnSend(true)
+        transport.maxFrameSize = MAX_FRAME_SIZE
         connection.collect(collector)
         val sasl = transport.sasl()
         if (userName != null) {
@@ -488,7 +493,9 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     fun transportWriteMessage(msg: SendableMessageImpl) {
-        msg.buf = encodePayloadBytes(msg)
+        val encoded = encodePayloadBytes(msg)
+        msg.release()
+        msg.buf = encoded
         val messageQueue = messageQueues.getOrPut(msg.topic, { LinkedList() })
         messageQueue.offer(msg)
         if (session != null) {

@@ -60,6 +60,7 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
         forEach { (alias, certificate) -> action.invoke(alias, certificate) }
     }
 
+    fun aliases(): List<String> = value.internal.aliases().toList()
     /**
      * @throws IllegalArgumentException if no certificate for the alias is found, or if the certificate is not an [X509Certificate].
      */
