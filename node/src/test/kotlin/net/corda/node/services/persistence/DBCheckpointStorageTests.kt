@@ -45,7 +45,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
-    return getRunnableCheckpoints().use {
+    return getAllCheckpoints().use {
         it.map { it.second }.toList()
     }
 }
