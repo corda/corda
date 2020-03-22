@@ -142,8 +142,7 @@ class FlowRetryTest {
                             .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
                 }
                 assertEquals(3, TransientConnectionFailureFlow.retryCount)
-                // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-                assertEquals(2, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+                assertEquals(1, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             }
         }
     }
@@ -161,8 +160,7 @@ class FlowRetryTest {
                             .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
                 }
                 assertEquals(3, WrappedTransientConnectionFailureFlow.retryCount)
-                // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-                assertEquals(2, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+                assertEquals(1, it.proxy.startFlow(::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             }
         }
     }
