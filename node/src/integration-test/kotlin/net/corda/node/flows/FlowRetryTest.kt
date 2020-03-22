@@ -460,7 +460,12 @@ class GeneralExternalFailureResponder(private val session: FlowSession) : FlowLo
 @StartableByRPC
 class GetNumberOfUncompletedCheckpointsFlow : FlowLogic<Long>() {
     override fun call(): Long {
-        val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
+        val sqlStatement =
+                "select count(*) " +
+                        "from node_checkpoints " +
+                        "where flow_id != '${runId.uuid}' " + // don't count in the checkpoint of the current flow
+                        "and status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
+
         return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
             ps.executeQuery().use { rs ->
                 rs.next()
