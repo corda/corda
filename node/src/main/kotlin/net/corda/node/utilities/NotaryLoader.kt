@@ -20,8 +20,6 @@ class NotaryLoader(
         private val config: NotaryConfig,
         versionInfo: VersionInfo
 ) {
-    class UnknownIdentityException : IllegalArgumentException("Could not establish notary identity of this node.")
-
     companion object {
         private val log = contextLogger()
     }
@@ -90,15 +88,18 @@ class NotaryLoader(
         }
     }
 
-    /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */
+    /**
+     * Validates that the notary is correctly configured by comparing the configured type against the
+     * type advertised in the network map cache.
+     */
     private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
         var configuredAsValidatingNotary = services.configuration.notary?.validating
         val notaryParty = myNotaryIdentity.party
         var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
-            log.warn("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. "
-            + "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")    
+            log.warn("There is a discrepancy in the configured notary type and the one advertised in the network parameters. " +
+            "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")
         }
     }
     
