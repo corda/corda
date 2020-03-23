@@ -23,6 +23,7 @@ import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.lang.management.ManagementFactory
 import java.sql.Connection
+import java.util.*
 import javax.management.ObjectName
 import javax.persistence.AttributeConverter
 
@@ -30,7 +31,7 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
-        private val jdbcUrl: String,
+        jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
         val customClassLoader: ClassLoader? = null
 ) {
@@ -59,6 +60,22 @@ class HibernateConfiguration(
 //        }
     }
 
+    private fun findSessionFactoryFactory(jdbcUrl: String): CordaSessionFactoryFactory {
+        val serviceLoader = if (customClassLoader != null)
+            ServiceLoader.load(CordaSessionFactoryFactory::class.java, customClassLoader)
+        else
+            ServiceLoader.load(CordaSessionFactoryFactory::class.java)
+
+        for( sff in serviceLoader.iterator()){
+            if (sff.canHandleDatabase(jdbcUrl)){
+                return sff
+            }
+        }
+        throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl")
+    }
+
+    val sessionFactoryFactory = findSessionFactoryFactory(jdbcUrl)
+
     private val sessionFactories = cacheFactory.buildNamed<Set<MappedSchema>, SessionFactory>(Caffeine.newBuilder(), "HibernateConfiguration_sessionFactories")
 
     val sessionFactoryForRegisteredSchemas = schemas.let {
@@ -70,7 +87,6 @@ class HibernateConfiguration(
     fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
-        val sessionFactoryFactory = H2SessionFactoryFactory()
         val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(databaseConfig, schemas, customClassLoader, attributeConverters)
 
         // export Hibernate JMX statistics
