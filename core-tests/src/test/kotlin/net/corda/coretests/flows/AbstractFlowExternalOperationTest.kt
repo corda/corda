@@ -20,6 +20,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import org.junit.Before
 import java.sql.SQLTransientConnectionException
@@ -72,11 +73,12 @@ abstract class AbstractFlowExternalOperationTest {
         @Suspendable
         override fun call(): Any {
             log.info("Started my flow")
+            subFlow(PingPongFlow(party))
             val result = testCode()
             val session = initiateFlow(party)
-            session.send("hi there")
-            log.info("ServiceHub value = $serviceHub")
-            session.receive<String>()
+            session.sendAndReceive<String>("hi there").unwrap { it }
+            session.sendAndReceive<String>("hi there").unwrap { it }
+            subFlow(PingPongFlow(party))
             log.info("Finished my flow")
             return result
         }
@@ -92,8 +94,28 @@ abstract class AbstractFlowExternalOperationTest {
     class FlowWithExternalOperationResponder(val session: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            session.receive<String>()
+            session.receive<String>().unwrap { it }
             session.send("go away")
+            session.receive<String>().unwrap { it }
+            session.send("go away")
+        }
+    }
+
+    @InitiatingFlow
+    class PingPongFlow(val party: Party): FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            session.sendAndReceive<String>("ping pong").unwrap { it }
+        }
+    }
+
+    @InitiatedBy(PingPongFlow::class)
+    class PingPongResponder(val session: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            session.receive<String>().unwrap { it }
+            session.send("I got you bro")
         }
     }
 
@@ -111,7 +133,7 @@ abstract class AbstractFlowExternalOperationTest {
         fun createFuture(): CompletableFuture<Any> {
             return CompletableFuture.supplyAsync(Supplier<Any> {
                 log.info("Starting sleep inside of future")
-                Thread.sleep(2000)
+                Thread.sleep(1000)
                 log.info("Finished sleep inside of future")
                 "Here is your return value"
             }, executorService)
