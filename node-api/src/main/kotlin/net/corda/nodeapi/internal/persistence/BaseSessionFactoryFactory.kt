@@ -1,0 +1,113 @@
+package net.corda.nodeapi.internal.persistence
+
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.toHexString
+import org.hibernate.SessionFactory
+import org.hibernate.boot.MetadataBuilder
+import org.hibernate.boot.MetadataSources
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
+import org.hibernate.cfg.Configuration
+import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.MaterializedBlobType
+import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
+import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
+import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
+import javax.persistence.AttributeConverter
+
+abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
+    companion object{
+        private val logger = contextLogger()
+    }
+
+    abstract fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSource: MetadataSources): Configuration
+    abstract fun buildHibernateMetadata(metadataBuiler: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata
+
+    open fun buildSessionFactory(
+            config: Configuration,
+            metadataSources: MetadataSources,
+            customClassLoader: ClassLoader?,
+            attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
+        config.standardServiceRegistryBuilder.applySettings(config.properties)
+
+        if (customClassLoader != null) {
+            config.standardServiceRegistryBuilder.addService(
+                    ClassLoaderService::class.java,
+                    ClassLoaderServiceImpl(customClassLoader))
+        }
+
+        @Suppress("DEPRECATION")
+        val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
+        val metadata = buildHibernateMetadata(metadataBuilder, attributeConverters)
+        return metadata.sessionFactoryBuilder.run {
+            allowOutOfTransactionUpdateOperations(true)
+            applySecondLevelCacheSupport(false)
+            applyQueryCacheSupport(false)
+            enableReleaseResourcesOnCloseEnabled(true)
+            build()
+        }
+    }
+
+    override fun makeSessionFactoryForSchemas(
+            databaseConfig: DatabaseConfig,
+            schemas: Set<MappedSchema>,
+            customClassLoader: ClassLoader?,
+            attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
+        logger.info("Creating session factory for schemas: $schemas")
+        val serviceRegistry = BootstrapServiceRegistryBuilder().build()
+        val metadataSources = MetadataSources(serviceRegistry)
+
+        val config = buildHibernateConfig(databaseConfig, metadataSources)
+        schemas.forEach { schema ->
+            // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
+            schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
+        }
+        val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader, attributeConverters)
+        logger.info("Created session factory for schemas: $schemas")
+        return sessionFactory
+    }
+
+    // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
+    object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-wrapper-binary"
+        }
+    }
+
+    object MapBlobToNormalBlob : MaterializedBlobType() {
+        override fun getName(): String {
+            return "corda-blob"
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
+    private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
+        private const val LOG_SIZE_LIMIT = 1024
+
+        override fun extractLoggableRepresentation(value: ByteArray?): String {
+            return if (value == null) {
+                super.extractLoggableRepresentation(value)
+            } else {
+                if (value.size <= LOG_SIZE_LIMIT) {
+                    "[size=${value.size}, value=${value.toHexString()}]"
+                } else {
+                    "[size=${value.size}, value=${value.copyOfRange(0, LOG_SIZE_LIMIT).toHexString()}...truncated...]"
+                }
+            }
+        }
+    }
+
+    // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
+    object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
+        override fun getName(): String {
+            return "materialized_blob"
+        }
+    }
+}
