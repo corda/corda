@@ -381,7 +381,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
 
         val metadata = entity.flowMetadata.apply {
-            if (checkpoint.status == FlowStatus.COMPLETED && finishInstant == null) {
+            if (checkpoint.isFinished() && finishInstant == null) {
                 finishInstant = now
                 currentDBSession().update(this)
             }
@@ -518,5 +518,10 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
+    private fun Checkpoint.isFinished() = when(status) {
+        FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
+        else -> false
     }
 }
