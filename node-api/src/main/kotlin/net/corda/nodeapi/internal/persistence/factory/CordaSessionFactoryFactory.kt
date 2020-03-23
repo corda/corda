@@ -6,6 +6,7 @@ import org.hibernate.SessionFactory
 import javax.persistence.AttributeConverter
 
 interface CordaSessionFactoryFactory {
+    val databaseType: String
     fun canHandleDatabase( jdbcUrl: String): Boolean
     fun makeSessionFactoryForSchemas(
             databaseConfig: DatabaseConfig,

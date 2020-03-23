@@ -36,4 +36,6 @@ class PostgresSessionFactoryFactory : BaseSessionFactoryFactory() {
             return "corda-blob"
         }
     }
+
+    override val databaseType: String = "PostgreSQL"
 }
