@@ -6,7 +6,7 @@ import org.junit.Assert
 import org.junit.Test
 
 class HibernateConfigurationFactoryLoadingTest {
-    @Test
+    @Test(timeout=300_000)
     fun checkErrorMessageForMissingFactory() {
         val jdbcUrl = "jdbc:madeUpNonense:foobar.com:1234"
         val presentFactories = listOf("H2", "PostgreSQL")
