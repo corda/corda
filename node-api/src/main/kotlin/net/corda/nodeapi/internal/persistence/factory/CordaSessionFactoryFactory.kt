@@ -13,4 +13,5 @@ interface CordaSessionFactoryFactory {
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
             attributeConverters: Collection<AttributeConverter<*, *>>) : SessionFactory
+    fun getExtraConfiguration(key: String) : Any?
 }

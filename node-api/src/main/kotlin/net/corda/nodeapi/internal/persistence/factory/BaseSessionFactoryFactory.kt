@@ -102,6 +102,10 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         return sessionFactory
     }
 
+    override fun getExtraConfiguration(key: String): Any? {
+        return null
+    }
+
     // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
     object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
         override fun getRegistrationKeys(): Array<String> {

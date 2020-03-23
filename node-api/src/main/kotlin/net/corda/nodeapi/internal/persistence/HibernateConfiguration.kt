@@ -105,4 +105,6 @@ class HibernateConfiguration(
 
         override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
     }
+
+    fun getExtraConfiguration(key: String ) = sessionFactoryFactory.getExtraConfiguration(key)
 }
