@@ -860,7 +860,7 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
-            null -> { } //Cannot start a flow with a null flow state.
+            null -> throw IllegalArgumentException("Cannot resume on a finished flow state.")
         }
     }
 

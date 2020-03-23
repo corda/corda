@@ -152,7 +152,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                     val checkpoint = serialisedCheckpoint.deserialize(checkpointSerializationContext)
                                     val json = checkpoint.toJson(runId.uuid, now)
                                     val jsonBytes = writer.writeValueAsBytes(json)
-                                    jsonBytes to "${json.topLevelFlowClass?.simpleName}-${runId.uuid}.json"
+                                    jsonBytes to "${json.topLevelFlowClass!!.simpleName}-${runId.uuid}.json"
                                 } catch (e: Exception) {
                                     log.info("Failed to deserialise checkpoint with flowId: ${runId.uuid}", e)
                                     val errorBytes = checkpointDeserializationErrorMessage(runId, e).toByteArray()
@@ -204,9 +204,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext)
                 fiber to fiber.logic
             }
-            null -> {
-                null to null
-            }
+            null -> throw IllegalStateException("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
         }
 
         val flowCallStack = if (fiber != null) {
@@ -220,7 +218,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
 
         return CheckpointJson(
                 flowId = id,
-                topLevelFlowClass = flowLogic?.javaClass,
+                topLevelFlowClass = flowLogic!!.javaClass,
                 topLevelFlowLogic = flowLogic,
                 flowCallStackSummary = flowCallStack.toSummary(),
                 flowCallStack = flowCallStack,
@@ -303,8 +301,8 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     @Suppress("unused")
     private class CheckpointJson(
             val flowId: UUID,
-            val topLevelFlowClass: Class<FlowLogic<*>>?,
-            val topLevelFlowLogic: FlowLogic<*>?,
+            val topLevelFlowClass: Class<FlowLogic<*>>,
+            val topLevelFlowLogic: FlowLogic<*>,
             val flowCallStackSummary: List<FlowCallSummary>,
             val suspendedOn: SuspendedOn?,
             val flowCallStack: List<FlowCall>,

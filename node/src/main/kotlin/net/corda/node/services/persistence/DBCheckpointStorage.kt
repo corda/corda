@@ -136,7 +136,7 @@ class DBCheckpointStorage(
 
         @Type(type = "corda-blob")
         @Column(name = "flow_state")
-        var flowStack: ByteArray? = EMPTY_BYTE_ARRAY,
+        var flowStack: ByteArray?,
 
         @Column(name = "hmac")
         var hmac: ByteArray,
@@ -506,11 +506,7 @@ class DBCheckpointStorage(
 
     private fun DBFlowCheckpoint.toSerializedCheckpoint(): Checkpoint.Serialized {
         val flowStack = blob.flowStack
-        val serialisedFlowState : SerializedBytes<FlowState>? = if (flowStack != null) {
-            SerializedBytes(flowStack)
-        } else {
-            null
-        }
+        val serialisedFlowState = flowStack?.let { SerializedBytes<FlowState>(it) } ?: null
         return Checkpoint.Serialized(
             serializedCheckpointState = SerializedBytes(blob.checkpoint),
             serializedFlowState = serialisedFlowState,
