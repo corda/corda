@@ -102,6 +102,7 @@ class UniquenessProviderTests(
                 Clock.systemUTC().instant().plus(60.minutes))
         val result = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
+        assert(result is UniquenessProvider.Result.Failure)
         val error = (result as UniquenessProvider.Result.Failure).error as NotaryError.TimeWindowInvalid
         assertEquals(timeWindow, error.txTimeWindow)
 
@@ -113,6 +114,7 @@ class UniquenessProviderTests(
         testClock.advanceBy(90.minutes)
         val result2 = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
+        assert(result2 is UniquenessProvider.Result.Failure)
         val error2 = (result2 as UniquenessProvider.Result.Failure).error as NotaryError.TimeWindowInvalid
         assertEquals(timeWindow, error2.txTimeWindow)
     }
@@ -144,6 +146,7 @@ class UniquenessProviderTests(
         val timeWindow = TimeWindow.untilOnly(Clock.systemUTC().instant().minus(30.minutes))
         val result = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
+        assert(result is UniquenessProvider.Result.Failure)
         val error = (result as UniquenessProvider.Result.Failure).error as NotaryError.TimeWindowInvalid
         assertEquals(timeWindow, error.txTimeWindow)
 
@@ -151,6 +154,7 @@ class UniquenessProviderTests(
         testClock.advanceBy(10.minutes)
         val result2 = uniquenessProvider.commit(
                 emptyList(), firstTxId, identity, requestSignature, timeWindow).get()
+        assert(result2 is UniquenessProvider.Result.Failure)
         val error2 = (result2 as UniquenessProvider.Result.Failure).error as NotaryError.TimeWindowInvalid
         assertEquals(timeWindow, error2.txTimeWindow)
     }
