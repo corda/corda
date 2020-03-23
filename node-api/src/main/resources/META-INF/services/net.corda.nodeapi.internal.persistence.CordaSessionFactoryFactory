@@ -1,1 +1,2 @@
 net.corda.nodeapi.internal.persistence.H2SessionFactoryFactory
+net.corda.nodeapi.internal.persistence.PostgresSessionFactoryFactory

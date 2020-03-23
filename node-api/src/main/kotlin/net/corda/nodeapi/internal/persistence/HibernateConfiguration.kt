@@ -37,27 +37,6 @@ class HibernateConfiguration(
 ) {
     companion object {
         private val logger = contextLogger()
-
-//        // register custom converters
-//        fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, jdbcUrl:String, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
-//            metadataBuilder.run {
-//                attributeConverters.forEach { applyAttributeConverter(it) }
-//                // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
-//                // to avoid OOM when large blobs might get logged.
-//                applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
-//                applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-//
-//                // Create a custom type that will map a blob to byteA in postgres and as a normal blob for all other dbms.
-//                // This is required for the Checkpoints as a workaround for the issue that postgres has on azure.
-//                if (jdbcUrl.contains(":postgresql:", ignoreCase = true)) {
-//                    applyBasicType(MapBlobToPostgresByteA, MapBlobToPostgresByteA.name)
-//                } else {
-//                    applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
-//                }
-//
-//                return build()
-//            }
-//        }
     }
 
     private fun findSessionFactoryFactory(jdbcUrl: String): CordaSessionFactoryFactory {
@@ -135,16 +114,4 @@ class HibernateConfiguration(
 
         override fun isUnwrappableAs(unwrapType: Class<*>?): Boolean = unwrapType == NodeDatabaseConnectionProvider::class.java
     }
-
-    // Maps to a byte array on postgres.
-    object MapBlobToPostgresByteA : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
-        override fun getRegistrationKeys(): Array<String> {
-            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
-        }
-
-        override fun getName(): String {
-            return "corda-blob"
-        }
-    }
-
 }

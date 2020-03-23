@@ -23,8 +23,27 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         private val logger = contextLogger()
     }
 
-    abstract fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSource: MetadataSources): Configuration
-    abstract fun buildHibernateMetadata(metadataBuiler: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata
+    open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
+        val hbm2dll: String =
+                if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                    "update"
+                } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                        || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                    "validate"
+                } else {
+                    "none"
+                }
+
+        // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
+        // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
+        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+                .setProperty("hibernate.format_sql", "true")
+                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+                .setProperty("javax.persistence.validation.mode", "none")
+                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+    }
+
+    abstract fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata
 
     open fun buildSessionFactory(
             config: Configuration,
