@@ -2,9 +2,7 @@ package net.corda.coretests.node
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.Party
 import net.corda.core.internal.getPackageOwnerOf
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
