@@ -73,6 +73,7 @@ import org.junit.Test
 import rx.Notification
 import rx.Observable
 import java.sql.SQLException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -98,14 +99,17 @@ class FlowFrameworkTests {
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-    private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-        override fun record(
+    private val dbCheckpointStorage = DBCheckpointStorage(
+        object : CheckpointPerformanceRecorder {
+            override fun record(
                 serializedCheckpointState: SerializedBytes<CheckpointState>,
                 serializedFlowState: SerializedBytes<FlowState>
-        ) {
-            // do nothing
-        }
-    })
+            ) {
+                // do nothing
+            }
+        },
+        Clock.systemUTC()
+    )
 
     @Before
     fun setUpMockNet() {

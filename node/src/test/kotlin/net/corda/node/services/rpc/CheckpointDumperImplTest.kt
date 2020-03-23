@@ -143,14 +143,17 @@ class CheckpointDumperImplTest {
 
     private fun newCheckpointStorage() {
         database.transaction {
-            checkpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-                override fun record(
-                    serializedCheckpointState: SerializedBytes<CheckpointState>,
-                    serializedFlowState: SerializedBytes<FlowState>
-                ) {
-                    // do nothing
-                }
-            })
+            checkpointStorage = DBCheckpointStorage(
+                object : CheckpointPerformanceRecorder {
+                    override fun record(
+                        serializedCheckpointState: SerializedBytes<CheckpointState>,
+                        serializedFlowState: SerializedBytes<FlowState>
+                    ) {
+                        // do nothing
+                    }
+                },
+                Clock.systemUTC()
+            )
         }
     }
 

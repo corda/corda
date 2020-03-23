@@ -328,7 +328,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         })
     }
     val services = ServiceHubInternalImpl().tokenize()
-    val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics))
+    val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
