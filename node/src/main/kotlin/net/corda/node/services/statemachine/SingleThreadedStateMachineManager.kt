@@ -338,13 +338,17 @@ class SingleThreadedStateMachineManager(
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
-                createFlowFromCheckpoint(
-                        id = id,
-                        serializedCheckpoint = serializedCheckpoint,
-                        initialDeduplicationHandler = null,
-                        isAnyCheckpointPersisted = true,
-                        isStartIdempotent = false
-                )
+                if (serializedCheckpoint.compatible) {
+                    createFlowFromCheckpoint(
+                            id = id,
+                            serializedCheckpoint = serializedCheckpoint,
+                            initialDeduplicationHandler = null,
+                            isAnyCheckpointPersisted = true,
+                            isStartIdempotent = false
+                    )
+                } else {
+                    return@mapNotNull null
+                }
             }.toList()
         }
     }
@@ -379,8 +383,7 @@ class SingleThreadedStateMachineManager(
                         serializedCheckpoint = serializedCheckpoint,
                         initialDeduplicationHandler = null,
                         isAnyCheckpointPersisted = true,
-                        isStartIdempotent = false
-                ) ?: return
+                        isStartIdempotent = false)
             } else {
                 // Just flow initiation message
                 null
@@ -759,6 +762,7 @@ class SingleThreadedStateMachineManager(
             bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
         } catch (e: Exception) {
             logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+            checkpointStorage.updateCompatible(flowId, false)
             null
         }
     }
@@ -768,6 +772,7 @@ class SingleThreadedStateMachineManager(
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
         } catch (e: Exception) {
             logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+            checkpointStorage.updateCompatible(flowId, false)
             null
         }
     }

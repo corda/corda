@@ -47,4 +47,9 @@ interface CheckpointStorage {
      * until the underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    /**
+     * Set a checkpoint as compatible
+     */
+    fun updateCompatible(id: StateMachineRunId, compatible: Boolean)
 }

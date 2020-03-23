@@ -308,6 +308,12 @@ class DBCheckpointStorage(
         }
     }
 
+    override fun updateCompatible(id: StateMachineRunId, compatible: Boolean) {
+        val checkpoint = getDBCheckpoint(id)
+        checkpoint?.compatible = compatible
+        currentDBSession().update(checkpoint)
+    }
+
     private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
