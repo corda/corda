@@ -3,6 +3,7 @@ package net.corda.node.internal
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -19,6 +20,7 @@ data class ServicesForResolutionImpl(
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
         override val networkParametersService: NetworkParametersService,
+        override val coreInternal: ServiceHubCoreInternal?,
         private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
     override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:

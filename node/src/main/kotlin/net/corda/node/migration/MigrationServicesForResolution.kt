@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.div
 import net.corda.core.internal.readObject
@@ -34,6 +35,7 @@ import java.util.Comparator.comparingInt
 class MigrationServicesForResolution(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorageInternal,
+        override val coreInternal: ServiceHubCoreInternal?,
         private val transactions: TransactionStorage,
         private val cordaDB: CordaPersistence,
         cacheFactory: MigrationNamedCacheFactory

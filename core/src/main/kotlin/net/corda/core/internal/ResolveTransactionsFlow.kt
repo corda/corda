@@ -11,6 +11,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
+import java.security.AccessController.doPrivileged
+import java.security.PrivilegedAction
 
 /**
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
@@ -57,7 +59,7 @@ class ResolveTransactionsFlow private constructor(
             fetchMissingNetworkParameters(initialTx)
         }
 
-        val resolver = (serviceHub as ServiceHubCoreInternal).createTransactionsResolver(this)
+        val resolver = doPrivileged(PrivilegedAction { serviceHub.coreInternal })!!.createTransactionsResolver(this)
         resolver.downloadDependencies(batchMode)
 
         logger.trace { "ResolveTransactionsFlow: Sending END." }

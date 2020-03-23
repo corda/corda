@@ -12,6 +12,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -425,6 +426,7 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
+    override val coreInternal: ServiceHubCoreInternal? = null
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }
@@ -438,7 +440,7 @@ open class MockServices private constructor(
     override val diagnosticsService: DiagnosticsService = NodeDiagnosticsService()
 
     protected val servicesForResolution: ServicesForResolution
-        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, null, validatedTransactions)
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }

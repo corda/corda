@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
@@ -10,6 +11,7 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.internal.ServiceHubCoreInternal
 import net.corda.core.node.services.*
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.SerializeAsToken
@@ -48,6 +50,9 @@ interface ServicesForResolution {
 
     /** Returns the network parameters the node is operating under. */
     val networkParameters: NetworkParameters
+
+    @get:CordaInternal
+    val coreInternal: ServiceHubCoreInternal?
 
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].

@@ -7,6 +7,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.ProxyFactory.createServiceHub
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -128,7 +129,7 @@ abstract class FlowLogic<out T> {
      * only available once the flow has started, which means it cannot be accessed in the constructor. Either
      * access this lazily or from inside [call].
      */
-    val serviceHub: ServiceHub get() = stateMachine.serviceHub
+    val serviceHub: ServiceHub = createServiceHub(this::class.java.classLoader) { stateMachine }
 
     /**
      * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
@@ -579,7 +580,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalOperation<R>): R {
-        val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub as ServiceHubCoreInternal, operation)
+        val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub.coreInternal!!, operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
     }
@@ -604,14 +605,14 @@ private class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExte
  * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
  */
 private class WrappedFlowExternalOperation<R : Any>(
-    val serviceHub: ServiceHubCoreInternal,
-    val operation: FlowExternalOperation<R>
+    private val serviceHub: ServiceHubCoreInternal,
+    private val operation: FlowExternalOperation<R>
 ) : FlowAsyncOperation<R> {
     override fun execute(deduplicationId: String): CordaFuture<R> {
         // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
         // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
         return CompletableFuture.supplyAsync(
-            Supplier { this.operation.execute(deduplicationId) },
+            Supplier { operation.execute(deduplicationId) },
             serviceHub.externalOperationExecutor
         ).asCordaFuture()
     }

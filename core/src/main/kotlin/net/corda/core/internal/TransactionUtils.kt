@@ -88,7 +88,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
  * Exception raised if an error was encountered while attempting to deserialise a component group in a transaction.
  */
 class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: Int, cause: Exception):
-        Exception("Failed to deserialise group $groupEnum at index $index in transaction: ${cause.message}", cause)
+        RuntimeException("Failed to deserialise group $groupEnum at index $index in transaction: ${cause.message}", cause)
 
 /**
  * Method to deserialise Commands from its two groups:

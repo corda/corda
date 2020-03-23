@@ -108,8 +108,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
-                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
+                isAttachmentTrusted = { services.coreInternal?.attachmentTrustCalculator?.calculate(it) ?: true }
             )
         )
     }
@@ -355,7 +354,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups
-                            .firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
+                            .firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }
                             ?.components
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
