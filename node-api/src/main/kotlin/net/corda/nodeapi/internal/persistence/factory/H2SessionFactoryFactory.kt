@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.nodeapi.internal.persistence.factory
 
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder

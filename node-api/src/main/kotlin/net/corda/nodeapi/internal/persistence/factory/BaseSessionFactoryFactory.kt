@@ -1,8 +1,11 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.nodeapi.internal.persistence.factory
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources

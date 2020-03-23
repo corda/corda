@@ -1,8 +1,8 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.nodeapi.internal.persistence.factory
 
 import net.corda.core.schemas.MappedSchema
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import org.hibernate.SessionFactory
-import org.hibernate.boot.MetadataSources
 import javax.persistence.AttributeConverter
 
 interface CordaSessionFactoryFactory {
