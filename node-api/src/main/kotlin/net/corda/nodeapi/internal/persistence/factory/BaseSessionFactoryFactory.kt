@@ -46,7 +46,18 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
     }
 
-    abstract fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata
+    open fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata{
+        metadataBuilder.run {
+            attributeConverters.forEach { applyAttributeConverter(it) }
+            // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
+            // to avoid OOM when large blobs might get logged.
+            applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
+            applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
+
+            return build()
+        }
+    }
 
     open fun buildSessionFactory(
             config: Configuration,
@@ -84,7 +95,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
 
         val config = buildHibernateConfig(databaseConfig, metadataSources)
         schemas.forEach { schema ->
-            // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
         val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader, attributeConverters)
