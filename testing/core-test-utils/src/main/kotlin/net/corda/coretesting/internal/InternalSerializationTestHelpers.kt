@@ -25,16 +25,18 @@ fun createTestSerializationEnv(): SerializationEnvironment {
 }
 
 fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironment {
-    val clientSerializationScheme = if (classLoader != null) {
+    val (clientSerializationScheme, serverSerializationScheme) = if (classLoader != null) {
         val customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
         val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, classLoader).toSet()
-        AMQPClientSerializationScheme(customSerializers, serializationWhitelists)
+
+        Pair(AMQPClientSerializationScheme(customSerializers, serializationWhitelists),
+             AMQPServerSerializationScheme(customSerializers, serializationWhitelists))
     } else {
-        AMQPClientSerializationScheme(emptyList())
+        Pair(AMQPClientSerializationScheme(emptyList()), AMQPServerSerializationScheme(emptyList()))
     }
     val factory = SerializationFactoryImpl().apply {
         registerScheme(clientSerializationScheme)
-        registerScheme(AMQPServerSerializationScheme(emptyList()))
+        registerScheme(serverSerializationScheme)
     }
     return SerializationEnvironment.with(
             factory,
