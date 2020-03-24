@@ -7,11 +7,13 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.factory.CordaSessionFactoryFactory
 import org.hibernate.SessionFactory
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataBuilder
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.service.UnknownUnwrapTypeException
 import java.lang.management.ManagementFactory
 import java.sql.Connection
-import java.util.*
+import java.util.ServiceLoader
 import javax.management.ObjectName
 import javax.persistence.AttributeConverter
 
@@ -25,26 +27,32 @@ class HibernateConfiguration(
 ) {
     companion object {
         private val logger = contextLogger()
-    }
 
-    private fun findSessionFactoryFactory(jdbcUrl: String): CordaSessionFactoryFactory {
-        val serviceLoader = if (customClassLoader != null)
-            ServiceLoader.load(CordaSessionFactoryFactory::class.java, customClassLoader)
-        else
-            ServiceLoader.load(CordaSessionFactoryFactory::class.java)
-
-        val presentFactories = mutableListOf<String>()
-
-        for( sff in serviceLoader.iterator()){
-            if (sff.canHandleDatabase(jdbcUrl)){
-                return sff
-            }
-            presentFactories.add(sff.databaseType)
+        // Will be used in open core
+        fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, jdbcUrl: String, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
+            val sff = findSessionFactoryFactory(jdbcUrl, null)
+            return sff.buildHibernateMetadata(metadataBuilder, attributeConverters)
         }
-        throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl - factories present for [${presentFactories.joinToString { ", " }}]")
+
+        private fun findSessionFactoryFactory(jdbcUrl: String, customClassLoader: ClassLoader?): CordaSessionFactoryFactory {
+            val serviceLoader = if (customClassLoader != null)
+                ServiceLoader.load(CordaSessionFactoryFactory::class.java, customClassLoader)
+            else
+                ServiceLoader.load(CordaSessionFactoryFactory::class.java)
+
+            val presentFactories = mutableListOf<String>()
+
+            for (sff in serviceLoader.iterator()) {
+                if (sff.canHandleDatabase(jdbcUrl)) {
+                    return sff
+                }
+                presentFactories.add(sff.databaseType)
+            }
+            throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl - factories present for [${presentFactories.joinToString { ", " }}]")
+        }
     }
 
-    val sessionFactoryFactory = findSessionFactoryFactory(jdbcUrl)
+    val sessionFactoryFactory = findSessionFactoryFactory(jdbcUrl, customClassLoader)
 
     private val sessionFactories = cacheFactory.buildNamed<Set<MappedSchema>, SessionFactory>(Caffeine.newBuilder(), "HibernateConfiguration_sessionFactories")
 
