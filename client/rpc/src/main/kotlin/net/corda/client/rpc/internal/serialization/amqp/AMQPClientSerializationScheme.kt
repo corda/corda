@@ -8,7 +8,6 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._rpcClientSerializationEnv
-import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
@@ -57,7 +56,7 @@ class AMQPClientSerializationScheme(
         }
     }
 
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: UseCase): Boolean {
         return magic == amqpMagic && (target == UseCase.RPCClient || target == UseCase.P2P)
     }
 
