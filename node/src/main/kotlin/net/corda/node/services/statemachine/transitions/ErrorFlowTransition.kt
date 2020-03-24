@@ -52,7 +52,6 @@ class ErrorFlowTransition(
                 actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
             }
 
-            // todo; the following block of code is not needed any more (it was needed for overnight observation)
             // If we're errored but not propagating keep processing events.
             if (remainingErrorsToPropagate.isNotEmpty() && !errorState.propagating) {
                 return@builder FlowContinuation.ProcessEvents
