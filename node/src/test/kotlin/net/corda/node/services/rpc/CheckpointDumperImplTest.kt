@@ -117,7 +117,7 @@ class CheckpointDumperImplTest {
     }
 
     @Test(timeout=300_000)
-    fun testDumpCheckpointWithRemovedFlowState() {
+    fun `test checkpoint dumper with Completed FlowState`() {
         val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
         dumper.update(mockAfterStartEvent)
 
@@ -127,7 +127,7 @@ class CheckpointDumperImplTest {
             checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
         }
         val newCheckpoint = checkpoint.copy(
-            flowState = null
+            flowState = FlowState.Completed
         )
         database.transaction {
             checkpointStorage.updateCheckpoint(id, newCheckpoint, null)
@@ -191,6 +191,6 @@ class CheckpointDumperImplTest {
     }
 
     private fun serializeFlowState(checkpoint: Checkpoint): SerializedBytes<FlowState> {
-        return checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        return checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }

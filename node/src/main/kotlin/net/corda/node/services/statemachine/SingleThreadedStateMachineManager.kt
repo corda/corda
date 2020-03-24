@@ -780,11 +780,10 @@ class SingleThreadedStateMachineManager(
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
         val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
-        val flowState = checkpoint.flowState ?: return null
         val resultFuture = openFuture<Any?>()
-        val fiber = when (flowState) {
+        val fiber = when (checkpoint.flowState) {
             is FlowState.Unstarted -> {
-                val logic = tryCheckpointDeserialize(flowState.frozenFlowLogic, id) ?: return null
+                val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -803,7 +802,7 @@ class SingleThreadedStateMachineManager(
                 fiber
             }
             is FlowState.Started -> {
-                val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
+                val fiber = tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -819,6 +818,9 @@ class SingleThreadedStateMachineManager(
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber
                 fiber
+            }
+            is FlowState.Completed -> {
+                return null
             }
         }
 
@@ -860,7 +862,7 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
-            null -> throw IllegalArgumentException("Cannot resume on a finished flow state.")
+            is FlowState.Completed -> throw IllegalArgumentException("Cannot resume on a finished flow state.")
         }
     }
 

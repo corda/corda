@@ -131,14 +131,13 @@ class DBCheckpointStorageTests {
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
-        val finalCheckpoint = updatedCheckpoint.copy(flowState = null)
+        val finalCheckpoint = updatedCheckpoint.copy(flowState = FlowState.Completed)
         database.transaction {
-            checkpointStorage.updateCheckpoint(id, finalCheckpoint, updatedSerializedFlowState)
-
+            checkpointStorage.updateCheckpoint(id, finalCheckpoint, null)
         }
         database.transaction {
             assertEquals(
-                    updatedCheckpoint,
+                    finalCheckpoint,
                     checkpointStorage.checkpoints().single().deserialize()
             )
         }
@@ -480,15 +479,14 @@ class DBCheckpointStorageTests {
     fun `Checkpoint can be updated with flow io request information`() {
         val (id, checkpoint) = newCheckpoint(1)
         database.transaction {
-            val serializedFlowState =
-                    checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
             assertNull(checkpointFromStorage!!.flowIoRequest)
         }
         database.transaction {
             val newCheckpoint = checkpoint.copy(flowIoRequest = FlowIORequest.Sleep::class.java.simpleName)
-            val serializedFlowState = newCheckpoint.flowState?.checkpointSerialize(
+            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
                 context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
@@ -506,8 +504,7 @@ class DBCheckpointStorageTests {
         val maxProgressStepLength = 256
         val (id, checkpoint) = newCheckpoint(1)
         database.transaction {
-            val serializedFlowState =
-                    checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
             assertNull(checkpointFromStorage!!.progressStep)
@@ -518,7 +515,7 @@ class DBCheckpointStorageTests {
         """.trimIndent()
         database.transaction {
             val newCheckpoint = checkpoint.copy(progressStep = longString)
-            val serializedFlowState = newCheckpoint.flowState?.checkpointSerialize(
+            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
                     context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState)
@@ -544,7 +541,7 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             val serializedFlowState =
-                    checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+                    checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), runnable, serializedFlowState)
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), hospitalized, serializedFlowState)
@@ -595,7 +592,7 @@ class DBCheckpointStorageTests {
     }
 
     private fun Checkpoint.serializeFlowState(): SerializedBytes<FlowState> {
-        return flowState!!.checkpointSerialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        return flowState.checkpointSerialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
     private fun Checkpoint.Serialized.deserialize(): Checkpoint {

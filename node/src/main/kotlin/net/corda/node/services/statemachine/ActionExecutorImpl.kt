@@ -95,7 +95,13 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
         val checkpoint = action.checkpoint
-        val serializedFlowState = checkpoint.flowState?.checkpointSerialize(checkpointSerializationContext)
+        val flowState = checkpoint.flowState
+        val serializedFlowState = when(flowState) {
+            FlowState.Completed -> null
+            else -> {
+                flowState.checkpointSerialize(checkpointSerializationContext)
+            }
+        }
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
         } else {

@@ -506,7 +506,7 @@ class DBCheckpointStorage(
 
     private fun DBFlowCheckpoint.toSerializedCheckpoint(): Checkpoint.Serialized {
         val flowStack = blob.flowStack
-        val serialisedFlowState = flowStack?.let { SerializedBytes<FlowState>(it) } ?: null
+        val serialisedFlowState = flowStack?.let { SerializedBytes<FlowState>(it) }
         return Checkpoint.Serialized(
             serializedCheckpointState = SerializedBytes(blob.checkpoint),
             serializedFlowState = serialisedFlowState,
