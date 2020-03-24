@@ -4,10 +4,10 @@ import org.slf4j.Logger
 import java.text.MessageFormat
 import java.util.*
 
-private const val MESSAGE_TEMPLATE = "errorTemplate"
-private const val ERROR_BAR_RESOURCE = "ErrorBar"
-private const val ERROR_CODE_MESSAGE = "errorCodeMessage"
-private const val ERROR_CODE_URL = "errorCodeUrl"
+internal const val MESSAGE_TEMPLATE = "errorTemplate"
+internal const val ERROR_BAR_RESOURCE = "ErrorBar"
+internal const val ERROR_CODE_MESSAGE = "errorCodeMessage"
+internal const val ERROR_CODE_URL = "errorCodeUrl"
 
 internal class ErrorReporterImpl(private val resourceLocation: String,
                                  private val locale: Locale) : ErrorReporter {
