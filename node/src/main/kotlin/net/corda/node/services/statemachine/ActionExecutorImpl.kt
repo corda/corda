@@ -98,17 +98,15 @@ class ActionExecutorImpl(
         val flowState = checkpoint.flowState
         val serializedFlowState = when(flowState) {
             FlowState.Completed -> null
-            else -> {
-                flowState.checkpointSerialize(checkpointSerializationContext)
-            }
+            else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
         } else {
-            val nonNullSerializedFlowState = requireNotNull(serializedFlowState) {
-                "Cannot create a new checkpoint with a null flow state."
+            if (flowState is FlowState.Completed) {
+                throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
             }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, nonNullSerializedFlowState)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!)
         }
     }
 

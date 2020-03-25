@@ -820,7 +820,7 @@ class SingleThreadedStateMachineManager(
                 fiber
             }
             is FlowState.Completed -> {
-                return null
+                return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
             }
         }
 
@@ -862,7 +862,7 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
-            is FlowState.Completed -> throw IllegalArgumentException("Cannot resume on a finished flow state.")
+            is FlowState.Completed -> throw IllegalStateException("Cannot start (or resume) a completed flow.")
         }
     }
 

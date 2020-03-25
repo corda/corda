@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine.transitions
 
 import net.corda.node.services.statemachine.*
-import java.lang.RuntimeException
 
 /**
  * This transition checks the current state of the flow and determines whether anything needs to be done.
@@ -29,7 +28,7 @@ class DoRemainingWorkTransition(
         return when (flowState) {
             is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, flowState).transition()
             is FlowState.Started -> StartedFlowTransition(context, startingState, flowState).transition()
-            is FlowState.Completed -> throw IllegalArgumentException("Cannot transition a state with completed flow state.")
+            is FlowState.Completed -> throw IllegalStateException("Cannot transition a state with completed flow state.")
         }
     }
 

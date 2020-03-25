@@ -301,7 +301,7 @@ sealed class FlowState {
     }
 
     /**
-     * The flow has finished.
+     * The flow has completed. It does not have a running fiber that needs to be serialized and checkpointed.
      */
     object Completed : FlowState()
 
