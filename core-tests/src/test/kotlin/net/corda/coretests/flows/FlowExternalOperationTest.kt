@@ -235,13 +235,9 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         FlowWithExternalProcess(party) {
 
         @Suspendable
-        override fun testCode(): Any {
-            val e: Exception? = createException()
-            return await(ExternalOperation(serviceHub) { _, _ ->
-                if (e != null)
-                    throw e
-                return@ExternalOperation
-            })
+        override fun testCode() {
+            val e = createException()
+            await(ExternalOperation(serviceHub) { _, _ -> throw e })
         }
 
         private fun createException() = when (exceptionType) {
