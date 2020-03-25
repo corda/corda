@@ -31,6 +31,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.node.services.Permissions
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.contracts.DummyContract
@@ -43,15 +44,14 @@ import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
-import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -92,7 +92,7 @@ class FlowMetadataRecordingTest {
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
-                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                ).returnValue.getOrThrow(1.minutes)
             }
 
             metadata!!.let {
@@ -133,7 +133,7 @@ class FlowMetadataRecordingTest {
                 }
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::MyFlowWithoutParameters).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                it.proxy.startFlow(::MyFlowWithoutParameters).returnValue.getOrThrow(1.minutes)
             }
 
             metadata!!.let {
@@ -186,7 +186,7 @@ class FlowMetadataRecordingTest {
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
-                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                ).returnValue.getOrThrow(1.minutes)
             }
 
             assertEquals(
@@ -232,7 +232,7 @@ class FlowMetadataRecordingTest {
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
-                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                ).returnValue.getOrThrow(1.minutes)
             }
 
             metadata!!.let {
@@ -278,7 +278,7 @@ class FlowMetadataRecordingTest {
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
-                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                ).returnValue.getOrThrow(1.minutes)
             }
 
             metadata!!.let {
@@ -308,7 +308,7 @@ class FlowMetadataRecordingTest {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            val lock = Semaphore(1)
+            val lock = Semaphore(0)
 
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
@@ -322,16 +322,13 @@ class FlowMetadataRecordingTest {
                     lock.release()
                 }
 
-            // Acquire the lock to prevent the asserts from being processed too early
-            lock.acquire()
-
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
                     ::MyStartedScheduledFlow,
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
-                ).returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                ).returnValue.getOrThrow(1.minutes)
             }
 
             // Block here until released in the hook
@@ -353,6 +350,42 @@ class FlowMetadataRecordingTest {
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.startInstant >= it.invocationInstant)
                 assertNull(it.finishInstant)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `flows have their finish time recorded when completed`() {
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            var flowId: StateMachineRunId? = null
+            var metadata: DBCheckpointStorage.DBFlowMetadata? = null
+            MyFlow.hookAfterInitialCheckpoint =
+                { flowIdFromHook: StateMachineRunId, _, metadataFromHook: DBCheckpointStorage.DBFlowMetadata ->
+                    flowId = flowIdFromHook
+                    metadata = metadataFromHook
+                }
+
+            val finishTime = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::MyFlow,
+                    nodeBHandle.nodeInfo.singleIdentity(),
+                    string,
+                    someObject
+                ).returnValue.getOrThrow(1.minutes)
+                it.proxy.startFlow(
+                    ::GetFlowFinishTimeFlow,
+                    flowId!!
+                ).returnValue.getOrThrow(1.minutes)
+            }
+
+            metadata!!.let {
+                assertNull(it.finishInstant)
+                assertNotNull(finishTime)
+                assertTrue(finishTime!! >= it.startInstant)
             }
         }
     }
@@ -470,6 +503,14 @@ class FlowMetadataRecordingTest {
             }
             val stx = serviceHub.signInitialTransaction(tx)
             serviceHub.recordTransactions(stx)
+        }
+    }
+
+    @StartableByRPC
+    class GetFlowFinishTimeFlow(private val flowId: StateMachineRunId) : FlowLogic<Instant?>() {
+        @Suspendable
+        override fun call(): Instant? {
+            return serviceHub.cordaService(MyService::class.java).findMetadata(flowId).finishInstant
         }
     }
 

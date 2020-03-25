@@ -73,6 +73,7 @@ import org.junit.Test
 import rx.Notification
 import rx.Observable
 import java.sql.SQLException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -80,6 +81,7 @@ import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
@@ -97,14 +99,17 @@ class FlowFrameworkTests {
     private lateinit var notaryIdentity: Party
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-    private val dbCheckpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-        override fun record(
+    private val dbCheckpointStorage = DBCheckpointStorage(
+        object : CheckpointPerformanceRecorder {
+            override fun record(
                 serializedCheckpointState: SerializedBytes<CheckpointState>,
                 serializedFlowState: SerializedBytes<FlowState>
-        ) {
-            // do nothing
-        }
-    })
+            ) {
+                // do nothing
+            }
+        },
+        Clock.systemUTC()
+    )
 
     @Before
     fun setUpMockNet() {
@@ -352,6 +357,24 @@ class FlowFrameworkTests {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
             assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Flow metadata finish time is set in database when the flow finishes`() {
+        val terminationSignal = Semaphore(0)
+        val flow = aliceNode.services.startFlow(NoOpFlow(terminateUponSignal = terminationSignal))
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
+            assertNull(metadata.finishInstant)
+        }
+        terminationSignal.release()
+        mockNet.waitQuiescent()
+        aliceNode.database.transaction {
+            val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
+            assertNotNull(metadata.finishInstant)
+            assertTrue(metadata.finishInstant!! >= metadata.startInstant)
         }
     }
 

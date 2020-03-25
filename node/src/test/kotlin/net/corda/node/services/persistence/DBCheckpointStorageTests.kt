@@ -37,6 +37,7 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -546,14 +547,17 @@ class DBCheckpointStorageTests {
 
     private fun newCheckpointStorage() {
         database.transaction {
-            checkpointStorage = DBCheckpointStorage(object : CheckpointPerformanceRecorder {
-                override fun record(
-                    serializedCheckpointState: SerializedBytes<CheckpointState>,
-                    serializedFlowState: SerializedBytes<FlowState>
-                ) {
-                    // do nothing
-                }
-            })
+            checkpointStorage = DBCheckpointStorage(
+                object : CheckpointPerformanceRecorder {
+                    override fun record(
+                        serializedCheckpointState: SerializedBytes<CheckpointState>,
+                        serializedFlowState: SerializedBytes<FlowState>
+                    ) {
+                        // do nothing
+                    }
+                },
+                Clock.systemUTC()
+            )
         }
     }
 

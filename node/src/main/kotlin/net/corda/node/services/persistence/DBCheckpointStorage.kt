@@ -22,6 +22,7 @@ import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.hibernate.annotations.Type
 import java.sql.Connection
 import java.sql.SQLException
+import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
@@ -39,7 +40,10 @@ import javax.persistence.OneToOne
  * Simple checkpoint key value storage in DB.
  */
 @Suppress("TooManyFunctions")
-class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointPerformanceRecorder) : CheckpointStorage {
+class DBCheckpointStorage(
+    private val checkpointPerformanceRecorder: CheckpointPerformanceRecorder,
+    private val clock: Clock
+) : CheckpointStorage {
 
     companion object {
         val log = contextLogger()
@@ -314,7 +318,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         serializedFlowState: SerializedBytes<FlowState>
     ): DBFlowCheckpoint {
         val flowId = id.uuid.toString()
-        val now = Instant.now()
+        val now = clock.instant()
 
         val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
@@ -333,7 +337,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             compatible = checkpoint.compatible,
             progressStep = null,
             ioRequestType = null,
-            checkpointInstant = Instant.now()
+            checkpointInstant = now
         )
     }
 
@@ -354,7 +358,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
             platformVersion = PLATFORM_VERSION,
             startedBy = context.principal().name,
             invocationInstant = context.trace.invocationId.timestamp,
-            startInstant = Instant.now(),
+            startInstant = clock.instant(),
             finishInstant = null
         ).apply {
             currentDBSession().save(this)
@@ -367,7 +371,7 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         serializedFlowState: SerializedBytes<FlowState>
     ): DBFlowCheckpoint {
         val flowId = id.uuid.toString()
-        val now = Instant.now()
+        val now = clock.instant()
 
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
@@ -380,13 +384,20 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
 
+        val metadata = entity.flowMetadata.apply {
+            if (checkpoint.isFinished() && finishInstant == null) {
+                finishInstant = now
+                currentDBSession().update(this)
+            }
+        }
+
         return entity.apply {
             this.blob = blob
             //Set the result to null for now.
             this.result = null
             this.exceptionDetails = exceptionDetails
             // Do not update the meta data relationship on updates
-            this.flowMetadata = entity.flowMetadata
+            this.flowMetadata = metadata
             this.status = checkpoint.status
             this.compatible = checkpoint.compatible
             this.progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH)
@@ -511,5 +522,10 @@ class DBCheckpointStorage(private val checkpointPerformanceRecorder: CheckpointP
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
+    private fun Checkpoint.isFinished() = when(status) {
+        FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
+        else -> false
     }
 }
