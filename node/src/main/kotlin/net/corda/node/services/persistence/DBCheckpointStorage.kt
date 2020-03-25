@@ -491,7 +491,7 @@ class DBCheckpointStorage(
                 type = it::class.java.name,
                 message = it.message,
                 stackTrace = it.stackTraceToString(),
-                value = null, // TODO to be populated in Corda 4.6
+                value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
                 persistedInstant = now
             )
         }
