@@ -58,11 +58,6 @@ sealed class Action {
     data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()
 
     /**
-     * Remove the checkpoint corresponding to [id].
-     */
-    data class RemoveCheckpoint(val id: StateMachineRunId) : Action()
-
-    /**
      * Persist the deduplication facts of [deduplicationHandlers].
      */
     data class PersistDeduplicationFacts(val deduplicationHandlers: List<DeduplicationHandler>) : Action()
