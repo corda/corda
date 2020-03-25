@@ -83,7 +83,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        services.validatedTransactions.trackTransaction(action.hash).thenMatch(
+        services.validatedTransactions.trackTransactionWithNoWarning(action.hash).thenMatch(
                 success = { transaction ->
                     fiber.scheduleEvent(Event.TransactionCommitted(transaction))
                 },
