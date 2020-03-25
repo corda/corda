@@ -315,7 +315,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun <R> subFlow(subFlow: FlowLogic<R>): R {
+    override fun <R> subFlow(currentFlow: FlowLogic<*>, subFlow: FlowLogic<R>): R {
+        subFlow.stateMachine = this
+        maybeWireUpProgressTracking(currentFlow, subFlow)
+
         checkpointIfSubflowIdempotent(subFlow.javaClass)
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
@@ -335,6 +338,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = true
             )
+        }
+    }
+
+    private fun maybeWireUpProgressTracking(currentFlow: FlowLogic<*>, subFlow: FlowLogic<*>) {
+        val currentFlowProgressTracker = currentFlow.progressTracker
+        val subflowProgressTracker = subFlow.progressTracker
+        if (currentFlowProgressTracker != null && subflowProgressTracker != null && currentFlowProgressTracker != subflowProgressTracker) {
+            if (currentFlowProgressTracker.currentStep == ProgressTracker.UNSTARTED) {
+                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
+                currentFlowProgressTracker.nextStep()
+            }
+            currentFlowProgressTracker.setChildProgressTracker(currentFlowProgressTracker.currentStep, subflowProgressTracker)
         }
     }
 

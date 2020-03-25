@@ -380,10 +380,8 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>): R {
-        subLogic.stateMachine = stateMachine
-        maybeWireUpProgressTracking(subLogic)
         logger.debug { "Calling subflow: $subLogic" }
-        val result = stateMachine.subFlow(subLogic)
+        val result = stateMachine.subFlow(this, subLogic)
         logger.debug { "Subflow finished with result ${result.toString().abbreviate(300)}" }
         return result
     }
@@ -539,18 +537,6 @@ abstract class FlowLogic<out T> {
         set(value) {
             _stateMachine = value
         }
-
-    private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
-        val ours = progressTracker
-        val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null && ours != theirs) {
-            if (ours.currentStep == ProgressTracker.UNSTARTED) {
-                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
-                ours.nextStep()
-            }
-            ours.setChildProgressTracker(ours.currentStep, theirs)
-        }
-    }
 
     private fun enforceNoDuplicates(sessions: List<FlowSession>) {
         require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
