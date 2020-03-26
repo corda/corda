@@ -22,31 +22,24 @@ import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import javax.persistence.AttributeConverter
 
 abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
-    companion object{
+    companion object {
         private val logger = contextLogger()
     }
 
     open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
-        val hbm2dll: String =
-                if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
-                    "update"
-                } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
-                        || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
-                    "validate"
-                } else {
-                    "none"
-                }
-
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
-                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+
+        config.setProperty("hibernate.hbm2ddl.auto", "validate")
+
+        return config
     }
 
-    override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>) : Metadata{
+    override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
         metadataBuilder.run {
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
