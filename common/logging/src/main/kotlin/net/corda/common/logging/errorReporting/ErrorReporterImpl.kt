@@ -4,7 +4,6 @@ import org.slf4j.Logger
 import java.text.MessageFormat
 import java.util.*
 
-internal const val MESSAGE_TEMPLATE = "errorTemplate"
 internal const val ERROR_BAR_RESOURCE = "ErrorBar"
 internal const val ERROR_CODE_MESSAGE = "errorCodeMessage"
 internal const val ERROR_CODE_URL = "errorCodeUrl"
@@ -13,10 +12,6 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
                                  private val locale: Locale) : ErrorReporter {
 
     private fun formatCodeForLogs(error: ErrorCode) : String {
-        return "${error.namespace}:${error.code}"
-    }
-
-    private fun formatCodeForResources(error: ErrorCode) : String {
         return "${error.namespace}-${error.code}"
     }
 
@@ -27,11 +22,6 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
         return formatter.format(params)
     }
 
-    private fun messageForCode(error: ErrorCode) : String {
-        val resource = "$resourceLocation/${formatCodeForResources(error)}"
-        return fetchAndFormat(resource, MESSAGE_TEMPLATE, error.parameters.toTypedArray())
-    }
-
     private fun constructErrorInfoBar(error: ErrorCode) : String {
         val resource = "$resourceLocation/$ERROR_BAR_RESOURCE"
         val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(formatCodeForLogs(error)))
@@ -40,7 +30,8 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
     }
 
     override fun report(error: ErrorCode, logger: Logger) {
-        val message = "${messageForCode(error)} ${constructErrorInfoBar(error)}"
+        val errorResource = ErrorResource.fromErrorCode(error, resourceLocation, locale)
+        val message = "${errorResource.errorMessage} ${constructErrorInfoBar(error)}"
         logger.error(message)
     }
 }

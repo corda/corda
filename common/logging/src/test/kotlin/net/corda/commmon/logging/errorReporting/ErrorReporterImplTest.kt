@@ -34,7 +34,7 @@ class ErrorReporterImplTest {
         }
         val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("en-US"))
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test:case1, URL: en-US/test:case1]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1, URL: en-US/test-case1]"), logs)
     }
 
     @Test(timeout = 300_00)
@@ -48,7 +48,7 @@ class ErrorReporterImplTest {
         val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("en-US"))
         testReporter.report(error, loggerMock)
         val format = DateFormat.getDateInstance(DateFormat.LONG, Locale.forLanguageTag("en-US"))
-        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test:case2, URL: en-US/test:case2]"), logs)
+        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test-case2, URL: en-US/test-case2]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -60,6 +60,18 @@ class ErrorReporterImplTest {
         }
         val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("fr-FR"))
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test:case1, URL: fr-FR/test:case1]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1, URL: fr-FR/test-case1]"), logs)
+    }
+
+    @Test(timeout = 300_000)
+    fun `locale with corresponding resource causes correct error to be printed`() {
+        val error = object : ErrorCode {
+            override val namespace = "test"
+            override val code = "case1"
+            override val parameters = listOf<Any>()
+        }
+        val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("ga-IE"))
+        testReporter.report(error, loggerMock)
+        assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1, URL: ga-IE/test-case1]"), logs)
     }
 }
