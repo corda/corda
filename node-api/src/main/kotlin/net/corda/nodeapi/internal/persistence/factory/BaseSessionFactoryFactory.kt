@@ -5,11 +5,10 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import org.hibernate.SessionFactory
+import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.Metadata
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
@@ -77,7 +76,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         }
     }
 
-    override final fun makeSessionFactoryForSchemas(
+    final override fun makeSessionFactoryForSchemas(
             databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
