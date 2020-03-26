@@ -10,6 +10,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.UniquenessProvider.Result
@@ -99,4 +100,13 @@ abstract class SinglePartyNotaryService : NotaryService() {
         return services.keyManagementService.sign(signableData, notaryIdentityKey)
     }
 
+    /**
+     * Produces a notary query flow in response to receiving an initiating client side
+     * notary query flow.
+     *
+     * @param otherPartySession client [Party] making the request
+     */
+    override fun createQueryFlow(otherPartySession: FlowSession): FlowLogic<Void?> {
+        return NotaryQueryFlow(otherPartySession, this)
+    }
 }

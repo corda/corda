@@ -3,6 +3,7 @@ package net.corda.node.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.NotaryQueryClientFlow
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.location
 import net.corda.node.VersionInfo
@@ -19,6 +20,11 @@ internal object VirtualCordapp {
             ContractUpgradeFlow.Initiate::class.java,
             ContractUpgradeFlow.Authorise::class.java,
             ContractUpgradeFlow.Deauthorise::class.java
+    )
+
+    /** A list of notary specific core RPC flows present in Corda */
+    private val notaryRpcFlows = listOf(
+            NotaryQueryClientFlow.DoubleSpendAudit::class.java
     )
 
     /** A Cordapp representing the core package which is not scanned automatically. */
@@ -49,7 +55,7 @@ internal object VirtualCordapp {
         return CordappImpl(
                 contractClassNames = listOf(),
                 initiatedFlows = listOf(),
-                rpcFlows = listOf(),
+                rpcFlows = notaryRpcFlows,
                 serviceFlows = listOf(),
                 schedulableFlows = listOf(),
                 services = listOf(),
@@ -72,7 +78,7 @@ internal object VirtualCordapp {
         return CordappImpl(
                 contractClassNames = listOf(),
                 initiatedFlows = listOf(),
-                rpcFlows = listOf(),
+                rpcFlows = notaryRpcFlows,
                 serviceFlows = listOf(),
                 schedulableFlows = listOf(),
                 services = listOf(),
@@ -95,7 +101,7 @@ internal object VirtualCordapp {
         return CordappImpl(
                 contractClassNames = listOf(),
                 initiatedFlows = listOf(),
-                rpcFlows = listOf(),
+                rpcFlows = notaryRpcFlows,
                 serviceFlows = listOf(),
                 schedulableFlows = listOf(),
                 services = listOf(),
