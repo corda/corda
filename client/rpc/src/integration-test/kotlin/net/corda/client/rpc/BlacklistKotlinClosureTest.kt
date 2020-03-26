@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import co.paralleluniverse.fibers.Suspendable
-import com.esotericsoftware.kryo.KryoException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow

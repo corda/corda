@@ -87,7 +87,6 @@
     <ID>ComplexCondition:InternalUtils.kt$it.type == this &amp;&amp; it.isPublic &amp;&amp; it.isStatic &amp;&amp; it.isFinal</ID>
     <ID>ComplexCondition:Main.kt$Main$(hostname != null) &amp;&amp; (port != null) &amp;&amp; (username != null) &amp;&amp; (password != null)</ID>
     <ID>ComplexCondition:Schema.kt$obj == null || obj is DescribedType || obj is Binary || forGenericType(type).run { isPrimitive(this) || this == TopType }</ID>
-    <ID>ComplexCondition:TopLevelTransition.kt$TopLevelTransition$currentState.isTransactionTracked &amp;&amp; checkpoint.flowState is FlowState.Started &amp;&amp; checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &amp;&amp; checkpoint.flowState.flowIORequest.hash == event.transaction.id</ID>
     <ID>ComplexCondition:WireTransaction.kt$WireTransaction$notary != null &amp;&amp; (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)</ID>
     <ID>ComplexMethod:AMQPBridgeManager.kt$AMQPBridgeManager.AMQPBridge$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
     <ID>ComplexMethod:AMQPBridgeTest.kt$AMQPBridgeTest$@Test(timeout=300_000) fun `test acked and nacked messages`()</ID>
@@ -160,7 +159,6 @@
     <ID>ComplexMethod:MerkleTransaction.kt$FilteredTransaction.Companion$ private fun filterWithFun(wtx: WireTransaction, filtering: Predicate&lt;Any&gt;): List&lt;FilteredComponentGroup&gt;</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun bootstrap( directory: Path, cordappJars: List&lt;Path&gt;, copyCordapps: CopyCordapps, fromCordform: Boolean, networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides() )</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean</ID>
-    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$fun updateNetworkMapCache(): Duration</ID>
     <ID>ComplexMethod:NetworkParametersReader.kt$NetworkParametersReader$fun read(): NetworkParametersAndSigned</ID>
     <ID>ComplexMethod:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$ private fun pollServerForCertificates(requestId: String): List&lt;X509Certificate&gt;</ID>
     <ID>ComplexMethod:NewTransaction.kt$NewTransaction$fun show(window: Window)</ID>
@@ -321,7 +319,6 @@
     <ID>ForbiddenComment:CustomSerializer.kt$CustomSerializer.SubClass$// TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?</ID>
     <ID>ForbiddenComment:CustomSerializer.kt$CustomSerializer.SubClass$// TODO: should this be empty or contain the schema of the super?</ID>
     <ID>ForbiddenComment:DbTransactionsResolver.kt$DbTransactionsResolver$// TODO: This approach has two problems. Analyze and resolve them:</ID>
-    <ID>ForbiddenComment:DefaultKryoCustomizer.kt$DefaultKryoCustomizer$// TODO: re-organise registrations into logical groups before v1.0</ID>
     <ID>ForbiddenComment:DigitalSignatureWithCert.kt$// TODO: Rename this to DigitalSignature.WithCert once we're happy for it to be public API. The methods will need documentation</ID>
     <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl$// TODO: Derive name from the full picked name, don't just wrap the common name</ID>
     <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl$//TODO: remove this once we can bundle quasar properly.</ID>
@@ -1740,6 +1737,18 @@
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField&lt;SerializationEnvironment&gt;("inheritableContextSerializationEnv") { stack -&gt; stack.fold(false) { isAGlobalThreadBeingCreated, e -&gt; isAGlobalThreadBeingCreated || (e.className == "io.netty.util.concurrent.GlobalEventExecutor" &amp;&amp; e.methodName == "startThread") || (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" &amp;&amp; e.methodName == "newThread") } }</ID>
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _rpcClientSerializationEnv = SimpleToggleField&lt;SerializationEnvironment&gt;("rpcClientSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationFormat.kt$const val encodingNotPermittedFormat = "Encoding not permitted: %s"</ID>
+    <ID>UnusedImports:Amount.kt$import net.corda.core.crypto.CompositeKey</ID>
+    <ID>UnusedImports:Amount.kt$import net.corda.core.identity.Party</ID>
+    <ID>UnusedImports:DummyLinearStateSchemaV1.kt$import net.corda.core.contracts.ContractState</ID>
+    <ID>UnusedImports:FlowsExecutionModeRpcTest.kt$import net.corda.core.internal.packageName</ID>
+    <ID>UnusedImports:FlowsExecutionModeRpcTest.kt$import net.corda.finance.schemas.CashSchemaV1</ID>
+    <ID>UnusedImports:InternalTestUtils.kt$import java.nio.file.Files</ID>
+    <ID>UnusedImports:InternalTestUtils.kt$import net.corda.nodeapi.internal.loadDevCaTrustStore</ID>
+    <ID>UnusedImports:NetworkMap.kt$import net.corda.core.node.NodeInfo</ID>
+    <ID>UnusedImports:NodeParameters.kt$import net.corda.core.identity.Party</ID>
+    <ID>UnusedImports:SerializerFactory.kt$import java.io.NotSerializableException</ID>
+    <ID>UnusedImports:TransformTypes.kt$import net.corda.core.serialization.CordaSerializationTransformEnumDefaults</ID>
+    <ID>UnusedImports:VaultSchema.kt$import net.corda.core.contracts.ContractState</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party</ID>
     <ID>VariableNaming:BootstrapperView.kt$BootstrapperView$val YAML_MAPPER = Constants.getContextMapper()</ID>
@@ -2030,8 +2039,6 @@
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.nodeapi.internal.persistence.*</ID>
     <ID>WildcardImport:DBTransactionStorageTests.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:DefaultKryoCustomizer.kt$import de.javakaffee.kryoserializers.guava.*</ID>
-    <ID>WildcardImport:DefaultKryoCustomizer.kt$import net.corda.core.transactions.*</ID>
     <ID>WildcardImport:DeleteForDJVM.kt$import kotlin.annotation.AnnotationTarget.*</ID>
     <ID>WildcardImport:DemoBench.kt$import tornadofx.*</ID>
     <ID>WildcardImport:DemoBenchNodeInfoFilesCopier.kt$import tornadofx.*</ID>
@@ -2163,8 +2170,6 @@
     <ID>WildcardImport:KotlinIntegrationTestingTutorial.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:Kryo.kt$import com.esotericsoftware.kryo.*</ID>
     <ID>WildcardImport:Kryo.kt$import net.corda.core.transactions.*</ID>
-    <ID>WildcardImport:KryoCheckpointSerializer.kt$import net.corda.core.serialization.*</ID>
-    <ID>WildcardImport:KryoCheckpointSerializer.kt$import net.corda.serialization.internal.*</ID>
     <ID>WildcardImport:KryoStreamsTest.kt$import java.io.*</ID>
     <ID>WildcardImport:KryoTests.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:KryoTests.kt$import net.corda.core.crypto.*</ID>
@@ -2224,12 +2229,6 @@
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.testing.node.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdater.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdater.kt$import net.corda.nodeapi.internal.network.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import org.junit.*</ID>
     <ID>WildcardImport:NetworkParametersReader.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkParametersReaderTest.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkParametersReaderTest.kt$import net.corda.nodeapi.internal.network.*</ID>

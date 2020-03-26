@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine.interceptors
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.ActionExecutor
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event

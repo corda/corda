@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
