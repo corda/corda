@@ -40,15 +40,14 @@ class HibernateConfiguration(
             else
                 ServiceLoader.load(CordaSessionFactoryFactory::class.java)
 
-            val presentFactories = mutableListOf<String>()
-
-            for (sff in serviceLoader.iterator()) {
-                if (sff.canHandleDatabase(jdbcUrl)) {
-                    return sff
-                }
-                presentFactories.add(sff.databaseType)
+            val sessionFactories = serviceLoader.filter { it.canHandleDatabase(jdbcUrl) }
+            when (sessionFactories.size) {
+                0 -> throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl " +
+                        "- factories present for ${serviceLoader.map { it.databaseType }}")
+                1 -> return sessionFactories.single()
+                else -> throw HibernateConfigException("Find several SessionFactoryFactory classes to handle $jdbcUrl " +
+                        "- classes ${sessionFactories.map { it.javaClass.canonicalName }}")
             }
-            throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl - factories present for [${presentFactories.joinToString { ", " }}]")
         }
     }
 

@@ -59,7 +59,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         }
     }
 
-    open fun buildSessionFactory(
+    fun buildSessionFactory(
             config: Configuration,
             metadataSources: MetadataSources,
             customClassLoader: ClassLoader?,
@@ -84,7 +84,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         }
     }
 
-    override fun makeSessionFactoryForSchemas(
+    override final fun makeSessionFactoryForSchemas(
             databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
