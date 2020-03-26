@@ -26,7 +26,7 @@ import java.time.Instant
  * @param pendingDeduplicationHandlers the list of incomplete deduplication handlers.
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
- * @param isTransactionTracked true if a ledger transaction has been tracked as part of a
+ * @param isWaitingForFuture true if the flow is waiting for the completion of a future triggered by one of the statemachine's actions
  *   [FlowIORequest.WaitForLedgerCommit]. This used is to make tracking idempotent.
  * @param isAnyCheckpointPersisted true if at least a single checkpoint has been persisted. This is used to determine
  *   whether we should DELETE the checkpoint at the end of the flow.
@@ -39,15 +39,15 @@ import java.time.Instant
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
 data class StateMachineState(
-        val checkpoint: Checkpoint,
-        val flowLogic: FlowLogic<*>,
-        val pendingDeduplicationHandlers: List<DeduplicationHandler>,
-        val isFlowResumed: Boolean,
-        val isTransactionTracked: Boolean,
-        val isAnyCheckpointPersisted: Boolean,
-        val isStartIdempotent: Boolean,
-        val isRemoved: Boolean,
-        val senderUUID: String?
+    val checkpoint: Checkpoint,
+    val flowLogic: FlowLogic<*>,
+    val pendingDeduplicationHandlers: List<DeduplicationHandler>,
+    val isFlowResumed: Boolean,
+    val isWaitingForFuture: Boolean,
+    val isAnyCheckpointPersisted: Boolean,
+    val isStartIdempotent: Boolean,
+    val isRemoved: Boolean,
+    val senderUUID: String?
 )
 
 /**

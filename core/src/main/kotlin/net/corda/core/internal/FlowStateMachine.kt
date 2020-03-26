@@ -25,7 +25,7 @@ interface FlowStateMachine<FLOWRETURN> {
     fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>)
 
     @Suspendable
-    fun <SUBFLOWRETURN> subFlow(subFlow: FlowLogic<SUBFLOWRETURN>): SUBFLOWRETURN
+    fun <SUBFLOWRETURN> subFlow(currentFlow: FlowLogic<*>, subFlow: FlowLogic<SUBFLOWRETURN>): SUBFLOWRETURN
 
     @Suspendable
     fun flowStackSnapshot(flowClass: Class<out FlowLogic<*>>): FlowStackSnapshot?
