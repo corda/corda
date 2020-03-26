@@ -9,7 +9,7 @@ import javax.persistence.AttributeConverter
 
 class PostgresSessionFactoryFactory : BaseSessionFactoryFactory() {
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
-        metadataBuilder.run {
+        return metadataBuilder.run {
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
@@ -20,7 +20,7 @@ class PostgresSessionFactoryFactory : BaseSessionFactoryFactory() {
             // This is required for the Checkpoints as a workaround for the issue that postgres has on azure.
             applyBasicType(MapBlobToPostgresByteA, MapBlobToPostgresByteA.name)
 
-            return build()
+            build()
         }
     }
 

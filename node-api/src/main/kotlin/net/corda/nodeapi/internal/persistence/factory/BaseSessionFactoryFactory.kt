@@ -39,7 +39,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
-        metadataBuilder.run {
+        return metadataBuilder.run {
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
             // to avoid OOM when large blobs might get logged.
@@ -47,7 +47,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
             applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
 
-            return build()
+            build()
         }
     }
 
