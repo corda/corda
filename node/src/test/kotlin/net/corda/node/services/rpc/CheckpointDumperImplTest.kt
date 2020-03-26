@@ -15,6 +15,8 @@ import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
@@ -42,6 +44,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
@@ -113,7 +116,7 @@ class CheckpointDumperImplTest {
         }
 
         dumper.dumpCheckpoints()
-	checkDumpFile()
+	    checkDumpFile(organisation)
     }
 
     @Test(timeout=300_000)
@@ -134,14 +137,15 @@ class CheckpointDumperImplTest {
         }
 
         dumper.dumpCheckpoints()
+        checkDumpFile("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
     }
 
-    private fun checkDumpFile() {
+    private fun checkDumpFile(match: String) {
         ZipInputStream(file.inputStream()).use { zip ->
             val entry = zip.nextEntry
             assertThat(entry.name, containsSubstring("json"))
             val content = zip.readFully()
-            assertThat(String(content), containsSubstring(organisation))
+            assertThat(String(content), containsSubstring(match))
         }
     }
 
