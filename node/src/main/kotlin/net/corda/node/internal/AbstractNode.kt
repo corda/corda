@@ -150,8 +150,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
-import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
-import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
@@ -266,11 +265,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
-    val cryptoService = CryptoServiceFactory.makeCryptoService(
-            SupportedCryptoServices.BC_SIMPLE,
-            configuration.myLegalName,
-            configuration.signingCertificateStore
-    )
+    @Suppress("LeakingThis")
+    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -878,6 +874,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {
         return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    }
+
+    protected open fun makeCryptoService(): CryptoService {
+        return BCCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
     }
 
     @VisibleForTesting
