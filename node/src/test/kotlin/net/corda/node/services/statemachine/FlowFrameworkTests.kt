@@ -684,7 +684,7 @@ class FlowFrameworkTests {
         }
 
         assertFailsWith<TimeoutException> {
-            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(10.seconds) // wait till flow gets hospitalized
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
         }
         // flow is in hospital
         assertTrue(flowState is FlowState.Unstarted)
@@ -723,7 +723,7 @@ class FlowFrameworkTests {
         }
 
         assertFailsWith<TimeoutException> {
-            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(10.seconds) // wait till flow gets hospitalized
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
         }
         // flow is in hospital
         assertTrue(flowState is FlowState.Started)
