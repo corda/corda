@@ -561,7 +561,7 @@ class DBCheckpointStorageTests {
                     this.stackTrace = smallerDummyStackTrace.toTypedArray()
                 }
         val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length // = 3985
-        assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_LENGTH_VARCHAR)
+        assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
@@ -591,14 +591,14 @@ class DBCheckpointStorageTests {
                     this.stackTrace = smallerDummyStackTrace.toTypedArray()
                 }
         val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length // = 3985
-        assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_LENGTH_VARCHAR)
+        assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val biggerStackTraceException = java.lang.IllegalStateException()
                 .apply {
                     this.stackTrace = (smallerDummyStackTrace + dummyStackTraceElement).toTypedArray()
                 }
         val biggerStackTraceSize = ExceptionUtils.getStackTrace(biggerStackTraceException).length // = 4011
-        assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_LENGTH_VARCHAR)
+        assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
         database.transaction {

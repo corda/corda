@@ -52,13 +52,12 @@ class DBCheckpointStorage(
 
         private const val HMAC_SIZE_BYTES = 16
 
-        private const val MAX_PROGRESS_STEP_LENGTH = 256
+        @VisibleForTesting
+        const val MAX_STACKTRACE_LENGTH = 4000
         private const val MAX_FLOW_NAME_LENGTH = 128
+        private const val MAX_PROGRESS_STEP_LENGTH = 256
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
-
-        @VisibleForTesting
-        const val MAX_LENGTH_VARCHAR = 4000
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -541,9 +540,9 @@ class DBCheckpointStorage(
 
     private fun Throwable.stackTraceToString(): String {
         var stackTraceStr = ExceptionUtils.getStackTrace(this)
-        if (stackTraceStr.length > MAX_LENGTH_VARCHAR) {
+        if (stackTraceStr.length > MAX_STACKTRACE_LENGTH) {
             // cut off the last line, which will be a half line
-            val truncateIndex = stackTraceStr.lastIndexOf('\n', MAX_LENGTH_VARCHAR - 1)
+            val truncateIndex = stackTraceStr.lastIndexOf('\n', MAX_STACKTRACE_LENGTH - 1)
             stackTraceStr = stackTraceStr.substring(0, truncateIndex + 1) // include last '\n' in
         }
         return stackTraceStr
