@@ -531,12 +531,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun <R : Any> await(operation: FlowExternalAsyncOperation<R>): R {
         // Wraps the passed in [FlowExternalAsyncOperation] so its [CompletableFuture] can be converted into a [CordaFuture]
-        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalAsyncOperation<R> {
-            override val operation = operation
-            override fun execute(deduplicationId: String): CordaFuture<R> {
-                return this.operation.execute(deduplicationId).asCordaFuture()
-            }
-        }
+        val flowAsyncOperation = WrappedFlowExternalAsyncOperation(operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
     }
@@ -550,18 +545,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalOperation<R>): R {
-        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalOperation<R> {
-            override val serviceHub = this@FlowLogic.serviceHub as ServiceHubCoreInternal
-            override val operation = operation
-            override fun execute(deduplicationId: String): CordaFuture<R> {
-                // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
-                // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
-                return CompletableFuture.supplyAsync(
-                    Supplier { this.operation.execute(deduplicationId) },
-                    serviceHub.externalOperationExecutor
-                ).asCordaFuture()
-            }
-        }
+        val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub as ServiceHubCoreInternal, operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
     }
@@ -571,21 +555,32 @@ abstract class FlowLogic<out T> {
  * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
  * [FlowExternalAsyncOperation].
  */
-private interface WrappedFlowExternalAsyncOperation<R : Any> {
-    val operation: FlowExternalAsyncOperation<R>
+private class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExternalAsyncOperation<R>) : FlowAsyncOperation<R> {
+    override fun execute(deduplicationId: String): CordaFuture<R> {
+        return operation.execute(deduplicationId).asCordaFuture()
+    }
 }
 
 /**
  * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
  * [FlowExternalOperation].
  *
- * The reference to [ServiceHub] is is also needed by Kryo to properly keep a reference to [ServiceHub] so that
+ * The reference to [ServiceHub] is also needed by Kryo to properly keep a reference to [ServiceHub] so that
  * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
  * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
  */
-private interface WrappedFlowExternalOperation<R : Any> {
-    val serviceHub: ServiceHub
+private class WrappedFlowExternalOperation<R : Any>(
+    val serviceHub: ServiceHubCoreInternal,
     val operation: FlowExternalOperation<R>
+) : FlowAsyncOperation<R> {
+    override fun execute(deduplicationId: String): CordaFuture<R> {
+        // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
+        // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
+        return CompletableFuture.supplyAsync(
+            Supplier { this.operation.execute(deduplicationId) },
+            serviceHub.externalOperationExecutor
+        ).asCordaFuture()
+    }
 }
 
 /**
