@@ -131,13 +131,23 @@ class DBCheckpointStorageTests {
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
-        val finalCheckpoint = updatedCheckpoint.copy(flowState = FlowState.Completed)
+    }
+
+    @Test(timeout = 300_000)
+    fun `update a checkpoint to completed`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.updateCheckpoint(id, finalCheckpoint, null)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+
+        val completedCheckpoint = checkpoint.copy(flowState = FlowState.Completed)
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, completedCheckpoint, null)
         }
         database.transaction {
             assertEquals(
-                    finalCheckpoint,
+                    completedCheckpoint,
                     checkpointStorage.checkpoints().single().deserialize()
             )
         }
