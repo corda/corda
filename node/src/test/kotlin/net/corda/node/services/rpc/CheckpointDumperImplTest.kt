@@ -5,6 +5,7 @@ import com.natpryce.hamkrest.containsSubstring
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import junit.framework.TestCase.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -49,6 +50,7 @@ import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.zip.ZipInputStream
+import kotlin.test.assertEquals
 
 class CheckpointDumperImplTest {
 
@@ -116,11 +118,11 @@ class CheckpointDumperImplTest {
         }
 
         dumper.dumpCheckpoints()
-	    checkDumpFile(organisation)
+	    checkDumpFile()
     }
 
     @Test(timeout=300_000)
-    fun `test checkpoint dumper with Completed FlowState`() {
+    fun `Checkpoint dumper doesn't output completed checkpoints`() {
         val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
         dumper.update(mockAfterStartEvent)
 
@@ -130,22 +132,30 @@ class CheckpointDumperImplTest {
             checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
         }
         val newCheckpoint = checkpoint.copy(
-            flowState = FlowState.Completed
+            flowState = FlowState.Completed,
+            status = Checkpoint.FlowStatus.COMPLETED
         )
         database.transaction {
             checkpointStorage.updateCheckpoint(id, newCheckpoint, null)
         }
 
         dumper.dumpCheckpoints()
-        checkDumpFile("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
+        checkDumpFileEmpty()
     }
 
-    private fun checkDumpFile(match: String) {
+    private fun checkDumpFile() {
         ZipInputStream(file.inputStream()).use { zip ->
             val entry = zip.nextEntry
             assertThat(entry.name, containsSubstring("json"))
             val content = zip.readFully()
-            assertThat(String(content), containsSubstring(match))
+            assertThat(String(content), containsSubstring(organisation))
+        }
+    }
+
+    private fun checkDumpFileEmpty() {
+        ZipInputStream(file.inputStream()).use { zip ->
+            val entry = zip.nextEntry
+            assertNull(entry)
         }
     }
 
