@@ -688,6 +688,8 @@ class FlowFrameworkTests {
         }
         // flow is in hospital
         assertTrue(flowState is FlowState.Unstarted)
+        val inMemoryHospitalizedCheckpointStatus = aliceNode.internals.smm.snapshot().first().transientState?.value?.checkpoint?.status
+        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, inMemoryHospitalizedCheckpointStatus)
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
