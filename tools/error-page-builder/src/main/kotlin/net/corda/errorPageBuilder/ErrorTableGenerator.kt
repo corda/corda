@@ -37,7 +37,6 @@ class ErrorTableGenerator(private val resourceLocation: String,
     private fun generateTable() : List<List<String>> {
         val table = mutableListOf<List<String>>()
         val loader = createLoader()
-        val rec = ResourceBundle.getBundle("database-missing-driver", Locale.getDefault(), loader)
         for (resource in listResources()) {
             val errorResource = ErrorResource("", resource, locale, classLoader = loader)
             table.add(listOf(resource, errorResource.aliases, errorResource.shortDescription, errorResource.actionsToFix))
@@ -54,7 +53,7 @@ class ErrorTableGenerator(private val resourceLocation: String,
         )
         val underlines = headings.map { "-".repeat(it.length) }
         val fullTable = listOf(headings, underlines) + tableData
-        return fullTable.joinToString(System.lineSeparator()) { it.joinToString(prefix = "|", postfix = "|", separator = "|") }
+        return fullTable.joinToString(System.lineSeparator()) { it.joinToString(prefix = "| ", postfix = " |", separator = " | ") }
     }
 
     fun generateMarkdown() : String {
