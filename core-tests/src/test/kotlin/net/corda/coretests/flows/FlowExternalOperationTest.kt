@@ -260,7 +260,10 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         FlowWithExternalProcess(party) {
 
         @Suspendable
-        override fun testCode(): Any = await(ExternalOperation(serviceHub) { _, _ -> throw createException() })
+        override fun testCode() {
+            val e = createException()
+            await(ExternalOperation(serviceHub) { _, _ -> throw e })
+        }
 
         private fun createException() = when (exceptionType) {
             HospitalizeFlowException::class.java -> HospitalizeFlowException("keep it around")
