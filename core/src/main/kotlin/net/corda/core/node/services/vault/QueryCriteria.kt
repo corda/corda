@@ -8,7 +8,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable

@@ -1,7 +1,6 @@
 package net.corda.node.utilities
 
 import org.junit.Test
-import java.net.InetAddress
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 

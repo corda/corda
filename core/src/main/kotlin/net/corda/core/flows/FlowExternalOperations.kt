@@ -1,7 +1,5 @@
 package net.corda.core.flows
 
-import net.corda.core.internal.ServiceHubCoreInternal
-import net.corda.core.node.ServiceHub
 import java.util.concurrent.CompletableFuture
 
 /**

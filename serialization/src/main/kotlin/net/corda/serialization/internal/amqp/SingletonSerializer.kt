@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.LocalTypeInformation
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 

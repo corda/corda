@@ -1,14 +1,6 @@
 package net.corda.node.services.diagnostics
 
 import net.corda.common.logging.CordaVersion
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappContext
-import net.corda.core.cordapp.CordappInfo
-import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.node.services.AttachmentId
-import net.corda.node.internal.cordapp.CordappProviderInternal
 import org.junit.Test
 import kotlin.test.assertEquals
 

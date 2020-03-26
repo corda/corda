@@ -29,7 +29,6 @@ import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
-import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
