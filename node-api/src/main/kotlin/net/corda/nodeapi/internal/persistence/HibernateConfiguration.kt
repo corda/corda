@@ -45,7 +45,7 @@ class HibernateConfiguration(
                 0 -> throw HibernateConfigException("Failed to find a SessionFactoryFactory to handle $jdbcUrl " +
                         "- factories present for ${serviceLoader.map { it.databaseType }}")
                 1 -> return sessionFactories.single()
-                else -> throw HibernateConfigException("Find several SessionFactoryFactory classes to handle $jdbcUrl " +
+                else -> throw HibernateConfigException("Found several SessionFactoryFactory classes to handle $jdbcUrl " +
                         "- classes ${sessionFactories.map { it.javaClass.canonicalName }}")
             }
         }
