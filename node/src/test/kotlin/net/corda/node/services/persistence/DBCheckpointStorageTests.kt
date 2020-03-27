@@ -8,6 +8,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.services.api.CheckpointStorage
@@ -52,6 +53,9 @@ internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
 
 class DBCheckpointStorageTests {
     private companion object {
+
+        val log = contextLogger()
+
         val ALICE = TestIdentity(ALICE_NAME, 70).party
     }
 
@@ -591,6 +595,7 @@ class DBCheckpointStorageTests {
                     this.stackTrace = smallerDummyStackTrace.toTypedArray()
                 }
         val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length // = 3985
+        log.info("smallerStackTraceSize = $smallerStackTraceSize")
         assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val biggerStackTraceException = java.lang.IllegalStateException()
@@ -598,6 +603,7 @@ class DBCheckpointStorageTests {
                     this.stackTrace = (smallerDummyStackTrace + dummyStackTraceElement).toTypedArray()
                 }
         val biggerStackTraceSize = ExceptionUtils.getStackTrace(biggerStackTraceException).length // = 4011
+        log.info("biggerStackTraceSize = $biggerStackTraceSize")
         assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
