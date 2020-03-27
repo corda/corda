@@ -604,6 +604,7 @@ class DBCheckpointStorageTests {
                 }
         val biggerStackTraceSize = ExceptionUtils.getStackTrace(biggerStackTraceException).length // = 4011
         log.info("biggerStackTraceSize = $biggerStackTraceSize")
+        log.info(ExceptionUtils.getStackTrace(biggerStackTraceException))
         assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
