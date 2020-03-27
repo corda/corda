@@ -384,10 +384,15 @@ class DBCheckpointStorage(
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
 
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
-        checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+        // if the flow failed or got hospitalized do not update [Checkpoint.checkpointState] or [Checkpoint.flowState]
+        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            entity.blob
+        } else {
+            val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
+            checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+            createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+        }
 
-        val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
         //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
