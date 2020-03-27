@@ -38,7 +38,7 @@ class ErrorTableGenerator(private val resourceLocation: String,
         val table = mutableListOf<List<String>>()
         val loader = createLoader()
         for (resource in listResources()) {
-            val errorResource = ErrorResource("", resource, locale, classLoader = loader)
+            val errorResource = ErrorResource(resource, locale, classLoader = loader)
             table.add(listOf(resource, errorResource.aliases, errorResource.shortDescription, errorResource.actionsToFix))
         }
         return table

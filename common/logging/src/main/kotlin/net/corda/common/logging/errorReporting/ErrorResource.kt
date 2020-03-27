@@ -9,16 +9,15 @@ import java.util.*
  *
  * This handles selecting the right properties from the resource bundle and formatting the error message.
  */
-class ErrorResource(resourceLocation: String,
-                    resourceName: String,
+class ErrorResource(private val resource: String,
                     private val locale: Locale,
                     private val parametersForTemplate: List<Any> = listOf(),
                     private val classLoader: ClassLoader? = null) {
 
     companion object {
         fun fromErrorCode(errorCode: ErrorCode, resourceLocation: String, locale: Locale) : ErrorResource {
-            val name = "${errorCode.namespace}-${errorCode.code}"
-            return ErrorResource(resourceLocation, name, locale, errorCode.parameters)
+            val resource = "$resourceLocation/${errorCode.namespace}-${errorCode.code}"
+            return ErrorResource(resource, locale, errorCode.parameters)
         }
 
         private const val MESSAGE_TEMPLATE = "errorTemplate"
@@ -26,8 +25,6 @@ class ErrorResource(resourceLocation: String,
         private const val ACTIONS_TO_FIX = "actionsToFix"
         private const val ALIASES = "aliases"
     }
-
-    private val resource = File(resourceLocation).resolve(resourceName).toString()
 
     private fun getProperty(propertyName: String) : String {
         val bundle = if (classLoader != null) {
