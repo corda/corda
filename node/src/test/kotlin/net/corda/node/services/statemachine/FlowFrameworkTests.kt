@@ -25,6 +25,7 @@ import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
@@ -665,6 +666,7 @@ class FlowFrameworkTests {
         var dbCheckpointStatusBeforeSuspension: Checkpoint.FlowStatus? = null
         var dbCheckpointStatusAfterSuspension: Checkpoint.FlowStatus? = null
         var inMemoryCheckpointStatusBeforeSuspension: Checkpoint.FlowStatus? = null
+        val futureFiber = openFuture<FlowStateMachineImpl<*>>().toCompletableFuture()
 
         SuspendingFlow.hookBeforeCheckpoint = {
             val flowFiber = this as? FlowStateMachineImpl<*>
@@ -673,9 +675,10 @@ class FlowFrameworkTests {
             if (firstExecution) {
                 throw HospitalizeFlowException()
             } else {
-                dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single()
-                        .second.status
+                dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatusBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
+
+                futureFiber.complete(flowFiber)
             }
         }
         SuspendingFlow.hookAfterCheckpoint = {
@@ -697,8 +700,7 @@ class FlowFrameworkTests {
         // restart Node - flow will be loaded from checkpoint
         firstExecution = false
         aliceNode = mockNet.restartNode(aliceNode)
-        val (_, future) = aliceNode.getSingleFlow<SuspendingFlow>()
-        future.getOrThrow()
+        futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, before and after suspension
         assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatusBeforeSuspension)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatusBeforeSuspension)
@@ -711,6 +713,7 @@ class FlowFrameworkTests {
         var flowState: FlowState? = null
         var dbCheckpointStatus: Checkpoint.FlowStatus? = null
         var inMemoryCheckpointStatus: Checkpoint.FlowStatus? = null
+        val futureFiber = openFuture<FlowStateMachineImpl<*>>().toCompletableFuture()
 
         SuspendingFlow.hookAfterCheckpoint = {
             val flowFiber = this as? FlowStateMachineImpl<*>
@@ -721,6 +724,8 @@ class FlowFrameworkTests {
             } else {
                 dbCheckpointStatus = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatus = flowFiber.transientState!!.value.checkpoint.status
+
+                futureFiber.complete(flowFiber)
             }
         }
 
@@ -736,8 +741,7 @@ class FlowFrameworkTests {
         // restart Node - flow will be loaded from checkpoint
         firstExecution = false
         aliceNode = mockNet.restartNode(aliceNode)
-        val (_, future) = aliceNode.getSingleFlow<SuspendingFlow>()
-        future.getOrThrow()
+        futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, after suspension
         assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatus)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
