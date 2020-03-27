@@ -547,8 +547,9 @@ class DBCheckpointStorage(
         var stackTraceStr = ExceptionUtils.getStackTrace(this)
         if (stackTraceStr.length > MAX_STACKTRACE_LENGTH) {
             // cut off the last line, which will be a half line
-            val truncateIndex = stackTraceStr.lastIndexOf('\n', MAX_STACKTRACE_LENGTH - 1)
-            stackTraceStr = stackTraceStr.substring(0, truncateIndex + 1) // include last '\n' in
+            val lineBreak = System.getProperty("line.separator")
+            val truncateIndex = stackTraceStr.lastIndexOf(lineBreak, MAX_STACKTRACE_LENGTH - 1)
+            stackTraceStr = stackTraceStr.substring(0, truncateIndex + lineBreak.length) // include last line break in
         }
         return stackTraceStr
     }
