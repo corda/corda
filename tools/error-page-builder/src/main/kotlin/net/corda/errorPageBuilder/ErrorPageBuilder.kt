@@ -3,6 +3,7 @@ package net.corda.errorPageBuilder
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
+import net.corda.common.logging.errorReporting.CordaErrorContextProvider
 import picocli.CommandLine
 import java.io.File
 import java.lang.IllegalArgumentException

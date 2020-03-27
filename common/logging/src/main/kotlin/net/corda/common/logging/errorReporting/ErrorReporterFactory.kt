@@ -17,7 +17,7 @@ object ErrorReporterFactory {
         return if (localeToUse == null || resourceLocationToUse == null) {
             UnsetErrorReporter()
         } else {
-            ErrorReporterImpl(resourceLocationToUse, localeToUse)
+            ErrorReporterImpl(resourceLocationToUse, localeToUse, CordaErrorContextProvider())
         }
     }
 }

@@ -9,7 +9,8 @@ internal const val ERROR_CODE_MESSAGE = "errorCodeMessage"
 internal const val ERROR_CODE_URL = "errorCodeUrl"
 
 internal class ErrorReporterImpl(private val resourceLocation: String,
-                                 private val locale: Locale) : ErrorReporter {
+                                 private val locale: Locale,
+                                 private val errorContextProvider: ErrorContextProvider) : ErrorReporter {
 
     private fun formatCodeForLogs(error: ErrorCode) : String {
         return "${error.namespace}-${error.code}"
@@ -25,7 +26,7 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
     private fun constructErrorInfoBar(error: ErrorCode) : String {
         val resource = "$resourceLocation/$ERROR_BAR_RESOURCE"
         val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(formatCodeForLogs(error)))
-        val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(locale.toLanguageTag(), formatCodeForLogs(error)))
+        val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(errorContextProvider.getURL(locale)))
         return "[$codeMessage, $urlMessage]"
     }
 

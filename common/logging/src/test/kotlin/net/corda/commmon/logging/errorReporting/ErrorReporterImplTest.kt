@@ -2,6 +2,7 @@ package net.corda.commmon.logging.errorReporting
 
 import junit.framework.TestCase.assertEquals
 import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.ErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorReporterImpl
 import org.junit.After
 import org.junit.Test
@@ -14,10 +15,25 @@ import java.util.*
 
 class ErrorReporterImplTest {
 
+    companion object {
+        private const val TEST_URL = "test-url"
+    }
+
     private val logs: MutableList<Any> = mutableListOf()
 
     private val loggerMock = Mockito.mock(Logger::class.java).also {
         Mockito.`when`(it.error(anyString())).then { logs.addAll(it.arguments) }
+    }
+
+    private val contextProvider: ErrorContextProvider  = object : ErrorContextProvider {
+        override fun getURL(locale: Locale): String {
+            return "$TEST_URL/${locale.toLanguageTag()}"
+        }
+    }
+
+    private fun createReporterImpl(localeTag: String?) : ErrorReporterImpl {
+        val locale = if (localeTag != null) Locale.forLanguageTag(localeTag) else Locale.getDefault()
+        return ErrorReporterImpl("errorReporting", locale, contextProvider)
     }
 
     @After
@@ -32,9 +48,9 @@ class ErrorReporterImplTest {
             override val code = "case1"
             override val parameters = listOf<Any>()
         }
-        val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("en-US"))
+        val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test-case1, URL: en-US/test-case1]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/en-US]"), logs)
     }
 
     @Test(timeout = 300_00)
@@ -45,10 +61,10 @@ class ErrorReporterImplTest {
             override val code = "case2"
             override val parameters: List<Any> = listOf("foo", 1, currentDate)
         }
-        val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("en-US"))
+        val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
         val format = DateFormat.getDateInstance(DateFormat.LONG, Locale.forLanguageTag("en-US"))
-        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test-case2, URL: en-US/test-case2]"), logs)
+        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test-case2, URL: $TEST_URL/en-US]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -58,9 +74,9 @@ class ErrorReporterImplTest {
             override val code = "case1"
             override val parameters = listOf<Any>()
         }
-        val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("fr-FR"))
+        val testReporter = createReporterImpl("fr-FR")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test-case1, URL: fr-FR/test-case1]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/fr-FR]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -70,8 +86,8 @@ class ErrorReporterImplTest {
             override val code = "case1"
             override val parameters = listOf<Any>()
         }
-        val testReporter = ErrorReporterImpl("errorReporting", Locale.forLanguageTag("ga-IE"))
+        val testReporter = createReporterImpl("ga-IE")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1, URL: ga-IE/test-case1]"), logs)
+        assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1, URL: $TEST_URL/ga-IE]"), logs)
     }
 }
