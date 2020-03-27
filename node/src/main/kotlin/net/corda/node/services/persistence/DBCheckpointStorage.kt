@@ -384,7 +384,12 @@ class DBCheckpointStorage(
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
 
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
+        val serializedCheckpointState = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            SerializedBytes(entity.blob.checkpoint)
+        } else {
+            checkpoint.checkpointState.storageSerialize()
+        }
+
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
