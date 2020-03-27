@@ -26,10 +26,14 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import kotlin.test.assertFailsWith
 
+@RunWith(Parameterized::class)
 @Suppress("FunctionName")
-class ContractWithMissingCustomSerializerTest {
+class ContractWithMissingCustomSerializerTest(private val runInProcess: Boolean) {
     companion object {
         const val BOBBINS = 5000L
 
@@ -37,14 +41,18 @@ class ContractWithMissingCustomSerializerTest {
         val flowCorDapp = cordappWithPackages("net.corda.flows.serialization.missing").signed()
         val contractCorDapp = cordappWithPackages("net.corda.contracts.serialization.missing").signed()
 
-        fun driverParameters(cordapps: List<TestCordapp>): DriverParameters {
+        fun driverParameters(cordapps: List<TestCordapp>, runInProcess: Boolean): DriverParameters {
             return DriverParameters(
                 portAllocation = incrementalPortAllocation(),
-                startNodesInProcess = false,
+                startNodesInProcess = runInProcess,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
                 cordappsForAllNodes = cordapps
             )
         }
+
+        @Parameters
+        @JvmStatic
+        fun modes(): List<Array<Boolean>> = listOf(Array(1) { true }, Array(1) { false })
 
         @BeforeClass
         @JvmStatic
@@ -62,7 +70,7 @@ class ContractWithMissingCustomSerializerTest {
         val flowId = flowCorDapp.jarFile.hash
         val fixupCorDapp = cordappWithFixups(listOf(setOf(contractId) to setOf(contractId, flowId))).signed()
 
-        driver(driverParameters(listOf(flowCorDapp, contractCorDapp, fixupCorDapp))) {
+        driver(driverParameters(listOf(flowCorDapp, contractCorDapp, fixupCorDapp), runInProcess)) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<ContractRejection> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
@@ -83,7 +91,7 @@ class ContractWithMissingCustomSerializerTest {
      */
     @Test(timeout=300_000)
 	fun `flow with missing custom serializer but without fixup`() {
-        driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
+        driver(driverParameters(listOf(flowCorDapp, contractCorDapp), runInProcess)) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<BrokenTransactionException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
@@ -104,7 +112,7 @@ class ContractWithMissingCustomSerializerTest {
      */
     @Test(timeout=300_000)
 	fun `transaction builder flow with missing custom serializer by rpc`() {
-        driver(driverParameters(listOf(flowCorDapp, contractCorDapp))) {
+        driver(driverParameters(listOf(flowCorDapp, contractCorDapp), runInProcess)) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val ex = assertFailsWith<CordaRuntimeException> {
                 CordaRPCClient(hostAndPort = alice.rpcAddress)
