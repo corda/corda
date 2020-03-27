@@ -556,7 +556,7 @@ class DBCheckpointStorageTests {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
         val dummyStackTraceElement = StackTraceElement("class", "method", "file", 0)
 
-        for (i in 0..151) {
+        for (i in 0 until iterationsBasedOnLineSeparatorLength()) {
             smallerDummyStackTrace.add(dummyStackTraceElement)
         }
 
@@ -564,7 +564,7 @@ class DBCheckpointStorageTests {
                 .apply {
                     this.stackTrace = smallerDummyStackTrace.toTypedArray()
                 }
-        val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length // = 3985
+        val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length
         assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
@@ -586,7 +586,7 @@ class DBCheckpointStorageTests {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
         val dummyStackTraceElement = StackTraceElement("class", "method", "file", 0)
 
-        for (i in 0..151) {
+        for (i in 0 until iterationsBasedOnLineSeparatorLength()) {
             smallerDummyStackTrace.add(dummyStackTraceElement)
         }
 
@@ -594,7 +594,7 @@ class DBCheckpointStorageTests {
                 .apply {
                     this.stackTrace = smallerDummyStackTrace.toTypedArray()
                 }
-        val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length // = 3985
+        val smallerStackTraceSize = ExceptionUtils.getStackTrace(smallerStackTraceException).length
         log.info("smallerStackTraceSize = $smallerStackTraceSize")
         assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
@@ -602,7 +602,7 @@ class DBCheckpointStorageTests {
                 .apply {
                     this.stackTrace = (smallerDummyStackTrace + dummyStackTraceElement).toTypedArray()
                 }
-        val biggerStackTraceSize = ExceptionUtils.getStackTrace(biggerStackTraceException).length // = 4011
+        val biggerStackTraceSize = ExceptionUtils.getStackTrace(biggerStackTraceException).length
         log.info("biggerStackTraceSize = $biggerStackTraceSize")
         assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
@@ -620,6 +620,14 @@ class DBCheckpointStorageTests {
             assertEquals(smallerStackTraceSize, persistedStackTrace.length)
             assertEquals(ExceptionUtils.getStackTrace(smallerStackTraceException), persistedStackTrace)
         }
+    }
+
+    private fun iterationsBasedOnLineSeparatorLength() = when {
+        System.getProperty("line.separator").length == 1 -> // Linux or Mac
+            158
+        System.getProperty("line.separator").length == 2 -> // Windows
+            152
+        else -> throw IllegalStateException("Unknown line.separator")
     }
 
     private fun newCheckpointStorage() {
