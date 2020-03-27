@@ -582,7 +582,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `-greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets truncated, to MAX_LENGTH_VARCHAR, and persisted`() {
+    fun `-greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets truncated to MAX_LENGTH_VARCHAR, and persisted`() {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
         val dummyStackTraceElement = StackTraceElement("class", "method", "file", 0)
 
