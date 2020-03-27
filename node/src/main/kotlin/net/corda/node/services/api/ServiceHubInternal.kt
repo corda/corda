@@ -261,6 +261,12 @@ interface WritableTransactionStorage : TransactionStorage {
      * ID exists.
      */
     fun getTransactionInternal(id: SecureHash): Pair<SignedTransaction, Boolean>?
+
+    /**
+     * Returns a future that completes with the transaction corresponding to [id] once it has been committed. Do not warn when run inside
+     * a DB transaction.
+     */
+    fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction>
 }
 
 /**
