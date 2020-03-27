@@ -384,7 +384,7 @@ class DBCheckpointStorage(
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
 
-        // if the flow failed or got hospitalized do not update [Checkpoint.checkpointState] or [Checkpoint.flowState]
+        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
         val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
             entity.blob
         } else {
