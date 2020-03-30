@@ -74,6 +74,7 @@ see changes to this list.
 * David Lee (BCS)
 * Dinesh Rivankar (Persistent Systems Limited)
 * Dirk Hermans (KBC)
+* Dirkjan Ochtman (ING)
 * dmytrobr
 * Edward Greenwood (State Street)
 * Elendu Uche (APPZONE)
