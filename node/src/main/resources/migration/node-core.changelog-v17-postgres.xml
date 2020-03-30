@@ -81,7 +81,7 @@
             <column name="type" type="NVARCHAR(256)">
                 <constraints nullable="false"/>
             </column>
-            <column name="exception_message" type="NVARCHAR(8192)">
+            <column name="exception_message" type="NVARCHAR(1024)">
                 <constraints nullable="true"/>
             </column>
             <column name="stack_trace" type="NVARCHAR(4000)">
