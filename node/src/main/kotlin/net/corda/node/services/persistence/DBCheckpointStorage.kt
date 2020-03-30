@@ -55,6 +55,7 @@ class DBCheckpointStorage(
         @VisibleForTesting
         const val MAX_STACKTRACE_LENGTH = 4000
         const val MAX_EXC_MSG_LENGTH = 4000
+        private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
 
@@ -493,8 +494,8 @@ class DBCheckpointStorage(
     private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
-                type = it::class.java.name,
-                message = it.message?.truncate(MAX_EXC_MSG_LENGTH),
+                type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+                message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
                 stackTrace = it.stackTraceToString(),
                 value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
                 persistedInstant = now
@@ -544,9 +545,12 @@ class DBCheckpointStorage(
         else -> false
     }
 
-    private fun String.truncate(maxLength: Int): String {
+    private fun String.truncate(maxLength: Int, withWarnings: Boolean): String {
         var str = this
         if (length > maxLength) {
+            if (withWarnings) {
+                log.warn("Truncating long string before storing it into the database. String: $str.")
+            }
             str = str.substring(0, maxLength)
         }
         return str
