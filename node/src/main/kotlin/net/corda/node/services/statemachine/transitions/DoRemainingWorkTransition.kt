@@ -24,10 +24,11 @@ class DoRemainingWorkTransition(
 
     // If the flow is clean check the FlowState
     private fun cleanTransition(): TransitionResult {
-        val checkpoint = startingState.checkpoint
-        return when (checkpoint.flowState) {
-            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, checkpoint.flowState).transition()
-            is FlowState.Started -> StartedFlowTransition(context, startingState, checkpoint.flowState).transition()
+        val flowState = startingState.checkpoint.flowState
+        return when (flowState) {
+            is FlowState.Unstarted -> UnstartedFlowTransition(context, startingState, flowState).transition()
+            is FlowState.Started -> StartedFlowTransition(context, startingState, flowState).transition()
+            is FlowState.Completed -> throw IllegalStateException("Cannot transition a state with completed flow state.")
         }
     }
 

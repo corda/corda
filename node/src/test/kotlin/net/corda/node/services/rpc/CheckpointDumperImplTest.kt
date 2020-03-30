@@ -5,21 +5,26 @@ import com.natpryce.hamkrest.containsSubstring
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import junit.framework.TestCase.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.toNonEmptySet
 import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
@@ -40,10 +45,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.zip.ZipInputStream
+import kotlin.test.assertEquals
 
 class CheckpointDumperImplTest {
 
@@ -111,7 +118,29 @@ class CheckpointDumperImplTest {
         }
 
         dumper.dumpCheckpoints()
-        checkDumpFile()
+	    checkDumpFile()
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint dumper doesn't output completed checkpoints`() {
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
+        dumper.update(mockAfterStartEvent)
+
+        // add a checkpoint
+        val (id, checkpoint) = newCheckpoint()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+        }
+        val newCheckpoint = checkpoint.copy(
+            flowState = FlowState.Completed,
+            status = Checkpoint.FlowStatus.COMPLETED
+        )
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, null)
+        }
+
+        dumper.dumpCheckpoints()
+        checkDumpFileEmpty()
     }
 
     private fun checkDumpFile() {
@@ -120,6 +149,13 @@ class CheckpointDumperImplTest {
             assertThat(entry.name, containsSubstring("json"))
             val content = zip.readFully()
             assertThat(String(content), containsSubstring(organisation))
+        }
+    }
+
+    private fun checkDumpFileEmpty() {
+        ZipInputStream(file.inputStream()).use { zip ->
+            val entry = zip.nextEntry
+            assertNull(entry)
         }
     }
 
@@ -147,7 +183,7 @@ class CheckpointDumperImplTest {
                 object : CheckpointPerformanceRecorder {
                     override fun record(
                         serializedCheckpointState: SerializedBytes<CheckpointState>,
-                        serializedFlowState: SerializedBytes<FlowState>
+                        serializedFlowState: SerializedBytes<FlowState>?
                     ) {
                         // do nothing
                     }

@@ -134,6 +134,26 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
+    fun `update a checkpoint to completed`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+
+        val completedCheckpoint = checkpoint.copy(flowState = FlowState.Completed)
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, completedCheckpoint, null)
+        }
+        database.transaction {
+            assertEquals(
+                    completedCheckpoint,
+                    checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `remove checkpoint`() {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
@@ -530,7 +550,8 @@ class DBCheckpointStorageTests {
         val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED) // is considered runnable
 
         database.transaction {
-            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            val serializedFlowState =
+                    checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), runnable, serializedFlowState)
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), hospitalized, serializedFlowState)
@@ -551,7 +572,7 @@ class DBCheckpointStorageTests {
                 object : CheckpointPerformanceRecorder {
                     override fun record(
                         serializedCheckpointState: SerializedBytes<CheckpointState>,
-                        serializedFlowState: SerializedBytes<FlowState>
+                        serializedFlowState: SerializedBytes<FlowState>?
                     ) {
                         // do nothing
                     }

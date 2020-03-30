@@ -95,11 +95,18 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
         val checkpoint = action.checkpoint
-        val serializedFlowState = checkpoint.flowState.checkpointSerialize(checkpointSerializationContext)
+        val flowState = checkpoint.flowState
+        val serializedFlowState = when(flowState) {
+            FlowState.Completed -> null
+            else -> flowState.checkpointSerialize(checkpointSerializationContext)
+        }
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
         } else {
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState)
+            if (flowState is FlowState.Completed) {
+                throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
+            }
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!)
         }
     }
 

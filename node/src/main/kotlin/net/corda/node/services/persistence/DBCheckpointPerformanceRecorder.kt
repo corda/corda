@@ -17,7 +17,7 @@ interface CheckpointPerformanceRecorder {
     /**
      * Record performance metrics regarding the serialized size of [CheckpointState] and [FlowState]
      */
-    fun record(serializedCheckpointState: SerializedBytes<CheckpointState>, serializedFlowState: SerializedBytes<FlowState>)
+    fun record(serializedCheckpointState: SerializedBytes<CheckpointState>, serializedFlowState: SerializedBytes<FlowState>?)
 }
 
 class DBCheckpointPerformanceRecorder(metrics: MetricRegistry) : CheckpointPerformanceRecorder {
@@ -44,8 +44,15 @@ class DBCheckpointPerformanceRecorder(metrics: MetricRegistry) : CheckpointPerfo
         }
     }
 
-    override fun record(serializedCheckpointState: SerializedBytes<CheckpointState>, serializedFlowState: SerializedBytes<FlowState>) {
-        val totalSize = serializedCheckpointState.size.toLong() + serializedFlowState.size.toLong()
+    override fun record(serializedCheckpointState: SerializedBytes<CheckpointState>, serializedFlowState: SerializedBytes<FlowState>?) {
+        /* For now we don't record states where the serializedFlowState is null and thus the checkpoint is in a completed state.
+           As this will skew the mean with lots of small checkpoints. For the moment we only measure runnable checkpoints. */
+        serializedFlowState?.let {
+            updateData(serializedCheckpointState.size.toLong() + it.size.toLong())
+        }
+    }
+
+    private fun updateData(totalSize: Long) {
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(totalSize)
         var lastUpdateTime = lastBandwidthUpdate.get()

@@ -149,7 +149,7 @@ data class Checkpoint(
      */
     data class Serialized(
         val serializedCheckpointState: SerializedBytes<CheckpointState>,
-        val serializedFlowState: SerializedBytes<FlowState>,
+        val serializedFlowState: SerializedBytes<FlowState>?,
         val errorState: ErrorState,
         val result: SerializedBytes<Any>?,
         val status: FlowStatus,
@@ -165,7 +165,7 @@ data class Checkpoint(
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             return Checkpoint(
                 checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
-                flowState = serializedFlowState.checkpointDeserialize(checkpointSerializationContext),
+                flowState = serializedFlowState?.checkpointDeserialize(checkpointSerializationContext) ?: FlowState.Completed,
                 errorState = errorState,
                 result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
                 status = status,
@@ -299,6 +299,12 @@ sealed class FlowState {
     ) : FlowState() {
         override fun toString() = "Started(flowIORequest=$flowIORequest, frozenFiber=${frozenFiber.hash})"
     }
+
+    /**
+     * The flow has completed. It does not have a running fiber that needs to be serialized and checkpointed.
+     */
+    object Completed : FlowState()
+
 }
 
 /**

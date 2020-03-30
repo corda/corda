@@ -67,6 +67,7 @@ import org.assertj.core.api.Condition
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -103,7 +104,7 @@ class FlowFrameworkTests {
         object : CheckpointPerformanceRecorder {
             override fun record(
                 serializedCheckpointState: SerializedBytes<CheckpointState>,
-                serializedFlowState: SerializedBytes<FlowState>
+                serializedFlowState: SerializedBytes<FlowState>?
             ) {
                 // do nothing
             }
@@ -342,13 +343,14 @@ class FlowFrameworkTests {
 
     //We should update this test when we do the work to persists the flow result.
     @Test(timeout = 300_000)
-    fun `Flow status is set to completed in database when the flow finishes`() {
+    fun `Flow status is set to completed in database when the flow finishes and serialised flow state is null`() {
         val terminationSignal = Semaphore(0)
         val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
         mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
+            assertNotNull(checkpoint.serializedFlowState)
             assertNotEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
         }
         terminationSignal.release()
@@ -356,6 +358,7 @@ class FlowFrameworkTests {
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
             assertNull(checkpoint!!.result)
+            assertNull(checkpoint.serializedFlowState)
             assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
         }
     }

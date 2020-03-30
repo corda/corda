@@ -780,11 +780,10 @@ class SingleThreadedStateMachineManager(
             initialDeduplicationHandler: DeduplicationHandler?
     ): Flow? {
         val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
-        val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
-        val fiber = when (flowState) {
+        val fiber = when (checkpoint.flowState) {
             is FlowState.Unstarted -> {
-                val logic = tryCheckpointDeserialize(flowState.frozenFlowLogic, id) ?: return null
+                val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -803,7 +802,7 @@ class SingleThreadedStateMachineManager(
                 fiber
             }
             is FlowState.Started -> {
-                val fiber = tryCheckpointDeserialize(flowState.frozenFiber, id) ?: return null
+                val fiber = tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -819,6 +818,9 @@ class SingleThreadedStateMachineManager(
                 fiber.transientState = TransientReference(state)
                 fiber.logic.stateMachine = fiber
                 fiber
+            }
+            is FlowState.Completed -> {
+                return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
             }
         }
 
@@ -847,15 +849,20 @@ class SingleThreadedStateMachineManager(
                 val flowLogic = flow.fiber.logic
                 if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
-                when (checkpoint.flowState) {
-                    is FlowState.Unstarted -> {
-                        flow.fiber.start()
-                    }
-                    is FlowState.Started -> {
-                        Fiber.unparkDeserialized(flow.fiber, scheduler)
-                    }
-                }
+                startOrResume(checkpoint, flow)
             }
+        }
+    }
+
+    private fun startOrResume(checkpoint: Checkpoint, flow: Flow) {
+        when (checkpoint.flowState) {
+            is FlowState.Unstarted -> {
+                flow.fiber.start()
+            }
+            is FlowState.Started -> {
+                Fiber.unparkDeserialized(flow.fiber, scheduler)
+            }
+            is FlowState.Completed -> throw IllegalStateException("Cannot start (or resume) a completed flow.")
         }
     }
 

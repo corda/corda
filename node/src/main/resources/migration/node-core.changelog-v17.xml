@@ -47,7 +47,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="flow_state" type="blob">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>
