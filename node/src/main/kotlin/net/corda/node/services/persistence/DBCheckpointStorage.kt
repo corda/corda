@@ -54,6 +54,7 @@ class DBCheckpointStorage(
 
         @VisibleForTesting
         const val MAX_STACKTRACE_LENGTH = 4000
+        const val MAX_EXC_MSG_LENGTH = 4000
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
 
@@ -493,7 +494,7 @@ class DBCheckpointStorage(
         return errorState.errors.last().exception.let {
             DBFlowException(
                 type = it::class.java.name,
-                message = it.message,
+                message = it.message?.truncate(MAX_EXC_MSG_LENGTH),
                 stackTrace = it.stackTraceToString(),
                 value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
                 persistedInstant = now
@@ -541,6 +542,14 @@ class DBCheckpointStorage(
     private fun Checkpoint.isFinished() = when(status) {
         FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
         else -> false
+    }
+
+    private fun String.truncate(maxLength: Int): String {
+        var str = this
+        if (length > maxLength) {
+            str = str.substring(0, maxLength)
+        }
+        return str
     }
 
     private fun Throwable.stackTraceToString(): String {
