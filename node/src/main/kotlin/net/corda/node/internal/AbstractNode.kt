@@ -159,7 +159,9 @@ import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -174,6 +176,7 @@ import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 import java.sql.Connection
+import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
@@ -187,6 +190,7 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import javax.persistence.PersistenceException
 import kotlin.collections.ArrayList
 
 /**
@@ -1163,9 +1167,39 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun jdbcSession(): Connection = database.createSession()
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-            return database.transaction {
+            return database.transaction(useErrorHandler = false) {
                 session.flush()
-                block(restrictedEntityManager)
+                val manager = entityManager
+                withSavePoint { savepoint ->
+                    // Restrict what entity manager they can use inside the block
+                    try {
+                        block(RestrictedEntityManager(manager)).also {
+                            if (!manager.transaction.rollbackOnly) {
+                                manager.flush()
+                            } else {
+                                connection.rollback(savepoint)
+                                // mark flow as errored?
+                            }
+                        }
+                    } catch (e: PersistenceException) {
+                        // do we need this if statement?
+                        // can we assume that receiving a persistence exception is enough to denote a rollback?
+                        if (manager.transaction.rollbackOnly) {
+                            connection.rollback(savepoint)
+                        }
+                        throw e
+                    }
+                }
+            }
+        }
+
+        private fun <T: Any?> DatabaseTransaction.withSavePoint(block: (savepoint: Savepoint) -> T) : T {
+            val savepoint = connection.setSavepoint()
+            return try {
+                block(savepoint)
+            } finally {
+                // Release the save point even if we occur an error
+                connection.releaseSavepoint(savepoint)
             }
         }
 

@@ -39,9 +39,13 @@ class DatabaseTransaction(
     }
 
     // Returns a delegate which overrides certain operations that we do not want CorDapp developers to call.
-    val restrictedEntityManager: RestrictedEntityManager by lazy {
-        val entityManager = session as EntityManager
-        RestrictedEntityManager(entityManager)
+
+    val entityManager: EntityManager get() {
+        // Always retrieve new session ([Session] implements [EntityManager])
+        // Note, this does not replace the top level hibernate session
+        val session = database.entityManagerFactory.withOptions().connection(connection).openSession()
+        session.beginTransaction()
+        return session
     }
 
     val session: Session by sessionDelegate
@@ -73,6 +77,11 @@ class DatabaseTransaction(
             throw DatabaseTransactionException(it)
         }
         if (sessionDelegate.isInitialized()) {
+            // The [sessionDelegate] must be initialised otherwise calling [entityManager] will cause an exception
+            if(session.transaction.rollbackOnly) {
+                // I might be able to move this out if I am using the original session now?
+                throw RolledBackDatabaseSessionException()
+            }
             hibernateTransaction.commit()
         }
         connection.commit()
@@ -125,3 +134,8 @@ class DatabaseTransaction(
  * Wrapper exception, for any exception registered as [DatabaseTransaction.firstExceptionInDatabaseTransaction].
  */
 class DatabaseTransactionException(override val cause: Throwable): CordaRuntimeException(cause.message, cause)
+
+// should this just be an `IllegalStateException`?
+class RolledBackDatabaseSessionException : CordaRuntimeException(
+    "Further operations are being executed on a rolled back database session"
+)
