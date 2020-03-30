@@ -62,6 +62,7 @@ import rx.Observable
 import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
 import java.math.BigInteger
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
@@ -148,6 +149,14 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                cordappsForAllNodes: Collection<TestCordappInternal> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
+    companion object {
+        fun createCordappClassLoader(cordapps: Collection<TestCordappInternal>?): URLClassLoader? {
+            if (cordapps == null || cordapps.isEmpty()) {
+                return null
+            }
+            return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
+        }
+    }
 
     var networkParameters: NetworkParameters = initialNetworkParameters
         private set
@@ -168,9 +177,12 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     private val networkId = random63BitValue()
     private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = checkNotNull(setDriverSerialization()) { "Using more than one mock network simultaneously is not supported." }
     private val sharedUserCount = AtomicInteger(0)
     private val combinedCordappsForAllNodes = cordappsForPackages(cordappPackages) + cordappsForAllNodes
+    private val cordappClassLoader = createCordappClassLoader(combinedCordappsForAllNodes)
+    private val serializationEnv = checkNotNull(setDriverSerialization(cordappClassLoader)) {
+        "Using more than one mock network simultaneously is not supported."
+    }
 
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -565,11 +577,13 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     fun stopNodes() {
-        // Serialization env must be unset even if other parts of this method fail.
-        serializationEnv.use {
-            nodes.forEach { it.started?.dispose() }
+        cordappClassLoader.use { _ ->
+            // Serialization env must be unset even if other parts of this method fail.
+            serializationEnv.use {
+                nodes.forEach { it.started?.dispose() }
+            }
+            messagingNetwork.stop()
         }
-        messagingNetwork.stop()
     }
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
