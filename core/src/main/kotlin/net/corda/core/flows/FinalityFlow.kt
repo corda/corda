@@ -40,11 +40,11 @@ import net.corda.core.utilities.debug
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
 @InitiatingFlow
 class FinalityFlow private constructor(val transaction: SignedTransaction,
-                                       private val oldParticipants: Collection<Party>,
+                                       val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
-                                       private val sessions: Collection<FlowSession>,
-                                       private val newApi: Boolean,
-                                       private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+                                       val sessions: Collection<FlowSession>,
+                                       val newApi: Boolean,
+                                       val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
             transaction, extraRecipients, progressTracker, emptyList(), false
