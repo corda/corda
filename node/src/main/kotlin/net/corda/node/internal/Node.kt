@@ -8,7 +8,6 @@ import com.jcabi.manifests.Manifests
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import io.netty.util.NettyRuntime
-import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -44,9 +43,6 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -78,8 +74,13 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
+import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -502,7 +503,7 @@ open class Node(configuration: NodeConfiguration,
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
     override fun startDatabase() {
-        val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
+        val databaseUrl = configuration.dataSourceProperties.getProperty(DATA_SOURCE_URL)
         val h2Prefix = "jdbc:h2:file:"
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {

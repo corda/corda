@@ -28,11 +28,20 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", "validate")
+
+        databaseConfig.schema?.apply {
+            config.setProperty("hibernate.default_schema", this)
+        }
+        databaseConfig.hibernateDialect?.apply {
+            config.setProperty("hibernate.dialect", this)
+        }
+
+        return config
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {

@@ -20,7 +20,7 @@ class HibernateConfigurationFactoryLoadingTest {
                     cacheFactory)
             Assert.fail("Expected exception not thrown")
         } catch (e: HibernateConfigException) {
-            Assert.assertEquals("Failed to find a SessionFactoryFactory to handle $jdbcUrl - factories present for ${presentFactories}", e.message)
+            Assert.assertEquals("Could not create Hibernate configuration. Reason: Failed to find a SessionFactoryFactory to handle $jdbcUrl - factories present for ${presentFactories}", e.message)
         }
     }
 }

@@ -276,7 +276,12 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
         val config = configuration.withOptions(options)
-        return valid(DatabaseConfig(config[initialiseSchema], config[initialiseAppSchema], config[transactionIsolationLevel], config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(config[initialiseSchema],
+                config[initialiseSchema],
+                config[initialiseAppSchema],
+                config[transactionIsolationLevel],
+                exportHibernateJMXStatistics = config[exportHibernateJMXStatistics],
+                mappedSchemaCacheSize = config[mappedSchemaCacheSize]))
     }
 }
 
