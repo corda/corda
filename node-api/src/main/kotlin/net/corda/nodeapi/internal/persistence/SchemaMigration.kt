@@ -192,12 +192,11 @@ class SchemaMigration(
      */
     fun nodeStartup(existingCheckpoints: Boolean, isH2Database: Boolean) {
         when {
-            //Enterprise - OS diff: the initialiseSchema flag is checked against a H2 database only
+            // the initialiseSchema flag is checked against a H2 database only
             isH2Database && databaseConfig.initialiseSchema -> {
                 migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
                 runMigration(existingCheckpoints)
             }
-            //Enterprise only runMigration flag
             !isH2Database && databaseConfig.runMigration -> runMigration(existingCheckpoints)
             else -> checkState()
         }
@@ -258,6 +257,7 @@ class SchemaMigration(
         }
     }
 
+    @Suppress("ComplexMethod", "ThrowsCount")
     private fun doRunMigration(
             run: Boolean,
             outputWriter: Writer?,
@@ -305,7 +305,6 @@ class SchemaMigration(
             if (ourName != null) {
                 System.setProperty(NODE_X500_NAME, ourName.toString())
             }
-
 
             // current version of Liquibase appears to be non-threadsafe
             // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -387,9 +386,8 @@ class SchemaMigration(
                     check && !run -> {
                     } // Do nothing will be interpreted as "check succeeded"
                     outputWriter != null && !check && !run -> {
-                        // Enterprise only
                         runner.changeLogParameters.set(DRY_RUN, "true")
-                        System.setProperty(DRY_RUN, "true") // Enterprise only: disable VaultSchemaMigration for dry-run
+                        System.setProperty(DRY_RUN, "true") // disable VaultSchemaMigration for dry-run
                         runner.update(Contexts(), outputWriter)
                     }
                     else -> throw IllegalStateException("Invalid usage.")
@@ -413,6 +411,7 @@ class SchemaMigration(
                 "outputDefaultSchema=${this.database.outputDefaultSchema}, objectQuotingStrategy=${this.database.objectQuotingStrategy}")
     }
 
+    @Suppress("ComplexMethod")
     private fun getLiquibaseDatabase(conn: JdbcConnection): Database {
 
         // Enterprise only
@@ -464,8 +463,8 @@ class SchemaMigration(
         val liquibaseDbImplementation = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
 
         return when (liquibaseDbImplementation) {
-            is PostgresDatabase -> PostgresDatabaseFixed(conn) // Enterprise only
-            is MSSQLDatabase -> AzureDatabase(conn) // Enterprise only
+            is PostgresDatabase -> PostgresDatabaseFixed(conn)
+            is MSSQLDatabase -> AzureDatabase(conn)
             else -> liquibaseDbImplementation
         }
     }
@@ -501,7 +500,7 @@ class SchemaMigration(
                 true
         }
 
-        val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3_2) = dataSource.connection.use {
+        val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3dot2) = dataSource.connection.use {
 
             val existingDatabase = it.metaData.getTables(null, null, "NODE%", null).next()
                     // Lower case names for PostgreSQL
@@ -518,9 +517,9 @@ class SchemaMigration(
 
 
             // Enterprise only: the patch v3.2 baseline differs from v3.0 release
-            val migrationFromV3_2 = existingDatabase && !hasLiquibase && it.metaData.getColumns(null, null, "NODE_INFO_HOSTS", "HOST_NAME").next()
+            val migrationFromV3dot2 = existingDatabase && !hasLiquibase && it.metaData.getColumns(null, null, "NODE_INFO_HOSTS", "HOST_NAME").next()
 
-            Triple(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3_2)
+            Triple(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3dot2)
         }
 
         if (isExistingDBWithoutLiquibase && existingCheckpoints)
@@ -535,7 +534,7 @@ class SchemaMigration(
                     "migration/node-info.changelog-v2.xml"))
 
             // Enterprise only: the migration was already run as part of v3.2
-            if (migrationFromV3_2)
+            if (migrationFromV3dot2)
                 preV4Baseline.addAll(listOf("migration/node-info.changelog-v3.xml"))
 
             preV4Baseline.addAll(listOf(
@@ -546,7 +545,7 @@ class SchemaMigration(
                     "migration/node-core.changelog-pkey.xml"))
 
             // Enterprise only: the migration was already run as part of v3.2
-            if (migrationFromV3_2)
+            if (migrationFromV3dot2)
                 preV4Baseline.addAll(listOf("migration/node-core.changelog-postgres-blob.xml"))
 
             preV4Baseline.addAll(listOf(
