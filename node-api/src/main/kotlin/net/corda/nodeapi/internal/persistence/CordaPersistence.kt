@@ -211,8 +211,8 @@ class CordaPersistence(
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: TransactionIsolationLevel, withErrorHandler: Boolean, statement: DatabaseTransaction.() -> T): T =
-            transaction(isolationLevel, 2, false, withErrorHandler, statement)
+    fun <T> transaction(isolationLevel: TransactionIsolationLevel, useErrorHandler: Boolean, statement: DatabaseTransaction.() -> T): T =
+            transaction(isolationLevel, 2, false, useErrorHandler, statement)
 
     /**
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
