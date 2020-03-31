@@ -247,6 +247,7 @@ class NodeVaultService(
         fun flushBatch(previouslySeen: Boolean) {
             val updates = makeUpdates(batch, statesToRecord, previouslySeen)
             processAndNotify(updates)
+            currentDBSession().flush()
             batch.clear()
         }
 
