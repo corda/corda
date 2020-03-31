@@ -825,50 +825,31 @@ class SingleThreadedStateMachineManager(
         val fiber = when (checkpoint.flowState) {
             is FlowState.Unstarted -> {
                 val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
-                val state = StateMachineState(
-                    checkpoint = checkpoint,
-                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                    isFlowResumed = false,
-                    isWaitingForFuture = false,
-                    future = null,
-                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                    isStartIdempotent = isStartIdempotent,
-                    isRemoved = false,
-                    isKilled = false,
-                    flowLogic = logic,
-                    senderUUID = null
-                )
-                val fiber = FlowStateMachineImpl(id, logic, scheduler)
-                fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
-                fiber.transientState = TransientReference(state)
-                fiber.logic.stateMachine = fiber
-                fiber
+                FlowStateMachineImpl(id, logic, scheduler)
             }
             is FlowState.Started -> {
-                val fiber = tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
-                val state = StateMachineState(
-                    checkpoint = checkpoint,
-                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                    isFlowResumed = false,
-                    isWaitingForFuture = false,
-                    future = null,
-                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                    isStartIdempotent = isStartIdempotent,
-                    isRemoved = false,
-                    isKilled = false,
-                    flowLogic = fiber.logic,
-                    senderUUID = null
-                )
-                fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
-                fiber.transientState = TransientReference(state)
-                fiber.logic.stateMachine = fiber
-                fiber
+                tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
             }
             is FlowState.Completed -> {
                 return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
             }
         }
-
+        val state = StateMachineState(
+                checkpoint = checkpoint,
+                pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
+                isFlowResumed = false,
+                isWaitingForFuture = false,
+                future = null,
+                isAnyCheckpointPersisted = isAnyCheckpointPersisted,
+                isStartIdempotent = isStartIdempotent,
+                isRemoved = false,
+                isKilled = false,
+                flowLogic = fiber.logic,
+                senderUUID = null
+        )
+        fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
+        fiber.transientState = TransientReference(state)
+        fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
 
         return Flow(fiber, resultFuture)
