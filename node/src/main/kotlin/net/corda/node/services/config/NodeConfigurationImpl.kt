@@ -161,6 +161,11 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+
+        // ensure our datasource configuration is sane
+        require(dataSourceProperties["autoCommit"] != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
+        dataSourceProperties["autoCommit"] = false
+
         @Suppress("DEPRECATION")
         if (certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
