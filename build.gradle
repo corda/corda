@@ -408,6 +408,8 @@ sonarqube {
         property "sonar.projectKey", "corda"
         property 'sonar.tests', '**/src/test/**,**/src/smoke-test/**,**/src/integration-test/**,**/src/integration-test-slow/**'
         property 'sonar.coverage.jacoco.xmlReportPaths', "${rootDir.path}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        property 'detekt.sonar.kotlin.baseline.path', "${rootDir.path}/detekt-baseline.xml"
+        property 'detekt.sonar.kotlin.config.path', "${rootDir.path}/detekt-config.yml"
     }
 }
 
