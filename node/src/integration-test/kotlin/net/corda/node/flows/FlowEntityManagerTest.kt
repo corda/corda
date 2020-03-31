@@ -111,7 +111,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::EntityManagerSaveEntitiesWithoutAFlushFlow)
                     .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -131,7 +130,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::EntityManagerSaveEntitiesWithAFlushFlow)
                     .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -150,7 +148,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::EntityManagerErrorWithoutAFlushFlow, commitStatus)
@@ -172,7 +169,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::EntityManagerErrorWithAFlushFlow, commitStatus)
@@ -193,7 +189,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::EntityManagerWithAFlushCatchErrorInsideTheEntityManagerFlow, commitStatus)
                     .returnValue.getOrThrow(20.seconds)
@@ -213,7 +208,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::EntityManagerWithAFlushCatchErrorOutsideTheEntityManagerFlow, commitStatus)
                     .returnValue.getOrThrow(20.seconds)
@@ -233,7 +227,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::EntityManagerSavingMultipleEntitiesWithASingleErrorFlow, commitStatus)
@@ -255,7 +248,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
                     ::EntityManagerSavingMultipleEntitiesWithASingleCaughtErrorFlow,
@@ -277,7 +269,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
                     ::EntityManagerCatchErrorAndSaveMoreEntitiesInANewEntityManager,
@@ -300,7 +291,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertFailsWith<RolledBackDatabaseSessionException> {
                     it.proxy.startFlow(
@@ -327,7 +317,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
                     ::EntityManagerCatchErrorOutsideTheEntityManagerAndSaveMoreEntitiesInANewEntityManager,
@@ -667,7 +656,8 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerCatchErrorOutsideTheEntityManagerAndSaveMoreEntitiesInANewEntityManager(private val commitStatus: CommitStatus) : FlowLogic<Unit>() {
+    class EntityManagerCatchErrorOutsideTheEntityManagerAndSaveMoreEntitiesInANewEntityManager(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
