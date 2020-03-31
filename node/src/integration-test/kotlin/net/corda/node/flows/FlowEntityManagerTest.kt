@@ -14,8 +14,11 @@ import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
@@ -43,6 +46,8 @@ import org.junit.runners.Parameterized
 import java.sql.Savepoint
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -60,21 +65,18 @@ import kotlin.test.assertFailsWith
  * 3)   Constraint violation with a flush breaks (no data saved and savepoint released) ✅
  * 4)   Constraint violation with a flush that is caught works (no data saved) ✅
  * 5)   Constraint violation with a flush that is caught outside of the entity manager block works (no data saved) ✅
- * 6)   Constraint violation on a single entity when saving multiple entities breaks ✅
+ * 6)   Constraint violation inside a single entity manager breaks (no data saved) ✅
+ * 7)   Constraint violation on a single entity when saving multiple entities breaks ✅
  *      (no data saved / test transactionality within an entity manager block)
- * 7)   Constraint violation on a single entity when saving multiple entities breaks works ✅
+ * 8)   Constraint violation on a single entity when saving multiple entities breaks works ✅
  *      (no data saved / test transactionality within an entity manager block)
- * 8)   Constraint violation with a flush that is caught inside an entity manager and more data is saved afterwards in a new entity manager (the extra data should be saved) ✅
- * 9)   Constraint violation with a flush that is caught inside an entity manager and more data is saved afterwards in the same entity manager (throws exception) ✅
- * 10)  Constraint violation with a flush that is caught outside an entity manager and more data is saved afterwards in a new entity manager (the extra data should be saved) ✅
- * 11)  All data is saved when a suspension point is reached
- * 12)  Hibernate session is cleared when rolling back a session/save-point (calling find/merge/persist should not hit evicted entity)
- * 13)  Other types of hibernate ([PersistenceException]s) can be caught
- * 14)
- *
- * I should take into account having a commit in between the entity managers or not
- * Basically the tests above can be repeated with a commit between each entity manager (use parameterized tests that determine whether to
- * trigger the commit?)
+ * 9)   Constraint violation with a flush that is caught inside an entity manager and more data is saved afterwards in a new entity manager (the extra data should be saved) ✅
+ * 10)  Constraint violation with a flush that is caught inside an entity manager and more data is saved afterwards in the same entity manager (throws exception) ✅
+ * 11)  Constraint violation with a flush that is caught outside an entity manager and more data is saved afterwards in a new entity manager (the extra data should be saved) ✅
+ * 12)  Data is only saved when a suspension point is reached ✅
+ * 13)  Hibernate session is cleared when rolling back a session/save-point (calling find/merge/persist should not hit evicted entity)
+ * 14)  Other types of hibernate ([PersistenceException]s) can be caught
+ * 15)  Parameterize all the above tests to have an intermediate commit ✅
  *
  * I should also test constraint violations within a single entity manager
  *
@@ -100,11 +102,13 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     @Before
     fun before() {
         StaffedFlowHospital.onFlowDischarged.clear()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
 
-    // This doesn't need to be parameterized...
     @Test(timeout = 300_000)
     fun `entities can be saved using entity manager without a flush`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -121,9 +125,10 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         }
     }
 
-    // This doesn't need to be parameterized...
     @Test(timeout = 300_000)
     fun `entities can be saved using entity manager with a flush`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -136,6 +141,38 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 assertEquals(0, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(3, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entities saved inside an entity manager are only committed when a flow suspends`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+
+                var beforeCommitEntities: List<CustomTableEntity>? = null
+                EntityManagerSaveEntitiesWithoutAFlushFlow.beforeCommitHook = {
+                    beforeCommitEntities = it
+                }
+                var afterCommitEntities: List<CustomTableEntity>? = null
+                EntityManagerSaveEntitiesWithoutAFlushFlow.afterCommitHook = {
+                    afterCommitEntities = it
+                }
+
+                it.proxy.startFlow(::EntityManagerSaveEntitiesWithoutAFlushFlow)
+                    .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(3, entities.size)
+                assertEquals(0, beforeCommitEntities!!.size)
+                assertEquals(3, afterCommitEntities!!.size)
             }
         }
     }
@@ -215,6 +252,32 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation within a single entity manager block throws and saves no data`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        var dischargeCounter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
+        var observationCounter = 0
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                assertFailsWith<TimeoutException> {
+                    it.proxy.startFlow(::EntityManagerErrorInsideASingleEntityManagerFlow, commitStatus)
+                        .returnValue.getOrThrow(20.seconds)
+                }
+                // Goes straight to observation due to throwing [EntityExistsException]
+                assertEquals(0, dischargeCounter)
+                assertEquals(1, observationCounter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(0, entities.size)
             }
         }
     }
@@ -446,6 +509,11 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     @StartableByRPC
     class EntityManagerSaveEntitiesWithoutAFlushFlow : FlowLogic<Unit>() {
 
+        companion object {
+            var beforeCommitHook: ((entities: List<CustomTableEntity>) -> Unit)? = null
+            var afterCommitHook: ((entities: List<CustomTableEntity>) -> Unit)? = null
+        }
+
         @Suspendable
         override fun call() {
             serviceHub.withEntityManager {
@@ -453,7 +521,27 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 persist(entityWithIdTwo)
                 persist(entityWithIdThree)
             }
+            beforeCommitHook?.invoke(serviceHub.cordaService(MyService::class.java).getEntities())
             sleep(1.millis)
+            afterCommitHook?.invoke(serviceHub.cordaService(MyService::class.java).getEntities())
+        }
+    }
+
+    @CordaService
+    class MyService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
+
+        val executors: ExecutorService = Executors.newFixedThreadPool(1)
+
+        fun getEntities(): List<CustomTableEntity> {
+            return executors.submit<List<CustomTableEntity>> {
+                services.database.transaction {
+                    session.run {
+                        val criteria = criteriaBuilder.createQuery(CustomTableEntity::class.java)
+                        criteria.select(criteria.from(CustomTableEntity::class.java))
+                        createQuery(criteria).resultList
+                    }
+                }
+            }.get()
         }
     }
 
@@ -550,6 +638,19 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 }
             } catch (e: PersistenceException) {
                 logger.info("Caught the exception!")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerErrorInsideASingleEntityManagerFlow(private val commitStatus: CommitStatus) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+                persist(anotherEntityWithIdOne)
             }
             sleep(1.millis)
         }
