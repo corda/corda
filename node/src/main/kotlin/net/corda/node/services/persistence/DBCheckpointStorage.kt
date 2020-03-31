@@ -311,7 +311,7 @@ class DBCheckpointStorage(
     override fun updateCompatible(id: StateMachineRunId, compatible: Boolean) {
         val checkpoint = getDBCheckpoint(id)
         checkpoint?.compatible = compatible
-        checkpoint?.checkpointInstant = Instant.now()
+        checkpoint?.checkpointInstant = clock.instant()
         currentDBSession().update(checkpoint)
     }
 
