@@ -21,11 +21,9 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
-import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.nodeapi.internal.persistence.RolledBackDatabaseSessionException
@@ -37,13 +35,11 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
-import org.hibernate.exception.ConstraintViolationException
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.sql.Savepoint
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
@@ -74,9 +70,8 @@ import kotlin.test.assertFailsWith
  * 10)  Constraint violation with a flush that is caught inside an entity manager and more data is saved afterwards in the same entity manager (throws exception) ✅
  * 11)  Constraint violation with a flush that is caught outside an entity manager and more data is saved afterwards in a new entity manager (the extra data should be saved) ✅
  * 12)  Data is only saved when a suspension point is reached ✅
- * 13)  Hibernate session is cleared when rolling back a session/save-point (calling find/merge/persist should not hit evicted entity)
- * 14)  Other types of hibernate ([PersistenceException]s) can be caught
- * 15)  Parameterize all the above tests to have an intermediate commit ✅
+ * 13)  Parameterize all the above tests to have an intermediate commit ✅
+ * 14)  Flow can continue processing normally after catching exception inside entity manager ✅
  *
  * I should also test constraint violations within a single entity manager
  *
@@ -270,7 +265,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
-                    it.proxy.startFlow(::EntityManagerErrorInsideASingleEntityManagerFlow, commitStatus)
+                    it.proxy.startFlow(::EntityManagerErrorInsideASingleEntityManagerFlow)
                         .returnValue.getOrThrow(20.seconds)
                 }
                 // Goes straight to observation due to throwing [EntityExistsException]
@@ -345,7 +340,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         }
     }
 
-    // maybe we should throw an error if a session is broken but the flow tries to insert more entities
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should throw an exception`() {
         var counter = 0
@@ -393,16 +387,11 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         }
     }
 
-    /*
-    Once a flush is made and caught, it is not possible to do anything using [withEntityManager] again (even inside a new call to it).
-
-    The question is, why is the flow able to progress as normal after catching a [flush] error but calling [withEntityManager] again
-    fails due to the caught error resurfacing due to a [flush]. It does not matter whether the [flush] comes from a user [flush] or the
-    [flush] that occurs when opening a [withEntityManager] block.
-     */
     @Test(timeout = 300_000)
     @Ignore
-    fun `constraint violation inside entity manager *with multiple flushes that insert extra data* and *catching the exception* will allow the flow to finish`() {
+    fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -411,91 +400,9 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                val txId = it.proxy.startFlow(::EntityManagerWithFlushCatchAndNewDataFlow, nodeBHandle.nodeInfo.singleIdentity())
-                    .returnValue.getOrThrow(20.seconds)
-                assertEquals(0, counter)
-                val txFromVault = it.proxy.stateMachineRecordedTransactionMappingSnapshot().firstOrNull()?.transactionId
-                assertEquals(txId, txFromVault)
-                val entity = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow().single()
-                assertEquals(entityWithIdOne, entity)
-            }
-        }
-        assertEquals(0, counter)
-    }
-
-    @Test(timeout = 300_000)
-    @Ignore
-    fun `constraint violation inside entity manager *with multiple flushes that insert extra data* and *catching the exception* will allow the flow to finish 123123`() {
-        var counter = 0
-        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(startNodesInProcess = true)) {
-
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                val txId = it.proxy.startFlow(::EntityManagerWithFlushCatchAndNewDataFlow2, nodeBHandle.nodeInfo.singleIdentity())
-                    .returnValue.getOrThrow(20.seconds)
-                assertEquals(0, counter)
-                val txFromVault = it.proxy.stateMachineRecordedTransactionMappingSnapshot().firstOrNull()?.transactionId
-                assertEquals(txId, txFromVault)
-                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                assertEquals(3, entities.size)
-//                assertEquals(entityOne, entity)
-            }
-        }
-        assertEquals(0, counter)
-    }
-
-    @Test(timeout = 300_000)
-    @Ignore
-    fun `constraint violation inside entity manager *with multiple flushes that insert extra data* and *catching the exception* will allow the flow to finish SAVE POINTS`() {
-        var counter = 0
-        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(startNodesInProcess = true)) {
-
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                val txId = it.proxy.startFlow(::EntityManagerWithFlushCatchAndNewDataFlow3, nodeBHandle.nodeInfo.singleIdentity())
-                    .returnValue.getOrThrow(20.seconds)
-                assertEquals(0, counter)
-                val txFromVault = it.proxy.stateMachineRecordedTransactionMappingSnapshot().firstOrNull()?.transactionId
-                assertEquals(txId, txFromVault)
-                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                assertEquals(2, entities.size)
-//                assertEquals(entityOne, entity)
-            }
-        }
-        assertEquals(0, counter)
-    }
-
-    /*
-    Calling rollback inside a flow blows it up when it reaches the next suspend/commit
-
-    Caused by: java.lang.IllegalStateException: Transaction not successfully started
-	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:98) ~[hibernate-core-5.4.3.Final.jar:5.4.3.Final]
-	at net.corda.nodeapi.internal.persistence.DatabaseTransaction.commit(DatabaseTransaction.kt:76) ~[corda-node-api-4.4-SNAPSHOT.jar:?]
-	at net.corda.node.services.statemachine.ActionExecutorImpl.executeCommitTransaction(ActionExecutorImpl.kt:230) ~[corda-node-4.4-SNAPSHOT.jar:?]
-	at net.corda.node.services.statemachine.ActionExecutorImpl.executeAction(ActionExecutorImpl.kt:77) ~[corda-node-4.4-SNAPSHOT.jar:?]
-	at net.corda.node.services.statemachine.TransitionExecutorImpl.executeTransition(TransitionExecutorImpl.kt:44) ~[corda-node-4.4-SNAPSHOT.jar:?]
-	... 18 more
-
-     */
-    @Test(timeout = 300_000)
-    @Ignore
-    fun `constraint violation inside entity manager *with flush* error that is caught, transaction is rolled back and new data is inserted, flow finishes`() {
-        var counter = 0
-        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(startNodesInProcess = true)) {
-
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                val txId = it.proxy.startFlow(::EntityManagerWithFlushCatchRollbackAndNewDataFlow, nodeBHandle.nodeInfo.singleIdentity())
-                    .returnValue.getOrThrow(20.seconds)
+                val txId =
+                    it.proxy.startFlow(::EntityManagerWithFlushCatchAndInteractWithOtherPartyFlow, nodeBHandle.nodeInfo.singleIdentity())
+                        .returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
                 val txFromVault = it.proxy.stateMachineRecordedTransactionMappingSnapshot().firstOrNull()?.transactionId
                 assertEquals(txId, txFromVault)
@@ -644,7 +551,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerErrorInsideASingleEntityManagerFlow(private val commitStatus: CommitStatus) : FlowLogic<Unit>() {
+    class EntityManagerErrorInsideASingleEntityManagerFlow : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -771,7 +678,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             try {
                 serviceHub.withEntityManager {
                     persist(anotherEntityWithIdOne)
-                    flush()
                 }
             } catch (e: PersistenceException) {
                 logger.info("Caught the exception!")
@@ -788,210 +694,22 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerWithFlushCatchAndNewDataFlow(private val party: Party) : FlowLogic<SecureHash>() {
-        companion object {
-            val log = contextLogger()
-        }
+    class EntityManagerWithFlushCatchAndInteractWithOtherPartyFlow(private val party: Party) : FlowLogic<SecureHash>() {
 
         @Suspendable
         override fun call(): SecureHash {
             serviceHub.withEntityManager {
                 persist(entityWithIdOne)
-                log.info("After the first insert")
             }
-            sleep(1.millis)
             serviceHub.withEntityManager {
-                // the exception is not triggered until the second commit
-                // it does not happen inline by hibernate
                 persist(anotherEntityWithIdOne)
                 try {
                     flush()
                 } catch (e: PersistenceException) {
-                    // it does not make it to here as a constraint violation exception
-                    if (e.cause is ConstraintViolationException) {
-                        log.info("Caught the exception!")
-                        clear()
-                        detach(anotherEntityWithIdOne)
-                    }
+                    logger.info("Caught the exception!")
                 }
             }
-            serviceHub.withEntityManager {
-                persist(entityWithIdTwo)
-//                flush()
-                log.info("After the second flush")
-            }
-            return subFlow(CreateATransactionFlow(party)).also {
-                log.info("Reached the end of the flow")
-            }
-        }
-    }
-
-    @StartableByRPC
-    class EntityManagerWithFlushCatchAndNewDataFlow2(private val party: Party) : FlowLogic<SecureHash>() {
-        companion object {
-            val log = contextLogger()
-        }
-
-        @Suspendable
-        override fun call(): SecureHash {
-            serviceHub.withEntityManager {
-                persist(entityWithIdOne)
-//                flush()
-                log.info("After the first insert")
-            }
-            sleep(1.millis)
-            doStuff()
-            sleep(1.millis)
-//            serviceHub.jdbcSession().setSavepoint()
-            serviceHub.withEntityManager {
-                val entity = find(CustomTableEntity::class.java, 1)
-                log.info("I found the entity : $entity")
-                val entity2 = find(CustomTableEntity::class.java, 2)
-                log.info("I found the entity2 : $entity2")
-                persist(entityWithIdThree)
-                val entity3 = find(CustomTableEntity::class.java, 3)
-                log.info("I found the entity3 : $entity3")
-//                flush()
-                log.info("After the second flush")
-            }
-            return subFlow(CreateATransactionFlow(party)).also {
-                log.info("Reached the end of the flow")
-            }
-        }
-
-        private fun doStuff() {
-//            val savePoint = createSavepoint()
-            serviceHub.withEntityManager {
-                // the exception is not triggered until the second commit
-                // it does not happen inline by hibernate
-                persist(entityWithIdTwo)
-                persist(anotherEntityWithIdOne)
-                try {
-                    flush()
-                } catch (e: PersistenceException) {
-                    // it does not make it to here as a constraint violation exception
-                    if (e.cause is ConstraintViolationException) {
-                        log.info("Caught the exception!")
-//                        savePoint.rollback()
-//                        clear()
-//                        detach(entityTwo)
-                    }
-                }
-            }
-//            savePoint.release()
-        }
-
-        private fun createSavepoint(): Savepoint {
-            val connection = serviceHub.jdbcSession()
-            return connection.setSavepoint()
-        }
-
-        private fun Savepoint.rollback() = serviceHub.jdbcSession().rollback(this)
-
-        private fun Savepoint.release() = serviceHub.jdbcSession().releaseSavepoint(this)
-    }
-
-    @StartableByRPC
-    class EntityManagerWithFlushCatchAndNewDataFlow3(private val party: Party) : FlowLogic<SecureHash>() {
-        companion object {
-            val log = contextLogger()
-        }
-
-        @Suspendable
-        override fun call(): SecureHash {
-            serviceHub.withEntityManager {
-                persist(entityWithIdOne)
-//                flush()
-                log.info("After the first insert")
-            }
-            sleep(1.millis)
-            doStuff()
-//            sleep(1.millis)
-//            serviceHub.jdbcSession().setSavepoint()
-            serviceHub.withEntityManager {
-                val entity = find(CustomTableEntity::class.java, 1)
-                log.info("I found the entity : $entity")
-                val entity2 = find(CustomTableEntity::class.java, 2)
-                log.info("I found the entity2 : $entity2")
-                persist(entityWithIdThree)
-                val entity3 = find(CustomTableEntity::class.java, 3)
-                log.info("I found the entity3 : $entity3")
-//                flush()
-                log.info("After the second flush")
-            }
-            return subFlow(CreateATransactionFlow(party)).also {
-                log.info("Reached the end of the flow")
-            }
-        }
-
-        private fun doStuff() {
-            val savePoint = createSavepoint()
-            serviceHub.withEntityManager {
-                // the exception is not triggered until the second commit
-                // it does not happen inline by hibernate
-                persist(entityWithIdTwo)
-                persist(anotherEntityWithIdOne)
-                try {
-                    flush()
-                } catch (e: PersistenceException) {
-                    // it does not make it to here as a constraint violation exception
-                    if (e.cause is ConstraintViolationException) {
-                        log.info("Caught the exception!")
-                        savePoint.rollback()
-//                        clear()
-//                        detach(entityTwo)
-                    }
-                }
-            }
-            savePoint.release()
-        }
-
-        private fun createSavepoint(): Savepoint {
-            val connection = serviceHub.jdbcSession()
-            return connection.setSavepoint()
-        }
-
-        private fun Savepoint.rollback() = serviceHub.jdbcSession().rollback(this)
-
-        private fun Savepoint.release() = serviceHub.jdbcSession().releaseSavepoint(this)
-    }
-
-    @StartableByRPC
-    class EntityManagerWithFlushCatchRollbackAndNewDataFlow(private val party: Party) : FlowLogic<SecureHash>() {
-        companion object {
-            val log = contextLogger()
-        }
-
-        @Suspendable
-        override fun call(): SecureHash {
-            serviceHub.withEntityManager {
-                persist(entityWithIdOne)
-                log.info("After the first insert")
-            }
-            sleep(1.millis)
-            serviceHub.withEntityManager {
-                // the exception is not triggered until the second commit
-                // it does not happen inline by hibernate
-                persist(anotherEntityWithIdOne)
-                try {
-                    flush()
-                } catch (e: PersistenceException) {
-                    // it does not make it to here as a constraint violation exception
-                    if (e.cause is ConstraintViolationException) {
-                        log.info("Caught the exception!")
-                        transaction.rollback()
-                        transaction.begin()
-                    }
-                }
-            }
-            serviceHub.withEntityManager {
-                persist(entityWithIdTwo)
-                flush()
-                log.info("After the second flush")
-            }
-            return subFlow(CreateATransactionFlow(party)).also {
-                log.info("Reached the end of the flow")
-            }
+            return subFlow(CreateATransactionFlow(party))
         }
     }
 
@@ -1033,26 +751,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     logger.info("results = $it")
                 }
             }
-        }
-    }
-
-    @InitiatingFlow
-    class PingPongFlow(val party: Party) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val session = initiateFlow(party)
-            session.sendAndReceive<String>("ping pong").unwrap { it }
-            logger.info("Finished the ping pong flow")
-        }
-    }
-
-    @InitiatedBy(PingPongFlow::class)
-    class PingPongResponder(val session: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            session.receive<String>().unwrap { it }
-            session.send("I got you bro")
-            logger.info("Finished the ping pong responder")
         }
     }
 
