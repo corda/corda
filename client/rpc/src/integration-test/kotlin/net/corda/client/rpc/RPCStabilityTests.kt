@@ -14,13 +14,13 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
-import net.corda.coretesting.internal.testThreadFactory
 import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.succeeds
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.coretesting.internal.testThreadFactory
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.RpcBrokerHandle
 import net.corda.testing.node.internal.RpcServerHandle
@@ -75,7 +75,7 @@ class RPCStabilityTests {
                 values.poll()
             }
             val first = values.peek()
-            if (values.size == 5 && values.all { it.keys == first.keys }) {
+            if (values.size == 5 && values.all { it.keys.size == first.keys.size }) {
                 first
             } else {
                 null
