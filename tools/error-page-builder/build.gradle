@@ -14,6 +14,12 @@ dependencies {
     implementation project(":tools:cliutils")
     implementation "info.picocli:picocli:$picocli_version"
     testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
 }
 
 jar {

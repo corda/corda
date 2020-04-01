@@ -31,6 +31,12 @@ class ErrorReporterImplTest {
         }
     }
 
+    private val TEST_ERROR_1 = object : ErrorCode {
+        override val namespace = "test"
+        override val code = "case1"
+        override val parameters = listOf<Any>()
+    }
+
     private fun createReporterImpl(localeTag: String?) : ErrorReporterImpl {
         val locale = if (localeTag != null) Locale.forLanguageTag(localeTag) else Locale.getDefault()
         return ErrorReporterImpl("errorReporting", locale, contextProvider)
@@ -43,11 +49,7 @@ class ErrorReporterImplTest {
 
     @Test(timeout = 300_000)
     fun `error codes logged correctly`() {
-        val error = object : ErrorCode {
-            override val namespace = "test"
-            override val code = "case1"
-            override val parameters = listOf<Any>()
-        }
+        val error = TEST_ERROR_1
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
         assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/en-US]"), logs)
@@ -69,11 +71,7 @@ class ErrorReporterImplTest {
 
     @Test(timeout = 300_000)
     fun `locale used with no corresponding resource falls back to default`() {
-        val error = object : ErrorCode {
-            override val namespace = "test"
-            override val code = "case1"
-            override val parameters = listOf<Any>()
-        }
+        val error = TEST_ERROR_1
         val testReporter = createReporterImpl("fr-FR")
         testReporter.report(error, loggerMock)
         assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/fr-FR]"), logs)
@@ -81,13 +79,17 @@ class ErrorReporterImplTest {
 
     @Test(timeout = 300_000)
     fun `locale with corresponding resource causes correct error to be printed`() {
-        val error = object : ErrorCode {
-            override val namespace = "test"
-            override val code = "case1"
-            override val parameters = listOf<Any>()
-        }
+        val error = TEST_ERROR_1
         val testReporter = createReporterImpl("ga-IE")
         testReporter.report(error, loggerMock)
         assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1, URL: $TEST_URL/ga-IE]"), logs)
+    }
+
+    @Test(timeout = 300_000)
+    fun `locale with missing properties falls back to default properties`() {
+        val error = TEST_ERROR_1
+        val testReporter = createReporterImpl("es-ES")
+        testReporter.report(error, loggerMock)
+        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/es-ES]"), logs)
     }
 }

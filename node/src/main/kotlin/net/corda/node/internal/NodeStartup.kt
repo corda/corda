@@ -17,7 +17,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.common.logging.errorReporting.ErrorReporterFactory
+import net.corda.common.logging.errorReporting.ErrorReporting
 import net.corda.common.logging.errorReporting.report
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
@@ -173,7 +173,7 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
-        ErrorReporterFactory.setParams(configuration.locale, ERROR_CODE_RESOURCE_LOCATION)
+        ErrorReporting.initialise(configuration.locale, ERROR_CODE_RESOURCE_LOCATION)
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
