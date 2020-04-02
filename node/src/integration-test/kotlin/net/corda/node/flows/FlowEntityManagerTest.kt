@@ -410,6 +410,26 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @Test(timeout = 300_000)
+    fun `data can be saved by a sql statement using entity manager`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerSqlFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement should save no data`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
@@ -428,6 +448,65 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
                     CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
                 }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation caused by a sql statement that is caught inside an entity manager block saves none of the data inside of it`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerCatchErrorFromSqlInsideTheEntityManagerFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                // 1 entity saved from the first entity manager block that does not get rolled back
+                // even if there is no intermediate commit to the database
+                assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation caused by a sql statement that is caught outside an entity manager block saves none of the data inside of it`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerCatchErrorFromSqlOutsideTheEntityManagerFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                // 1 entity saved from the first entity manager block that does not get rolled back
+                // even if there is no intermediate commit to the database
+                assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation caused by a sql statement that is caught inside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManager,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(2, entities.size)
             }
         }
     }
@@ -733,6 +812,23 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
+    class EntityManagerSqlFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                    .setParameter("id", anotherEntityWithIdOne.id)
+                    .setParameter("name", anotherEntityWithIdOne.name)
+                    .setParameter("quote", anotherEntityWithIdOne.name)
+                    .executeUpdate()
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
     class EntityManagerErrorFromSqlFlow(private val commitStatus: CommitStatus) :
         FlowLogic<Unit>() {
 
@@ -745,7 +841,100 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 sleep(1.millis)
             }
             serviceHub.withEntityManager {
-                createNativeQuery("INSERT INTO custom_table VALUES (1, 'dan', 'I have been updated')").executeUpdate()
+                createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                    .setParameter("id", anotherEntityWithIdOne.id)
+                    .setParameter("name", anotherEntityWithIdOne.name)
+                    .setParameter("quote", anotherEntityWithIdOne.name)
+                    .executeUpdate()
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerCatchErrorFromSqlInsideTheEntityManagerFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                try {
+                    createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                        .setParameter("id", anotherEntityWithIdOne.id)
+                        .setParameter("name", anotherEntityWithIdOne.name)
+                        .setParameter("quote", anotherEntityWithIdOne.name)
+                        .executeUpdate()
+                } catch (e: PersistenceException) {
+                    logger.info("Caught the exception!")
+                }
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerCatchErrorFromSqlOutsideTheEntityManagerFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            try {
+                serviceHub.withEntityManager {
+                    createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                        .setParameter("id", anotherEntityWithIdOne.id)
+                        .setParameter("name", anotherEntityWithIdOne.name)
+                        .setParameter("quote", anotherEntityWithIdOne.name)
+                        .executeUpdate()
+                }
+            } catch (e: PersistenceException) {
+                logger.info("Caught the exception!")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManager(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            try {
+                serviceHub.withEntityManager {
+                    createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                        .setParameter("id", anotherEntityWithIdOne.id)
+                        .setParameter("name", anotherEntityWithIdOne.name)
+                        .setParameter("quote", anotherEntityWithIdOne.name)
+                        .executeUpdate()
+
+                }
+            } catch (e: PersistenceException) {
+                logger.info("Caught the exception!")
+            }
+            serviceHub.withEntityManager {
+                val query = createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                    .setParameter("id", entityWithIdTwo.id)
+                    .setParameter("name", entityWithIdTwo.name)
+                    .setParameter("quote", entityWithIdTwo.name)
+                query.executeUpdate()
             }
             sleep(1.millis)
         }
