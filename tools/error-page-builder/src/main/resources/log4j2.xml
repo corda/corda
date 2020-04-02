@@ -6,7 +6,7 @@
     </Properties>
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
+            <PatternLayout pattern="[%level{length=5}] %date{HH:mm:ssZ} - %msg%n%throwable{0}"/>
         </Console>
     </Appenders>
 

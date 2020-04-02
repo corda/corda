@@ -43,22 +43,28 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
 
     companion object {
         private val logger = LoggerFactory.getLogger(ErrorPageBuilder::class.java)
+        private const val ERROR_CODES_FILE = "error-codes.md"
     }
 
     private fun getOutputFile() : File {
-        if (outputDir == null || Files.notExists(outputDir)) {
-            throw IllegalArgumentException("Directory not specified or not valid. Please specify a valid directory to write output to.")
-        }
-        val outputPath = outputDir!!.resolve("error-codes.md")
-        if (Files.exists(outputPath)) throw IllegalArgumentException("Output file $outputPath exists, please remove it and run again.")
-        return Files.createFile(outputPath).toFile()
+        return outputDir?.let {
+            require(Files.exists(it)) {
+                "Directory specified does not exist. Please specify a valid directory to write output to."
+            }
+            val outputPath = it.resolve(ERROR_CODES_FILE)
+            require(Files.notExists(outputPath)) {
+                "Output file $outputPath exists, please remove it and run again."
+            }
+            outputPath.toFile()
+        } ?: throw IllegalArgumentException("Directory not specified or not valid. Please specify a valid directory to write output to.")
     }
 
     private fun getResourceDir() : Path {
-        if (resourceLocation == null || Files.notExists(resourceLocation)) {
-            throw IllegalArgumentException("Resource location does not exist. Please specify a valid location for error code resources")
-        }
-        return resourceLocation!!
+        return resourceLocation?.also {
+            require(Files.exists(it)) {
+                "Resource location does not exist. Please specify a valid location for error code resources"
+            }
+        } ?: throw IllegalArgumentException("Resource location not specified. Please specify a resource location.")
     }
 
     override fun runProgram(): Int {
