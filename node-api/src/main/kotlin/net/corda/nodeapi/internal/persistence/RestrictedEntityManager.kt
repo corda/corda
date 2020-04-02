@@ -7,6 +7,7 @@ import javax.persistence.LockModeType
 /**
  * A delegate of [EntityManager] which disallows some operations.
  */
+@Suppress("TooManyFunctions")
 class RestrictedEntityManager(private val delegate: EntityManager) : EntityManager by delegate {
 
     override fun close() {
