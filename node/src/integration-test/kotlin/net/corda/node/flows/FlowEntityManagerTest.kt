@@ -35,8 +35,9 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.core.config.Configurator
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -85,6 +86,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         val anotherEntityWithIdOne = CustomTableEntity(1, "Rick", "I'm pretty sure this will work")
         val entityWithIdTwo = CustomTableEntity(2, "Ivan", "This will break existing CorDapps")
         val entityWithIdThree = CustomTableEntity(3, "Some other guy", "What am I doing here?")
+        val user = User("mark", "dadada", setOf(Permissions.all()))
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
@@ -96,6 +98,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
 
     @Before
     fun before() {
+        Configurator.setLevel("org.hibernate.SQL", Level.DEBUG)
         StaffedFlowHospital.onFlowDischarged.clear()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
     }
@@ -126,7 +129,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -146,7 +148,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -176,7 +177,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     fun `constraint violation without a flush breaks`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -186,9 +186,11 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                         .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
                 }
                 assertEquals(3, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                assertEquals(1, entities.size)
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
             }
         }
     }
@@ -197,7 +199,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     fun `constraint violation with a flush breaks`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -208,16 +209,18 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 }
                 assertEquals(3, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                assertEquals(1, entities.size)
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
             }
         }
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation with a flush that is caught inside an entity manager block saves no data`() {
+    fun `constraint violation with a flush that is caught inside an entity manager block saves none of the data inside of it`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -225,18 +228,18 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 it.proxy.startFlow(::EntityManagerWithAFlushCatchErrorInsideTheEntityManagerFlow, commitStatus)
                     .returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                // 1 entity saved from the first entity manager block that does not get rolled back
+                // even if there is no intermediate commit to the database
                 assertEquals(1, entities.size)
             }
         }
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation with a flush that is caught outside the entity manager block saves no data`() {
+    fun `constraint violation with a flush that is caught outside the entity manager block saves none of the data inside of it`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -244,22 +247,22 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 it.proxy.startFlow(::EntityManagerWithAFlushCatchErrorOutsideTheEntityManagerFlow, commitStatus)
                     .returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                // 1 entity saved from the first entity manager block that does not get rolled back
+                // even if there is no intermediate commit to the database
                 assertEquals(1, entities.size)
             }
         }
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation within a single entity manager block throws and saves no data`() {
+    fun `constraint violation within a single entity manager block throws an exception and saves no data`() {
         // Don't run this test with both parameters to save time
         if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var dischargeCounter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
         var observationCounter = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -278,10 +281,9 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation on a single entity when saving multiple entities does not save any entities`() {
+    fun `constraint violation on a single entity when saving multiple entities throws an exception and does not save any data within the entity manager block`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -291,18 +293,19 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                         .returnValue.getOrThrow(20.seconds)
                 }
                 assertEquals(3, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                assertEquals(1, entities.size)
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
             }
         }
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation on a single entity when saving multiple entities and catching the error does not save any entities`() {
+    fun `constraint violation on a single entity when saving multiple entities and catching the error does not save any data within the entity manager block`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -312,8 +315,9 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     commitStatus
                 ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                // 1 entity saved from the first entity manager block that does not get rolled back
+                // even if there is no intermediate commit to the database
                 assertEquals(1, entities.size)
             }
         }
@@ -323,7 +327,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -333,7 +336,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     commitStatus
                 ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(3, entities.size)
             }
@@ -344,7 +346,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should throw an exception`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -356,7 +357,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     ).returnValue.getOrThrow(20.seconds)
                 }
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 when (commitStatus) {
                     CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
@@ -370,7 +370,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     fun `constraint violation that is caught outside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -380,7 +379,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     commitStatus
                 ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
-                // 1 entity exists to trigger constraint violation
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(3, entities.size)
             }
@@ -388,13 +386,11 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @Test(timeout = 300_000)
-    @Ignore
     fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
         // Don't run this test with both parameters to save time
         if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -411,6 +407,29 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             }
         }
         assertEquals(0, counter)
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation caused by a sql statement should save no data`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                assertFailsWith<TimeoutException> {
+                    it.proxy.startFlow(
+                        ::EntityManagerErrorFromSqlFlow,
+                        commitStatus
+                    ).returnValue.getOrThrow(20.seconds)
+                }
+                assertEquals(3, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
+            }
+        }
     }
 
     @StartableByRPC
@@ -710,6 +729,25 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 }
             }
             return subFlow(CreateATransactionFlow(party))
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerErrorFromSqlFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                createNativeQuery("INSERT INTO custom_table VALUES (1, 'dan', 'I have been updated')").executeUpdate()
+            }
+            sleep(1.millis)
         }
     }
 

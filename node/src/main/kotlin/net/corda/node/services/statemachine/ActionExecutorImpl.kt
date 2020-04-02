@@ -221,7 +221,10 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        contextTransactionOrNull?.close()
+        contextTransactionOrNull?.run {
+            rollback()
+            close()
+        }
     }
 
     @Suspendable
