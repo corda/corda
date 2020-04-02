@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 
 class CordaErrorContextProviderTest {
 
-    @Test
+    @Test(timeout = 300_000)
     fun `check that correct URL is returned from context provider`() {
         val context = CordaErrorContextProvider()
         val expectedURL = "https://docs.corda.net/docs/corda-os/${CordaVersion.releaseVersion}/error-codes.html"
