@@ -3,8 +3,7 @@ package net.corda.errorPageBuilder
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
-import net.corda.common.logging.errorReporting.CordaErrorContextProvider
-import net.corda.core.internal.exists
+import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -19,22 +18,39 @@ fun main(args: Array<String>) {
 
 class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error table for the error codes page") {
 
-    @CommandLine.Parameters(index = "0", paramLabel = "OUTPUT_FILE", arity = "1")
+    @CommandLine.Parameters(
+            index = "0",
+            paramLabel = "OUTPUT_LOCATION",
+            arity = "1",
+            description = ["The file system location to output the error codes documentation table"]
+    )
     var outputDir: Path? = null
 
-    @CommandLine.Parameters(index = "1", paramLabel = "RESOURCE_LOCATION", arity = "1")
+    @CommandLine.Parameters(
+            index = "1",
+            paramLabel = "RESOURCE_LOCATION",
+            arity = "1",
+            description = ["The file system location of the resource files to process"]
+    )
     var resourceLocation: Path? = null
 
-    @CommandLine.Option(names = ["--locale-tag"])
+    @CommandLine.Option(
+            names = ["--locale-tag"],
+            description = ["The locale tag of the locale to use when localising the error codes table. For example, en-US"],
+            arity = "1"
+    )
     var localeTag: String? = null
 
+    companion object {
+        private val logger = LoggerFactory.getLogger(ErrorPageBuilder::class.java)
+    }
 
     private fun getOutputFile() : File {
         if (outputDir == null || Files.notExists(outputDir)) {
             throw IllegalArgumentException("Directory not specified or not valid. Please specify a valid directory to write output to.")
         }
         val outputPath = outputDir!!.resolve("error-codes.md")
-        if (outputPath.exists()) throw IllegalArgumentException("Output file $outputPath exists, please remove it and run again.")
+        if (Files.exists(outputPath)) throw IllegalArgumentException("Output file $outputPath exists, please remove it and run again.")
         return Files.createFile(outputPath).toFile()
     }
 
@@ -50,11 +66,17 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
         val (outputFile, resources) = try {
             Pair(getOutputFile(), getResourceDir())
         } catch (e: IllegalArgumentException) {
+            logger.error(e.message, e)
             return ExitCodes.FAILURE
         }
         val tableGenerator = ErrorTableGenerator(resources.toFile(), locale)
-        val table = tableGenerator.generateMarkdown()
-        outputFile.writeText(table)
+        try {
+            val table = tableGenerator.generateMarkdown()
+            outputFile.writeText(table)
+        } catch (e: IllegalArgumentException) {
+            logger.error(e.message, e)
+            return ExitCodes.FAILURE
+        }
         return ExitCodes.SUCCESS
     }
 }
