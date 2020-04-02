@@ -30,12 +30,18 @@ import java.time.Duration
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 interface StateMachineManager {
+
+    enum class StartMode {
+        ResumeAll, // Resume all flows except paused flows.
+        Safe // Mark all flows as paused.
+    }
+
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>) : CordaFuture<Unit>
+    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ResumeAll) : CordaFuture<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
@@ -79,6 +85,22 @@ interface StateMachineManager {
      * @return whether the flow existed and was killed.
      */
     fun killFlow(id: StateMachineRunId): Boolean
+
+    /**
+     * Mark a flow as paused, this stops the flow from running next time the state machine manager starts up.
+     * Note this function will fail with the flow is currently running and so it should be used in combination with stop.
+     *
+     * @return whether the flow was successfully marked as paused.
+     */
+//    fun markFlowsAsPaused(id: StateMachineRunId): Boolean
+
+    /**
+     * Mark all flows as paused, this stops the flow from running next time the state machine manager starts up.
+     * Note this function will fail with the flow is currently running and so it should be used in combination with stop.
+     *
+     * @return a map with an entry for each flow marking whether or not the flow was successfully paused.
+     */
+//    fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean>
 
     /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.

@@ -322,9 +322,22 @@ class DBCheckpointStorage(
         }
     }
 
+
     @VisibleForTesting
     internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
+    }
+
+    override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
+        criteriaQuery.select(root)
+                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), FlowStatus.PAUSED))
+        return session.createQuery(criteriaQuery).stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
     }
 
     private fun createDBCheckpoint(

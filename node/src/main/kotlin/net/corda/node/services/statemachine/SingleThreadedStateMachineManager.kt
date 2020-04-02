@@ -92,6 +92,90 @@ class SingleThreadedStateMachineManager(
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
+    //TODO: This should be moved into its own class
+    private inner class FlowPrimitive(val id: StateMachineRunId,
+                                val checkpoint: Checkpoint,
+                                val isAnyCheckpointPersisted: Boolean,
+                                val isStartIdempotent: Boolean,
+                                val initialDeduplicationHandler: DeduplicationHandler?
+    ) {
+
+        fun createFlow() : Flow? {
+            val fiber = getFibreFromCheckpoint() ?: return null
+            val state = StateMachineState(
+                    checkpoint = checkpoint,
+                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
+                    isFlowResumed = false,
+                    isWaitingForFuture = false,
+                    future = null,
+                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
+                    isStartIdempotent = isStartIdempotent,
+                    isRemoved = false,
+                    isKilled = false,
+                    flowLogic = fiber.logic,
+                    senderUUID = null)
+            val resultFuture = openFuture<Any?>()
+            fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
+            fiber.transientState = TransientReference(state)
+            fiber.logic.stateMachine = fiber
+            verifyFlowLogicIsSuspendable(fiber.logic)
+            return Flow(fiber, resultFuture)
+        }
+
+        private fun getFibreFromCheckpoint(): FlowStateMachineImpl<*>? {
+            return when (checkpoint.flowState) {
+                is FlowState.Unstarted -> {
+                    val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
+                    FlowStateMachineImpl(id, logic, scheduler)
+                }
+                is FlowState.Started -> {
+                    tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
+                }
+                is FlowState.Completed -> {
+                    return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
+                }
+            }
+        }
+
+         private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
+                return try {
+                    bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
+                } catch (e: Exception) {
+                    logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+                    null
+                }
+         }
+
+        private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
+            // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
+            // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
+            //
+            // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which
+            // forwards to the void method and then returns Unit. However annotations do not get copied across to this
+            // bridge, so we have to do a more complex scan here.
+            val call = logic.javaClass.methods.first { !it.isSynthetic && it.name == "call" && it.parameterCount == 0 }
+            if (call.getAnnotation(Suspendable::class.java) == null) {
+                throw FlowException("${logic.javaClass.name}.call() is not annotated as @Suspendable. Please fix this.")
+            }
+        }
+
+        private fun createTransientValues(id: StateMachineRunId, resultFuture: CordaFuture<Any?>): FlowStateMachineImpl.TransientValues {
+            return FlowStateMachineImpl.TransientValues(
+                    eventQueue = Channels.newChannel(-1, Channels.OverflowPolicy.BLOCK),
+                    resultFuture = resultFuture,
+                    database = database,
+                    transitionExecutor = transitionExecutor,
+                    actionExecutor = actionExecutor!!,
+                    stateMachine = StateMachine(id, secureRandom),
+                    serviceHub = serviceHub,
+                    checkpointSerializationContext = checkpointSerializationContext!!,
+                    unfinishedFibers = unfinishedFibers,
+                    waitTimeUpdateHook = { flowId, timeout -> resetCustomTimeout(flowId, timeout) }
+            )
+        }
+    }
+
+
     private data class ScheduledTimeout(
         /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
         val scheduledFuture: ScheduledFuture<*>,
@@ -106,6 +190,7 @@ class SingleThreadedStateMachineManager(
         /** True if we're shutting down, so don't resume anything. */
         var stopping = false
         val flows = HashMap<StateMachineRunId, Flow>()
+        val flowPrimitives = HashMap<StateMachineRunId, FlowPrimitive>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
@@ -146,7 +231,7 @@ class SingleThreadedStateMachineManager(
      */
     override val changes: Observable<StateMachineManager.Change> = mutex.content.changesPublisher
 
-    override fun start(tokenizableServices: List<Any>) : CordaFuture<Unit> {
+    override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): CordaFuture<Unit> {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                 CheckpointSerializeAsTokenContextImpl(
@@ -357,13 +442,9 @@ class SingleThreadedStateMachineManager(
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
-                createFlowFromCheckpoint(
-                        id = id,
-                        serializedCheckpoint = serializedCheckpoint,
-                        initialDeduplicationHandler = null,
-                        isAnyCheckpointPersisted = true,
-                        isStartIdempotent = false
-                )
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
+                val flowPrimative = FlowPrimitive(id, checkpoint, true, false, null)
+                flowPrimative.createFlow()
             }.toList()
         }
     }
@@ -393,14 +474,12 @@ class SingleThreadedStateMachineManager(
                     logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
                     return
                 }
+
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
+                val flowPrimitive = FlowPrimitive(flowId, checkpoint, false, false, null)
+
                 // Resurrect flow
-                createFlowFromCheckpoint(
-                        id = flowId,
-                        serializedCheckpoint = serializedCheckpoint,
-                        initialDeduplicationHandler = null,
-                        isAnyCheckpointPersisted = true,
-                        isStartIdempotent = false
-                ) ?: return
+                flowPrimitive.createFlow() ?: return
             } else {
                 // Just flow initiation message
                 null
@@ -767,19 +846,6 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
-        // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
-        // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
-        //
-        // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which
-        // forwards to the void method and then returns Unit. However annotations do not get copied across to this
-        // bridge, so we have to do a more complex scan here.
-        val call = logic.javaClass.methods.first { !it.isSynthetic && it.name == "call" && it.parameterCount == 0 }
-        if (call.getAnnotation(Suspendable::class.java) == null) {
-            throw FlowException("${logic.javaClass.name}.call() is not annotated as @Suspendable. Please fix this.")
-        }
-    }
-
     private fun createTransientValues(id: StateMachineRunId, resultFuture: CordaFuture<Any?>): FlowStateMachineImpl.TransientValues {
         return FlowStateMachineImpl.TransientValues(
                 eventQueue = Channels.newChannel(-1, Channels.OverflowPolicy.BLOCK),
@@ -795,15 +861,6 @@ class SingleThreadedStateMachineManager(
         )
     }
 
-    private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
-        return try {
-            bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
-        } catch (e: Exception) {
-            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-            null
-        }
-    }
-
     private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
         return try {
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
@@ -811,48 +868,6 @@ class SingleThreadedStateMachineManager(
             logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
             null
         }
-    }
-
-    private fun createFlowFromCheckpoint(
-            id: StateMachineRunId,
-            serializedCheckpoint: Checkpoint.Serialized,
-            isAnyCheckpointPersisted: Boolean,
-            isStartIdempotent: Boolean,
-            initialDeduplicationHandler: DeduplicationHandler?
-    ): Flow? {
-        val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.copy(status = Checkpoint.FlowStatus.RUNNABLE) ?: return null
-        val resultFuture = openFuture<Any?>()
-        val fiber = when (checkpoint.flowState) {
-            is FlowState.Unstarted -> {
-                val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
-                FlowStateMachineImpl(id, logic, scheduler)
-            }
-            is FlowState.Started -> {
-                tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
-            }
-            is FlowState.Completed -> {
-                return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-            }
-        }
-        val state = StateMachineState(
-                checkpoint = checkpoint,
-                pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                isFlowResumed = false,
-                isWaitingForFuture = false,
-                future = null,
-                isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                isStartIdempotent = isStartIdempotent,
-                isRemoved = false,
-                isKilled = false,
-                flowLogic = fiber.logic,
-                senderUUID = null
-        )
-        fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
-        fiber.transientState = TransientReference(state)
-        fiber.logic.stateMachine = fiber
-        verifyFlowLogicIsSuspendable(fiber.logic)
-
-        return Flow(fiber, resultFuture)
     }
 
     private fun addAndStartFlow(id: StateMachineRunId, flow: Flow) {
