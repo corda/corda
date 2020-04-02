@@ -2,10 +2,11 @@ package net.corda.errorPageBuilder
 
 import net.corda.common.logging.errorReporting.ErrorResource
 import java.io.File
+import java.lang.IllegalArgumentException
 import java.net.URLClassLoader
 import java.util.*
 
-class ErrorTableGenerator(private val resourceLocation: String,
+class ErrorTableGenerator(private val resourceLocation: File,
                           private val locale: Locale) {
 
     companion object {
@@ -14,6 +15,7 @@ class ErrorTableGenerator(private val resourceLocation: String,
         private const val DESCRIPTION_HEADING = "descriptionHeading"
         private const val TO_FIX_HEADING = "toFixHeading"
         private const val ERROR_HEADINGS_BUNDLE = "ErrorPageHeadings"
+        private const val ERROR_BAR_RESOURCE = "ErrorBar.properties"
     }
 
     private fun getHeading(heading: String) : String {
@@ -22,15 +24,15 @@ class ErrorTableGenerator(private val resourceLocation: String,
     }
 
     private fun listResources() : Iterator<String> {
-        return File(resourceLocation).walkTopDown().filter {
-            it.name.matches("[^_]*\\.properties".toRegex()) && !it.name.matches("ErrorBar.properties".toRegex())
+        return resourceLocation.walkTopDown().filter {
+            it.name.matches("[^_]*\\.properties".toRegex()) && !it.name.matches(ERROR_BAR_RESOURCE.toRegex())
         }.map {
             it.nameWithoutExtension
         }.iterator()
     }
 
     private fun createLoader() : ClassLoader {
-        val urls = File(resourceLocation).walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
+        val urls = resourceLocation.walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
         return URLClassLoader(urls)
     }
 
@@ -57,6 +59,7 @@ class ErrorTableGenerator(private val resourceLocation: String,
     }
 
     fun generateMarkdown() : String {
+        if (!resourceLocation.exists()) throw IllegalArgumentException("Directory $resourceLocation does not exist.")
         val tableData = generateTable()
         return formatTable(tableData)
     }

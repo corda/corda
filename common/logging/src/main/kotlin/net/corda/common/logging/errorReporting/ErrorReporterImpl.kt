@@ -12,10 +12,6 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
                                  private val locale: Locale,
                                  private val errorContextProvider: ErrorContextProvider) : ErrorReporter {
 
-    private fun formatCodeForLogs(error: ErrorCode) : String {
-        return "${error.namespace}-${error.code}"
-    }
-
     private fun fetchAndFormat(resource: String, property: String, params: Array<out Any>) : String {
         val bundle = ResourceBundle.getBundle(resource, locale)
         val template = bundle.getString(property)
@@ -25,7 +21,7 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
 
     private fun constructErrorInfoBar(error: ErrorCode) : String {
         val resource = "$resourceLocation/$ERROR_BAR_RESOURCE"
-        val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(formatCodeForLogs(error)))
+        val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(error.formatCode()))
         val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(errorContextProvider.getURL(locale)))
         return "[$codeMessage, $urlMessage]"
     }

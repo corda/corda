@@ -4,6 +4,7 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
 import net.corda.common.logging.errorReporting.CordaErrorContextProvider
+import net.corda.core.internal.exists
 import picocli.CommandLine
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -33,6 +34,7 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
             throw IllegalArgumentException("Directory not specified or not valid. Please specify a valid directory to write output to.")
         }
         val outputPath = outputDir!!.resolve("error-codes.md")
+        if (outputPath.exists()) throw IllegalArgumentException("Output file $outputPath exists, please remove it and run again.")
         return Files.createFile(outputPath).toFile()
     }
 
@@ -50,7 +52,7 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
         } catch (e: IllegalArgumentException) {
             return ExitCodes.FAILURE
         }
-        val tableGenerator = ErrorTableGenerator(resources.toString(), locale)
+        val tableGenerator = ErrorTableGenerator(resources.toFile(), locale)
         val table = tableGenerator.generateMarkdown()
         outputFile.writeText(table)
         return ExitCodes.SUCCESS

@@ -1,6 +1,5 @@
 package net.corda.common.logging.errorReporting
 
-import java.io.File
 import java.text.MessageFormat
 import java.util.*
 
@@ -16,7 +15,7 @@ class ErrorResource(private val resource: String,
 
     companion object {
         fun fromErrorCode(errorCode: ErrorCode, resourceLocation: String, locale: Locale) : ErrorResource {
-            val resource = "$resourceLocation/${errorCode.namespace}-${errorCode.code}"
+            val resource = "$resourceLocation/${errorCode.formatCode()}"
             return ErrorResource(resource, locale, errorCode.parameters)
         }
 
