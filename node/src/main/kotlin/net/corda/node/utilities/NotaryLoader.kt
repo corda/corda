@@ -60,7 +60,7 @@ class NotaryLoader(
         val notaryKey = myNotaryIdentity?.owningKey
                 ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
 
-        validateNotaryInWhitelist(myNotaryIdentity, services)
+        warnIfNotaryNotWhitelisted(myNotaryIdentity, services)
         validateNotaryType(myNotaryIdentity, services)
 
         val serviceClass = builtInServiceClass ?: scanCorDapps(cordappLoader)
@@ -80,8 +80,8 @@ class NotaryLoader(
         }
     }
 
-    /** Ensures the notary is in the network map whitelist on startup.*/
-    private fun validateNotaryInWhitelist(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
+    /** Log a warning if the notary is not whitelisted in the network parameters. */
+    private fun warnIfNotaryNotWhitelisted(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
         val ourParty = myNotaryIdentity.party
         if (!services.networkMapCache.isNotary(ourParty)) {
             log.warn("Provided notary identity is not in whitelist")
@@ -93,13 +93,13 @@ class NotaryLoader(
      * type advertised in the network map cache.
      */
     private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
-        var configuredAsValidatingNotary = services.configuration.notary?.validating
+        val configuredAsValidatingNotary = services.configuration.notary?.validating
         val notaryParty = myNotaryIdentity.party
-        var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
+        val validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
             log.warn("There is a discrepancy in the configured notary type and the one advertised in the network parameters. " +
-            "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")
+            "Configured as validating: $configuredAsValidatingNotary. Advertised as validating: $validatingNotaryInNetworkMapCache")
         }
     }
     
