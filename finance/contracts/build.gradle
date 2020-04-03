@@ -6,7 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
-apply from: "${rootProject.projectDir}/deterministic.gradle"
+apply from: "${rootProject.projectDir}/java8.gradle"
 
 description 'Corda finance module - contracts'
 
