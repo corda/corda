@@ -129,6 +129,10 @@ object DefaultKryoCustomizer {
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
 
+            addDefaultSerializer(Iterator::class.java) {kryo, type ->
+                IteratorSerializer(type, CompatibleFieldSerializer<Iterator<*>>(kryo, type).apply { setIgnoreSyntheticFields(false) })
+            }
+
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist
                 require(types.toSet().size == types.size) {
