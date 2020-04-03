@@ -75,31 +75,6 @@ class RestrictedEntityManager(private val delegate: EntityManager) : EntityManag
         delegate.refresh(entity)
     }
 
-    override fun <T : Any?> find(entityClass: Class<T>?, primaryKey: Any?, properties: MutableMap<String, Any>?): T {
-        checkSessionIsNotRolledBack()
-        return delegate.find(entityClass, primaryKey, properties)
-    }
-
-    override fun <T : Any?> find(entityClass: Class<T>?, primaryKey: Any?, lockMode: LockModeType?): T {
-        checkSessionIsNotRolledBack()
-        return delegate.find(entityClass, primaryKey, lockMode)
-    }
-
-    override fun <T : Any?> find(entityClass: Class<T>?, primaryKey: Any?): T {
-        checkSessionIsNotRolledBack()
-        return delegate.find(entityClass, primaryKey)
-    }
-
-    override fun <T : Any?> find(
-        entityClass: Class<T>?,
-        primaryKey: Any?,
-        lockMode: LockModeType?,
-        properties: MutableMap<String, Any>?
-    ): T {
-        checkSessionIsNotRolledBack()
-        return delegate.find(entityClass, primaryKey, lockMode, properties)
-    }
-
     private fun checkSessionIsNotRolledBack() {
         if (delegate.transaction.rollbackOnly) {
             throw RolledBackDatabaseSessionException()

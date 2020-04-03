@@ -12,6 +12,7 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.LockModeType
 import javax.persistence.Table
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RestrictedEntityManagerTest {
@@ -138,14 +139,18 @@ class RestrictedEntityManagerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `cannot call find on a session marked for rollback`() {
+    fun `can call find on a session marked for rollback`() {
         database.transaction {
             val manager = entityManager
             restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.find(entity::class.java, entity.id)
-            }
+            manager.persist(entity)
+            manager.transaction.setRollbackOnly()
+            assertEquals(entity, restrictedEntityManager.find(entity::class.java, entity.id))
+        }
+        database.transaction {
+            val manager = entityManager
+            restrictedEntityManager = RestrictedEntityManager(manager)
+            assertEquals(null, restrictedEntityManager.find(entity::class.java, entity.id))
         }
     }
 
