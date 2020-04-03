@@ -604,7 +604,7 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
         return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory(), ::signSingle)
     }
 
@@ -619,7 +619,7 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
 
         val testSSL = configureTestSSL(CordaX500Name("Raft", "London", "GB"))
         val raftNodePort = 10987

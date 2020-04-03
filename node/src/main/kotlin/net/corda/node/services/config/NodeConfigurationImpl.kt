@@ -128,7 +128,7 @@ data class NodeConfigurationImpl(
 
         fun database(devMode: Boolean) = DatabaseConfig(
                 initialiseSchema = devMode,
-                initialiseAppSchema = if(devMode) SchemaInitializationType.UPDATE else SchemaInitializationType.VALIDATE,
+                allowHibernateToManageAppSchema = devMode,
                 exportHibernateJMXStatistics = devMode
         )
     }

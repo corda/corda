@@ -127,7 +127,11 @@ open class MockServices private constructor(
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+            val database = configureDatabase(dataSourceProps,
+                    identityService::wellKnownPartyFromX500Name,
+                    identityService::wellKnownPartyFromAnonymous,
+                    schemaService,
+                    schemaService.internalSchemas())
             val keyManagementService = MockKeyManagementService(
                     identityService,
                     *arrayOf(initialIdentity.keyPair) + moreKeys
@@ -166,7 +170,6 @@ open class MockServices private constructor(
             val identityService = PersistentIdentityService(cacheFactory)
             val persistence = configureDatabase(
                     hikariProperties = dataSourceProps,
-                    databaseConfig = DatabaseConfig(),
                     wellKnownPartyFromX500Name = identityService::wellKnownPartyFromX500Name,
                     wellKnownPartyFromAnonymous = identityService::wellKnownPartyFromAnonymous,
                     schemaService = schemaService,

@@ -18,7 +18,6 @@ import javax.persistence.Id
 class AppendOnlyPersistentMapNonConcurrentTest {
 
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(),
-            DatabaseConfig(),
             { null }, { null },
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(AppendOnlyPersistentMapNonConcurrentTest.PersistentMapEntry::class.java)))))
 

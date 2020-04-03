@@ -59,7 +59,6 @@ class PersistentIdentityServiceTests {
         identityService = PersistentIdentityService(cacheFactory = cacheFactory)
         database = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 identityService::wellKnownPartyFromX500Name,
                 identityService::wellKnownPartyFromAnonymous
         )

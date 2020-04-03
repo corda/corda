@@ -68,7 +68,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })
         database.transaction {
             oracle = createMockCordaService(services, NodeInterestRates::Oracle)
             oracle.knownFixes = TEST_DATA

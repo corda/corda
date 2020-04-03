@@ -32,20 +32,24 @@ const val NODE_DATABASE_PREFIX = "node_"
 enum class SchemaInitializationType{
     NONE,
     VALIDATE,
-    UPDATE
+    UPDATE,
+    UNSET
 }
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
         val initialiseSchema: Boolean = Defaults.initialiseSchema,
+        @Deprecated(message = "initialiseAppSchema is deprecated and will be ignored", replaceWith = ReplaceWith("allowHibernateToManageAppSchema"))
         val initialiseAppSchema: SchemaInitializationType = Defaults.initialiseAppSchema,
+        val allowHibernateToManageAppSchema: Boolean = Defaults.allowHibernateToManageAppSchema,
         val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
 ) {
     object Defaults {
-        val initialiseSchema = true
-        val initialiseAppSchema = SchemaInitializationType.UPDATE
+        val initialiseSchema = false
+        val initialiseAppSchema = SchemaInitializationType.UNSET
+        val allowHibernateToManageAppSchema = false
         val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L

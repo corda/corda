@@ -61,7 +61,7 @@ class PersistentStateServiceTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), rigorousMock(), rigorousMock(), schemaService)
         val persistentStateService = PersistentStateService(schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party

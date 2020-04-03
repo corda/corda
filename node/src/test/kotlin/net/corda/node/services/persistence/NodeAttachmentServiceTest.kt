@@ -70,7 +70,7 @@ class NodeAttachmentServiceTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
+        database = configureDatabase(dataSourceProperties, { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
 
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {

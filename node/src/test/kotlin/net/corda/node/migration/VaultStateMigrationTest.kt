@@ -110,7 +110,6 @@ class VaultStateMigrationTest {
         notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 notaryServices.identityService::wellKnownPartyFromX500Name,
                 notaryServices.identityService::wellKnownPartyFromAnonymous,
                 ourName = BOB_IDENTITY.name)
@@ -564,7 +563,7 @@ class VaultStateMigrationTest {
         val commodityStatesToAdd = 0
         val stateMultiplier = 10
 
-        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
 
         // Starting the database this way runs the migration under test. This is fine for the unit tests (as the changelog table is ignored),
         // but when starting an actual node using these databases the migration will be skipped, as it has an entry in the changelog table.
@@ -586,7 +585,7 @@ class VaultStateMigrationTest {
     @Test(timeout=300_000)
 @Ignore
     fun `Run on persistent DB`() {
-        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
         val connection = (liquibaseDB.connection as JdbcConnection)
         Mockito.`when`(connection.url).thenReturn(cordaDB.jdbcUrl)
         Mockito.`when`(connection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)

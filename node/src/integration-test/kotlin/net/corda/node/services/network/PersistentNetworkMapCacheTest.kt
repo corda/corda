@@ -29,7 +29,7 @@ class PersistentNetworkMapCacheTest {
                 organisation = "Long Plc",
                 locality = "AB123456789012345678901234567890123456789012345678901234567890",
                 state = "AB123456789012345678901234567890123456789012345678901234567890",
-                country= "IT")
+                country = "IT")
         val LONG_PLC = TestIdentity(LONG_X500_NAME, 95)
         val LONGER_PLC = TestIdentity(LONG_X500_NAME.copy(organisation = "Longer Plc"), 96)
     }
@@ -39,7 +39,7 @@ class PersistentNetworkMapCacheTest {
     val testSerialization = SerializationEnvironmentRule()
 
     private var portCounter = 1000
-    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })
     private val charlieNetMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @After
@@ -47,8 +47,8 @@ class PersistentNetworkMapCacheTest {
         database.close()
     }
 
-    @Test(timeout=300_000)
-	fun addNode() {
+    @Test(timeout = 300_000)
+    fun addNode() {
         val alice = createNodeInfo(listOf(ALICE))
         charlieNetMapCache.addOrUpdateNode(alice)
         val fromDb = database.transaction {
@@ -60,8 +60,8 @@ class PersistentNetworkMapCacheTest {
         assertThat(fromDb).containsOnly(alice)
     }
 
-    @Test(timeout=300_000)
-	fun `unknown legal name`() {
+    @Test(timeout = 300_000)
+    fun `unknown legal name`() {
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
         assertThat(charlieNetMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
         assertThat(charlieNetMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
@@ -69,8 +69,8 @@ class PersistentNetworkMapCacheTest {
         assertThat(charlieNetMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
     }
 
-    @Test(timeout=300_000)
-	fun `nodes in distributed service`() {
+    @Test(timeout = 300_000)
+    fun `nodes in distributed service`() {
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
 
         val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME)
@@ -87,23 +87,23 @@ class PersistentNetworkMapCacheTest {
                 .withMessageContaining(DUMMY_NOTARY_NAME.toString())
     }
 
-    @Test(timeout=300_000)
-	fun `get nodes by owning key and by name`() {
+    @Test(timeout = 300_000)
+    fun `get nodes by owning key and by name`() {
         val alice = createNodeInfo(listOf(ALICE))
         charlieNetMapCache.addOrUpdateNode(alice)
         assertThat(charlieNetMapCache.getNodesByLegalIdentityKey(ALICE.publicKey)).containsOnly(alice)
         assertThat(charlieNetMapCache.getNodeByLegalName(ALICE.name)).isEqualTo(alice)
     }
 
-    @Test(timeout=300_000)
-	fun `get nodes by address`() {
+    @Test(timeout = 300_000)
+    fun `get nodes by address`() {
         val alice = createNodeInfo(listOf(ALICE))
         charlieNetMapCache.addOrUpdateNode(alice)
         assertThat(charlieNetMapCache.getNodeByAddress(alice.addresses[0])).isEqualTo(alice)
     }
 
-    @Test(timeout=300_000)
-	fun `insert two node infos with the same host and port`() {
+    @Test(timeout = 300_000)
+    fun `insert two node infos with the same host and port`() {
         val alice = createNodeInfo(listOf(ALICE))
         charlieNetMapCache.addOrUpdateNode(alice)
         val bob = createNodeInfo(listOf(BOB), address = alice.addresses[0])
@@ -112,14 +112,14 @@ class PersistentNetworkMapCacheTest {
         assertThat(nodeInfos).hasSize(2)
     }
 
-    @Test(timeout=300_000)
-	fun `negative test - attempt to insert invalid node info`() {
+    @Test(timeout = 300_000)
+    fun `negative test - attempt to insert invalid node info`() {
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(LONG_PLC)))
         assertThat(charlieNetMapCache.allNodes).hasSize(0)
     }
 
-    @Test(timeout=300_000)
-	fun `negative test - attempt to update existing node with invalid node info`() {
+    @Test(timeout = 300_000)
+    fun `negative test - attempt to update existing node with invalid node info`() {
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
         val aliceUpdate = TestIdentity(LONG_X500_NAME, ALICE.keyPair)
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(aliceUpdate)))
@@ -128,17 +128,17 @@ class PersistentNetworkMapCacheTest {
         assertThat(charlieNetMapCache.getNodeByLegalName(LONG_X500_NAME)).isNull()
     }
 
-    @Test(timeout=300_000)
-	fun `negative test - insert two valid node infos and one invalid one`() {
+    @Test(timeout = 300_000)
+    fun `negative test - insert two valid node infos and one invalid one`() {
         charlieNetMapCache.addOrUpdateNodes(listOf(createNodeInfo(listOf(ALICE)),
-                                           createNodeInfo(listOf(BOB)),
-                                           createNodeInfo(listOf(LONG_PLC))))
+                createNodeInfo(listOf(BOB)),
+                createNodeInfo(listOf(LONG_PLC))))
         assertThat(charlieNetMapCache.allNodes).hasSize(2)
         assertThat(charlieNetMapCache.allNodes.flatMap { it.legalIdentities }).isEqualTo(listOf(ALICE.party, BOB.party))
     }
 
-    @Test(timeout=300_000)
-	fun `negative test - insert three valid node infos and two invalid ones`() {
+    @Test(timeout = 300_000)
+    fun `negative test - insert three valid node infos and two invalid ones`() {
         charlieNetMapCache.addOrUpdateNodes(listOf(createNodeInfo(listOf(LONG_PLC)),
                 createNodeInfo(listOf(ALICE)),
                 createNodeInfo(listOf(BOB)),
@@ -148,8 +148,8 @@ class PersistentNetworkMapCacheTest {
         assertThat(charlieNetMapCache.allNodes.flatMap { it.legalIdentities }).isEqualTo(listOf(ALICE.party, BOB.party, CHARLIE.party))
     }
 
-    @Test(timeout=300_000)
-	fun `negative test - insert one valid node info then attempt to add one invalid node info and update the existing valid nodeinfo`() {
+    @Test(timeout = 300_000)
+    fun `negative test - insert one valid node info then attempt to add one invalid node info and update the existing valid nodeinfo`() {
         charlieNetMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
         val aliceUpdate = TestIdentity(LONG_X500_NAME, ALICE.keyPair)
         charlieNetMapCache.addOrUpdateNodes(listOf(createNodeInfo(listOf(aliceUpdate)),

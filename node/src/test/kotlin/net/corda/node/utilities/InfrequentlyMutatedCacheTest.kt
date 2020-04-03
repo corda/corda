@@ -16,7 +16,6 @@ import kotlin.test.assertNull
 class InfrequentlyMutatedCacheTest {
     private val cache = InfrequentlyMutatedCache<String, Int>("foo", TestingNamedCacheFactory())
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(),
-            DatabaseConfig(),
             { null }, { null },
             NodeSchemaService(emptySet()))
 

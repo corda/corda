@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 
 
 class TransactionCallbackTest {
-    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })
 
     @After
     fun closeDatabase() {

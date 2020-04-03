@@ -46,7 +46,6 @@ class IdentityServiceToStringShortMigrationTest {
     fun setUp() {
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 { null },
                 { null },
                 ourName = BOB_IDENTITY.name)

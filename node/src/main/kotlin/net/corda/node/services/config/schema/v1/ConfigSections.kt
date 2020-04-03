@@ -270,13 +270,14 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
     private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
+    private val allowHibernateToManageAppSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.allowHibernateToManageAppSchema)
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
         val config = configuration.withOptions(options)
-        return valid(DatabaseConfig(config[initialiseSchema], config[initialiseAppSchema], config[transactionIsolationLevel], config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(config[initialiseSchema], config[initialiseAppSchema], config[allowHibernateToManageAppSchema], config[transactionIsolationLevel], config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }
 

@@ -55,7 +55,6 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
                         val bExpectedIfSingleThreaded: Outcome = bExpected)
 
     private val database = configureDatabase(makeTestDataSourceProperties(),
-            DatabaseConfig(),
             { null }, { null },
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(PersistentMapEntry::class.java)))))
 

@@ -139,7 +139,8 @@ class DriverDSLImpl(
         val cordappsForAllNodes: Collection<TestCordappInternal>?,
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
-        val environmentVariables : Map<String, String>
+        val environmentVariables : Map<String, String>,
+        val allowHibernateToManageAppSchema : Boolean = false
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -307,7 +308,7 @@ class DriverDSLImpl(
                         baseDirectory = baseDirectory(name),
                         allowMissingConfig = true,
                         configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
-                ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
+                ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource).withDbManagementFallback(allowHibernateToManageAppSchema)
         ).checkAndOverrideForInMemoryDB()
         return startNodeInternal(config, webAddress, localNetworkMap, parameters, bytemanPort)
     }
@@ -1064,6 +1065,11 @@ class DriverDSLImpl(
             return filterNot { it.key == "java.class.path" }
         }
     }
+}
+
+private fun Config.withDbManagementFallback(allowHibernateToManageAppSchema: Boolean): Config {
+    val dbFallback = ConfigFactory.parseMap(mapOf("database" to mapOf("initialiseSchema" to true, "allowHibernateToManageAppSchema" to allowHibernateToManageAppSchema)))
+    return this.withFallback(dbFallback).resolve()
 }
 
 /**

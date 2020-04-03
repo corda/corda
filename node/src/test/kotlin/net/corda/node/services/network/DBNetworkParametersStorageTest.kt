@@ -54,7 +54,6 @@ class DBNetworkParametersStorageTest {
         hash3 = incorrectParams.raw.hash
         database = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 { null },
                 { null }
         )

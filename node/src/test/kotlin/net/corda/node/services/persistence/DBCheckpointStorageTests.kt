@@ -51,7 +51,7 @@ class DBCheckpointStorageTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })
         newCheckpointStorage()
     }
 

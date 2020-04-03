@@ -128,7 +128,7 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
 }
 
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
-    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), { null }, { null })
 
     @After
     fun closeDatabase() {
@@ -254,7 +254,7 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
 }
 
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
-    private val databaseConfig: DatabaseConfig = DatabaseConfig()
+    private val databaseConfig: DatabaseConfig = DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true)
 
     private fun createScheduler(db: CordaPersistence): NodeSchedulerService {
         return NodeSchedulerService(

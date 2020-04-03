@@ -63,7 +63,6 @@ class PersistentIdentityMigrationNewTableTest{
         // Runs migration tasks
         cordaDB = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 notaryServices.identityService::wellKnownPartyFromX500Name,
                 notaryServices.identityService::wellKnownPartyFromAnonymous,
                 ourName = BOB_IDENTITY.name)

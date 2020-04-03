@@ -161,6 +161,26 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
         RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(users).copy(id = id), TestingNamedCacheFactory())
 
 /**
+ * Convenience method to configure a database in default test setting (schema migration enabled, hibernate management enabled)
+ */
+fun configureDatabase(hikariProperties: Properties,
+                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
+                      schemaService: SchemaService = NodeSchemaService(),
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
+                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
+    return configureDatabase(hikariProperties,
+            DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true),
+            wellKnownPartyFromX500Name,
+            wellKnownPartyFromAnonymous,
+            schemaService,
+            internalSchemas,
+            cacheFactory,
+            ourName)
+}
+
+/**
  * Convenience method for configuring a database for some tests.
  */
 fun configureDatabase(hikariProperties: Properties,

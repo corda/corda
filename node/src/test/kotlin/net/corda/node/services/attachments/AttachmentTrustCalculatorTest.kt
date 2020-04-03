@@ -50,7 +50,7 @@ class AttachmentTrustCalculatorTest {
     @Before
     fun setUp() {
         val dataSourceProperties = MockServices.makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
+        database = configureDatabase(dataSourceProperties, { null }, { null })
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {
                 it.start()
