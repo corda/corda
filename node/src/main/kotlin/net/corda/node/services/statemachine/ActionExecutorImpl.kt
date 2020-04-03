@@ -58,6 +58,7 @@ class ActionExecutorImpl(
             is Action.PropagateErrors -> executePropagateErrors(action)
             is Action.ScheduleEvent -> executeScheduleEvent(fiber, action)
             is Action.SleepUntil -> executeSleepUntil(action)
+            is Action.RemoveCheckpoint -> executeRemoveCheckpoint(action)
             is Action.SendInitial -> executeSendInitial(action)
             is Action.SendExisting -> executeSendExisting(action)
             is Action.SendMultiple -> executeSendMultiple(action)
@@ -158,6 +159,11 @@ class ActionExecutorImpl(
         // conditions may "interrupt" the sleep instead of waiting until wakeup.
         val duration = Duration.between(services.clock.instant(), action.time)
         Fiber.sleep(duration.toNanos(), TimeUnit.NANOSECONDS)
+    }
+
+    @Suspendable
+    private fun executeRemoveCheckpoint(action: Action.RemoveCheckpoint) {
+        checkpointStorage.removeCheckpoint(action.id)
     }
 
     @Suspendable
