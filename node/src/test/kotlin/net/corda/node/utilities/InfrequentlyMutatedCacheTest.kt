@@ -2,7 +2,6 @@ package net.corda.node.utilities
 
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices

@@ -163,6 +163,7 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
 /**
  * Convenience method to configure a database in default test setting (schema migration enabled, hibernate management enabled)
  */
+@Suppress("LongParameterList")
 fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,

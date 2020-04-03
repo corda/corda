@@ -1,12 +1,10 @@
 package net.corda.node.services.persistence
 
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Test
 import kotlin.test.assertEquals
-
 
 class TransactionCallbackTest {
     private val database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })

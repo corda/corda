@@ -5,7 +5,6 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.relaxedThoroughness
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.ProcessUtilities.startJavaProcess
