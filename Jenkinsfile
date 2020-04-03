@@ -22,6 +22,8 @@ pipeline {
         stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "docker login --username=stefanotestingcr --password=\"${DOCKER_PUSH_PWD}\" stefanotestingcr.azurecr.io/baseimage"
+                    sh "docker pull stefanotestingcr.azurecr.io/buildbase:11latest"
                     sh "./gradlew --no-daemon " +
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
