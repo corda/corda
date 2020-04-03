@@ -415,10 +415,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         driver(DriverParameters(startNodesInProcess = true)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(
-                    ::EntityManagerSqlFlow,
-                    commitStatus
-                ).returnValue.getOrThrow(20.seconds)
+                it.proxy.startFlow(::EntityManagerSqlFlow).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(1, entities.size)
@@ -498,15 +495,12 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
-                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManager,
+                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManagerFlow,
                     commitStatus
                 ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
-                when (commitStatus) {
-                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
-                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
-                }
+                assertEquals(1, entities.size)
             }
         }
     }
@@ -520,12 +514,173 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(
-                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManager,
+                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManagerFlow,
                     commitStatus
                 ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 assertEquals(2, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager inside an entity manager saves all data`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::EntityManagerInsideAnEntityManagerFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(2, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager inside an entity manager that throws an error does not save any data`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                assertFailsWith<TimeoutException> {
+                    it.proxy.startFlow(
+                        ::EntityManagerInsideAnEntityManagerThatThrowsAnExceptionFlow,
+                        commitStatus
+                    ).returnValue.getOrThrow(20.seconds)
+                }
+                assertEquals(3, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager that saves an entity with an entity manager inside it that throws an error after saving the entity does not save any data`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                assertFailsWith<TimeoutException> {
+                    it.proxy.startFlow(
+                        ::EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAfterSavingFlow,
+                        commitStatus
+                    ).returnValue.getOrThrow(20.seconds)
+                }
+                assertEquals(3, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it around the entity manager after saving the entity saves the data from the external entity manager`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesAroundTheEntityManagerAfterSavingFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(2, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it inside the entity manager after saving the entity saves the data from the external entity manager`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesInsideTheEntityManagerAfterSavingFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(2, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it around the entity manager before saving the entity saves the data from the external entity manager`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesAroundTheEntityManagerBeforeSavingFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(2, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager with an entity manager inside it saves an entity, outer throws and catches the error outside itself after saving the entity does not save the data from the internal entity manager`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerThatSavesAnEntityUsingInternalEntityManagerAndThrowsFromOuterAndCatchesAroundOuterEntityManagerAfterSavingFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `entity manager with an entity manager inside it saves an entity, outer throws and catches the error inside itself after saving the entity does not save the data from the internal entity manager`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerThatSavesAnEntityUsingInternalEntityManagerAndThrowsFromOuterAndCatchesInsideOuterEntityManagerAfterSavingFlow,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                assertEquals(1, entities.size)
             }
         }
     }
@@ -832,8 +987,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerSqlFlow(private val commitStatus: CommitStatus) :
-        FlowLogic<Unit>() {
+    class EntityManagerSqlFlow : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -926,7 +1080,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManager(private val commitStatus: CommitStatus) :
+    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManagerFlow(private val commitStatus: CommitStatus) :
         FlowLogic<Unit>() {
 
         @Suspendable
@@ -959,7 +1113,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @StartableByRPC
-    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManager(private val commitStatus: CommitStatus) :
+    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInNewEntityManagerFlow(private val commitStatus: CommitStatus) :
         FlowLogic<Unit>() {
 
         @Suspendable
@@ -988,6 +1142,206 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     .setParameter("name", entityWithIdTwo.name)
                     .setParameter("quote", entityWithIdTwo.name)
                 query.executeUpdate()
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerInsideAnEntityManagerFlow : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+                serviceHub.withEntityManager {
+                    persist(entityWithIdTwo)
+                }
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerInsideAnEntityManagerThatThrowsAnExceptionFlow(private val commitStatus: CommitStatus) : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                serviceHub.withEntityManager {
+                    persist(anotherEntityWithIdOne)
+                }
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAfterSavingFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                persist(entityWithIdTwo)
+                serviceHub.withEntityManager {
+                    persist(anotherEntityWithIdOne)
+                }
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesAroundTheEntityManagerAfterSavingFlow(
+        private val commitStatus: CommitStatus
+    ) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                persist(entityWithIdTwo)
+                try {
+                    serviceHub.withEntityManager {
+                        persist(anotherEntityWithIdOne)
+                    }
+                } catch (e: PersistenceException) {
+                    logger.info("Caught the exception!")
+                }
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesInsideTheEntityManagerAfterSavingFlow(
+        private val commitStatus: CommitStatus
+    ) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                persist(entityWithIdTwo)
+                serviceHub.withEntityManager {
+                    try {
+                        persist(anotherEntityWithIdOne)
+                        flush()
+                    } catch (e: PersistenceException) {
+                        logger.info("Caught the exception!")
+                    }
+                }
+
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityWithAnEntityManagerInsideItThatThrowsAnExceptionAndCatchesAroundTheEntityManagerBeforeSavingFlow(
+        private val commitStatus: CommitStatus
+    ) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                try {
+                    serviceHub.withEntityManager {
+                        persist(anotherEntityWithIdOne)
+                    }
+                } catch (e: PersistenceException) {
+                    logger.info("Caught the exception!")
+                }
+                persist(entityWithIdTwo)
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityUsingInternalEntityManagerAndThrowsFromOuterAndCatchesAroundOuterEntityManagerAfterSavingFlow(
+        private val commitStatus: CommitStatus
+    ) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            try {
+                serviceHub.withEntityManager {
+                    serviceHub.withEntityManager {
+                        persist(entityWithIdTwo)
+                    }
+                    persist(anotherEntityWithIdOne)
+                }
+            } catch (e: PersistenceException) {
+                logger.info("Caught the exception!")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerThatSavesAnEntityUsingInternalEntityManagerAndThrowsFromOuterAndCatchesInsideOuterEntityManagerAfterSavingFlow(
+        private val commitStatus: CommitStatus
+    ) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                serviceHub.withEntityManager {
+                    persist(entityWithIdTwo)
+                }
+                try {
+                    persist(anotherEntityWithIdOne)
+                    flush()
+                } catch (e: PersistenceException) {
+                    logger.info("Caught the exception!")
+                }
             }
             sleep(1.millis)
         }
