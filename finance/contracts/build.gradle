@@ -6,6 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
+apply from: "${rootProject.projectDir}/deterministic.gradle"
 
 description 'Corda finance module - contracts'
 
@@ -31,7 +32,8 @@ configurations {
 }
 
 jar {
-    baseName 'corda-finance-contracts'
+    archiveBaseName = 'corda-finance-contracts'
+    archiveClassifier = ''
     manifest {
         attributes('Corda-Revision': 'n/a')
         attributes('Corda-Vendor': 'Corda Open Source')

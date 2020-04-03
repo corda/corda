@@ -30,7 +30,9 @@ tasks.withType(AbstractCompile) {
 }
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
+    // Disable the bootclasspath for now - it breaks compiling
+    // the finance-contracts Java classes.
+    //options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
     sourceCompatibility = VERSION_1_8
     targetCompatibility = VERSION_1_8
 }
