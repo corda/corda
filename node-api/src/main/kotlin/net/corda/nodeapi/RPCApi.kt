@@ -197,6 +197,7 @@ object RPCApi {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REPLY.ordinal)
                 message.putStringProperty(DEDUPLICATION_IDENTITY_FIELD_NAME, deduplicationIdentity)
                 id.mapTo(message, RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME)
+                message.type = ClientMessage.BYTES_TYPE;
                 message.bodyBuffer.writeBytes(result.safeSerialize(context) { Try.Failure<Any>(it) }.bytes)
             }
         }
