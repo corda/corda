@@ -6,6 +6,7 @@ import net.corda.core.messaging.StateMachineTransactionMapping;
 import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
+import org.crsh.cli.Named;
 import org.crsh.cli.Usage;
 import org.crsh.text.Color;
 import org.crsh.text.Decoration;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Optional;
 
+@Named("hashLookup")
 public class HashLookupShellCommand extends InteractiveShellCommand {
     private static Logger logger = LoggerFactory.getLogger(HashLookupShellCommand.class);
 

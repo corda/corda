@@ -7,6 +7,7 @@ import net.corda.tools.shell.InteractiveShell.OutputFormat;
 import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
+import org.crsh.cli.Named;
 import org.crsh.cli.Usage;
 import org.crsh.command.InvocationContext;
 import org.crsh.command.ScriptException;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @Man("Allows you to see and update the format that's currently used for the commands' output.")
 @Usage("Allows you to see and update the format that's currently used for the commands' output.")
+@Named("output-format")
 public class OutputFormatCommand extends InteractiveShellCommand {
 
     public OutputFormatCommand() {}
