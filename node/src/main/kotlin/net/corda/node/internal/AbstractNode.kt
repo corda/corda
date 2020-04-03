@@ -46,6 +46,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.RestrictedConnection
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.ContractUpgradeService
@@ -1182,7 +1183,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
-        override fun jdbcSession(): Connection = database.createSession()
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction {
