@@ -21,6 +21,13 @@ interface CheckpointStorage {
     fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?)
 
     /**
+     * Update an existing checkpoint. Changing the FlowStatus to paused.
+     *
+     * @return whether the checkpoint exists
+     */
+    fun markCheckpointAsPaused(id: StateMachineRunId): Boolean
+
+    /**
      * Remove existing checkpoint from the store.
      * @return whether the id matched a checkpoint that was removed.
      */

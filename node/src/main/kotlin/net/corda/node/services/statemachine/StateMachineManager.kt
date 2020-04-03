@@ -92,7 +92,7 @@ interface StateMachineManager {
      *
      * @return whether the flow was successfully marked as paused.
      */
-//    fun markFlowsAsPaused(id: StateMachineRunId): Boolean
+    fun markFlowsAsPaused(id: StateMachineRunId): Boolean
 
     /**
      * Mark all flows as paused, this stops the flow from running next time the state machine manager starts up.
@@ -100,7 +100,7 @@ interface StateMachineManager {
      *
      * @return a map with an entry for each flow marking whether or not the flow was successfully paused.
      */
-//    fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean>
+    fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean>
 
     /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.

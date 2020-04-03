@@ -190,6 +190,8 @@ class SingleThreadedStateMachineManager(
         /** True if we're shutting down, so don't resume anything. */
         var stopping = false
         val flows = HashMap<StateMachineRunId, Flow>()
+        // TODO: Does flowPrimitives need to be here and controlled by a mutex. Probably not unless StateMachineManager
+        //  is meant to be thread safe.
         val flowPrimitives = HashMap<StateMachineRunId, FlowPrimitive>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
@@ -252,6 +254,11 @@ class SingleThreadedStateMachineManager(
             } else {
                 (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
             }
+        }
+
+        val pausedFlows = restoreFlowPrimitivesFromPausedCheckpoint()
+        mutex.locked {
+            flowPrimitives.putAll(pausedFlows)
         }
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
@@ -367,6 +374,35 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    override fun markFlowsAsPaused(id: StateMachineRunId): Boolean {
+        mutex.locked {
+            if (flows[id] != null)
+                return false // Flow is running already hence we cannot pause it.
+            if (flowPrimitives[id] != null)
+                return true // Flow is already paused hence we don't need to do anything
+        }
+        return checkpointStorage.markCheckpointAsPaused(id)
+    }
+
+    override fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
+        return checkpointStorage.getRunnableCheckpoints().use {
+            it.map { (id, serializedCheckpoint) ->
+                val paused = markFlowsAsPaused(id)
+                id to paused
+            }.toList().map {pair -> pair.first to pair.second}.toMap()
+        }
+    }
+
+    //TODO: Do we need a to return a future here?
+    fun unPauseFlow(id: StateMachineRunId): Boolean {
+        mutex.locked {
+            val flowPrimitive = flowPrimitives[id] ?: return false
+            val flow = flowPrimitive.createFlow() ?: return false
+            addAndStartFlow(flow.fiber.id, flow)
+        }
+        return true
+    }
+
     override fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId) {
         val previousFlowId = sessionToFlow.put(sessionId, flowId)
         if (previousFlowId != null) {
@@ -446,6 +482,16 @@ class SingleThreadedStateMachineManager(
                 val flowPrimative = FlowPrimitive(id, checkpoint, true, false, null)
                 flowPrimative.createFlow()
             }.toList()
+        }
+    }
+
+    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, FlowPrimitive> {
+        return checkpointStorage.getPausedCheckpoints().use {
+            it.mapNotNull { (id, serializedCheckpoint) ->
+                // If a flow is added before start() then don't attempt to restore it
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
+                id to FlowPrimitive(id, checkpoint, true, false, null)
+            }.toList().map {pair -> pair.first to pair.second}.toMap()
         }
     }
 

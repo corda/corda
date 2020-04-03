@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.sun.org.apache.xpath.internal.operations.Bool
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
@@ -59,7 +60,7 @@ class DBCheckpointStorage(
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
 
-        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
+        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.PAUSED, FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -279,6 +280,13 @@ class DBCheckpointStorage(
 
     override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?) {
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
+    }
+
+    override fun markCheckpointAsPaused(id: StateMachineRunId) : Boolean {
+        val checkpoint = getDBCheckpoint(id) ?: return false
+        checkpoint?.status = FlowStatus.PAUSED
+        currentDBSession().update(checkpoint)
+        return true
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
