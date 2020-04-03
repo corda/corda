@@ -26,7 +26,6 @@ import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.nodeapi.internal.persistence.RolledBackDatabaseSessionException
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -343,24 +342,22 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
     }
 
     @Test(timeout = 300_000)
-    fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should throw an exception`() {
+    fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should not save the extra data`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
         driver(DriverParameters(startNodesInProcess = true)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertFailsWith<RolledBackDatabaseSessionException> {
-                    it.proxy.startFlow(
-                        ::EntityManagerCatchErrorAndSaveMoreEntitiesInTheSameEntityManager,
-                        commitStatus
-                    ).returnValue.getOrThrow(20.seconds)
-                }
+                it.proxy.startFlow(
+                    ::EntityManagerCatchErrorAndSaveMoreEntitiesInTheSameEntityManager,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
                 assertEquals(0, counter)
                 val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
                 when (commitStatus) {
                     CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
-                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(0, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
                 }
             }
         }
@@ -488,6 +485,28 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 // 1 entity saved from the first entity manager block that does not get rolled back
                 // even if there is no intermediate commit to the database
                 assertEquals(1, entities.size)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `constraint violation caused by a sql statement that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should not save the extra data`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(
+                    ::EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManager,
+                    commitStatus
+                ).returnValue.getOrThrow(20.seconds)
+                assertEquals(0, counter)
+                val entities = it.proxy.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+                when (commitStatus) {
+                    CommitStatus.INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                    CommitStatus.NO_INTERMEDIATE_COMMIT -> assertEquals(1, entities.size)
+                }
             }
         }
     }
@@ -754,6 +773,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 } catch (e: PersistenceException) {
                     logger.info("Caught the exception!")
                 }
+                // These entities are not saved since the transaction is marked for rollback
                 persist(entityWithIdTwo)
                 persist(entityWithIdThree)
             }
@@ -900,6 +920,39 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                 }
             } catch (e: PersistenceException) {
                 logger.info("Caught the exception!")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerCatchErrorFromSqlAndSaveMoreEntitiesInTheSameEntityManager(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            serviceHub.withEntityManager {
+                try {
+                    createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                        .setParameter("id", anotherEntityWithIdOne.id)
+                        .setParameter("name", anotherEntityWithIdOne.name)
+                        .setParameter("quote", anotherEntityWithIdOne.name)
+                        .executeUpdate()
+                } catch (e: PersistenceException) {
+                    logger.info("Caught the exception!")
+                }
+                // These entities are not saved since the transaction is marked for rollback
+                createNativeQuery("INSERT INTO custom_table VALUES (:id, :name, :quote)")
+                    .setParameter("id", entityWithIdTwo.id)
+                    .setParameter("name", entityWithIdTwo.name)
+                    .setParameter("quote", entityWithIdTwo.name)
+                    .executeUpdate()
             }
             sleep(1.millis)
         }

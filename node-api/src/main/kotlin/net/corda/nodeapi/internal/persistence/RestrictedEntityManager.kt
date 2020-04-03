@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.persistence
 
 import javax.persistence.EntityManager
 import javax.persistence.EntityTransaction
-import javax.persistence.LockModeType
 
 /**
  * A delegate of [EntityManager] which disallows some operations.
@@ -10,11 +9,11 @@ import javax.persistence.LockModeType
 @Suppress("TooManyFunctions")
 class RestrictedEntityManager(private val delegate: EntityManager) : EntityManager by delegate {
 
-    override fun close() {
-        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
+    override fun getTransaction(): EntityTransaction {
+        return RestrictedEntityTransaction(delegate.transaction)
     }
 
-    override fun getTransaction(): EntityTransaction {
+    override fun close() {
         throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
     }
 
@@ -29,57 +28,19 @@ class RestrictedEntityManager(private val delegate: EntityManager) : EntityManag
     override fun setProperty(propertyName: String?, value: Any?) {
         throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
     }
+}
 
-    override fun persist(entity: Any?) {
-        checkSessionIsNotRolledBack()
-        delegate.persist(entity)
+class RestrictedEntityTransaction(private val delegate: EntityTransaction) : EntityTransaction by delegate {
+
+    override fun rollback() {
+        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
     }
 
-    override fun <T : Any?> merge(entity: T): T {
-        checkSessionIsNotRolledBack()
-        return delegate.merge(entity)
+    override fun commit() {
+        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
     }
 
-    override fun remove(entity: Any?) {
-        checkSessionIsNotRolledBack()
-        delegate.remove(entity)
+    override fun begin() {
+        throw UnsupportedOperationException("This method cannot be called via ServiceHub.withEntityManager.")
     }
-
-    override fun lock(entity: Any?, lockMode: LockModeType?) {
-        checkSessionIsNotRolledBack()
-        delegate.lock(entity, lockMode)
-    }
-
-    override fun lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?) {
-        checkSessionIsNotRolledBack()
-        delegate.lock(entity, lockMode, properties)
-    }
-
-    override fun refresh(entity: Any?, properties: MutableMap<String, Any>?) {
-        checkSessionIsNotRolledBack()
-        delegate.refresh(entity, properties)
-    }
-
-    override fun refresh(entity: Any?, lockMode: LockModeType?) {
-        checkSessionIsNotRolledBack()
-        delegate.refresh(entity, lockMode)
-    }
-
-    override fun refresh(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?) {
-        checkSessionIsNotRolledBack()
-        delegate.refresh(entity, lockMode, properties)
-    }
-
-    override fun refresh(entity: Any?) {
-        checkSessionIsNotRolledBack()
-        delegate.refresh(entity)
-    }
-
-    private fun checkSessionIsNotRolledBack() {
-        if (delegate.transaction.rollbackOnly) {
-            throw RolledBackDatabaseSessionException()
-        }
-    }
-
-    // TODO: Figure out which other methods on EntityManager need to be blocked?
 }

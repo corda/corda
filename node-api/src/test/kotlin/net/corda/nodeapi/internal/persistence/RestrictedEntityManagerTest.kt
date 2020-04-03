@@ -10,10 +10,10 @@ import org.junit.Test
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.persistence.LockModeType
 import javax.persistence.Table
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class RestrictedEntityManagerTest {
     private val database = configureDatabase(
@@ -55,11 +55,39 @@ class RestrictedEntityManagerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `cannot call getTransaction`() {
+    fun `getTransaction returns a restricted transaction`() {
+        database.transaction {
+            restrictedEntityManager = RestrictedEntityManager(entityManager)
+            assertTrue(restrictedEntityManager.transaction is RestrictedEntityTransaction)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `cannot call commit`() {
         database.transaction {
             restrictedEntityManager = RestrictedEntityManager(entityManager)
             assertFailsWith<UnsupportedOperationException> {
-                restrictedEntityManager.transaction
+                restrictedEntityManager.transaction.commit()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `cannot call rollback`() {
+        database.transaction {
+            restrictedEntityManager = RestrictedEntityManager(entityManager)
+            assertFailsWith<UnsupportedOperationException> {
+                restrictedEntityManager.transaction.rollback()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `cannot call begin`() {
+        database.transaction {
+            restrictedEntityManager = RestrictedEntityManager(entityManager)
+            assertFailsWith<UnsupportedOperationException> {
+                restrictedEntityManager.transaction.begin()
             }
         }
     }
@@ -103,42 +131,6 @@ class RestrictedEntityManagerTest {
     }
 
     @Test(timeout = 300_000)
-    fun `cannot call persist on a session marked for rolled back`() {
-        database.transaction {
-            val manager = entityManager
-            restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.persist(entity)
-            }
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `cannot call merge on a session marked for rolled back`() {
-        database.transaction {
-            val manager = entityManager
-            restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.merge(entity)
-            }
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `cannot call remove on asession marked for rolled back`() {
-        database.transaction {
-            val manager = entityManager
-            restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.remove(entity)
-            }
-        }
-    }
-
-    @Test(timeout = 300_000)
     fun `can call find on a session marked for rollback`() {
         database.transaction {
             val manager = entityManager
@@ -151,30 +143,6 @@ class RestrictedEntityManagerTest {
             val manager = entityManager
             restrictedEntityManager = RestrictedEntityManager(manager)
             assertEquals(null, restrictedEntityManager.find(entity::class.java, entity.id))
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `cannot call refresh on a session marked for rollback`() {
-        database.transaction {
-            val manager = entityManager
-            restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.refresh(entity)
-            }
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `cannot call lock on a session marked for rollback`() {
-        database.transaction {
-            val manager = entityManager
-            restrictedEntityManager = RestrictedEntityManager(manager)
-            assertFailsWith<RolledBackDatabaseSessionException> {
-                manager.transaction.setRollbackOnly()
-                restrictedEntityManager.lock(entity, LockModeType.OPTIMISTIC)
-            }
         }
     }
 
