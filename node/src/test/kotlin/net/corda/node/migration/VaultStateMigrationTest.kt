@@ -480,7 +480,7 @@ class VaultStateMigrationTest {
         assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
     }
 
-    @Test(expected = VaultStateMigrationException::class)
+    @Test(expected = VaultStateMigrationException::class, timeout = 300_000)
     fun `Null database causes migration to fail`() {
         val migration = VaultStateMigration()
         // Just check this does not throw an exception
