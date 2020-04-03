@@ -386,13 +386,16 @@ class ProtonWrapperTests {
 	fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
-        var connected = false
+        // AmqpClient is set to auto-reconnect, there might be multiple connect/disconnect rounds
+        val connectedStack = mutableListOf<Boolean>()
         amqpClient.onConnection.subscribe { change ->
-            connected = change.connected
+            connectedStack.add(change.connected)
         }
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
+        assertEquals(1, connectedStack.size)
+        assertTrue(connectedStack.contains(true))
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val sendAddress = P2P_PREFIX + "Test"
         val testData = "Test".toByteArray()
@@ -401,7 +404,7 @@ class ProtonWrapperTests {
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Rejected, message.onComplete.get())
-        assertEquals(false, connected)
+        assertTrue(connectedStack.contains(false))
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
