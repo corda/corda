@@ -196,7 +196,7 @@ class CordaPersistence(
         _contextDatabase.set(this)
         val transaction = contextTransaction
         try {
-//            transaction.session.flush()
+            transaction.session.flush()
             return transaction.connection
         } catch (e: Exception) {
             if (e is SQLException || e is PersistenceException) {
