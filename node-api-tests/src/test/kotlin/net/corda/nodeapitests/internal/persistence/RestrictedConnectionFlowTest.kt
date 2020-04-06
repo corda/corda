@@ -4,14 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.persistence.RestrictedConnection
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RestrictedConnectionFlowTest {
@@ -28,36 +29,20 @@ class RestrictedConnectionFlowTest {
     }
 
     @InitiatingFlow
-    class TestAutoCommitMethodIsBlocked : FlowLogic<UnsupportedOperationException?>() {
+    class TestAutoCommitMethodIsBlocked : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() : UnsupportedOperationException? {
+        override fun call() {
             val connection = serviceHub.jdbcSession()
-            var exception : UnsupportedOperationException? = null
-
-            try {
-                connection.autoCommit = true
-            } catch(e : UnsupportedOperationException){
-                exception = e
-            }
-
-            return exception
+            connection.autoCommit = true
         }
     }
 
     @InitiatingFlow
-    class TestCloseMethodIsBlocked : FlowLogic<UnsupportedOperationException?>() {
+    class TestCloseMethodIsBlocked : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() : UnsupportedOperationException? {
+        override fun call() {
             val connection = serviceHub.jdbcSession()
-            var exception : UnsupportedOperationException? = null
-
-            try {
-                connection.close()
-            } catch(e : UnsupportedOperationException){
-                exception = e
-            }
-
-            return exception
+            connection.close()
         }
     }
 
@@ -80,8 +65,14 @@ class RestrictedConnectionFlowTest {
 
     @Test(timeout=300_000)
     fun testMethodsAreBlocked() {
-        assertNotNull({ aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).get()?.message }, "This method cannot be called via ServiceHub.jdbcSession.")
-        assertNotNull({ aliceNode.startFlow(TestCloseMethodIsBlocked()).get()?.message }, "This method cannot be called via ServiceHub.jdbcSession.")
+        Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
+                .isThrownBy { aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).getOrThrow()}
+                .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession.")
+
+        Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
+                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow()}
+                .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession.")
+
         mockNetwork.runNetwork()
     }
 }

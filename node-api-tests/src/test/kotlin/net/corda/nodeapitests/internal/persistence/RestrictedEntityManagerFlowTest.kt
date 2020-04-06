@@ -4,14 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RestrictedEntityManagerFlowTest {
@@ -32,38 +33,22 @@ class RestrictedEntityManagerFlowTest {
     }
 
     @InitiatingFlow
-    class TestCloseMethodIsBlocked : FlowLogic<UnsupportedOperationException?>() {
+    class TestCloseMethodIsBlocked : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() : UnsupportedOperationException? {
-            var exception : UnsupportedOperationException? = null
-
-            try {
-                serviceHub.withEntityManager(){
-                    this.close()
-                }
-            } catch(e : UnsupportedOperationException){
-                exception = e
+        override fun call() {
+            serviceHub.withEntityManager() {
+                this.close()
             }
-
-            return exception
         }
     }
 
     @InitiatingFlow
-    class TestJoinTransactionMethodIsBlocked : FlowLogic<UnsupportedOperationException?>() {
+    class TestJoinTransactionMethodIsBlocked : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() : UnsupportedOperationException? {
-            var exception : UnsupportedOperationException? = null
-
-            try {
-                serviceHub.withEntityManager(){
-                    this.joinTransaction()
-                }
-            } catch(e : UnsupportedOperationException){
-                exception = e
+        override fun call() {
+            serviceHub.withEntityManager(){
+                this.joinTransaction()
             }
-
-            return exception
         }
     }
 
@@ -86,8 +71,14 @@ class RestrictedEntityManagerFlowTest {
 
     @Test(timeout=300_000)
     fun testMethodsAreBlocked() {
-        assertNotNull({ aliceNode.startFlow(TestCloseMethodIsBlocked()).get()?.message }, "This method cannot be called via ServiceHub.withEntityManager.")
-        assertNotNull({ aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).get()?.message }, "This method cannot be called via ServiceHub.withEntityManager.")
+        Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
+                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow()}
+                .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager.")
+
+        Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
+                .isThrownBy { aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).getOrThrow()}
+                .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager.")
+
         mockNetwork.runNetwork()
     }
 }
