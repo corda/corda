@@ -49,20 +49,20 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
     private fun getOutputFile() : File {
         return outputDir?.let {
             require(Files.exists(it)) {
-                "Directory specified does not exist. Please specify a valid directory to write output to."
+                "Directory $it does not exist. Please specify a valid directory to write output to."
             }
             val outputPath = it.resolve(ERROR_CODES_FILE)
             require(Files.notExists(outputPath)) {
                 "Output file $outputPath exists, please remove it and run again."
             }
             outputPath.toFile()
-        } ?: throw IllegalArgumentException("Directory not specified or not valid. Please specify a valid directory to write output to.")
+        } ?: throw IllegalArgumentException("Directory not specified. Please specify a valid directory to write output to.")
     }
 
     private fun getResourceDir() : Path {
         return resourceLocation?.also {
             require(Files.exists(it)) {
-                "Resource location does not exist. Please specify a valid location for error code resources"
+                "Resource location $it does not exist. Please specify a valid location for error code resources"
             }
         } ?: throw IllegalArgumentException("Resource location not specified. Please specify a resource location.")
     }
