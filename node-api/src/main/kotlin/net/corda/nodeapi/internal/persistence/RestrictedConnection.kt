@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.nodeapi.internal.persistence
 
 import java.sql.Connection
 import java.sql.Savepoint
@@ -7,6 +7,7 @@ import java.util.concurrent.Executor
 /**
  * A delegate of [Connection] which disallows some operations.
  */
+@Suppress("TooManyFunctions")
 class RestrictedConnection(private val delegate : Connection) : Connection by delegate {
 
     override fun abort(executor: Executor?) {

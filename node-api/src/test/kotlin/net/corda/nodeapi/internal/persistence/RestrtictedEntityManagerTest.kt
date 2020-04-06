@@ -9,44 +9,44 @@ class RestrtictedEntityManagerTest {
     private val entitymanager = mock<EntityManager>()
     private val restrictedEntityManager = RestrictedEntityManager(entitymanager)
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testClose(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testClose() {
         restrictedEntityManager.close()
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testClear(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testClear() {
         restrictedEntityManager.clear()
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testGetMetaModel(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testGetMetaModel() {
         restrictedEntityManager.getMetamodel()
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testGetTransaction(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testGetTransaction() {
         restrictedEntityManager.getTransaction()
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testJoinTransaction(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testJoinTransaction() {
         restrictedEntityManager.joinTransaction()
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testLockWithTwoParameters(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testLockWithTwoParameters() {
         restrictedEntityManager.lock(Object(),LockModeType.OPTIMISTIC)
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testLockWithThreeParameters(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testLockWithThreeParameters() {
         val map: MutableMap<String,Any> = mutableMapOf()
         restrictedEntityManager.lock(Object(),LockModeType.OPTIMISTIC,map)
     }
 
-    @Test(expected = UnsupportedOperationException::class)
-    fun testSetProperty(){
+    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    fun testSetProperty() {
         restrictedEntityManager.setProperty("number",12)
     }
 }
