@@ -4,9 +4,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.util.Util
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
-import java.util.LinkedList
+import java.util.*
 
 /**
  * The [LinkedHashMap] and [LinkedHashSet] have a problem with the default Quasar/Kryo serialisation
@@ -54,13 +55,22 @@ internal object LinkedHashMapIteratorSerializer : Serializer<Iterator<*>>() {
     private fun Iterator<*>.returnToIteratorLocation(current: Any?) : Iterator<*> {
         while (this.hasNext()) {
             val key = this.next()
-            @Suppress("SuspiciousEqualsCombination")
-            if (current == null || key === current || key == current) {
-                break
-            }
+            if (iteratedObjectsEqual(key, current)) break
         }
         return this
     }
+
+    private fun iteratedObjectsEqual(a: Any?, b: Any?): Boolean = if (a == null || b == null) {
+        a == b
+    } else {
+        a === b || mapEntriesEqual(a, b) || kryoOptimisesAwayReferencesButEqual(a, b)
+    }
+
+    private fun kryoOptimisesAwayReferencesButEqual(a: Any, b: Any) =
+            (Util.isWrapperClass(a.javaClass) && Util.isWrapperClass(b.javaClass) && a == b)
+
+    private fun mapEntriesEqual(a: Any, b: Any) =
+            (a is Map.Entry<*, *> && b is Map.Entry<*, *> && iteratedObjectsEqual(a.key, b.key))
 }
 
 /**

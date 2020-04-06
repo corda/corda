@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.serialization.kryo
 
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import java.util.LinkedList
+import java.util.*
 import kotlin.test.assertEquals
 
 class KryoCheckpointTest {
@@ -47,12 +47,16 @@ class KryoCheckpointTest {
     @Test(timeout=300_000)
     fun `linked hash map with null values can checkpoint without error`() {
         val dummyMap = linkedMapOf<String?, Long?>().apply {
-                put(null, null)
+            put("foo", 2L)
+            put(null, null)
+            put("bar", 3L)
         }
         val it = dummyMap.iterator()
         val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
 
         val itKeys = dummyMap.keys.iterator()
+        itKeys.next()
+        itKeys.next()
         val bytesKeys = KryoCheckpointSerializer.serialize(itKeys, KRYO_CHECKPOINT_CONTEXT)
 
         val itValues = dummyMap.values.iterator()
@@ -60,7 +64,8 @@ class KryoCheckpointTest {
 
         assertDoesNotThrow {
             KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
-            KryoCheckpointSerializer.deserialize(bytesKeys, itKeys.javaClass, KRYO_CHECKPOINT_CONTEXT)
+            val desItKeys = KryoCheckpointSerializer.deserialize(bytesKeys, itKeys.javaClass, KRYO_CHECKPOINT_CONTEXT)
+            assertEquals("bar", desItKeys.next())
             KryoCheckpointSerializer.deserialize(bytesValues, itValues.javaClass, KRYO_CHECKPOINT_CONTEXT)
         }
     }
