@@ -2,9 +2,7 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters
@@ -32,13 +30,10 @@ class SimmValuationTest {
 
     @Test(timeout=300_000)
 	fun `runs SIMM valuation demo`() {
-        val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
-        assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
                 startNodesInProcess = false, // starting nodes in separate processes to ensure system class path does not contain 3rd party libraries (masking serialization issues)
-                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
-        ) {
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS
+        )) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
