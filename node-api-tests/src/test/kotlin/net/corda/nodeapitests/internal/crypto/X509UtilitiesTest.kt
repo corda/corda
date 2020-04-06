@@ -118,7 +118,7 @@ class X509UtilitiesTest {
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
         Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
-                && it != SPHINCS256_SHA256}.forEach { validSelfSignedCertificate(it) }
+                && ( !SystemUtils.IS_JAVA_11 || it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
     }
 
     private fun validSelfSignedCertificate(signatureScheme: SignatureScheme) {
@@ -153,7 +153,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.filter{ it.first != SPHINCS256_SHA256 }.forEach { createValidServerCertChain(it.first, it.second) }
+        certChainSchemeCombinations.filter{ !SystemUtils.IS_JAVA_11 || it.first != SPHINCS256_SHA256 }.forEach { createValidServerCertChain(it.first, it.second) }
     }
 
     private fun createValidServerCertChain(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
