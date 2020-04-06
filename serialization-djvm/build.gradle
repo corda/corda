@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import static org.gradle.api.JavaVersion.VERSION_1_8
 
 plugins {
@@ -7,6 +8,11 @@ plugins {
     id 'java-library'
     id 'idea'
 }
+
+// The DJVM only supports Java 8 byte-code, so the tests must
+// be compiled for Java 8. The main artifact is only compiled
+// for Java 8 because it belongs to "Open Core".
+apply from: "${rootProject.projectDir}/java8.gradle"
 
 description 'Serialization support for the DJVM'
 
@@ -41,20 +47,9 @@ dependencies {
     sandboxTesting "org.slf4j:slf4j-nop:$slf4j_version"
 }
 
-// The DJVM only supports Java 8 byte-code.
-compileTestJava {
-    sourceCompatibility = VERSION_1_8
-    targetCompatibility = VERSION_1_8
-}
-
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = VERSION_1_8
-    }
-}
-
 jar {
     archiveBaseName = 'corda-serialization-djvm'
+    archiveClassifier = ''
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.serialization.djvm')
         attributes('Sealed': true)
