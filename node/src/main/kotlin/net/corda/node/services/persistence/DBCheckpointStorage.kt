@@ -282,12 +282,18 @@ class DBCheckpointStorage(
     }
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val delete = criteriaBuilder.createCriteriaDelete(DBFlowCheckpoint::class.java)
-        val root = delete.from(DBFlowCheckpoint::class.java)
-        delete.where(criteriaBuilder.equal(root.get<String>(DBFlowCheckpoint::id.name), id.uuid.toString()))
-        return session.createQuery(delete).executeUpdate() > 0
+        // This will be changed after performance tuning
+        return currentDBSession().let { session ->
+            session.find(DBFlowCheckpoint::class.java, id.uuid.toString())?.run {
+                result?.let { session.delete(result) }
+                exceptionDetails?.let { session.delete(exceptionDetails) }
+                session.delete(blob)
+                session.delete(this)
+                // The metadata foreign key might be the wrong way around
+                session.delete(flowMetadata)
+                true
+            }
+        } ?: false
     }
 
     override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
@@ -310,7 +316,7 @@ class DBCheckpointStorage(
         val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
-                .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
+            .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
@@ -513,7 +519,7 @@ class DBCheckpointStorage(
 
     private fun InvocationContext.getFlowParameters(): List<Any?> {
         // Only RPC flows have parameters which are found in index 1
-        return if(arguments.isNotEmpty()) {
+        return if (arguments.isNotEmpty()) {
             uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
         } else {
             emptyList()
@@ -540,7 +546,7 @@ class DBCheckpointStorage(
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
-    private fun Checkpoint.isFinished() = when(status) {
+    private fun Checkpoint.isFinished() = when (status) {
         FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
         else -> false
     }
