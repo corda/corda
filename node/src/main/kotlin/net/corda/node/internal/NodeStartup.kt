@@ -99,7 +99,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     private fun disableJDK11Warnings() {
-        val theUnsafe = Unsafe::class.java!!.getDeclaredField("theUnsafe")
+        val theUnsafe = Unsafe::class.java.getDeclaredField("theUnsafe")
         theUnsafe.setAccessible(true)
         val unsafeObj = theUnsafe.get(null) as Unsafe
         val loggerCls = Class.forName("jdk.internal.module.IllegalAccessLogger")
