@@ -21,6 +21,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
@@ -40,6 +41,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.sql.Connection
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
@@ -100,6 +102,7 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         Configurator.setLevel("org.hibernate.SQL", Level.DEBUG)
         StaffedFlowHospital.onFlowDischarged.clear()
         StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
+        MyService.includeRawUpdates = false
     }
 
     @Test(timeout = 300_000)
@@ -685,6 +688,46 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `data saved from an entity manager vault update should be visible within an entity manager block inside the same database transaction`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        MyService.includeRawUpdates = true
+        MyService.insertionType = MyService.InsertionType.ENTITY_MANAGER
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                val entities =
+                    it.proxy.startFlow(::EntityManagerWithinTheSameDatabaseTransactionFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(3, entities.size)
+            }
+        }
+        assertEquals(0, counter)
+    }
+
+    @Test(timeout = 300_000)
+    fun `data saved from a jdbc connection vault update should be visible within an entity manager block inside the same database transaction`() {
+        // Don't run this test with both parameters to save time
+        if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) return
+        MyService.includeRawUpdates = true
+        MyService.insertionType = MyService.InsertionType.CONNECTION
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                val entities =
+                    it.proxy.startFlow(::EntityManagerWithinTheSameDatabaseTransactionFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(3, entities.size)
+            }
+        }
+        assertEquals(0, counter)
+    }
+
     @StartableByRPC
     class EntityManagerSaveEntitiesWithoutAFlushFlow : FlowLogic<Unit>() {
 
@@ -703,24 +746,6 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
             beforeCommitHook?.invoke(serviceHub.cordaService(MyService::class.java).getEntities())
             sleep(1.millis)
             afterCommitHook?.invoke(serviceHub.cordaService(MyService::class.java).getEntities())
-        }
-    }
-
-    @CordaService
-    class MyService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
-
-        val executors: ExecutorService = Executors.newFixedThreadPool(1)
-
-        fun getEntities(): List<CustomTableEntity> {
-            return executors.submit<List<CustomTableEntity>> {
-                services.database.transaction {
-                    session.run {
-                        val criteria = criteriaBuilder.createQuery(CustomTableEntity::class.java)
-                        criteria.select(criteria.from(CustomTableEntity::class.java))
-                        createQuery(criteria).resultList
-                    }
-                }
-            }.get()
         }
     }
 
@@ -1347,6 +1372,25 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
         }
     }
 
+    @StartableByRPC
+    class EntityManagerWithinTheSameDatabaseTransactionFlow : FlowLogic<List<CustomTableEntity>>() {
+
+        @Suspendable
+        override fun call(): List<CustomTableEntity> {
+            val tx = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+                addOutputState(DummyState(participants = listOf(ourIdentity)))
+                addCommand(DummyCommandData, ourIdentity.owningKey)
+            }
+            val stx = serviceHub.signInitialTransaction(tx)
+            serviceHub.recordTransactions(stx)
+            return serviceHub.withEntityManager {
+                val criteria = criteriaBuilder.createQuery(CustomTableEntity::class.java)
+                criteria.select(criteria.from(CustomTableEntity::class.java))
+                createQuery(criteria).resultList
+            }
+        }
+    }
+
     @InitiatingFlow
     class CreateATransactionFlow(val party: Party) : FlowLogic<SecureHash>() {
         @Suspendable
@@ -1385,6 +1429,62 @@ class FlowEntityManagerTest(var commitStatus: CommitStatus) {
                     logger.info("results = $it")
                 }
             }
+        }
+    }
+
+    @CordaService
+    class MyService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
+
+        companion object {
+            var includeRawUpdates = false
+            var insertionType = InsertionType.ENTITY_MANAGER
+            val logger = contextLogger()
+        }
+
+        enum class InsertionType { ENTITY_MANAGER, CONNECTION }
+
+        val executors: ExecutorService = Executors.newFixedThreadPool(1)
+
+        init {
+            if (includeRawUpdates) {
+                services.register {
+                    services.vaultService.rawUpdates.subscribe {
+                        if (insertionType == InsertionType.ENTITY_MANAGER) {
+                            services.withEntityManager {
+                                persist(entityWithIdOne)
+                                persist(entityWithIdTwo)
+                                persist(entityWithIdThree)
+                            }
+                        } else {
+                            services.jdbcSession().run {
+                                insert(entityWithIdOne)
+                                insert(entityWithIdTwo)
+                                insert(entityWithIdThree)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private fun Connection.insert(entity: CustomTableEntity) {
+            prepareStatement("INSERT INTO custom_table VALUES (?, ?, ?)").apply {
+                setInt(1, entity.id)
+                setString(2, entity.name)
+                setString(3, entity.quote)
+            }.executeUpdate()
+        }
+
+        fun getEntities(): List<CustomTableEntity> {
+            return executors.submit<List<CustomTableEntity>> {
+                services.database.transaction {
+                    session.run {
+                        val criteria = criteriaBuilder.createQuery(CustomTableEntity::class.java)
+                        criteria.select(criteria.from(CustomTableEntity::class.java))
+                        createQuery(criteria).resultList
+                    }
+                }
+            }.get()
         }
     }
 
