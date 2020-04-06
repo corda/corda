@@ -51,6 +51,7 @@ import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
@@ -96,6 +97,7 @@ class X509UtilitiesTest {
                 Pair(ECDSA_SECP256K1_SHA256, RSA_SHA256),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256K1_SHA256),
                 Pair(RSA_SHA256, EDDSA_ED25519_SHA512),
+                Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256R1_SHA256),
                 Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256)
         )
 
@@ -115,7 +117,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { validSelfSignedCertificate(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
+                && it != SPHINCS256_SHA256}.forEach { validSelfSignedCertificate(it) }
     }
 
     private fun validSelfSignedCertificate(signatureScheme: SignatureScheme) {
@@ -150,7 +153,7 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.forEach { createValidServerCertChain(it.first, it.second) }
+        certChainSchemeCombinations.filter{ it.first != SPHINCS256_SHA256 }.forEach { createValidServerCertChain(it.first, it.second) }
     }
 
     private fun createValidServerCertChain(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
