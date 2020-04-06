@@ -140,7 +140,7 @@ class DriverDSLImpl(
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
         val environmentVariables : Map<String, String>,
-        val allowHibernateToManageAppSchema : Boolean = false
+        val allowHibernateToManageAppSchema : Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -335,7 +335,7 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = overrides
-            ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
+            ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource).withDbManagementFallback(allowHibernateToManageAppSchema)
         ).checkAndOverrideForInMemoryDB()
 
         val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
