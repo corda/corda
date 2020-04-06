@@ -137,5 +137,5 @@ class DatabaseTransactionException(override val cause: Throwable): CordaRuntimeE
 
 // should this just be an `IllegalStateException`?
 class RolledBackDatabaseSessionException : CordaRuntimeException(
-    "Further operations are being executed on a rolled back database session"
+    "Attempted to commit database transaction marked for rollback"
 )
