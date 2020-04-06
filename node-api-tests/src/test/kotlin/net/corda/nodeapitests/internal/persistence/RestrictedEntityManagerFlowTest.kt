@@ -72,11 +72,11 @@ class RestrictedEntityManagerFlowTest {
     @Test(timeout=300_000)
     fun testMethodsAreBlocked() {
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
-                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow()}
+                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow() }
                 .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager.")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
-                .isThrownBy { aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).getOrThrow()}
+                .isThrownBy { aliceNode.startFlow(TestJoinTransactionMethodIsBlocked()).getOrThrow() }
                 .withMessageContaining("This method cannot be called via ServiceHub.withEntityManager.")
 
         mockNetwork.runNetwork()

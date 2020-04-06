@@ -66,11 +66,11 @@ class RestrictedConnectionFlowTest {
     @Test(timeout=300_000)
     fun testMethodsAreBlocked() {
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
-                .isThrownBy { aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).getOrThrow()}
+                .isThrownBy { aliceNode.startFlow(TestAutoCommitMethodIsBlocked()).getOrThrow() }
                 .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession.")
 
         Assertions.assertThatExceptionOfType(UnsupportedOperationException::class.java)
-                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow()}
+                .isThrownBy { aliceNode.startFlow(TestCloseMethodIsBlocked()).getOrThrow() }
                 .withMessageContaining("This method cannot be called via ServiceHub.jdbcSession.")
 
         mockNetwork.runNetwork()
