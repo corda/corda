@@ -62,7 +62,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.time.Instant.now()Lsandbox/java/time/Instant;, ")
+                .hasMessageStartingWith("^NoSuchMethodError: .*\\Qsandbox.java.time.Instant.now()\\E.*\$")
         }
     }
 
@@ -75,7 +75,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.currentTimeMillis()J, ")
+                .hasMessageStartingWith("^NoSuchMethodError: .*\\Qsandbox.java.lang.System.currentTimeMillis()\\E.*\$")
         }
     }
 
@@ -88,7 +88,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.lang.System.nanoTime()J, ")
+                .hasMessageStartingWith("^NoSuchMethodError: .*\\Qsandbox.java.lang.System.nanoTime()\\E.*\$")
         }
     }
 
@@ -101,7 +101,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageStartingWith("NoSuchMethodError: sandbox.java.util.UUID.randomUUID()Lsandbox/java/util/UUID;, ")
+                .hasMessageStartingWith("^NoSuchMethodError: .*\\Qsandbox.java.util.UUID.randomUUID()\\E.*\$")
         }
     }
 
