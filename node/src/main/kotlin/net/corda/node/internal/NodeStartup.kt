@@ -33,10 +33,12 @@ import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
+import sun.misc.Unsafe
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.NullPointerException
 import java.lang.management.ManagementFactory
+import java.lang.reflect.Field
 import java.net.InetAddress
 import java.nio.channels.UnresolvedAddressException
 import java.nio.file.Path
@@ -95,7 +97,22 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
         return true
     }
 
+    private fun disableJDK11Warnings() {
+        try {
+            val theUnsafe = Unsafe::class.java!!.getDeclaredField("theUnsafe")
+            theUnsafe.setAccessible(true)
+            val unsafeObj = theUnsafe.get(null) as Unsafe
+
+            val loggerCls = Class.forName("jdk.internal.module.IllegalAccessLogger")
+            val logger = loggerCls.getDeclaredField("logger")
+            unsafeObj.putObjectVolatile(loggerCls, unsafeObj.staticFieldOffset(logger), null)
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
     override fun runProgram(): Int {
+        disableJDK11Warnings()
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
