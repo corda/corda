@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.util.*
@@ -100,6 +101,39 @@ class KryoCheckpointTest {
             it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
         }
         assertEquals(testSize, lastValue)
+    }
+
+    @Test
+    fun `linked hash map values can checkpoint without error, even with repeats`() {
+        var lastValue = "0"
+        val dummyMap = linkedMapOf<String, String>()
+        for (i in 0..testSize) {
+            dummyMap[i.toString()] = (i % 10).toString()
+        }
+        var it = dummyMap.values.iterator()
+        while (it.hasNext()) {
+            lastValue = it.next()
+            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
+            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
+        }
+        assertEquals((testSize % 10).toString(), lastValue)
+    }
+
+    @Ignore("Kryo optimizes boxed primitives so this does not work.  Need to customise ReferenceResolver to stop it doing it.")
+    @Test
+    fun `linked hash map values can checkpoint without error, even with repeats for boxed primitives`() {
+        var lastValue = 0L
+        val dummyMap = linkedMapOf<String, Long>()
+        for (i in 0..testSize) {
+            dummyMap[i.toString()] = (i % 10)
+        }
+        var it = dummyMap.values.iterator()
+        while (it.hasNext()) {
+            lastValue = it.next()
+            val bytes = KryoCheckpointSerializer.serialize(it, KRYO_CHECKPOINT_CONTEXT)
+            it = KryoCheckpointSerializer.deserialize(bytes, it.javaClass, KRYO_CHECKPOINT_CONTEXT)
+        }
+        assertEquals(testSize % 10, lastValue)
     }
 
     /**
