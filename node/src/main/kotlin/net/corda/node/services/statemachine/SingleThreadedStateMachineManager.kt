@@ -374,14 +374,19 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    //TODO: Check this function behaves correctly on failure!
     override fun markFlowsAsPaused(id: StateMachineRunId): Boolean {
+        flowHospital
+
         mutex.locked {
-            if (flows[id] != null)
-                return false // Flow is running already hence we cannot pause it.
-            if (flowPrimitives[id] != null)
-                return true // Flow is already paused hence we don't need to do anything
+            if (flows[id] != null) return false // Flow is running already hence we cannot pause it.
+            if (flowPrimitives[id] != null) return true // Flow is already paused hence we don't need to do anything
         }
-        return checkpointStorage.markCheckpointAsPaused(id)
+        var success = false
+        database.transaction {
+            success = checkpointStorage.markCheckpointAsPaused(id)
+        }
+        return success
     }
 
     override fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
@@ -394,7 +399,7 @@ class SingleThreadedStateMachineManager(
     }
 
     //TODO: Do we need a to return a future here?
-    fun unPauseFlow(id: StateMachineRunId): Boolean {
+    override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
             val flowPrimitive = flowPrimitives[id] ?: return false
             val flow = flowPrimitive.createFlow() ?: return false

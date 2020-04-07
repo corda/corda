@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
