@@ -48,6 +48,7 @@ class TopLevelTransition(
             is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
             is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
             is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
+            is Event.OvernightObservation -> overnightObservationTransition()
         }
     }
 
@@ -307,6 +308,17 @@ class TopLevelTransition(
             actions.add(Action.RetryFlowFromSafePoint(startingState))
             actions.add(Action.CommitTransaction)
             FlowContinuation.Abort
+        }
+    }
+
+    private fun overnightObservationTransition(): TransitionResult {
+        return builder {
+            val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+            actions.add(Action.CreateTransaction)
+            actions.add(Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted))
+            actions.add(Action.CommitTransaction)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
+            FlowContinuation.ProcessEvents
         }
     }
 }

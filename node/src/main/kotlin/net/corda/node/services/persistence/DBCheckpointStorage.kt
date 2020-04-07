@@ -4,6 +4,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -19,6 +20,7 @@ import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.hibernate.annotations.Type
 import java.sql.Connection
 import java.sql.SQLException
@@ -50,8 +52,12 @@ class DBCheckpointStorage(
 
         private const val HMAC_SIZE_BYTES = 16
 
-        private const val MAX_PROGRESS_STEP_LENGTH = 256
+        @VisibleForTesting
+        const val MAX_STACKTRACE_LENGTH = 4000
+        private const val MAX_EXC_MSG_LENGTH = 4000
+        private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
+        private const val MAX_PROGRESS_STEP_LENGTH = 256
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
@@ -170,14 +176,17 @@ class DBCheckpointStorage(
         var id: Long = 0,
 
         @Column(name = "type", nullable = false)
-        var type: Class<out Throwable>,
-
-        @Type(type = "corda-blob")
-        @Column(name = "exception_value", nullable = false)
-        var value: ByteArray = EMPTY_BYTE_ARRAY,
+        var type: String,
 
         @Column(name = "exception_message")
         var message: String? = null,
+
+        @Column(name = "stack_trace", nullable = false)
+        var stackTrace: String,
+
+        @Type(type = "corda-blob")
+        @Column(name = "exception_value")
+        var value: ByteArray? = null,
 
         @Column(name = "timestamp")
         val persistedInstant: Instant
@@ -307,7 +316,8 @@ class DBCheckpointStorage(
         }
     }
 
-    private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
+    @VisibleForTesting
+    internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
@@ -375,10 +385,15 @@ class DBCheckpointStorage(
         // Load the previous entity from the hibernate cache so the meta data join does not get updated
         val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
 
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
-        checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
+        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            entity.blob
+        } else {
+            val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
+            checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+            createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+        }
 
-        val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
         //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
@@ -478,9 +493,10 @@ class DBCheckpointStorage(
     private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
-                type = it::class.java,
-                message = it.message,
-                value = it.storageSerialize().bytes,
+                type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+                message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
+                stackTrace = it.stackTraceToString(),
+                value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
                 persistedInstant = now
             )
         }
@@ -527,5 +543,27 @@ class DBCheckpointStorage(
     private fun Checkpoint.isFinished() = when(status) {
         FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
         else -> false
+    }
+
+    private fun String.truncate(maxLength: Int, withWarnings: Boolean): String {
+        var str = this
+        if (length > maxLength) {
+            if (withWarnings) {
+                log.warn("Truncating long string before storing it into the database. String: $str.")
+            }
+            str = str.substring(0, maxLength)
+        }
+        return str
+    }
+
+    private fun Throwable.stackTraceToString(): String {
+        var stackTraceStr = ExceptionUtils.getStackTrace(this)
+        if (stackTraceStr.length > MAX_STACKTRACE_LENGTH) {
+            // cut off the last line, which will be a half line
+            val lineBreak = System.getProperty("line.separator")
+            val truncateIndex = stackTraceStr.lastIndexOf(lineBreak, MAX_STACKTRACE_LENGTH - 1)
+            stackTraceStr = stackTraceStr.substring(0, truncateIndex + lineBreak.length) // include last line break in
+        }
+        return stackTraceStr
     }
 }
