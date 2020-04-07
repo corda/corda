@@ -18,7 +18,7 @@ class RestrictedConnectionTest {
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun testAbort() {
-        restrictedConnection.abort { println("I'm just an executor for this test...")}
+        restrictedConnection.abort { println("I'm just an executor for this test...") }
     }
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
@@ -89,7 +89,7 @@ class RestrictedConnectionTest {
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun testSetNetworkTimeout() {
-        restrictedConnection.setNetworkTimeout({ println("I'm just an executor for this test...")}, TEST_INT)
+        restrictedConnection.setNetworkTimeout({ println("I'm just an executor for this test...") }, TEST_INT)
     }
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)

@@ -25,7 +25,7 @@ class RestrictedEntityManagerFlowTest {
         @Suspendable
         override fun call() : Boolean {
             var result = false
-            serviceHub.withEntityManager(){
+            serviceHub.withEntityManager() {
                 result = this is RestrictedEntityManager
             }
             return result
@@ -46,7 +46,7 @@ class RestrictedEntityManagerFlowTest {
     class TestJoinTransactionMethodIsBlocked : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            serviceHub.withEntityManager(){
+            serviceHub.withEntityManager() {
                 this.joinTransaction()
             }
         }

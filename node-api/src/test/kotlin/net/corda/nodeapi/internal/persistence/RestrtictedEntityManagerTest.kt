@@ -36,17 +36,17 @@ class RestrtictedEntityManagerTest {
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun testLockWithTwoParameters() {
-        restrictedEntityManager.lock(Object(),LockModeType.OPTIMISTIC)
+        restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC)
     }
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun testLockWithThreeParameters() {
         val map: MutableMap<String,Any> = mutableMapOf()
-        restrictedEntityManager.lock(Object(),LockModeType.OPTIMISTIC,map)
+        restrictedEntityManager.lock(Object(), LockModeType.OPTIMISTIC,map)
     }
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
     fun testSetProperty() {
-        restrictedEntityManager.setProperty("number",12)
+        restrictedEntityManager.setProperty("number", 12)
     }
 }
