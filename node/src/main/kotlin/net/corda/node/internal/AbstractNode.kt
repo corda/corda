@@ -124,6 +124,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowMonitor
+import net.corda.node.services.statemachine.FlowOperator
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
@@ -332,6 +333,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+    val flowOperator = FlowOperator(smm, platformClock)
     private val schedulerService = NodeSchedulerService(
             platformClock,
             database,
@@ -543,7 +545,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             val flowMonitor = FlowMonitor(
-                    smm,
+                    flowOperator,
                     configuration.flowMonitorPeriodMillis,
                     configuration.flowMonitorSuspensionLoggingThresholdMillis
             )
