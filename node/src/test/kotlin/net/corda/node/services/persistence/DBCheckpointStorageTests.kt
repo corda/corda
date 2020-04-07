@@ -248,7 +248,6 @@ class DBCheckpointStorageTests {
 
     @Test(timeout = 300_000)
     fun `removing a checkpoint when there is no exception does not fail`() {
-        val exception = IllegalStateException("I am a naughty exception")
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
