@@ -30,6 +30,7 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
 .. sourcecode:: groovy
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        manageSchema = true
         directory "./build/nodes"
         node {
             name "O=Notary,L=London,C=GB"

@@ -29,6 +29,7 @@ dependencies {
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
+    manageSchema = true
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     nodeDefaults{
         projectCordapp {

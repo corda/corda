@@ -45,6 +45,7 @@ dependencies {
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+    manageSchema = true
     nodeDefaults {
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')

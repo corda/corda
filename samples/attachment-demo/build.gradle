@@ -75,6 +75,7 @@ task integrationTest(type: Test, dependsOn: []) {
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':testing:testserver:testcapsule::assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
+    manageSchema = true
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
                                                                              "InvokeRpc.partiesFromName",
                                                                              "InvokeRpc.attachmentExists",
