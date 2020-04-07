@@ -6,7 +6,9 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
-import java.util.*
+import java.util.LinkedHashMap
+import java.util.LinkedHashSet
+import java.util.LinkedList
 
 /**
  * The [LinkedHashMap] and [LinkedHashSet] have a problem with the default Quasar/Kryo serialisation
