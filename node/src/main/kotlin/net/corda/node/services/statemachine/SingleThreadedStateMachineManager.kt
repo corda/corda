@@ -93,11 +93,11 @@ class SingleThreadedStateMachineManager(
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
     //TODO: This should be moved into its own class
-    private inner class FlowPrimitive(val id: StateMachineRunId,
-                                val checkpoint: Checkpoint,
-                                val isAnyCheckpointPersisted: Boolean,
-                                val isStartIdempotent: Boolean,
-                                val initialDeduplicationHandler: DeduplicationHandler?
+    private inner class NonResidentFlow(val id: StateMachineRunId,
+                                        val checkpoint: Checkpoint,
+                                        val isAnyCheckpointPersisted: Boolean,
+                                        val isStartIdempotent: Boolean,
+                                        val initialDeduplicationHandler: DeduplicationHandler?
     ) {
 
         fun createFlow() : Flow? {
@@ -192,7 +192,7 @@ class SingleThreadedStateMachineManager(
         val flows = HashMap<StateMachineRunId, Flow>()
         // TODO: Does flowPrimitives need to be here and controlled by a mutex. Probably not unless StateMachineManager
         //  is meant to be thread safe.
-        val flowPrimitives = HashMap<StateMachineRunId, FlowPrimitive>()
+        val flowPrimitives = HashMap<StateMachineRunId, NonResidentFlow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
@@ -484,18 +484,18 @@ class SingleThreadedStateMachineManager(
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                val flowPrimative = FlowPrimitive(id, checkpoint, true, false, null)
+                val flowPrimative = NonResidentFlow(id, checkpoint, true, false, null)
                 flowPrimative.createFlow()
             }.toList()
         }
     }
 
-    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, FlowPrimitive> {
+    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, NonResidentFlow> {
         return checkpointStorage.getPausedCheckpoints().use {
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                id to FlowPrimitive(id, checkpoint, true, false, null)
+                id to NonResidentFlow(id, checkpoint, true, false, null)
             }.toList().map {pair -> pair.first to pair.second}.toMap()
         }
     }
@@ -527,7 +527,7 @@ class SingleThreadedStateMachineManager(
                 }
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
-                val flowPrimitive = FlowPrimitive(flowId, checkpoint, false, false, null)
+                val flowPrimitive = NonResidentFlow(flowId, checkpoint, false, false, null)
 
                 // Resurrect flow
                 flowPrimitive.createFlow() ?: return
