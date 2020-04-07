@@ -3,16 +3,29 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.utilities.unwrap
+import java.time.Instant
 
 class NotaryQueryClientFlow {
 
     @StartableByRPC
-    class DoubleSpendAudit(private val stateRef: StateRef) :
+    class DoubleSpendAudit(private val stateRef: StateRef,
+                           private val maxResults: Int,
+                           private val successOnly: Boolean,
+                           private val startTime: Instant?,
+                           private val endTime: Instant?,
+                           private val lastTxId: String?) :
         FlowLogic<NotaryQuery.Result.SpentStates>() {
 
         @Suspendable
         override fun call(): NotaryQuery.Result.SpentStates {
-            return subFlow(InitiateQuery(NotaryQuery.Request.SpentStates(stateRef)))
+            return subFlow(InitiateQuery(
+                    NotaryQuery.Request.SpentStates(
+                            stateRef,
+                            maxResults,
+                            successOnly,
+                            startTime,
+                            endTime,
+                            lastTxId)))
                     as NotaryQuery.Result.SpentStates
         }
     }

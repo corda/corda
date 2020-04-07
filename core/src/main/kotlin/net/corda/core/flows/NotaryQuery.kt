@@ -25,12 +25,18 @@ import java.time.Instant
 class NotaryQuery {
     sealed class Request {
         @CordaSerializable
-        data class SpentStates(val stateRef: StateRef) : Request()
+        data class SpentStates(val stateRef: StateRef,
+                               val maxResults: Int,
+                               val successOnly: Boolean,
+                               val startTime: Instant?,
+                               val endTime: Instant?,
+                               val lastTxId: String?) : Request()
     }
 
     sealed class Result {
         @CordaSerializable
-        data class SpentStates(val spendEvents: List<SpendEventDetails>): Result()
+        data class SpentStates(val spendEvents: List<SpendEventDetails>,
+                               val moreResults: Boolean): Result()
     }
 
     @CordaSerializable
