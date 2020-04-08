@@ -189,6 +189,7 @@ class SingleThreadedStateMachineManager(
         val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
         /** True if we're shutting down, so don't resume anything. */
         var stopping = false
+        var stopped = false
         val flows = HashMap<StateMachineRunId, Flow>()
         // TODO: Does flowPrimitives need to be here and controlled by a mutex. Probably not unless StateMachineManager
         //  is meant to be thread safe.
@@ -290,6 +291,7 @@ class SingleThreadedStateMachineManager(
     override fun stop(allowedUnsuspendedFiberCount: Int) {
         require(allowedUnsuspendedFiberCount >= 0){"allowedUnsuspendedFiberCount must be greater than or equal to zero"}
         mutex.locked {
+            if (stopped) return
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
             for ((_, flow) in flows) {
@@ -303,9 +305,13 @@ class SingleThreadedStateMachineManager(
             val foundUnrestorableFibers = it.stop()
             check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
         }
+
         flowHospital.close()
         scheduledFutureExecutor.shutdown()
         scheduler.shutdown()
+        mutex.locked {
+            stopped = true
+        }
     }
 
     /**
@@ -374,19 +380,23 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    //TODO: Check this function behaves correctly on failure!
     override fun markFlowsAsPaused(id: StateMachineRunId): Boolean {
-        flowHospital
-
         mutex.locked {
-            if (flows[id] != null) return false // Flow is running already hence we cannot pause it.
-            if (flowPrimitives[id] != null) return true // Flow is already paused hence we don't need to do anything
+            var success = false
+            if (flowHospital.contains(id)) {
+                database.transaction {
+                    success = checkpointStorage.markCheckpointAsPaused(id)
+                }
+                return success
+            } else {
+                if (flows[id] != null) return false // Flow is running already hence we cannot pause it.
+                if (flowPrimitives[id] != null) return true // Flow is already paused hence we don't need to do anything
+                database.transaction {
+                    success = checkpointStorage.markCheckpointAsPaused(id)
+                }
+                return success
+            }
         }
-        var success = false
-        database.transaction {
-            success = checkpointStorage.markCheckpointAsPaused(id)
-        }
-        return success
     }
 
     override fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
