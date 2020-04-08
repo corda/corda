@@ -21,14 +21,14 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
 
     // Returns the string appended to all reported errors, indicating the error code and the URL to go to.
     // e.g. [Code: my-error-code, For further information, please go to https://docs.corda.net/corda-os/4.5/error-codes.html]
-    private fun getErrorInfo(error: ErrorCode) : String {
+    private fun getErrorInfo(error: ErrorCode<*, *>) : String {
         val resource = "$resourceLocation/$ERROR_INFO_RESOURCE"
         val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(error.formatCode()))
         val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(errorContextProvider.getURL(locale)))
         return "[$codeMessage, $urlMessage]"
     }
 
-    override fun report(error: ErrorCode, logger: Logger) {
+    override fun report(error: ErrorCode<*, *>, logger: Logger) {
         val errorResource = ErrorResource.fromErrorCode(error, resourceLocation, locale)
         val message = "${errorResource.getErrorMessage(error.parameters.toTypedArray())} ${getErrorInfo(error)}"
         logger.error(message)

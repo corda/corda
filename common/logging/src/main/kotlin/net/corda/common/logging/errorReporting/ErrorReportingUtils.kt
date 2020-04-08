@@ -9,6 +9,6 @@ import org.slf4j.Logger
  *
  * @param error The error that has occurred.
  */
-fun Logger.report(error: ErrorCode) = ErrorReporting.getReporter().report(error, this)
+fun Logger.report(error: ErrorCode<*, *>) = ErrorReporting().getReporter().report(error, this)
 
-internal fun ErrorCode.formatCode() : String = "${this.namespace}-${this.code}"
+internal fun ErrorCode<*, *>.formatCode() : String = "${this.namespace.toString().toLowerCase()}-${this.code.toString().toLowerCase()}"

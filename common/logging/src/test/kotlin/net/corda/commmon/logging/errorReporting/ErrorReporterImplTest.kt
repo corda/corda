@@ -31,9 +31,18 @@ class ErrorReporterImplTest {
         }
     }
 
-    private val TEST_ERROR_1 = object : ErrorCode {
-        override val namespace = "test"
-        override val code = "case1"
+    private enum class TestNamespaces {
+        TEST
+    }
+
+    private enum class TestErrors {
+        CASE1,
+        CASE2
+    }
+
+    private val TEST_ERROR_1 = object : ErrorCode<TestNamespaces, TestErrors> {
+        override val namespace = TestNamespaces.TEST
+        override val code = TestErrors.CASE1
         override val parameters = listOf<Any>()
     }
 
@@ -58,9 +67,9 @@ class ErrorReporterImplTest {
     @Test(timeout = 300_00)
     fun `error code with parameters correctly reported`() {
         val currentDate = Date.from(Instant.now())
-        val error = object : ErrorCode {
-            override val namespace = "test"
-            override val code = "case2"
+        val error = object : ErrorCode<TestNamespaces, TestErrors> {
+            override val namespace = TestNamespaces.TEST
+            override val code = TestErrors.CASE2
             override val parameters: List<Any> = listOf("foo", 1, currentDate)
         }
         val testReporter = createReporterImpl("en-US")

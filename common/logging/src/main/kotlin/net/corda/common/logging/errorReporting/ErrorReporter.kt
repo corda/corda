@@ -12,5 +12,5 @@ internal interface ErrorReporter {
      * @param error The error to report
      * @param logger The logger to use when reporting this error
      */
-    fun report(error: ErrorCode, logger: Logger)
+    fun report(error: ErrorCode<*, *>, logger: Logger)
 }

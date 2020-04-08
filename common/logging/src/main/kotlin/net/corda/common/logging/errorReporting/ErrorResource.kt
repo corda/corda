@@ -12,7 +12,7 @@ class ErrorResource private constructor(private val bundle: ResourceBundle,
                                         private val locale: Locale) {
 
     companion object {
-        fun fromErrorCode(errorCode: ErrorCode, resourceLocation: String, locale: Locale) : ErrorResource {
+        fun fromErrorCode(errorCode: ErrorCode<*, *>, resourceLocation: String, locale: Locale) : ErrorResource {
             val resource = "$resourceLocation/${errorCode.formatCode()}"
             val bundle = ResourceBundle.getBundle(resource, locale)
             return ErrorResource(bundle, locale)
