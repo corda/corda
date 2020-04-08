@@ -30,12 +30,9 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
-import org.apache.commons.lang3.JavaVersion
-import org.apache.commons.lang3.SystemUtils
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
-import sun.misc.Unsafe
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.NullPointerException
@@ -98,19 +95,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
         return true
     }
 
-    private fun disableJDK11Warnings() {
-        val theUnsafe = Unsafe::class.java.getDeclaredField("theUnsafe")
-        theUnsafe.setAccessible(true)
-        val unsafeObj = theUnsafe.get(null) as Unsafe
-        val loggerCls = Class.forName("jdk.internal.module.IllegalAccessLogger")
-        val logger = loggerCls.getDeclaredField("logger")
-        unsafeObj.putObjectVolatile(loggerCls, unsafeObj.staticFieldOffset(logger), null)
-    }
-
     override fun runProgram(): Int {
-        if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_11)) {
-            disableJDK11Warnings()
-        }
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
