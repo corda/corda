@@ -2,6 +2,11 @@ package net.corda.common.logging.errorReporting
 
 import java.util.*
 
+/**
+ * Entry point into the Error Reporting framework.
+ *
+ *
+ */
 object ErrorReporting {
     private var errorReporter: ErrorReporter? = null
 
