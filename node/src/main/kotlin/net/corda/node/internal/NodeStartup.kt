@@ -143,7 +143,6 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
-        const val ERROR_CODE_DEFAULT_LOCALE = "en-US"
         const val ERROR_CODE_RESOURCE_LOCATION = "error-codes"
     }
 
@@ -174,7 +173,7 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
-        ErrorReporting.initialise(ERROR_CODE_DEFAULT_LOCALE, ERROR_CODE_RESOURCE_LOCATION)
+        ErrorReporting().usingResourcesAt(ERROR_CODE_RESOURCE_LOCATION).initialiseReporting()
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
@@ -488,7 +487,7 @@ interface NodeStartupLogging {
 
     fun handleStartError(error: Throwable) {
         when {
-            error is ErrorCode -> logger.report(error)
+            error is ErrorCode<*, *> -> logger.report(error)
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")

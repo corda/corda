@@ -152,6 +152,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_AL
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
 import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
 import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
@@ -1304,16 +1305,16 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
                     "Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.",
-                    "could-not-connect",
+                    NodeDatabaseErrors.COULD_NOT_CONNECT,
                     cause = ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
                     "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
-                    "missing-driver")
+                    NodeDatabaseErrors.MISSING_DRIVERS)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else ->
                 throw CouldNotCreateDataSourceException(
                         "Could not create the DataSource: ${ex.message}",
-                        "failed-startup",
+                        NodeDatabaseErrors.FAILED_STARTUP,
                         cause = ex)
         }
     }

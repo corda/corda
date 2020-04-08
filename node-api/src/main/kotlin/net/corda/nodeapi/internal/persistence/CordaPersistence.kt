@@ -9,6 +9,8 @@ import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.common.logging.errorReporting.NodeNamespaces
 import org.hibernate.tool.schema.spi.SchemaManagementException
 import rx.Observable
 import rx.Subscriber
@@ -407,10 +409,10 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?,
-                                        override val code: String,
+                                        override val code: NodeDatabaseErrors,
                                         override val parameters: List<Any> = listOf(),
-                                        override val cause: Throwable? = null) : ErrorCode, Exception() {
-    override val namespace = "database"
+                                        override val cause: Throwable? = null) : ErrorCode<NodeNamespaces, NodeDatabaseErrors>, Exception() {
+    override val namespace = NodeNamespaces.DATABASE
 }
 
 class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
