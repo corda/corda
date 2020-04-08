@@ -5,6 +5,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -13,6 +14,7 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.Duration
@@ -31,6 +33,11 @@ class FlowPausingTests {
         mockNet = InternalMockNetwork()
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test
@@ -54,10 +61,20 @@ class FlowPausingTests {
         val flow = aliceNode.services.startFlow(CheckpointingFlow())
         aliceNode.smm.stop(0)
         assertEquals(true, aliceNode.smm.markFlowsAsPaused(flow.id))
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
+            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
+        }
+
         val restartedAlice = mockNet.restartNode(aliceNode)
         assertEquals(0, restartedAlice.smm.snapshot().size)
         assertEquals(true, restartedAlice.smm.unPauseFlow(flow.id))
         assertEquals(1, restartedAlice.smm.snapshot().size)
+        Thread.sleep(2000) //Forgive Me
+        restartedAlice.database.transaction {
+            val checkpoint = restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id)
+            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint!!.status)
+        }
     }
 
     fun StateMachineManager.waitForFlowToBeHospitalised(id: StateMachineRunId) : Boolean {
@@ -78,8 +95,7 @@ class FlowPausingTests {
     internal class CheckpointingFlow(): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            sleep(Duration.ofSeconds(5))
-            sleep(Duration.ofSeconds(5))
+            sleep(Duration.ofSeconds(1))
         }
     }
 }
