@@ -143,6 +143,7 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        const val ERROR_CODE_DEFAULT_LOCALE = "en-US"
         const val ERROR_CODE_RESOURCE_LOCATION = "error-codes"
     }
 
@@ -173,7 +174,7 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
-        ErrorReporting.initialise(configuration.locale, ERROR_CODE_RESOURCE_LOCATION)
+        ErrorReporting.initialise(ERROR_CODE_DEFAULT_LOCALE, ERROR_CODE_RESOURCE_LOCATION)
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE

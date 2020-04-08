@@ -4,7 +4,7 @@ import org.slf4j.Logger
 import java.text.MessageFormat
 import java.util.*
 
-internal const val ERROR_BAR_RESOURCE = "ErrorBar"
+internal const val ERROR_INFO_RESOURCE = "ErrorInfo"
 internal const val ERROR_CODE_MESSAGE = "errorCodeMessage"
 internal const val ERROR_CODE_URL = "errorCodeUrl"
 
@@ -19,8 +19,10 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
         return formatter.format(params)
     }
 
-    private fun constructErrorInfoBar(error: ErrorCode) : String {
-        val resource = "$resourceLocation/$ERROR_BAR_RESOURCE"
+    // Returns the string appended to all reported errors, indicating the error code and the URL to go to.
+    // e.g. [Code: my-error-code, For further information, please go to https://docs.corda.net/corda-os/4.5/error-codes.html]
+    private fun getErrorInfo(error: ErrorCode) : String {
+        val resource = "$resourceLocation/$ERROR_INFO_RESOURCE"
         val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(error.formatCode()))
         val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(errorContextProvider.getURL(locale)))
         return "[$codeMessage, $urlMessage]"
@@ -28,7 +30,7 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
 
     override fun report(error: ErrorCode, logger: Logger) {
         val errorResource = ErrorResource.fromErrorCode(error, resourceLocation, locale)
-        val message = "${errorResource.errorMessage} ${constructErrorInfoBar(error)}"
+        val message = "${errorResource.getErrorMessage(error.parameters.toTypedArray())} ${getErrorInfo(error)}"
         logger.error(message)
     }
 }

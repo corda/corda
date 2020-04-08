@@ -3,6 +3,11 @@ package net.corda.common.logging.errorReporting
 import net.corda.common.logging.CordaVersion
 import java.util.*
 
+/**
+ * Provides information specific to Corda to the error reporting library.
+ *
+ * The primary use of this is to provide the URL to the docs site where the error information is hosted.
+ */
 class CordaErrorContextProvider : ErrorContextProvider {
 
     companion object {
