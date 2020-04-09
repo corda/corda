@@ -197,7 +197,7 @@ class SchemaMigration(
                 migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
                 runMigration(existingCheckpoints)
             }
-            !isH2Database && databaseConfig.runMigration -> runMigration(existingCheckpoints)
+            !isH2Database && databaseConfig.initialiseSchema -> runMigration(existingCheckpoints)
             else -> checkState()
         }
     }

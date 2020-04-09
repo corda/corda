@@ -38,7 +38,8 @@ enum class SchemaInitializationType{
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val runMigration: Boolean = Defaults.runMigration,
+        @Deprecated(message = "runMigration is deprecated and will be ignored", replaceWith = ReplaceWith("inialiseSchema"))
+        val runMigration: Boolean? = Defaults.runMigration,
         val initialiseSchema: Boolean = Defaults.initialiseSchema,
         @Deprecated(message = "initialiseAppSchema is deprecated and will be ignored", replaceWith = ReplaceWith("allowHibernateToManageAppSchema"))
         val initialiseAppSchema: SchemaInitializationType = Defaults.initialiseAppSchema,
@@ -51,7 +52,7 @@ data class DatabaseConfig(
         val vaultUpdateBatchSize: Int? = Defaults.vaultUpdateBatchSize
 ) {
     object Defaults {
-        val runMigration = false
+        val runMigration = null
         val initialiseSchema = false
         val initialiseAppSchema = SchemaInitializationType.UNSET
         val allowHibernateToManageAppSchema = false

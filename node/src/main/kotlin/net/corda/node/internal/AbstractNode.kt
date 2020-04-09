@@ -1286,6 +1286,12 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
         Node.printWarning(warning)
         loggerFor<CordaPersistence>().warn(warning)
     }
+    if (databaseConfig.runMigration != null) {
+        val warning = "DatabaseConfig.runMigration is deprecated and will be ignored. Set initialiseSchema to true to create/modify schemas."
+        Node.printWarning(warning)
+        loggerFor<CordaPersistence>().warn(warning)
+    }
+
     return CordaPersistence(
             databaseConfig,
             schemaService.schemas,
