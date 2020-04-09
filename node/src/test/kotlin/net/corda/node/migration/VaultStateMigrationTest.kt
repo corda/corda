@@ -2,8 +2,18 @@ package net.corda.node.migration
 
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -32,10 +42,16 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
@@ -45,7 +61,11 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.ClassRule
+import org.junit.Ignore
+import org.junit.Test
 import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
@@ -110,7 +130,6 @@ class VaultStateMigrationTest {
         notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 notaryServices.identityService::wellKnownPartyFromX500Name,
                 notaryServices.identityService::wellKnownPartyFromAnonymous,
                 ourName = BOB_IDENTITY.name)
@@ -461,7 +480,7 @@ class VaultStateMigrationTest {
         assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
     }
 
-    @Test(expected = VaultStateMigrationException::class)
+    @Test(expected = VaultStateMigrationException::class, timeout = 300_000)
     fun `Null database causes migration to fail`() {
         val migration = VaultStateMigration()
         // Just check this does not throw an exception
@@ -564,7 +583,7 @@ class VaultStateMigrationTest {
         val commodityStatesToAdd = 0
         val stateMultiplier = 10
 
-        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
 
         // Starting the database this way runs the migration under test. This is fine for the unit tests (as the changelog table is ignored),
         // but when starting an actual node using these databases the migration will be skipped, as it has an entry in the changelog table.
@@ -586,7 +605,7 @@ class VaultStateMigrationTest {
     @Test(timeout=300_000)
 @Ignore
     fun `Run on persistent DB`() {
-        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
         val connection = (liquibaseDB.connection as JdbcConnection)
         Mockito.`when`(connection.url).thenReturn(cordaDB.jdbcUrl)
         Mockito.`when`(connection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)

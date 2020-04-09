@@ -72,7 +72,9 @@ constructor(private val initSerEnv: Boolean,
                 Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
                 "-jar",
                 "corda.jar",
-                "generate-node-info"
+                "generate-node-info",
+                "--initialiseSchema",
+                "--allowHibernateToManageAppSchema"
         )
 
         private const val LOGS_DIR_NAME = "logs"

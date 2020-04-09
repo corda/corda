@@ -10,7 +10,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class PersistentMapTests {
-    private val databaseConfig = DatabaseConfig()
+    private val databaseConfig = DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true)
     private val database get() = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
     private val dataSourceProps = MockServices.makeTestDataSourceProperties()
 

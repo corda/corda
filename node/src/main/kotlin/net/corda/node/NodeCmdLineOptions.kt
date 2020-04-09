@@ -48,6 +48,18 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
+    @Option(
+            names = ["--initialiseSchema"],
+            description = ["Allow the node to manage database schemas"]
+    )
+    var inialiseSchema: Boolean? = null
+
+    @Option(
+            names = ["--allowHibernateToManageAppSchema"],
+            description = ["Allow hibernate to modify database schemas"]
+    )
+    val allowHibernateToModifyAppSchema: Boolean? = null
+
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)
@@ -55,7 +67,14 @@ open class SharedNodeCmdLineOptions {
 
     open fun rawConfiguration(): Validated<Config, ConfigException> {
         return try {
-            valid(ConfigHelper.loadConfig(baseDirectory, configFile))
+            val configOverrides = mutableMapOf<String, Any>()
+            inialiseSchema?.let{
+                configOverrides += "database.initialiseSchema" to it
+            }
+            allowHibernateToModifyAppSchema?.let{
+                configOverrides += "database.allowHibernateToManageAppSchema" to it
+            }
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
         } catch (e: ConfigException) {
             return invalid(e)
         }
@@ -186,6 +205,13 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         devMode?.let {
             configOverrides += "devMode" to it
         }
+        inialiseSchema?.let{
+            configOverrides += "database.initialiseSchema" to it
+        }
+        allowHibernateToModifyAppSchema?.let{
+            configOverrides += "database.allowHibernateToManageAppSchema" to it
+        }
+
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
         } catch (e: ConfigException) {

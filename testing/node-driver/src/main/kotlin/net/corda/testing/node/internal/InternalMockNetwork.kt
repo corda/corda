@@ -618,7 +618,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
-        doReturn(DatabaseConfig()).whenever(it).database
+        doReturn(DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true)).whenever(it).database
         doReturn("").whenever(it).emailAddress
         doReturn(null).whenever(it).jmxMonitoringHttpPort
         doReturn(true).whenever(it).devMode

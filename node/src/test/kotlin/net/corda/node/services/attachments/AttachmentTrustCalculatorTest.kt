@@ -5,11 +5,18 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.AttachmentTrustInfo
+import net.corda.core.internal.delete
+import net.corda.core.internal.div
+import net.corda.core.internal.hash
+import net.corda.core.internal.outputStream
+import net.corda.core.internal.read
+import net.corda.core.internal.readAll
 import net.corda.core.node.ServicesForResolution
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
@@ -17,7 +24,6 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -50,7 +56,7 @@ class AttachmentTrustCalculatorTest {
     @Before
     fun setUp() {
         val dataSourceProperties = MockServices.makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
+        database = configureDatabase(dataSourceProperties, { null }, { null })
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {
                 it.start()

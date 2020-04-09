@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -59,7 +58,6 @@ class PersistentIdentityServiceTests {
         identityService = PersistentIdentityService(cacheFactory = cacheFactory)
         database = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 identityService::wellKnownPartyFromX500Name,
                 identityService::wellKnownPartyFromAnonymous
         )

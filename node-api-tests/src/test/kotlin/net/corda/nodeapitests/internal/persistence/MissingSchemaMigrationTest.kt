@@ -2,12 +2,12 @@ package net.corda.nodeapitests.internal.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.MissingMigrationException
-import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.MissingMigrationException
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
@@ -41,7 +41,7 @@ class MissingSchemaMigrationTest {
     }
 
     private fun createSchemaMigration(schemasToMigrate: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): SchemaMigration {
-        val databaseConfig = DatabaseConfig()
+        val databaseConfig = DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true)
         return SchemaMigration(schemasToMigrate, dataSource, databaseConfig, null, null,
                 TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }

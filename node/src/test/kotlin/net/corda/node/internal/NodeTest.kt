@@ -183,7 +183,7 @@ class NodeTest {
                 trustStorePassword = "tsp",
                 crlCheckSoftFail = true,
                 dataSourceProperties = makeTestDataSourceProperties(),
-                database = DatabaseConfig(),
+                database = DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true),
                 rpcUsers = emptyList(),
                 verifierType = VerifierType.InMemory,
                 flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),

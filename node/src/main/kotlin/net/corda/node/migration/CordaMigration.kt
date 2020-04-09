@@ -73,7 +73,7 @@ abstract class CordaMigration : CustomTaskChange {
     private fun createDatabase(cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>): CordaPersistence {
-        val configDefaults = DatabaseConfig()
+        val configDefaults = DatabaseConfig(true) // want to run migration, but not hibernate to manage app schemas
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
                 AbstractPartyToX500NameAsStringConverter(

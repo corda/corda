@@ -62,6 +62,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.minutes
 import net.corda.djvm.source.ApiSource
 import net.corda.djvm.source.EmptyApi
@@ -161,6 +162,7 @@ import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.tools.shell.InteractiveShell
@@ -1278,6 +1280,12 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
 
+    @Suppress("DEPRECATION")
+    if ( databaseConfig.initialiseAppSchema != SchemaInitializationType.UNSET){
+        val warning = "DatabaseConfig.initialiseAppSchema is deprecated and will be ignored. Set allowHibernateToManageAppSchema to true to create schemas with hibernate."
+        Node.printWarning(warning)
+        loggerFor<CordaPersistence>().warn(warning)
+    }
     return CordaPersistence(
             databaseConfig,
             schemaService.schemas,

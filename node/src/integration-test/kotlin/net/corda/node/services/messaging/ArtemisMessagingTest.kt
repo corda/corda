@@ -7,6 +7,8 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -14,7 +16,6 @@ import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -22,8 +23,6 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.coretesting.internal.rigorousMock
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -89,7 +88,7 @@ class ArtemisMessagingTest {
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null })
         networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, rigorousMock()).apply { start(emptyList()) }
     }
 
@@ -101,16 +100,16 @@ class ArtemisMessagingTest {
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 
-    @Test(timeout=300_000)
-	fun `server starting with the port already bound should throw`() {
+    @Test(timeout = 300_000)
+    fun `server starting with the port already bound should throw`() {
         ServerSocket(serverPort).use {
             val messagingServer = createMessagingServer()
             assertThatThrownBy { messagingServer.start() }
         }
     }
 
-    @Test(timeout=300_000)
-	fun `client should connect to remote server`() {
+    @Test(timeout = 300_000)
+    fun `client should connect to remote server`() {
         val remoteServerAddress = portAllocation.nextHostAndPort()
 
         createMessagingServer(remoteServerAddress.port).start()
@@ -118,8 +117,8 @@ class ArtemisMessagingTest {
         startNodeMessagingClient()
     }
 
-    @Test(timeout=300_000)
-	fun `client should throw if remote server not found`() {
+    @Test(timeout = 300_000)
+    fun `client should throw if remote server not found`() {
         val serverAddress = portAllocation.nextHostAndPort()
         val invalidServerAddress = portAllocation.nextHostAndPort()
 
@@ -130,15 +129,15 @@ class ArtemisMessagingTest {
         messagingClient = null
     }
 
-    @Test(timeout=300_000)
-	fun `client should connect to local server`() {
+    @Test(timeout = 300_000)
+    fun `client should connect to local server`() {
         createMessagingServer().start()
         createMessagingClient()
         startNodeMessagingClient()
     }
 
-    @Test(timeout=300_000)
-	fun `client should be able to send message to itself`() {
+    @Test(timeout = 300_000)
+    fun `client should be able to send message to itself`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
@@ -148,8 +147,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test(timeout=300_000)
-	fun `client should fail if message exceed maxMessageSize limit`() {
+    @Test(timeout = 300_000)
+    fun `client should fail if message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
         messagingClient.send(message, messagingClient.myAddress)
@@ -167,8 +166,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test(timeout=300_000)
-	fun `server should not process if incoming message exceed maxMessageSize limit`() {
+    @Test(timeout = 300_000)
+    fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
         messagingClient.send(message, messagingClient.myAddress)
@@ -184,8 +183,8 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    @Test(timeout=300_000)
-	fun `platform version is included in the message`() {
+    @Test(timeout = 300_000)
+    fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)

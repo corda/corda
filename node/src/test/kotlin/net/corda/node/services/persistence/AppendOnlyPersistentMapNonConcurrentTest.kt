@@ -3,7 +3,6 @@ package net.corda.node.services.persistence
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -18,7 +17,6 @@ import javax.persistence.Id
 class AppendOnlyPersistentMapNonConcurrentTest {
 
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(),
-            DatabaseConfig(),
             { null }, { null },
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(AppendOnlyPersistentMapNonConcurrentTest.PersistentMapEntry::class.java)))))
 

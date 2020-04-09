@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class PersistentScheduledFlowRepositoryTest {
-    private val databaseConfig: DatabaseConfig = DatabaseConfig()
+    private val databaseConfig: DatabaseConfig = DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true)
     private val mark = Instant.now()
 
     @Test(timeout=300_000)

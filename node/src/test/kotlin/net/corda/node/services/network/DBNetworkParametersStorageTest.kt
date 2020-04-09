@@ -8,15 +8,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.NetworkParametersService
+import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
+import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
-import net.corda.coretesting.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
@@ -54,7 +53,6 @@ class DBNetworkParametersStorageTest {
         hash3 = incorrectParams.raw.hash
         database = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 { null },
                 { null }
         )

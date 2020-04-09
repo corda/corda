@@ -9,14 +9,19 @@ import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.hamcrest.CoreMatchers
 import org.hamcrest.Matcher
-import org.hamcrest.Matchers.*
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.anyOf
+import org.hamcrest.Matchers.greaterThan
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -46,7 +51,6 @@ class IdentityServiceToStringShortMigrationTest {
     fun setUp() {
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
-                DatabaseConfig(),
                 { null },
                 { null },
                 ourName = BOB_IDENTITY.name)

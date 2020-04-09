@@ -113,7 +113,7 @@ class HibernateConfigurationTest {
             }
         }
         val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+        database = configureDatabase(dataSourceProps, identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
 
@@ -976,7 +976,7 @@ class HibernateConfigurationTest {
                     doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
                 }
             }
-            database = configureDatabase(dataSourceProps, DatabaseConfig(initialiseSchema = initialiseSchema), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            database = configureDatabase(dataSourceProps, DatabaseConfig(initialiseSchema = initialiseSchema, allowHibernateToManageAppSchema = true), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             return database
         }
 

@@ -270,6 +270,7 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
     private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
+    private val allowHibernateToManageAppSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.allowHibernateToManageAppSchema)
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
@@ -279,6 +280,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
         return valid(DatabaseConfig(config[initialiseSchema],
                 config[initialiseSchema],
                 config[initialiseAppSchema],
+                config[allowHibernateToManageAppSchema],
                 config[transactionIsolationLevel],
                 exportHibernateJMXStatistics = config[exportHibernateJMXStatistics],
                 mappedSchemaCacheSize = config[mappedSchemaCacheSize]))

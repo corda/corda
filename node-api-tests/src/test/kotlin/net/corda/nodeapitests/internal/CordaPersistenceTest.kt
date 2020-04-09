@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 
 class CordaPersistenceTest {
     private val database = configureDatabase(MockServices.makeTestDataSourceProperties(),
-            DatabaseConfig(),
+            DatabaseConfig(initialiseSchema = true, allowHibernateToManageAppSchema = true),
             { null }, { null },
             NodeSchemaService(emptySet()))
 

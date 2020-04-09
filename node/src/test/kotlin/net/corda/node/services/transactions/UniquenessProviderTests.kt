@@ -20,7 +20,6 @@ import net.corda.coretesting.internal.configureTestSSL
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.notary.experimental.raft.RaftUniquenessProvider
@@ -604,7 +603,7 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
         return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory(), ::signSingle)
     }
 
@@ -619,7 +618,7 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
+        database = configureDatabase(makeTestDataSourceProperties(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
 
         val testSSL = configureTestSSL(CordaX500Name("Raft", "London", "GB"))
         val raftNodePort = 10987

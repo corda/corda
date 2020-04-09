@@ -54,6 +54,7 @@ def rpcUsersList = [
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
+    manageSchema = true
     nodeDefaults{
         projectCordapp {
             deploy = false

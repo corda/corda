@@ -5,7 +5,6 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.relaxedThoroughness
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.ProcessUtilities.startJavaProcess
@@ -32,7 +31,7 @@ class AbstractNodeTests {
     @Test(timeout=300_000)
 	fun `logVendorString does not leak connection`() {
         // Note this test also covers a transaction that CordaPersistence does while it's instantiating:
-        val database = configureDatabase(hikariProperties(freshURL()), DatabaseConfig(), { null }, { null })
+        val database = configureDatabase(hikariProperties(freshURL()), { null }, { null })
         val log = mock<Logger>() // Don't care what happens here.
         // Actually 10 is enough to reproduce old code hang, as pool size is 10 and we leaked 9 connections and 1 is in flight:
         repeat(100) {

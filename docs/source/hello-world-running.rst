@@ -20,6 +20,8 @@ service.
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 
+        manageSchema = true
+
         nodeDefaults {
                 cordapps = [
                 "net.corda:corda-finance-contracts:$corda_release_version",

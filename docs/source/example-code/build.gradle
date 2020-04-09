@@ -80,6 +80,7 @@ task integrationTest(type: Test) {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    manageSchema = true
     directory "./build/nodes"
     node {
         name "O=Notary Service,OU=corda,L=London,C=GB"

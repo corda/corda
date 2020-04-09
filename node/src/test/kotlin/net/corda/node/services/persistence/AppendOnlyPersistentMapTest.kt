@@ -4,12 +4,13 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -55,7 +56,6 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
                         val bExpectedIfSingleThreaded: Outcome = bExpected)
 
     private val database = configureDatabase(makeTestDataSourceProperties(),
-            DatabaseConfig(),
             { null }, { null },
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(PersistentMapEntry::class.java)))))
 

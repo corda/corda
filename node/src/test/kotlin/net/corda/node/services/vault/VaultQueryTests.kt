@@ -29,7 +29,6 @@ import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.finance.workflows.CommercialPaperUtils
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.chooseIdentity
@@ -188,7 +187,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Ignore
     @Test(timeout=300_000)
 	fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc::wellKnownPartyFromX500Name, identitySvc::wellKnownPartyFromAnonymous)
+        val database = configureDatabase(makePersistentDataSourceProperties(), identitySvc::wellKnownPartyFromX500Name, identitySvc::wellKnownPartyFromAnonymous)
         setUpDb(database, 5000)
 
         database.close()
