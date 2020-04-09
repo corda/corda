@@ -1,7 +1,10 @@
 package net.corda.nodeapi.internal.persistence.factory
 
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
+import org.hibernate.boot.MetadataSources
+import org.hibernate.cfg.Configuration
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
@@ -25,6 +28,19 @@ class PostgresSessionFactoryFactory : BaseSessionFactoryFactory() {
     }
 
     override fun canHandleDatabase(jdbcUrl: String): Boolean = jdbcUrl.contains(":postgresql:")
+
+    override fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
+        val config = super.buildHibernateConfig(databaseConfig, metadataSources)
+        databaseConfig.schema?.apply {
+            val schemaName = if (!this.startsWith("\"")) {
+                "\"" + this + "\""
+            } else {
+                this
+            }
+            config.setProperty("hibernate.default_schema", schemaName)
+        }
+        return config
+    }
 
     // Maps to a byte array on postgres.
     object MapBlobToPostgresByteA : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {

@@ -87,6 +87,8 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL
+import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
@@ -183,10 +185,10 @@ class DriverDSLImpl(
     }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
-        if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
+        if (inMemoryDB && isH2Database(corda.dataSourceProperties.getProperty(DATA_SOURCE_URL))) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
-            corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
-            NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
+            corda.dataSourceProperties.setProperty(DATA_SOURCE_URL, jdbcUrl)
+            NodeConfig(typesafe + mapOf("dataSourceProperties" to mapOf(DATA_SOURCE_URL to jdbcUrl)))
         } else {
             this
         }
