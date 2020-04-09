@@ -227,6 +227,17 @@ public class CordaCaplet extends Capsule {
                 jvmArgs.add("-XX:+HeapDumpOnOutOfMemoryError");
                 jvmArgs.add("-XX:+CrashOnOutOfMemoryError");
             }
+            if (isAtLeastJavaVersion11()) {
+                jvmArgs.add("--add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.lang=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.lang.reflect=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.lang.invoke=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.util=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.time=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.io=ALL-UNNAMED");
+                jvmArgs.add("--add-opens=java.base/java.nio=ALL-UNNAMED");
+                jvmArgs.add("-Dnashorn.args=--no-deprecation-warning");
+            }
             return (T) jvmArgs;
         } else if (ATTR_SYSTEM_PROPERTIES == attr) {
             // Add system properties, if specified, from the config.
@@ -269,6 +280,14 @@ public class CordaCaplet extends Capsule {
             System.err.printf("Error: Unsupported Java version %s; currently only version 1.8 or 11 is supported.\n", version);
             System.exit(1);
         }
+    }
+
+    private static boolean isAtLeastJavaVersion11() {
+        String version = System.getProperty("java.specification.version");
+        if (version != null) {
+            return Float.parseFloat(version) >= 11f;
+        }
+        return false;
     }
 
     private Boolean checkIfCordappDirExists(File dir) {

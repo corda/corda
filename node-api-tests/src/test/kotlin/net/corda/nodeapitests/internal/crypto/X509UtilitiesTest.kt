@@ -15,6 +15,7 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.JavaVersion
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
@@ -51,7 +52,6 @@ import net.corda.nodeapi.internal.crypto.save
 import net.corda.nodeapi.internal.crypto.toBc
 import net.corda.nodeapi.internal.crypto.x509
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
@@ -118,7 +118,7 @@ class X509UtilitiesTest {
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
         Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
-                && ( !SystemUtils.IS_JAVA_11 || it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
+                && ( !JavaVersion.isVersionAtLeast(JavaVersion.Java_11) || it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
     }
 
     private fun validSelfSignedCertificate(signatureScheme: SignatureScheme) {
@@ -153,7 +153,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.filter{ !SystemUtils.IS_JAVA_11 || it.first != SPHINCS256_SHA256 }.forEach { createValidServerCertChain(it.first, it.second) }
+        certChainSchemeCombinations.filter{ !JavaVersion.isVersionAtLeast(JavaVersion.Java_11) || it.first != SPHINCS256_SHA256 }
+                                   .forEach { createValidServerCertChain(it.first, it.second) }
     }
 
     private fun createValidServerCertChain(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {
