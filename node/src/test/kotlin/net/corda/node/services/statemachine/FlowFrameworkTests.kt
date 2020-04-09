@@ -31,6 +31,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -43,6 +44,10 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -70,6 +75,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import rx.Notification
 import rx.Observable
@@ -77,13 +83,12 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.ArrayList
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
@@ -348,7 +353,7 @@ class FlowFrameworkTests {
 
     //We should update this test when we do the work to persists the flow result.
     @Test(timeout = 300_000)
-    fun `Flow status is set to completed in database when the flow finishes and serialised flow state is null`() {
+    fun `Checkpoint and all its related records are deleted when the flow finishes`() {
         val terminationSignal = Semaphore(0)
         val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
         mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
@@ -362,12 +367,15 @@ class FlowFrameworkTests {
         mockNet.waitQuiescent()
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
-            assertNull(checkpoint!!.result)
-            assertNull(checkpoint.serializedFlowState)
-            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+            assertNull(checkpoint)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
     }
 
+    // Ignoring test since completed flows are not currently keeping their checkpoints in the database
+    @Ignore
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
         val terminationSignal = Semaphore(0)
@@ -819,6 +827,12 @@ class FlowFrameworkTests {
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
         assertEquals(null, persistedException)
+    }
+
+    private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
+        val criteria = session.criteriaBuilder.createQuery(T::class.java)
+        criteria.select(criteria.from(T::class.java))
+        return session.createQuery(criteria).resultList
     }
 
     //region Helpers

@@ -228,9 +228,11 @@ class TopLevelTransition(
                             isRemoved = true
                     )
                     val allSourceSessionIds = checkpoint.checkpointState.sessions.keys
+                    if (currentState.isAnyCheckpointPersisted) {
+                        actions.add(Action.RemoveCheckpoint(context.id))
+                    }
                     actions.addAll(arrayOf(
-                            Action.PersistCheckpoint(context.id, currentState.checkpoint, currentState.isAnyCheckpointPersisted),
-                            Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
+                        Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.ReleaseSoftLocks(event.softLocksId),
                             Action.CommitTransaction,
                             Action.AcknowledgeMessages(pendingDeduplicationHandlers),
