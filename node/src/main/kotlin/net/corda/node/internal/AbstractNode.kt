@@ -1309,7 +1309,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
                     cause = ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
                     "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
-                    NodeDatabaseErrors.MISSING_DRIVERS)
+                    NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else ->
                 throw CouldNotCreateDataSourceException(

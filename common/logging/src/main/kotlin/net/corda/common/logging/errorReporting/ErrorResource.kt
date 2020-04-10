@@ -12,12 +12,26 @@ class ErrorResource private constructor(private val bundle: ResourceBundle,
                                         private val locale: Locale) {
 
     companion object {
+        /**
+         * Construct an error resource from a provided code.
+         *
+         * @param errorCode The code to get the resource bundle for
+         * @param resourceLocation The location in the JAR of the error code resource bundles
+         * @param locale The locale to use for this resource
+         */
         fun fromErrorCode(errorCode: ErrorCode<*, *>, resourceLocation: String, locale: Locale) : ErrorResource {
             val resource = "$resourceLocation/${errorCode.formatCode()}"
             val bundle = ResourceBundle.getBundle(resource, locale)
             return ErrorResource(bundle, locale)
         }
 
+        /**
+         * Construct an error resource using resources loaded in a given classloader
+         *
+         * @param resource The resource bundle to load
+         * @param classLoader The classloader used to load the resource bundles
+         * @param locale The locale to use for this resource
+         */
         fun fromLoader(resource: String, classLoader: ClassLoader, locale: Locale) : ErrorResource {
             val bundle = ResourceBundle.getBundle(resource, locale, classLoader)
             return ErrorResource(bundle, locale)

@@ -13,7 +13,7 @@ enum class NodeNamespaces {
  */
 enum class NodeDatabaseErrors {
     COULD_NOT_CONNECT,
-    MISSING_DRIVERS,
+    MISSING_DRIVER,
     FAILED_STARTUP,
     PASSWORD_REQUIRED_FOR_H2
 }
