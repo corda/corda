@@ -405,7 +405,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 /**
  * Thrown when scanning CorDapps.
  */
-class MultipleCordappsForFlowException(message: String) : Exception(message)
+class MultipleCordappsForFlowException(
+        message: String,
+        flowName: String,
+        jars: String
+) : Exception(message), ErrorCode<NodeNamespaces, CordappErrors> {
+    override val namespace = NodeNamespaces.CORDAPP
+    override val code = CordappErrors.MULTIPLE_CORDAPPS_FOR_FLOW
+    override val parameters = listOf(flowName, jars)
+}
 
 /**
  * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
@@ -450,7 +458,9 @@ abstract class CordappLoaderTemplate : CordappLoader {
                             }
                         }
                         throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow " +
-                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
+                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].",
+                                entry.value.first().first.name,
+                                entry.value.joinToString { it.second.jarPath.toString() })
                     }
                     entry.value.single().second
                 }

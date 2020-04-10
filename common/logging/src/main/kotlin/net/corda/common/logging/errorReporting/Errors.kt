@@ -22,5 +22,6 @@ enum class NodeDatabaseErrors {
  * Errors related to loading of Cordapps
  */
 enum class CordappErrors {
-    DUPLICATE_CORDAPPS_INSTALLED
+    DUPLICATE_CORDAPPS_INSTALLED,
+    MULTIPLE_CORDAPPS_FOR_FLOW
 }
