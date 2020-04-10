@@ -638,6 +638,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
+        doReturn(StateMachineManager.StartMode.ResumeAll).whenever(it).smmStartMode
     }
 }
 

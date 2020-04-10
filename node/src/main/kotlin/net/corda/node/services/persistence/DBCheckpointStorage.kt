@@ -328,8 +328,7 @@ class DBCheckpointStorage(
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
-
-
+    
     @VisibleForTesting
     internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
@@ -342,6 +341,19 @@ class DBCheckpointStorage(
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
                 .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), FlowStatus.PAUSED))
+        return session.createQuery(criteriaQuery).stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
+    }
+
+    //TODO: Clean up this method and the last one call a private inner method as most of the code is the same
+    override fun getHospitalizedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
+        criteriaQuery.select(root)
+                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), FlowStatus.HOSPITALIZED))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }

@@ -191,8 +191,6 @@ class SingleThreadedStateMachineManager(
         var stopping = false
         var stopped = false
         val flows = HashMap<StateMachineRunId, Flow>()
-        // TODO: Does flowPrimitives need to be here and controlled by a mutex. Probably not unless StateMachineManager
-        //  is meant to be thread safe.
         val flowPrimitives = HashMap<StateMachineRunId, NonResidentFlow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
@@ -247,6 +245,13 @@ class SingleThreadedStateMachineManager(
         this.checkpointSerializationContext = checkpointSerializationContext
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
         fiberDeserializationChecker?.start(checkpointSerializationContext)
+        when (startMode) {
+            StateMachineManager.StartMode.ResumeAll -> {}
+            StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
+            StateMachineManager.StartMode.PauseHospitalised -> markAllHosipitalisedFlowsAsPaused()
+        }
+
+
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
@@ -408,11 +413,20 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    //TODO: Do we need a to return a future here?
+    private fun markAllHosipitalisedFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
+        return checkpointStorage.getHospitalizedCheckpoints().use {
+            it.map { (id, serializedCheckpoint) ->
+                val paused = markFlowsAsPaused(id)
+                id to paused
+            }.toList().map {pair -> pair.first to pair.second}.toMap()
+        }
+    }
+
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
             val flowPrimitive = flowPrimitives[id] ?: return false
             val flow = flowPrimitive.createFlow() ?: return false
+            flowPrimitives.remove(id)
             addAndStartFlow(flow.fiber.id, flow)
         }
         return true
