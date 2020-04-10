@@ -229,12 +229,21 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun parseVersion(versionStr: String?, attributeName: String): Int {
         if (versionStr == null) {
-            throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
+            throw CordappInvalidVersionException(
+                    "Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.",
+                    CordappErrors.MISSING_VERSION_ATTRIBUTE,
+                    listOf(attributeName))
         }
         val version = versionStr.toIntOrNull()
-                ?: throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
+                ?: throw CordappInvalidVersionException(
+                        "Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.",
+                        CordappErrors.INVALID_VERSION_IDENTIFIER,
+                        listOf(versionStr, attributeName))
         if (version < 1) {
-            throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
+            throw CordappInvalidVersionException(
+                    "Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.",
+                    CordappErrors.INVALID_VERSION_IDENTIFIER,
+                    listOf(versionStr, attributeName))
         }
         return version
     }
@@ -418,7 +427,13 @@ class MultipleCordappsForFlowException(
 /**
  * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
  */
-class CordappInvalidVersionException(msg: String) : Exception(msg)
+class CordappInvalidVersionException(
+        msg: String,
+        override val code: CordappErrors,
+        override val parameters: List<Any> = listOf()
+) : Exception(msg), ErrorCode<NodeNamespaces, CordappErrors> {
+    override val namespace = NodeNamespaces.CORDAPP
+}
 
 /**
  * Thrown if duplicate CorDapps are installed on the node
