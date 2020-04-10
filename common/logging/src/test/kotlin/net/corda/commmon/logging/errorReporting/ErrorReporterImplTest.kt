@@ -37,12 +37,25 @@ class ErrorReporterImplTest {
 
     private enum class TestErrors {
         CASE1,
-        CASE2
+        CASE2,
+        CASE_3
     }
 
     private val TEST_ERROR_1 = object : ErrorCode<TestNamespaces, TestErrors> {
         override val namespace = TestNamespaces.TEST
         override val code = TestErrors.CASE1
+        override val parameters = listOf<Any>()
+    }
+
+    private class TestError2(currentDate: Date) : ErrorCode<TestNamespaces, TestErrors> {
+        override val namespace = TestNamespaces.TEST
+        override val code = TestErrors.CASE2
+        override val parameters: List<Any> = listOf("foo", 1, currentDate)
+    }
+
+    private val TEST_ERROR_3 = object : ErrorCode<TestNamespaces, TestErrors> {
+        override val namespace = TestNamespaces.TEST
+        override val code = TestErrors.CASE_3
         override val parameters = listOf<Any>()
     }
 
@@ -67,11 +80,7 @@ class ErrorReporterImplTest {
     @Test(timeout = 300_00)
     fun `error code with parameters correctly reported`() {
         val currentDate = Date.from(Instant.now())
-        val error = object : ErrorCode<TestNamespaces, TestErrors> {
-            override val namespace = TestNamespaces.TEST
-            override val code = TestErrors.CASE2
-            override val parameters: List<Any> = listOf("foo", 1, currentDate)
-        }
+        val error = TestError2(currentDate)
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
         val format = DateFormat.getDateInstance(DateFormat.LONG, Locale.forLanguageTag("en-US"))
@@ -100,5 +109,13 @@ class ErrorReporterImplTest {
         val testReporter = createReporterImpl("es-ES")
         testReporter.report(error, loggerMock)
         assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/es-ES]"), logs)
+    }
+
+    @Test(timeout = 300_000)
+    fun `error code with underscore in translated to resource file successfully`() {
+        val error = TEST_ERROR_3
+        val testReporter = createReporterImpl("en-US")
+        testReporter.report(error, loggerMock)
+        assertEquals(listOf("This is the third test message [Code: test-case-3, URL: $TEST_URL/en-US]"), logs)
     }
 }
