@@ -2,6 +2,10 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
+import net.corda.common.logging.errorReporting.CordappErrors
+import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.common.logging.errorReporting.NodeNamespaces
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -144,9 +148,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
 
             if (duplicateCordapps.isNotEmpty()) {
-                throw IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
-                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
-                        "${duplicateCordapps.map { it.name }}")
+                throw DuplicateCordappsInstalledException(cordapp, duplicateCordapps)
             }
             if (registeredClassName in contractClasses) {
                 throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
@@ -409,6 +411,18 @@ class MultipleCordappsForFlowException(message: String) : Exception(message)
  * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
  */
 class CordappInvalidVersionException(msg: String) : Exception(msg)
+
+/**
+ * Thrown if duplicate CorDapps are installed on the node
+ */
+class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>)
+    : IllegalStateException("The CorDapp (name: ${app.info.shortName}, file: ${app.name}) " +
+        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+        "${duplicates.map { it.name }}"), ErrorCode<NodeNamespaces, CordappErrors> {
+    override val namespace = NodeNamespaces.CORDAPP
+    override val code = CordappErrors.DUPLICATE_CORDAPPS_INSTALLED
+    override val parameters = listOf(app.info.shortName, app.name, duplicates.map { it.name })
+}
 
 abstract class CordappLoaderTemplate : CordappLoader {
 
