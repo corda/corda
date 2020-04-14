@@ -277,7 +277,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
         val config = configuration.withOptions(options)
-        return valid(DatabaseConfig(config[initialiseSchema],
+        return valid(DatabaseConfig(null,
                 config[initialiseSchema],
                 config[initialiseAppSchema],
                 config[allowHibernateToManageAppSchema],
