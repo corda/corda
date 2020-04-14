@@ -251,7 +251,6 @@ class SingleThreadedStateMachineManager(
             StateMachineManager.StartMode.PauseHospitalised -> markAllHosipitalisedFlowsAsPaused()
         }
 
-
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
