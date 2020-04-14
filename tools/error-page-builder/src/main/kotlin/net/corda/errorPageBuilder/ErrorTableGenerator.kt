@@ -15,7 +15,7 @@ class ErrorTableGenerator(private val resourceLocation: File,
         private const val DESCRIPTION_HEADING = "descriptionHeading"
         private const val TO_FIX_HEADING = "toFixHeading"
         private const val ERROR_HEADINGS_BUNDLE = "ErrorPageHeadings"
-        private const val ERROR_INFO_RESOURCE = "ErrorInfo.properties"
+        private const val ERROR_INFO_RESOURCE = ".*ErrorInfo.*"
     }
 
     private fun getHeading(heading: String) : String {
