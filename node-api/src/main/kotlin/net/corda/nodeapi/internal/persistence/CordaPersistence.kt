@@ -411,9 +411,7 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
 class CouldNotCreateDataSourceException(override val message: String?,
                                         override val code: NodeDatabaseErrors,
                                         override val parameters: List<Any> = listOf(),
-                                        override val cause: Throwable? = null) : ErrorCode<NodeNamespaces, NodeDatabaseErrors>, Exception() {
-    override val namespace = NodeNamespaces.DATABASE
-}
+                                        override val cause: Throwable? = null) : ErrorCode<NodeDatabaseErrors>, Exception()
 
 class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
 
