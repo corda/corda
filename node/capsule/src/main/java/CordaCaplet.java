@@ -173,6 +173,27 @@ public class CordaCaplet extends Capsule {
         }
     }
 
+    // Capsule does not handle multiple instances of same option hence we add in the args here to process builder
+    // For multiple instances Capsule jvm args handling works on basis that one overrides the other.
+    @Override
+    protected int launch(ProcessBuilder pb) throws IOException, InterruptedException {
+        if (isAtLeastJavaVersion11()) {
+            List<String> args = pb.command();
+            List<String> myArgs = Arrays.asList(
+                "--add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED",
+                "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+                "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+                "--add-opens=java.base/java.util=ALL-UNNAMED",
+                "--add-opens=java.base/java.time=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+                "--add-opens=java.base/java.nio=ALL-UNNAMED");
+            args.addAll(1, myArgs);
+            pb.command(args);
+        }
+        return super.launch(pb);
+    }
+
     /**
      * Overriding the Caplet classpath generation via the intended interface in Capsule.
      */
@@ -228,14 +249,6 @@ public class CordaCaplet extends Capsule {
                 jvmArgs.add("-XX:+CrashOnOutOfMemoryError");
             }
             if (isAtLeastJavaVersion11()) {
-                jvmArgs.add("--add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.lang=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.lang.reflect=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.lang.invoke=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.util=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.time=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.io=ALL-UNNAMED");
-                jvmArgs.add("--add-opens=java.base/java.nio=ALL-UNNAMED");
                 jvmArgs.add("-Dnashorn.args=--no-deprecation-warning");
             }
             return (T) jvmArgs;
