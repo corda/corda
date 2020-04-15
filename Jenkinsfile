@@ -5,7 +5,7 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'local-k8s' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
