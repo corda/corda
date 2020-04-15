@@ -169,6 +169,8 @@ internal class CordaRPCOpsImpl(
 
     override fun killFlow(id: StateMachineRunId): Boolean = smm.killFlow(id)
 
+    override fun unPauseFlow(id: StateMachineRunId): Boolean = smm.unPauseFlow(id)
+
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 
         val (allStateMachines, changes) = smm.track()

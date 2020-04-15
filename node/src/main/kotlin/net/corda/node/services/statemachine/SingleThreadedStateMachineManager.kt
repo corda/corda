@@ -100,6 +100,12 @@ class SingleThreadedStateMachineManager(
                                         val initialDeduplicationHandler: DeduplicationHandler?
     ) {
 
+        val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
+
+        fun addExternalEvent(message: Event.DeliverSessionMessage) {
+            externalEvents.add(message)
+        }
+
         fun createFlow() : Flow? {
             val fiber = getFibreFromCheckpoint() ?: return null
             val state = StateMachineState(
@@ -191,7 +197,7 @@ class SingleThreadedStateMachineManager(
         var stopping = false
         var stopped = false
         val flows = HashMap<StateMachineRunId, Flow>()
-        val flowPrimitives = HashMap<StateMachineRunId, NonResidentFlow>()
+        val nonResidentFlows = HashMap<StateMachineRunId, NonResidentFlow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
@@ -263,7 +269,14 @@ class SingleThreadedStateMachineManager(
 
         val pausedFlows = restoreFlowPrimitivesFromPausedCheckpoint()
         mutex.locked {
-            flowPrimitives.putAll(pausedFlows)
+            nonResidentFlows.putAll(pausedFlows)
+            for (flow in pausedFlows) {
+                val checkpoint = flow.value.checkpoint
+                for (sessionId in getFlowSessionIds(checkpoint)) {
+                    sessionToFlow[sessionId] = flow.key
+                    logger.error("Added to MAP ${sessionId} : ${flow.key}")
+                }
+            }
         }
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
@@ -394,7 +407,7 @@ class SingleThreadedStateMachineManager(
                 return success
             } else {
                 if (flows[id] != null) return false // Flow is running already hence we cannot pause it.
-                if (flowPrimitives[id] != null) return true // Flow is already paused hence we don't need to do anything
+                if (nonResidentFlows[id] != null) return true // Flow is already paused hence we don't need to do anything
                 database.transaction {
                     success = checkpointStorage.markCheckpointAsPaused(id)
                 }
@@ -423,10 +436,13 @@ class SingleThreadedStateMachineManager(
 
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
-            val flowPrimitive = flowPrimitives[id] ?: return false
+            val flowPrimitive = nonResidentFlows[id] ?: return false
             val flow = flowPrimitive.createFlow() ?: return false
-            flowPrimitives.remove(id)
+            nonResidentFlows.remove(id)
             addAndStartFlow(flow.fiber.id, flow)
+            for (event in flowPrimitive.externalEvents) {
+                flow.fiber.scheduleEvent(event)
+            }
         }
         return true
     }
@@ -550,10 +566,10 @@ class SingleThreadedStateMachineManager(
                 }
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
-                val flowPrimitive = NonResidentFlow(flowId, checkpoint, false, false, null)
+                val nonResidentFlow = NonResidentFlow(flowId, checkpoint, false, false, null)
 
                 // Resurrect flow
-                flowPrimitive.createFlow() ?: return
+                nonResidentFlow.createFlow() ?: return
             } else {
                 // Just flow initiation message
                 null
@@ -656,9 +672,12 @@ class SingleThreadedStateMachineManager(
                     logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                mutex.locked { flows[flowId] }?.run {
-                    fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
-                } ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
+                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender)
+                mutex.locked {
+                    flows[flowId]?.run { fiber.scheduleEvent(event) }
+                        ?: nonResidentFlows[flowId]?.run { addExternalEvent(event) }
+                        ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
+                }
             }
         } catch (exception: Exception) {
             logger.error("Exception while routing $sessionMessage", exception)

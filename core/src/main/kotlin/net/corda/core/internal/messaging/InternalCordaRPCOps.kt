@@ -1,5 +1,6 @@
 package net.corda.core.internal.messaging
 
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.messaging.CordaRPCOps
 
@@ -13,4 +14,11 @@ interface InternalCordaRPCOps : CordaRPCOps {
 
     /** Get all attachment trust information */
     val attachmentTrustInfos: List<AttachmentTrustInfo>
+
+    /**
+     * Start a paused flow.
+     *
+     * @return whether the flow was successfully started.
+     */
+    fun unPauseFlow(id: StateMachineRunId): Boolean
 }
