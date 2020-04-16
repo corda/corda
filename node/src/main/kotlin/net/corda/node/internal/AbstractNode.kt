@@ -21,7 +21,6 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.NotaryQueryClientFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -958,8 +957,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 tokenize()
                 runOnStop += ::stop
                 flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
-                flowManager.registerInitiatedCoreFlowFactory(
-                        NotaryQueryClientFlow.InitiateQuery::class, ::createQueryFlow)
                 start()
             }
             return service
