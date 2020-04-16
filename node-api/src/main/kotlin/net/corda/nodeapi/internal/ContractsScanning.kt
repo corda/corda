@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal
 import io.github.classgraph.ClassGraph
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.crypto.SecureHash
@@ -17,7 +18,7 @@ import java.util.Collections.singleton
 // When scanning of the CorDapp Jar is performed without "corda-core.jar" being in the classpath, there is no way to appreciate
 // relationships between those interfaces, therefore they have to be listed explicitly.
 val coreContractClasses = setOf(Contract::class, UpgradedContractWithLegacyConstraint::class, UpgradedContract::class)
-
+val coreContractStateClasses = setOf(ContractState::class)
 interface ContractsJar {
     val hash: SecureHash
     fun scan(): List<ContractClassName>

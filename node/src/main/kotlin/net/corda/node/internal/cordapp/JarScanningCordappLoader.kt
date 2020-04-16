@@ -21,6 +21,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
+import net.corda.nodeapi.internal.coreContractStateClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import java.lang.reflect.Modifier
 import java.math.BigInteger
@@ -34,6 +35,7 @@ import java.util.jar.Manifest
 import java.util.zip.ZipInputStream
 import kotlin.reflect.KClass
 import kotlin.streams.toList
+import java.io.DataInputStream
 
 /**
  * Handles CorDapp loading and classpath scanning of CorDapp JARs
@@ -60,6 +62,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     companion object {
         private val logger = contextLogger()
+        private const val MIN_CONTRACT_CLASS_VERSION = 49 // Java 5
+        private const val MAX_CONTRACT_CLASS_VERSION = 52 // Java 8
 
         /**
          * Creates a CordappLoader from multiple directories.
@@ -102,7 +106,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun loadCordapps(): List<CordappImpl> {
         val cordapps = cordappJarPaths
-                .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
+                .map { url -> scanCordapp(url).use { it.toCordapp(url).verifyClassVersion() } }
                 .filter {
                     if (it.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
@@ -178,8 +182,38 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 minPlatformVersion,
                 targetPlatformVersion,
                 findNotaryService(this),
-                explicitCordappClasses = findAllCordappClasses(this)
+                explicitCordappClasses = findAllCordappClasses(this),
+                contractStateClassNames = findContractStateClassNames(this)
         )
+    }
+
+    private fun CordappImpl.verifyClassVersion(): CordappImpl {
+        if (contractClassNames.isNotEmpty()) {
+            verifyClassVersionNumber(contractClassNames, jarPath)
+        }
+        if (contractStateClassNames.isNotEmpty()) {
+            verifyClassVersionNumber(contractStateClassNames, jarPath)
+        }
+        if (serializationCustomSerializers.isNotEmpty()) {
+            verifyClassVersionNumber(serializationCustomSerializers.map { it.javaClass.name }.toList(), jarPath)
+        }
+        return this
+    }
+
+    private fun verifyClassVersionNumber(classes: List<String>, jarPath: URL) {
+        classes.forEach {
+            DataInputStream(appClassLoader.getResourceAsStream("${it.replace('.', '/')}.class")).use { dataStream ->
+                val magic = dataStream.readInt()
+                if (magic != -0x35014542) {
+                    throw java.lang.IllegalStateException("Invalid Java class $it found in jar file $jarPath")
+                }
+                dataStream.readShort() // minor version number
+                val major = dataStream.readShort().toInt()
+                if (major < MIN_CONTRACT_CLASS_VERSION || major > MAX_CONTRACT_CLASS_VERSION) {
+                    throw IllegalStateException("Class $it from jar file $jarPath has an invalid version of $major")
+                }
+            }
+        }
     }
 
     private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info {
@@ -289,6 +323,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             contractClass.warnContractWithoutConstraintPropagation(appClassLoader)
         }
         return contractClasses
+    }
+
+    private fun findContractStateClassNames(scanResult: RestrictedScanResult): List<String> {
+        return coreContractStateClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
     }
 
     private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
