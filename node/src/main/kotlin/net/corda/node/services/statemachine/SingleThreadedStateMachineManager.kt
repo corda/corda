@@ -92,7 +92,6 @@ class SingleThreadedStateMachineManager(
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
-    //TODO: This should be moved into its own class
     private inner class NonResidentFlow(val id: StateMachineRunId,
                                         val checkpoint: Checkpoint,
                                         val isAnyCheckpointPersisted: Boolean,
@@ -137,19 +136,21 @@ class SingleThreadedStateMachineManager(
                 is FlowState.Started -> {
                     tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
                 }
+                // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
                 is FlowState.Completed -> {
-                    return null // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
+                    return null
                 }
             }
         }
 
-         private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
-                return try {
-                    bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
-                } catch (e: Exception) {
-                    logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-                    null
-                }
+        @Suppress("TooGenericExceptionCaught")
+        private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
+            return try {
+                bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
+            } catch (e: Exception) {
+                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+                null
+            }
          }
 
         private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
@@ -418,7 +419,7 @@ class SingleThreadedStateMachineManager(
 
     override fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
         return checkpointStorage.getRunnableCheckpoints().use {
-            it.map { (id, serializedCheckpoint) ->
+            it.map { (id, _) ->
                 val paused = markFlowsAsPaused(id)
                 id to paused
             }.toList().map {pair -> pair.first to pair.second}.toMap()
@@ -427,7 +428,7 @@ class SingleThreadedStateMachineManager(
 
     private fun markAllHosipitalisedFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
         return checkpointStorage.getHospitalizedCheckpoints().use {
-            it.map { (id, serializedCheckpoint) ->
+            it.map { (id, _) ->
                 val paused = markFlowsAsPaused(id)
                 id to paused
             }.toList().map {pair -> pair.first to pair.second}.toMap()

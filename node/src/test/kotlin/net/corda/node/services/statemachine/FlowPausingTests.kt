@@ -172,14 +172,14 @@ class FlowPausingTests {
         return false
     }
 
-    internal class HospitalizingFlow(): FlowLogic<Unit>() {
+    internal class HospitalizingFlow: FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             throw HospitalizeFlowException("Something went wrong.")
         }
     }
 
-    internal class CheckpointingFlow(): FlowLogic<Unit>() {
+    internal class CheckpointingFlow: FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             sleep(Duration.ofSeconds(1))

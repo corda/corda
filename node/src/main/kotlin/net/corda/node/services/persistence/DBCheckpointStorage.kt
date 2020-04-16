@@ -283,7 +283,7 @@ class DBCheckpointStorage(
 
     override fun markCheckpointAsPaused(id: StateMachineRunId) : Boolean {
         val checkpoint = getDBCheckpoint(id) ?: return false
-        checkpoint?.status = FlowStatus.PAUSED
+        checkpoint.status = FlowStatus.PAUSED
         currentDBSession().update(checkpoint)
         return true
     }
@@ -335,25 +335,20 @@ class DBCheckpointStorage(
     }
 
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), FlowStatus.PAUSED))
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
+        return getAllCheckpointsWithStatus(FlowStatus.PAUSED)
     }
 
-    //TODO: Clean up this method and the last one call a private inner method as most of the code is the same
     override fun getHospitalizedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        return getAllCheckpointsWithStatus(FlowStatus.HOSPITALIZED)
+    }
+
+    private fun getAllCheckpointsWithStatus(flowStatus: FlowStatus): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
-                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), FlowStatus.HOSPITALIZED))
+                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), flowStatus))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
