@@ -368,6 +368,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
 
+    private var notaryService: NotaryService? = null
+
     private val nodeServicesContext = object : NodeServicesContext {
         override val platformVersion = versionInfo.platformVersion
         override val configurationWithOptions = configuration.configurationWithOptions
@@ -525,7 +527,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs)
-            val notaryService = maybeStartNotaryService(myNotaryIdentity)
+            notaryService = maybeStartNotaryService(myNotaryIdentity)
             installCordaServices()
             contractUpgradeService.start()
             vaultService.start()
@@ -1163,6 +1165,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
+        override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
