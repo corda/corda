@@ -47,8 +47,7 @@ class FlowPausingTest {
                This is a Race but if bob finishes too quickly then we will fail to unpause the initiated flow running on BOB latter
                and this test will fail.*/
             startedBob.stop()
-
-            //Start bob backup in Safe mode. This means no flows will run but BOB will receive messages and queue these up.
+            //Start bob backup in Safe mode. This means no flows will run but BOB should receive messages and queue these up.
             val restartedBob = startNode(NodeParameters(
                     providedName = BOB_NAME,
                     rpcUsers = listOf(rpcUser),
