@@ -3,6 +3,8 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
@@ -11,6 +13,7 @@ import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolu
 import net.corda.serialization.internal.amqp.testutils.testName
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
+import org.junit.Assert.assertNotSame
 import org.junit.Test
 import java.io.NotSerializableException
 import java.time.DayOfWeek
@@ -279,4 +282,32 @@ class EnumTests {
             DeserializationInput(factory2).deserialize(bytes)
         }.isInstanceOf(NotSerializableException::class.java)
     }
+
+    @Test(timeout = 300_000)
+    fun deserializeCustomisedEnum() {
+        val input = CustomEnumWrapper(CustomEnum.ONE)
+        val factory1 = SerializerFactoryBuilder.build(EmptyWhitelist, ClassLoader.getSystemClassLoader())
+        val serialized = TestSerializationOutput(VERBOSE, factory1).serialize(input)
+
+        val factory2 = SerializerFactoryBuilder.build(EmptyWhitelist, ClassLoader.getSystemClassLoader())
+        val output = DeserializationInput(factory2).deserialize(serialized)
+
+        assertEquals(input, output)
+        assertNotSame("Deserialized object should be brand new.", input, output)
+    }
+
+    @Suppress("unused")
+    @CordaSerializable
+    enum class CustomEnum {
+        ONE,
+        TWO,
+        THREE;
+
+        override fun toString(): String {
+            return "[${name.toLowerCase()}]"
+        }
+    }
+
+    @CordaSerializable
+    data class CustomEnumWrapper(val data: CustomEnum)
 }
