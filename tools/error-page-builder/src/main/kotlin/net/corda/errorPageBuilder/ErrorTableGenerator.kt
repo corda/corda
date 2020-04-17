@@ -15,7 +15,6 @@ class ErrorTableGenerator(private val resourceLocation: File,
         private const val DESCRIPTION_HEADING = "descriptionHeading"
         private const val TO_FIX_HEADING = "toFixHeading"
         private const val ERROR_HEADINGS_BUNDLE = "ErrorPageHeadings"
-        private const val ERROR_INFO_RESOURCE = ".*ErrorInfo.*"
     }
 
     private fun getHeading(heading: String) : String {
@@ -23,23 +22,11 @@ class ErrorTableGenerator(private val resourceLocation: File,
         return resource.getString(heading)
     }
 
-    private fun listResources() : Iterator<String> {
-        return resourceLocation.walkTopDown().filter {
-            it.name.matches("[^_]*\\.properties".toRegex()) && !it.name.matches(ERROR_INFO_RESOURCE.toRegex())
-        }.map {
-            it.nameWithoutExtension
-        }.iterator()
-    }
-
-    private fun createLoader() : ClassLoader {
-        val urls = resourceLocation.walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
-        return URLClassLoader(urls)
-    }
-
     private fun generateTable() : List<List<String>> {
         val table = mutableListOf<List<String>>()
-        val loader = createLoader()
-        for (resource in listResources()) {
+        val utils = ErrorResourceUtilities(resourceLocation)
+        val loader = utils.loaderForResources()
+        for (resource in utils.listResources()) {
             val errorResource = ErrorResource.fromLoader(resource, loader, locale)
             table.add(listOf(resource, errorResource.aliases, errorResource.shortDescription, errorResource.actionsToFix))
         }

@@ -51,10 +51,11 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
             require(Files.exists(it)) {
                 "Directory $it does not exist. Please specify a valid directory to write output to."
             }
-            val outputPath = it.resolve(ERROR_CODES_FILE)
-            require(Files.notExists(outputPath)) {
-                "Output file $outputPath exists, please remove it and run again."
-            }
+//            val outputPath = it.resolve(ERROR_CODES_FILE)
+//            require(Files.notExists(outputPath)) {
+//                "Output file $outputPath exists, please remove it and run again."
+//            }
+            val outputPath = it
             outputPath.toFile()
         } ?: throw IllegalArgumentException("Directory not specified. Please specify a valid directory to write output to.")
     }
@@ -75,10 +76,17 @@ class ErrorPageBuilder : CordaCliWrapper("error-page-builder", "Builds the error
             logger.error(e.message, e)
             return ExitCodes.FAILURE
         }
-        val tableGenerator = ErrorTableGenerator(resources.toFile(), locale)
+//        val tableGenerator = ErrorTableGenerator(resources.toFile(), locale)
+        val resourceGenerator = ResourceGenerator(resources.toFile(), listOf(Locale.forLanguageTag("en-US")))
+        val utils = ErrorResourceUtilities(resources.toFile())
         try {
-            val table = tableGenerator.generateMarkdown()
-            outputFile.writeText(table)
+            val resourceFiles = utils.listResources().asSequence().toSet()
+            val enumResources = resourceGenerator.readDefinedCodes(outputFile).toSet()
+            val missingResources = enumResources - resourceFiles
+            resourceGenerator.createResources(missingResources.toList())
+
+//            val table = tableGenerator.generateMarkdown()
+//            outputFile.writeText(table)
         } catch (e: IllegalArgumentException) {
             logger.error(e.message, e)
             return ExitCodes.FAILURE

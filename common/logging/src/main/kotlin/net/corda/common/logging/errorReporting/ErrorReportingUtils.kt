@@ -12,8 +12,7 @@ import org.slf4j.Logger
 fun Logger.report(error: ErrorCode<*>) = ErrorReporting().getReporter().report(error, this)
 
 internal fun ErrorCode<*>.formatCode() : String {
-    return "" //TODO
-//    val namespaceString = this.code.namespace.toString().toLowerCase().replace("_", "-")
-//    val codeString = this.code.toString().toLowerCase().replace("_", "-")
-//    return "$namespaceString-$codeString"
+    val namespaceString = this.code.namespace.toLowerCase().replace("_", "-")
+    val codeString = this.code.toString().toLowerCase().replace("_", "-")
+    return "$namespaceString-$codeString"
 }

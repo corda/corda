@@ -418,8 +418,7 @@ class MultipleCordappsForFlowException(
         message: String,
         flowName: String,
         jars: String
-) : Exception(message), ErrorCode<NodeNamespaces, CordappErrors> {
-    override val namespace = NodeNamespaces.CORDAPP
+) : Exception(message), ErrorCode<CordappErrors> {
     override val code = CordappErrors.MULTIPLE_CORDAPPS_FOR_FLOW
     override val parameters = listOf(flowName, jars)
 }
@@ -431,9 +430,7 @@ class CordappInvalidVersionException(
         msg: String,
         override val code: CordappErrors,
         override val parameters: List<Any> = listOf()
-) : Exception(msg), ErrorCode<NodeNamespaces, CordappErrors> {
-    override val namespace = NodeNamespaces.CORDAPP
-}
+) : Exception(msg), ErrorCode<CordappErrors>
 
 /**
  * Thrown if duplicate CorDapps are installed on the node
@@ -441,8 +438,7 @@ class CordappInvalidVersionException(
 class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>)
     : IllegalStateException("The CorDapp (name: ${app.info.shortName}, file: ${app.name}) " +
         "is installed multiple times on the node. The following files correspond to the exact same content: " +
-        "${duplicates.map { it.name }}"), ErrorCode<NodeNamespaces, CordappErrors> {
-    override val namespace = NodeNamespaces.CORDAPP
+        "${duplicates.map { it.name }}"), ErrorCode<CordappErrors> {
     override val code = CordappErrors.DUPLICATE_CORDAPPS_INSTALLED
     override val parameters = listOf(app.info.shortName, app.name, duplicates.map { it.name })
 }
