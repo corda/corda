@@ -73,6 +73,15 @@ class NodeTest {
     }
 
     @Test(timeout=300_000)
+    fun `check node service availability`() {
+        val configuration = createConfig(ALICE_NAME)
+        val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
+        val node = Node(configuration, info, initialiseSerialization = false)
+        // Regular nodes must not have internal access to the notary service
+        assertNull(node.services.notaryService)
+    }
+
+    @Test(timeout=300_000)
 	fun `clear network map cache works`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo, _) = createNodeInfoAndSigned(ALICE_NAME)
