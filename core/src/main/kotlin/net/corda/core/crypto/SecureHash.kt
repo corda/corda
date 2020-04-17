@@ -19,23 +19,49 @@ import java.util.function.Supplier
 @KeepForDJVM
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** BLAKE2s256  Generated hash is fixed size, 256-bits (32-bytes). */
+    class BLAKE2s256(bytes: ByteArray, private val digestServiceFactory: DigestServiceFactory = DefaultDigestServiceFactory) : SecureHash(bytes) {
+        init {
+            require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
+        }
+
+        override fun hashConcat(other: SecureHash) = digestServiceFactory.getService(Algorithm.BLAKE2s256()).hash(this.bytes + other.bytes)
+    }
+
+    /** BLAKE2b256  Generated hash is fixed size, 256-bits (32-bytes). */
+    class BLAKE2b256(bytes: ByteArray, private val digestServiceFactory: DigestServiceFactory = DefaultDigestServiceFactory) : SecureHash(bytes) {
+        init {
+            require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
+        }
+
+        override fun hashConcat(other: SecureHash) = digestServiceFactory.getService(Algorithm.BLAKE2b256()).hash(this.bytes + other.bytes)
+    }
+
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
 
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            if (!super.equals(other)) return false
-            return true
-        }
-
-        // This is an efficient hashCode, because there is no point in performing a hash calculation on a cryptographic hash.
-        // It just takes the first 4 bytes and transforms them into an Int.
-        override fun hashCode() = ByteBuffer.wrap(bytes).int
+        override fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
     }
+
+    /**
+     * Append a second hash value to this hash value, and then compute the SHA-256 hash of the result.
+     * @param other The hash to append to this one.
+     */
+    abstract fun hashConcat(other: SecureHash): SecureHash
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        if (!super.equals(other)) return false
+        return true
+    }
+
+    // This is an efficient hashCode, because there is no point in performing a hash calculation on a cryptographic hash.
+    // It just takes the first 4 bytes and transforms them into an Int.
+    override fun hashCode() = ByteBuffer.wrap(bytes).int
 
     /**
      * Convert the hash value to an uppercase hexadecimal [String].
@@ -48,11 +74,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
      */
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
 
-    /**
-     * Append a second hash value to this hash value, and then compute the SHA-256 hash of the result.
-     * @param other The hash to append to this one.
-     */
-    fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
