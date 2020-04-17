@@ -24,21 +24,29 @@ sealed class MerkleTree {
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.
          */
-        @Throws(MerkleTreeException::class)
         fun getMerkleTree(allLeavesHashes: List<SecureHash>): MerkleTree {
+            return getMerkleTree(allLeavesHashes, SHA256DigestService)
+        }
+
+        fun getMerkleTree(allLeavesHashes: List<SecureHash>, digestService: DigestService): MerkleTree {
+            return getMerkleTree(allLeavesHashes, digestService, digestService)
+        }
+
+        @Throws(MerkleTreeException::class)
+        fun getMerkleTree(allLeavesHashes: List<SecureHash>, nodeDigestService: DigestService, leafDigestService: DigestService): MerkleTree {
             if (allLeavesHashes.isEmpty())
                 throw MerkleTreeException("Cannot calculate Merkle root on empty hash list.")
-            val leaves = padWithZeros(allLeavesHashes).map { Leaf(it) }
-            return buildMerkleTree(leaves)
+            val leaves = padWithZeros(allLeavesHashes, leafDigestService).map { Leaf(it) }
+            return buildMerkleTree(leaves, nodeDigestService)
         }
 
         // If number of leaves in the tree is not a power of 2, we need to pad it with zero hashes.
-        private fun padWithZeros(allLeavesHashes: List<SecureHash>): List<SecureHash> {
+        private fun padWithZeros(allLeavesHashes: List<SecureHash>, leafDigestService: DigestService): List<SecureHash> {
             var n = allLeavesHashes.size
             if (isPow2(n)) return allLeavesHashes
-            val paddedHashes = ArrayList<SecureHash>(allLeavesHashes)
+            val paddedHashes = ArrayList(allLeavesHashes)
             while (!isPow2(n++)) {
-                paddedHashes.add(SecureHash.zeroHash)
+                paddedHashes.add(leafDigestService.zeroHash)
             }
             return paddedHashes
         }
@@ -48,7 +56,7 @@ sealed class MerkleTree {
          * @param lastNodesList MerkleTree nodes from previous level.
          * @return Tree root.
          */
-        private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
+        private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>, nodeDigestService: DigestService): MerkleTree {
             return if (lastNodesList.size == 1) {
                 lastNodesList[0] // Root reached.
             } else {
@@ -58,11 +66,10 @@ sealed class MerkleTree {
                 for (i in 0..n - 2 step 2) {
                     val left = lastNodesList[i]
                     val right = lastNodesList[i + 1]
-                    val newHash = left.hash.hashConcat(right.hash)
-                    val combined = Node(newHash, left, right)
-                    newLevelHashes.add(combined)
+                    val node = Node(nodeDigestService.hash(left.hash.bytes + right.hash.bytes), left, right)
+                    newLevelHashes.add(node)
                 }
-                buildMerkleTree(newLevelHashes)
+                buildMerkleTree(newLevelHashes, nodeDigestService)
             }
         }
     }
