@@ -10,6 +10,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
+import java.lang.IllegalStateException
 import java.util.function.Function
 
 @DeleteForDJVM
@@ -55,17 +56,20 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         // 1. Check that there is one and only one attachment for each relevant contract.
         val contractAttachmentsByContract = getUniqueContractAttachmentsByContract()
 
-        // 2. Check that the attachments satisfy the constraints of the states. (The contract verification code is correct.)
+        // 2. Verify state classes and contract classes have class version between 49 and 52
+        verifyStatesAndContractsHaveValidClassVersion()
+
+        // 3. Check that the attachments satisfy the constraints of the states. (The contract verification code is correct.)
         verifyConstraints(contractAttachmentsByContract)
 
-        // 3. Check that the actual state constraints are correct. This is necessary because transactions can be built by potentially malicious nodes
+        // 4. Check that the actual state constraints are correct. This is necessary because transactions can be built by potentially malicious nodes
         // who can create output states with a weaker constraint which can be exploited in a future transaction.
         verifyConstraintsValidity(contractAttachmentsByContract)
 
-        // 4. Check that the [TransactionState] objects are correctly formed.
+        // 5. Check that the [TransactionState] objects are correctly formed.
         validateStatesAgainstContract()
 
-        // 5. Final step is to run the contract code. After the first 4 steps we are now sure that we are running the correct code.
+        // 6. Final step is to run the contract code. After the first 4 steps we are now sure that we are running the correct code.
         verifyContracts()
     }
 
@@ -354,6 +358,16 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                 logger.warnOnce("Skipping hash constraints verification.")
             else if (!constraint.isSatisfiedBy(constraintAttachment))
                 throw TransactionVerificationException.ContractConstraintRejection(ltx.id, contract)
+        }
+    }
+
+    private fun verifyStatesAndContractsHaveValidClassVersion() {
+        try {
+            verifyClassVersionNumber(transactionClassLoader, allStates.map { it.data::class.java.name }.toList())
+            verifyClassVersionNumber(transactionClassLoader, allStates.map { it.contract }.toSet().toList())
+        }
+        catch(e: IllegalStateException) {
+            throw TransactionVerificationException.ContractCreationError(ltx.id, "Invalid class version number", e)
         }
     }
 

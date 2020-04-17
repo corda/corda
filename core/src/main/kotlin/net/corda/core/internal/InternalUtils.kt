@@ -25,6 +25,7 @@ import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -634,5 +635,25 @@ private val warnings = Collections.newSetFromMap(createSimpleCache<String, Boole
 fun Logger.warnOnce(warning: String) {
     if (warnings.add(warning)) {
         this.warn(warning)
+    }
+}
+
+private const val MIN_CONTRACT_CLASS_VERSION = 49
+private const val MAX_CONTRACT_CLASS_VERSION = 52
+fun verifyClassVersionNumber(classloader: ClassLoader, classes: List<String>, jarPath: URL? = null) {
+    classes.forEach {
+        DataInputStream(classloader.getResourceAsStream("${it.replace('.', '/')}.class")).use { dataStream ->
+            val magic = dataStream.readInt()
+            if (magic != -0x35014542) {
+                val jarDetails = jarPath?.let { "in jar file $it" } ?: ""
+                throw java.lang.IllegalStateException("Invalid Java class $it found $jarDetails")
+            }
+            dataStream.readShort() // minor version number
+            val major = dataStream.readShort().toInt()
+            if (major < MIN_CONTRACT_CLASS_VERSION || major > MAX_CONTRACT_CLASS_VERSION) {
+                val jarDetails = jarPath?.let { "from jar file $it " } ?: ""
+                throw IllegalStateException("Class $it ${jarDetails}has an invalid version of $major")
+            }
+        }
     }
 }
