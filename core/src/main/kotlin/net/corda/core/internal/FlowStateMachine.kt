@@ -7,7 +7,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
