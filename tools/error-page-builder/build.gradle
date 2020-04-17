@@ -21,10 +21,10 @@ jar {
 }
 
 shadowJar {
-    baseName = "corda-tools-error-page-builder"
+    baseName = "corda-tools-error-utils"
     manifest {
         attributes(
-                'Main-Class': "net.corda.errorPageBuilder.ErrorPageBuilderKt"
+                'Main-Class': "net.corda.errorPageBuilder.ErrorToolKt"
         )
     }
 }
