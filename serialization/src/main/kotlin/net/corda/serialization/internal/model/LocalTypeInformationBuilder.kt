@@ -119,7 +119,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 AnEnum(
                     type,
                     typeIdentifier,
-                    enumConstants.map(Any::toString),
+                    enumConstants,
                     buildInterfaceInformation(type),
                     getEnumTransforms(type, enumConstants)
                 )
@@ -142,9 +142,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         }
     }
 
-    private fun getEnumTransforms(type: Class<*>, enumConstants: Array<out Any>): EnumTransforms {
+    private fun getEnumTransforms(type: Class<*>, enumConstants: List<String>): EnumTransforms {
         try {
-            val constants = enumConstants.asSequence().mapIndexed { index, constant -> constant.toString() to index }.toMap()
+            val constants = enumConstants.asSequence().mapIndexed { index, constant -> constant to index }.toMap()
             return EnumTransforms.build(TransformsAnnotationProcessor.getTransformsSchema(type), constants)
         } catch (e: InvalidEnumTransformsException) {
             throw NotSerializableDetailedException(type.name, e.message!!)
