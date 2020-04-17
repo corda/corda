@@ -267,7 +267,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
         val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
                 shouldRetrySend = true
         )
         return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
@@ -350,20 +350,10 @@ abstract class FlowLogic<out T> {
     @JvmOverloads
     fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
         val request = FlowIORequest.Send(
-                sessionToMessage = serializePayloads(payloadsPerSession)
+                sessionToMessage = stateMachine.serialize(payloadsPerSession)
         )
         stateMachine.suspend(request, maySkipCheckpoint)
     }
-
-    @Suspendable
-    private fun serializePayloads(payloadsPerSession: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
-        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
-
-        return payloadsPerSession.mapValues { (_, payload) ->
-            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
-        }
-    }
-
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
