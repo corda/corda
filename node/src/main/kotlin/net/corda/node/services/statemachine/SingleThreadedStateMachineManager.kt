@@ -567,7 +567,7 @@ class SingleThreadedStateMachineManager(
                 }
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
-                val nonResidentFlow = NonResidentFlow(flowId, checkpoint, false, false, null)
+                val nonResidentFlow = NonResidentFlow(flowId, checkpoint, true, false, null)
 
                 // Resurrect flow
                 nonResidentFlow.createFlow() ?: return
