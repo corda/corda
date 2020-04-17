@@ -93,13 +93,15 @@ class SingleThreadedStateMachineManager(
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
     private inner class NonResidentFlow(val id: StateMachineRunId,
-                                        val checkpoint: Checkpoint,
+                                        oldCheckpoint: Checkpoint,
                                         val isAnyCheckpointPersisted: Boolean,
                                         val isStartIdempotent: Boolean,
                                         val initialDeduplicationHandler: DeduplicationHandler?
     ) {
 
         val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
+
+        val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
 
         fun addExternalEvent(message: Event.DeliverSessionMessage) {
             externalEvents.add(message)
