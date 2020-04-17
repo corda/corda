@@ -50,7 +50,7 @@ class ErrorResourceGenerator : CordaCliWrapper(
     override fun runProgram(): Int {
         val buildFileLocation = ErrorToolUtilities.checkDirectory(buildDir, "error code definition class files")
         val resourceLocation = ErrorToolUtilities.checkDirectory(resourceDir, "resource bundle files")
-        val resourceGenerator = ResourceGenerator(resourceLocation.toFile(), locales.map { Locale.forLanguageTag(it) })
+        val resourceGenerator = ResourceGenerator(resourceLocation, locales.map { Locale.forLanguageTag(it) })
         val utils = ErrorResourceUtilities(resourceLocation.toFile())
         try {
             val resourceFiles = utils.listResources().asSequence().toSet()

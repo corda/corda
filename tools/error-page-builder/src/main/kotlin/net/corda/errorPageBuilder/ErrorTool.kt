@@ -9,6 +9,11 @@ fun main(args: Array<String>) {
     tool.start(args)
 }
 
+/**
+ * Entry point for the error utilities.
+ *
+ * By itself, this doesn't do anything - instead one of the subcommands should be invoked.
+ */
 class ErrorTool : CordaCliWrapper("error-utils", "Utilities for working with error codes and error reporting") {
 
     private val errorPageBuilder = ErrorPageBuilder()

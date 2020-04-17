@@ -4,8 +4,14 @@ import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Common functions to use among multiple of the error code subcommands
+ */
 class ErrorToolUtilities {
     companion object {
+        /**
+         * Checks that a directory provided through Picocli exists.
+         */
         fun checkDirectory(dir: Path?, expectedContents: String) : Path {
             return dir?.also {
                 require(Files.exists(it)) {

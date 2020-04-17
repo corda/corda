@@ -1,12 +1,14 @@
 package net.corda.errorPageBuilder
 
 import net.corda.common.logging.errorReporting.ErrorResource
-import java.io.File
 import java.lang.IllegalArgumentException
-import java.net.URLClassLoader
+import java.nio.file.Path
 import java.util.*
 
-class ErrorTableGenerator(private val resourceLocation: File,
+/**
+ * Generate the documentation table given a resource file location set.
+ */
+class ErrorTableGenerator(private val resourceLocation: Path,
                           private val locale: Locale) {
 
     companion object {
@@ -24,7 +26,7 @@ class ErrorTableGenerator(private val resourceLocation: File,
 
     private fun generateTable() : List<List<String>> {
         val table = mutableListOf<List<String>>()
-        val utils = ErrorResourceUtilities(resourceLocation)
+        val utils = ErrorResourceUtilities(resourceLocation.toFile())
         val loader = utils.loaderForResources()
         for (resource in utils.listResources()) {
             val errorResource = ErrorResource.fromLoader(resource, loader, locale)
@@ -46,7 +48,7 @@ class ErrorTableGenerator(private val resourceLocation: File,
     }
 
     fun generateMarkdown() : String {
-        if (!resourceLocation.exists()) throw IllegalArgumentException("Directory $resourceLocation does not exist.")
+        if (!resourceLocation.toFile().exists()) throw IllegalArgumentException("Directory $resourceLocation does not exist.")
         val tableData = generateTable()
         return formatTable(tableData)
     }

@@ -5,12 +5,15 @@ import net.corda.common.logging.errorReporting.ResourceBundleProperties
 import org.reflections.Reflections
 import org.reflections.scanners.SubTypesScanner
 import org.reflections.util.ConfigurationBuilder
-import org.reflections.util.FilterBuilder
 import java.io.File
 import java.net.URLClassLoader
+import java.nio.file.Path
 import java.util.*
 
-class ResourceGenerator(private val resourceLocation: File,
+/**
+ * Generate a set of resource files from an enumeration of error codes.
+ */
+class ResourceGenerator(private val resourceLocation: Path,
                         private val locales: List<Locale>) {
 
     private fun createResourceFile(name: String) {
@@ -21,7 +24,7 @@ class ResourceGenerator(private val resourceLocation: File,
             |${ResourceBundleProperties.ACTIONS_TO_FIX} = <Actions to fix>
             |${ResourceBundleProperties.ALIASES} = 
         """.trimMargin()
-        file.writeText(text)
+        file.toFile().writeText(text)
     }
 
     fun createResources(resources: List<String>) {
