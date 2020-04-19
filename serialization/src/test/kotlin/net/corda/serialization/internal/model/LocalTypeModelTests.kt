@@ -4,9 +4,11 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.jupiter.api.fail
 import java.lang.reflect.Type
 import java.util.*
 
@@ -202,6 +204,26 @@ class LocalTypeModelTests {
             assertEquals(
                 "Either ensure that the properties [b, c, d] are serializable, or provide a custom serializer for this type",
                 typeInformation.remedy
+            )
+        }
+    }
+
+    @Suppress("unused")
+    enum class CustomEnum {
+        ONE,
+        TWO;
+
+        override fun toString(): String {
+            return "[${name.toLowerCase()}]"
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `test type information for customised enum`() {
+        modelWithoutOpacity.inspect(typeOf<CustomEnum>()).let { typeInformation ->
+            val anEnum = typeInformation as? LocalTypeInformation.AnEnum ?: fail("Not AnEnum!")
+            assertThat(anEnum.members).containsExactlyElementsOf(
+                CustomEnum::class.java.enumConstants.map(CustomEnum::name)
             )
         }
     }
