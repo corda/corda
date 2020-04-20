@@ -3,27 +3,14 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.makeUnique
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
@@ -31,11 +18,8 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertNull
 import java.time.Duration
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.reflect.jvm.javaMethod
-import kotlin.reflect.jvm.reflect
 import kotlin.test.assertEquals
 
 class FlowPausingTests {
@@ -71,7 +55,7 @@ class FlowPausingTests {
     @Test(timeout = 300_000)
     fun `Hospitalized flow can be paused and resumed`() {
         val flow = aliceNode.services.startFlow(HospitalizingFlow())
-        assertEquals(true, aliceNode.smm.waitForFlowToBeHospitalised(flow.id))
+        assertEquals(true, waitForFlowToBeHospitalised(flow.id))
         assertEquals(true, aliceNode.smm.markFlowsAsPaused(flow.id))
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
@@ -93,15 +77,13 @@ class FlowPausingTests {
             val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
             assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
         }
-
         val restartedAlice = mockNet.restartNode(aliceNode)
         assertEquals(0, restartedAlice.smm.snapshot().size)
         assertEquals(true, restartedAlice.smm.unPauseFlow(flow.id))
         assertEquals(1, restartedAlice.smm.snapshot().size)
         Thread.sleep(2000) //Forgive Me
         restartedAlice.database.transaction {
-            val checkpoint = restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id)
-            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint!!.status)
+            assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
         }
     }
 
@@ -116,8 +98,7 @@ class FlowPausingTests {
         assertEquals(1, restartedAlice.smm.snapshot().size)
         Thread.sleep(2000) //Forgive Me
         restartedAlice.database.transaction {
-            val checkpoint = restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id)
-            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint!!.status)
+            assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
         }
     }
 
@@ -158,18 +139,32 @@ class FlowPausingTests {
                 assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
             }
             for (flow in flows) {
-                val checkpoint = restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id)
-                assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
+                assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
             }
         }
     }
 
     fun StateMachineManager.waitForFlowToBeHospitalised(id: StateMachineRunId) : Boolean {
-        for (i in 0..100) {
+        for (i in 0..1000) {
             if (this.flowHospital.contains(id)) return true
             Thread.sleep(10)
         }
         return false
+    }
+
+    fun waitForFlowToBeHospitalised(id: StateMachineRunId) : Boolean {
+        var paused = false
+        for (i in 0..100) {
+            aliceNode.database.transaction {
+                val status = aliceNode.internals.checkpointStorage.getDBCheckpoint(id)!!.status
+                if ( status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                    paused = true
+                }
+            }
+            if (!paused) Thread.sleep(10)
+            else break
+        }
+        return paused
     }
 
     internal class HospitalizingFlow: FlowLogic<Unit>() {
