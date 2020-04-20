@@ -13,8 +13,11 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -427,6 +430,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>) {
         FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
+    }
+
+    override fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
+        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
+
+        return payloads.mapValues { (_, payload) ->
+            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
+        }
     }
 
     @Suspendable
