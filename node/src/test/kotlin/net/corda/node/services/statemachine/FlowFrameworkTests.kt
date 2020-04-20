@@ -689,7 +689,7 @@ class FlowFrameworkTests {
             }
         }
         SuspendingFlow.hookAfterCheckpoint = {
-            dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single()
+            dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getCheckpointsToRun().toList().single()
                     .second.status
         }
 

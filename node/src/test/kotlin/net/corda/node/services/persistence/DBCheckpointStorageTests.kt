@@ -641,7 +641,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `fetch runnable checkpoints`() {
+    fun `fetch checkpoints to run and paused checkpoints`() {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
@@ -650,8 +650,8 @@ class DBCheckpointStorageTests {
         val completed = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
         val failed = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
         val killed = checkpoint.copy(status = Checkpoint.FlowStatus.KILLED)
-        // tentative
-        val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED) // is considered runnable
+        // paused
+        val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
 
         database.transaction {
             val serializedFlowState =
@@ -666,7 +666,8 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            assertEquals(3, checkpointStorage.getRunnableCheckpoints().count())
+            assertEquals(2, checkpointStorage.getCheckpointsToRun().count())
+            assertEquals(1, checkpointStorage.getPausedCheckpoints().count())
         }
     }
 

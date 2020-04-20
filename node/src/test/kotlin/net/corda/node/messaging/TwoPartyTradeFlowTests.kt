@@ -63,7 +63,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.getAllIncompleteCheckpoints(): List<Checkpoint.Serialized> {
-    return getRunnableCheckpoints().use {
+    return getCheckpointsToRun().use {
         it.map { it.second }.toList()
     }.filter { it.status !=  Checkpoint.FlowStatus.COMPLETED }
 }
