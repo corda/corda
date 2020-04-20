@@ -257,7 +257,6 @@ class SingleThreadedStateMachineManager(
         when (startMode) {
             StateMachineManager.StartMode.ResumeAll -> {}
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
-            StateMachineManager.StartMode.PauseHospitalised -> markAllHosipitalisedFlowsAsPaused()
         }
 
         val fibers = restoreFlowsFromCheckpoints()

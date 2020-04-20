@@ -119,31 +119,6 @@ class FlowPausingTests {
         }
     }
 
-    @Test(timeout = 300_000)
-    fun `All hospitalized flows are paused when the node is restarted in paused hospitalized mode`() {
-        val flows = ArrayList<FlowStateMachine<Unit>>()
-        for (i in 1..NUMBER_OF_FLOWS) {
-            flows += aliceNode.services.startFlow(CheckpointingFlow())
-        }
-        val hospitalisedFlows = ArrayList<FlowStateMachine<Unit>>()
-        for (i in 1..NUMBER_OF_FLOWS) {
-            hospitalisedFlows += aliceNode.services.startFlow(HospitalizingFlow())
-        }
-
-        val restartedAlice = restartNode(aliceNode, StateMachineManager.StartMode.PauseHospitalised)
-        assertEquals(flows.size, restartedAlice.smm.snapshot().size)
-        Thread.sleep(10000) //Forgive Me
-        restartedAlice.database.transaction {
-            for (flow in hospitalisedFlows) {
-                val checkpoint = restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id)
-                assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
-            }
-            for (flow in flows) {
-                assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
-            }
-        }
-    }
-
     fun StateMachineManager.waitForFlowToBeHospitalised(id: StateMachineRunId) : Boolean {
         for (i in 0..1000) {
             if (this.flowHospital.contains(id)) return true
