@@ -6,6 +6,7 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
+import net.corda.common.logging.errorReporting.CordaErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
@@ -173,7 +174,10 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
-        ErrorReporting().usingResourcesAt(ERROR_CODE_RESOURCE_LOCATION).initialiseReporting()
+        ErrorReporting()
+                .usingResourcesAt(ERROR_CODE_RESOURCE_LOCATION)
+                .withContextProvider(CordaErrorContextProvider())
+                .initialiseReporting()
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
