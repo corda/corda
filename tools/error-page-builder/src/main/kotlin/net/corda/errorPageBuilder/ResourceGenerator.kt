@@ -29,13 +29,7 @@ class ResourceGenerator(private val resourceLocation: Path,
 
     fun createResources(resources: List<String>) {
         for (resource in resources) {
-            // Make the default resource file
-            createResourceFile("$resource.properties")
-            for (locale in locales) {
-                // Create a resource file for each locale
-                val suffix = locale.toLanguageTag().replace("-", "_")
-                createResourceFile("${resource}_$suffix.properties")
-            }
+            createResourceFile(resource)
         }
     }
 
@@ -58,5 +52,20 @@ class ResourceGenerator(private val resourceLocation: Path,
                 listOf()
             }
         }
+    }
+
+    fun getExpectedResources(codes: List<String>) : List<String> {
+        return codes.flatMap {
+            val localeResources = locales.map { locale -> "${it}_${locale.toLanguageTag().replace("-", "_")}.properties"}
+            localeResources + "$it.properties"
+        }
+    }
+
+    fun calculateMissingResources(expected: List<String>) : List<String> {
+        val resources = resourceLocation.toFile().walkTopDown().filter {
+            it.name.matches(".*\\.properties".toRegex())
+        }.map { it.name }.toSet()
+        val missing = expected.toSet() - resources
+        return missing.toList()
     }
 }

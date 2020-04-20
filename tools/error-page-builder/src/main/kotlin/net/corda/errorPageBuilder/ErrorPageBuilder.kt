@@ -62,7 +62,7 @@ class ErrorPageBuilder : CordaCliWrapper("build-docs", "Builds the error table f
             logger.error(e.message, e)
             return ExitCodes.FAILURE
         }
-        val tableGenerator = ErrorTableGenerator(resources.toFile(), locale)
+        val tableGenerator = ErrorTableGenerator(resources, locale)
         try {
             val table = tableGenerator.generateMarkdown()
             outputFile.toFile().writeText(table)

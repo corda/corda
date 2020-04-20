@@ -41,7 +41,7 @@ class ErrorResourceGenerator : CordaCliWrapper(
             description = ["The set of locales to generate resource files for. Specified as locale tags, for example en-US"],
             arity = "1"
     )
-    var locales: List<String> = listOf()
+    var locales: List<String> = listOf("en-US")
 
     companion object {
         private val logger = LoggerFactory.getLogger(ErrorResourceGenerator::class.java)
@@ -51,12 +51,11 @@ class ErrorResourceGenerator : CordaCliWrapper(
         val buildFileLocation = ErrorToolUtilities.checkDirectory(buildDir, "error code definition class files")
         val resourceLocation = ErrorToolUtilities.checkDirectory(resourceDir, "resource bundle files")
         val resourceGenerator = ResourceGenerator(resourceLocation, locales.map { Locale.forLanguageTag(it) })
-        val utils = ErrorResourceUtilities(resourceLocation.toFile())
         try {
-            val resourceFiles = utils.listResources().asSequence().toSet()
-            val enumResources = resourceGenerator.readDefinedCodes(buildFileLocation.toFile()).toSet()
-            val missingResources = enumResources - resourceFiles
-            resourceGenerator.createResources(missingResources.toList())
+            val enumResources = resourceGenerator.readDefinedCodes(buildFileLocation.toFile())
+            val expectedResources = resourceGenerator.getExpectedResources(enumResources)
+            val missingResources = resourceGenerator.calculateMissingResources(expectedResources)
+            resourceGenerator.createResources(missingResources)
         } catch (e: IllegalArgumentException) {
             logger.error(e.message, e)
             return ExitCodes.FAILURE
