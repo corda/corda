@@ -36,8 +36,7 @@ data class CordappImpl(
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true,
         private val explicitCordappClasses: List<String> = emptyList(),
-        val isVirtual: Boolean = false,
-        val contractStateClassNames: List<String> = emptyList()
+        val isVirtual: Boolean = false
 ) : Cordapp {
     override val name: String = jarName(jarPath)
 

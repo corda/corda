@@ -638,25 +638,26 @@ fun Logger.warnOnce(warning: String) {
     }
 }
 
-private const val MIN_CONTRACT_CLASS_VERSION = 49
-private const val MAX_CONTRACT_CLASS_VERSION = 52
+const val JDK5_CLASS_FILE_FORMAT_MAJOR_VERSION = 49
+const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
+const val CLASS_FILE_HEADER = -0x35014542
 fun verifyClassVersionNumber(classloader: ClassLoader, classes: List<String>, jarPath: URL? = null) {
     classes.forEach {
-        DataInputStream(classloader.getResourceAsStream("${it.replace('.', '/')}.class")).use { dataStream ->
-            checkClassVersionFromDataStream(it, dataStream, jarPath)
-        }
+        val resourceAsStream = classloader.getResourceAsStream("${it.replace('.', '/')}.class") ?:
+            throw IllegalStateException("Could not find $it in class loader")
+        DataInputStream(resourceAsStream).use { dataStream -> checkClassVersionFromDataStream(it, dataStream, jarPath) }
     }
 }
 
 private fun checkClassVersionFromDataStream(className: String, dataStream: DataInputStream, jarPath: URL?) {
     val magic = dataStream.readInt()
-    if (magic != -0x35014542) {
+    if (magic != CLASS_FILE_HEADER) {
         val jarDetails = jarPath?.let { "in jar file $it" } ?: ""
         throw java.lang.IllegalStateException("Invalid Java class $className found $jarDetails")
     }
     dataStream.readShort() // minor version number
     val major = dataStream.readShort().toInt()
-    if (major < MIN_CONTRACT_CLASS_VERSION || major > MAX_CONTRACT_CLASS_VERSION) {
+    if (major < JDK5_CLASS_FILE_FORMAT_MAJOR_VERSION || major > JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION) {
         val jarDetails = jarPath?.let { "from jar file $it " } ?: ""
         throw IllegalStateException("Class $className ${jarDetails}has an invalid version of $major")
     }
