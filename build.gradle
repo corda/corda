@@ -681,7 +681,7 @@ ext.largeScaleSet  = [
 ]
 
 ext.generalPurpose = new Yaml().loadAs(new URL(
-        "https://raw.githubusercontent.com/corda/infrastructure-profiles/master/gradle-distributed-testing-plugin-profiles/generalPurpose.yml")
+        "https://raw.githubusercontent.com/corda/infrastructure-profiles/master/generalPurpose.yml")
         .newInputStream(), InfrastructureProfile.class)
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
