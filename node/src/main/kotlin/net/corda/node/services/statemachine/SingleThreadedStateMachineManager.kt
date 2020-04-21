@@ -428,9 +428,8 @@ class SingleThreadedStateMachineManager(
 
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
-            val flowPrimitive = nonResidentFlows[id] ?: return false
+            val flowPrimitive = nonResidentFlows.remove(id) ?: return false
             val flow = flowPrimitive.createFlow() ?: return false
-            nonResidentFlows.remove(id)
             addAndStartFlow(flow.fiber.id, flow)
             for (event in flowPrimitive.externalEvents) {
                 flow.fiber.scheduleEvent(event)
