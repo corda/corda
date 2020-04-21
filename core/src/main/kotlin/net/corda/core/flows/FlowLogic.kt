@@ -128,6 +128,31 @@ abstract class FlowLogic<out T> {
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
     /**
+     * Returns `true` when the current [FlowLogic] has been killed (has received a command to halt its progress and terminate).
+     *
+     * Check this property in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * while (!isKilled) {
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Ideal usage would include throwing a [KilledFlowException] which will lead to the termination of the flow:
+     * ```
+     * for (item in list) {
+     *   if (isKilled) {
+     *     throw KilledFlowException(runId)
+     *   }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Note, once the [isKilled] flag is set to `true` the flow will terminate once it reaches its next suspension point. Therefore, it is
+     * possible to write a flow that does not interact with the [isKilled] flag.
+     */
+    val isKilled: Boolean get() = stateMachine.isKilled
+
+    /**
      * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
      * is routed depends on the [Destination] type, including whether this call does any initial communication.
      */
@@ -569,6 +594,46 @@ abstract class FlowLogic<out T> {
         val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub as ServiceHubCoreInternal, operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed.
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled()
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled() {
+        if (isKilled) {
+            throw KilledFlowException(runId)
+        }
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed. The provided message is added to the
+     * thrown [KilledFlowException].
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled { "The flow $runId was killed while iterating through the list of items" }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled(lazyMessage: () -> Any) {
+        if (isKilled) {
+            val message = lazyMessage()
+            throw KilledFlowException(runId, message.toString())
+        }
     }
 }
 

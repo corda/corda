@@ -47,4 +47,5 @@ interface FlowStateMachine<FLOWRETURN> {
     val ourIdentity: Party
     val ourSenderUUID: String?
     val creationTime: Long
+    val isKilled: Boolean
 }

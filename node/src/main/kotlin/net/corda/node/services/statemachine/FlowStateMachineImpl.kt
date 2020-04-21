@@ -9,10 +9,27 @@ import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.flows.*
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowStackSnapshot
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.KilledFlowException
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.isIdempotentFlow
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.location
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -113,6 +130,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val resultFuture: CordaFuture<R> get() = uncheckedCast(getTransientField(TransientValues::resultFuture))
     override val context: InvocationContext get() = transientState!!.value.checkpoint.invocationContext
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.ourIdentity
+    override val isKilled: Boolean get() = transientState!!.value.isKilled
+
     internal var hasSoftLockedStates: Boolean = false
         set(value) {
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
@@ -131,6 +150,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val actionExecutor = getTransientField(TransientValues::actionExecutor)
         val transition = stateMachine.transition(event, oldState)
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
+        // Ensure that the next state that is being written to the transient state maintains the [isKilled] flag
+        // This condition can be met if a flow is killed during [TransitionExecutor.executeTransition]
+        if (oldState.isKilled && !newState.isKilled) {
+            newState.isKilled = true
+        }
         transientState = TransientReference(newState)
         setLoggingContext()
         return continuation
@@ -157,6 +181,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     eventQueue.receive()
                 } catch (interrupted: InterruptedException) {
                     log.error("Flow interrupted while waiting for events, aborting immediately")
+                    (transientValues?.value?.resultFuture as? OpenFuture<*>)?.setException(KilledFlowException(id))
                     abortFiber()
                 }
                 val continuation = processEvent(transitionExecutor, nextEvent)

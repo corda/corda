@@ -88,9 +88,16 @@ class StartedFlowTransition(
     }
 
     private fun sleepTransition(flowIORequest: FlowIORequest.Sleep): TransitionResult {
-        return builder {
-            actions.add(Action.SleepUntil(flowIORequest.wakeUpAfter))
-            resumeFlowLogic(Unit)
+        // This ensures that the [Sleep] request is not executed multiple times if extra
+        // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
+        return if (!startingState.isWaitingForFuture) {
+            builder {
+                actions.add(Action.SleepUntil(flowIORequest.wakeUpAfter))
+                currentState = currentState.copy(isWaitingForFuture = true)
+                FlowContinuation.ProcessEvents
+            }
+        } else {
+            TransitionResult(startingState)
         }
     }
 

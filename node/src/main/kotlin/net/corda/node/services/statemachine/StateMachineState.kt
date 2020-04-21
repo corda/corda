@@ -22,13 +22,15 @@ import java.time.Instant
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
  * @param isWaitingForFuture true if the flow is waiting for the completion of a future triggered by one of the statemachine's actions
- *   [FlowIORequest.WaitForLedgerCommit]. This used is to make tracking idempotent.
  * @param isAnyCheckpointPersisted true if at least a single checkpoint has been persisted. This is used to determine
  *   whether we should DELETE the checkpoint at the end of the flow.
  * @param isStartIdempotent true if the start of the flow is idempotent, making the skipping of the initial checkpoint
  *   possible.
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
+ * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
+ * what event it is set to process next. [isKilled] is a `var` to prevent concurrency errors that can occur if a flow is killed during the
+ * middle of a state transition.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
@@ -42,6 +44,7 @@ data class StateMachineState(
     val isAnyCheckpointPersisted: Boolean,
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
+    var isKilled: Boolean,
     val senderUUID: String?
 )
 

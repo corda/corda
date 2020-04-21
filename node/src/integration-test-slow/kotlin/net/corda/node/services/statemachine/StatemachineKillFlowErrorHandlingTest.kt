@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
@@ -84,7 +85,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(20.seconds) }
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(20.seconds) }
 
             val output = getBytemanOutput(alice)
 
@@ -170,7 +171,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(30.seconds) }
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(30.seconds) }
 
             val output = getBytemanOutput(alice)
 
