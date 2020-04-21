@@ -340,7 +340,6 @@
     <ID>ForbiddenComment:FlowLogicRefFactoryImpl.kt$FlowLogicRefFactoryImpl$// TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly</ID>
     <ID>ForbiddenComment:GenerateRpcSslCertsCli.kt$GenerateRpcSslCerts$// TODO: consider adding a password strength policy.</ID>
     <ID>ForbiddenComment:GuiUtilities.kt$// TODO: This is a temporary fix for the UI to show the correct issuer identity, this will break when we start randomizing keys. More work is needed here when the identity work is done.</ID>
-    <ID>ForbiddenComment:HibernateConfiguration.kt$HibernateConfiguration$// TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session</ID>
     <ID>ForbiddenComment:IRS.kt$FloatingRatePaymentEvent$// TODO: Should an uncalculated amount return a zero ? null ? etc.</ID>
     <ID>ForbiddenComment:IRS.kt$InterestRateSwap$// TODO: Confirm: would someone really enter a swap with a negative fixed rate?</ID>
     <ID>ForbiddenComment:IRS.kt$InterestRateSwap$// TODO: further tests</ID>
@@ -632,8 +631,8 @@
     <ID>LongParameterList:AbstractNode.kt$(databaseConfig: DatabaseConfig, wellKnownPartyFromX500Name: (CordaX500Name) -&gt; Party?, wellKnownPartyFromAnonymous: (AbstractParty) -&gt; Party?, schemaService: SchemaService, hikariProperties: Properties, cacheFactory: NamedCacheFactory, customClassLoader: ClassLoader?)</ID>
     <ID>LongParameterList:AbstractNode.kt$(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set&lt;MappedSchema&gt;, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name)</ID>
     <ID>LongParameterList:ArtemisMessagingServer.kt$ArtemisMessagingServer$(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false, deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false, deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
     <ID>LongParameterList:ArtemisRpcTests.kt$ArtemisRpcTests$(nodeSSlconfig: MutualSslConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(), adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = tempFolder.root.toPath() )</ID>
     <ID>LongParameterList:AttachmentsClassLoader.kt$AttachmentsClassLoaderBuilder$(attachments: List&lt;Attachment&gt;, params: NetworkParameters, txId: SecureHash, isAttachmentTrusted: (Attachment) -&gt; Boolean, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -&gt; T)</ID>
     <ID>LongParameterList:BFTSmart.kt$BFTSmart.Replica$( states: List&lt;StateRef&gt;, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; = emptyList() )</ID>
@@ -1194,7 +1193,6 @@
     <ID>MatchingDeclarationName:ConfigException.kt$net.corda.core.cordapp.ConfigException.kt</ID>
     <ID>MatchingDeclarationName:ConfigUtilities.kt$net.corda.node.services.config.ConfigUtilities.kt</ID>
     <ID>MatchingDeclarationName:ContractsDSL.kt$net.corda.core.contracts.ContractsDSL.kt</ID>
-    <ID>MatchingDeclarationName:CordaUtils.kt$net.corda.core.internal.CordaUtils.kt</ID>
     <ID>MatchingDeclarationName:CurrencyParameterSensitivitySerialiser.kt$net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitySerialiser.kt</ID>
     <ID>MatchingDeclarationName:FinanceWorkflowsUtils.kt$net.corda.finance.workflows.utils.FinanceWorkflowsUtils.kt</ID>
     <ID>MatchingDeclarationName:FlowStackSnapshot.kt$net.corda.testing.internal.FlowStackSnapshot.kt</ID>
@@ -1465,6 +1463,7 @@
     <ID>TooGenericExceptionCaught:AbstractNode.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:AbstractNodeTests.kt$ColdJVM.Companion$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:Amount.kt$Amount.Companion$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ArtemisRpcBroker.kt$ArtemisRpcBroker$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:AttachmentDemo.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AttachmentLoadingTests.kt$AttachmentLoadingTests.ConsumeAndBroadcastResponderFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AttachmentVersionNumberMigration.kt$AttachmentVersionNumberMigration$e: Exception</ID>
@@ -1500,6 +1499,7 @@
     <ID>TooGenericExceptionCaught:DeserializeSimpleTypesTests.kt$DeserializeSimpleTypesTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DockerInstantiator.kt$DockerInstantiator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl.Companion$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverTests.kt$DriverTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ErrorCodeLoggingTests.kt$e: Exception</ID>
