@@ -9,7 +9,7 @@ import net.corda.serialization.internal.amqp.testutils.writeTestResource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class  ThrowableEvolutionTests
+class ThrowableEvolutionTests
 {
     private val toBeRemovedValue = "Remove"
     private val message = "Test Message"
