@@ -50,12 +50,13 @@ class ErrorResourceGenerator : CordaCliWrapper(
     override fun runProgram(): Int {
         val buildFileLocation = ErrorToolUtilities.checkDirectory(buildDir, "error code definition class files")
         val resourceLocation = ErrorToolUtilities.checkDirectory(resourceDir, "resource bundle files")
-        val resourceGenerator = ResourceGenerator(resourceLocation, locales.map { Locale.forLanguageTag(it) })
+        val resourceGenerator = ResourceGenerator(locales.map { Locale.forLanguageTag(it) })
         try {
-            val enumResources = resourceGenerator.readDefinedCodes(buildFileLocation.toFile())
-            val expectedResources = resourceGenerator.getExpectedResources(enumResources)
-            val missingResources = resourceGenerator.calculateMissingResources(expectedResources)
-            resourceGenerator.createResources(missingResources)
+            val resources = ErrorResourceUtilities.listResourceFiles(resourceLocation)
+            val loader = ErrorResourceUtilities.loaderFromDirectory(buildFileLocation)
+            val missingResources = resourceGenerator.calculateMissingResources(loader.urLs.toList(), resources)
+            resourceGenerator.createResources(missingResources, resourceLocation)
+            loader.close()
         } catch (e: IllegalArgumentException) {
             logger.error(e.message, e)
             return ExitCodes.FAILURE

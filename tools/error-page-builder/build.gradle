@@ -28,3 +28,5 @@ shadowJar {
         )
     }
 }
+
+assemble.dependsOn shadowJar

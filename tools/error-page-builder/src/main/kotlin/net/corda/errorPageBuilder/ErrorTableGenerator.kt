@@ -26,9 +26,8 @@ class ErrorTableGenerator(private val resourceLocation: Path,
 
     private fun generateTable() : List<List<String>> {
         val table = mutableListOf<List<String>>()
-        val utils = ErrorResourceUtilities(resourceLocation.toFile())
-        val loader = utils.loaderForResources()
-        for (resource in utils.listResources()) {
+        val loader = ErrorResourceUtilities.loaderFromDirectory(resourceLocation)
+        for (resource in ErrorResourceUtilities.listResourceNames(resourceLocation)) {
             val errorResource = ErrorResource.fromLoader(resource, loader, locale)
             table.add(listOf(resource, errorResource.aliases, errorResource.shortDescription, errorResource.actionsToFix))
         }

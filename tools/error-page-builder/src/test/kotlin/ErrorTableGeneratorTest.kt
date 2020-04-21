@@ -9,7 +9,7 @@ import java.util.*
 class ErrorTableGeneratorTest {
 
     companion object {
-        private val RESOURCE_LOCATION = Paths.get("src/test/resources/test-errors").toAbsolutePath().toFile()
+        private val RESOURCE_LOCATION = Paths.get("src/test/resources/test-errors").toAbsolutePath()
     }
 
     private val englishTable = """| Error Code | Aliases | Description | Actions to Fix |
@@ -39,7 +39,7 @@ class ErrorTableGeneratorTest {
 
     @Test(expected = IllegalArgumentException::class, timeout = 300_000)
     fun `error thrown if unknown directory passed to generator`() {
-        val generator = ErrorTableGenerator(File("not/a/directory"), Locale.getDefault())
+        val generator = ErrorTableGenerator(Paths.get("not/a/directory"), Locale.getDefault())
         generator.generateMarkdown()
     }
 }
