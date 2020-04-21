@@ -14,6 +14,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -47,6 +48,12 @@ open class SharedNodeCmdLineOptions {
             description = ["Runs the node in development mode. Unsafe for production."]
     )
     var devMode: Boolean? = null
+
+    @Option(
+            names = ["--safe-mode"],
+            description = ["Do not run any flows on startup. Flows can be resumed via RCP."]
+    )
+    var safeMode: Boolean = false
 
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
@@ -185,6 +192,9 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         }
         devMode?.let {
             configOverrides += "devMode" to it
+        }
+        if (safeMode) {
+            configOverrides += "ssmStartMode" to StateMachineManager.StartMode.Safe
         }
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
