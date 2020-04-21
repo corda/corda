@@ -156,6 +156,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             }
             return URLClassLoader(cordapps.map { it.jarFile.toUri().toURL() }.toTypedArray())
         }
+
+        private val logger = contextLogger()
     }
 
     var networkParameters: NetworkParameters = initialNetworkParameters
@@ -224,7 +226,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             // We don't actually allow the shutdown of the network-wide shared thread pool until all references to
             // it have been shutdown.
             if (sharedUserCount.decrementAndGet() == 0) {
+                logger.info("Shutting down sharedServerThread")
                 super.shutdown()
+            } else {
+                logger.info("Remaining shared user count: $sharedUserCount")
             }
         }
 
@@ -274,7 +279,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         return if (threadPerNode) {
             ServiceAffinityExecutor("Mock node $id thread", 1)
         } else {
-            sharedUserCount.incrementAndGet()
+            sharedUserCount.addAndGet(2) // Adding 2 users as the same sharedServerThread will be used for nodeExecutor as well as inside SMM
             sharedServerThread
         }
     }
