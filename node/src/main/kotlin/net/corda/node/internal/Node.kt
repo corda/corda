@@ -435,9 +435,11 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
+                                null,jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
+                                null, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.addresses
@@ -528,6 +530,7 @@ open class Node(configuration: NodeConfiguration,
                 val url = try {
                     server.start().url
                 } catch (e: JdbcSQLNonTransientConnectionException) {
+                    log.error("Unexpected DB connectivity error", e)
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {

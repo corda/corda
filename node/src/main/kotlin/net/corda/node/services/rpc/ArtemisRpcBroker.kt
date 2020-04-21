@@ -26,6 +26,7 @@ class ArtemisRpcBroker internal constructor(
         private val useSsl: Boolean,
         private val securityManager: RPCSecurityManager,
         private val maxMessageSize: Int,
+        private val journalBufferTimeout: Int?,
         private val jmxEnabled: Boolean = false,
         private val baseDirectory: Path,
         private val nodeConfiguration: MutualSslConfiguration,
@@ -34,25 +35,35 @@ class ArtemisRpcBroker internal constructor(
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
 
-        fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
-            return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
+        fun withSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
+                    sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int,
+                    journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, journalBufferTimeout,
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
 
-        fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
-            return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
+        fun withoutSsl(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort,
+                       securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean,
+                       baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, journalBufferTimeout,
+                    jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
     }
 
     override fun start() {
-        logger.debug("Artemis RPC broker is starting.")
+        logger.debug("Artemis RPC broker is starting for: $addresses")
         try {
             server.start()
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
+            logger.error("Unexpected IO error", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
             } else {
                 throw e
             }
+        } catch (th: Throwable) {
+            logger.error("Unexpected error", th)
+            throw th
         }
         logger.debug("Artemis RPC broker is started.")
     }
@@ -73,7 +84,8 @@ class ArtemisRpcBroker internal constructor(
     private val server = initialiseServer()
 
     private fun initialiseServer(): ActiveMQServer {
-        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl, nodeConfiguration, shouldStartLocalShell)
+        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, journalBufferTimeout, jmxEnabled,
+                addresses.primary, adminAddressOptional, sslOptions, useSsl, nodeConfiguration, shouldStartLocalShell)
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
