@@ -33,6 +33,7 @@ class TopLevelTransition(
         val event: Event
 ) : Transition {
 
+    @Suppress("ComplexMethod")
     override fun transition(): TransitionResult {
 
         if (startingState.isKilled) {

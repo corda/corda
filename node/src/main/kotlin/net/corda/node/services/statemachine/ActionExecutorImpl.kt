@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Histogram
