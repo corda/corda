@@ -9,7 +9,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -58,7 +57,7 @@ class FlowPausingTests {
     fun `Hospitalized flow can be paused and resumed`() {
         val flow = aliceNode.services.startFlow(HospitalizingFlow())
         assertEquals(true, waitForHospitalizedCheckpoint(flow.id))
-        assertEquals(true, aliceNode.smm.markFlowsAsPaused(flow.id))
+        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
             assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
@@ -74,7 +73,7 @@ class FlowPausingTests {
     fun `Checkpointing flow can be paused and resumed if the statemachine is stopped`() {
         val flow = aliceNode.services.startFlow(CheckpointingFlow())
         aliceNode.smm.stop(0)
-        assertEquals(true, aliceNode.smm.markFlowsAsPaused(flow.id))
+        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
         aliceNode.database.transaction {
             val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
             assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
@@ -93,7 +92,7 @@ class FlowPausingTests {
     fun `A paused flow cannot be resumed twice`() {
         val flow = aliceNode.services.startFlow(CheckpointingFlow())
         aliceNode.smm.stop(0)
-        assertEquals(true, aliceNode.smm.markFlowsAsPaused(flow.id))
+        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
         val restartedAlice = mockNet.restartNode(aliceNode)
         assertEquals(true, restartedAlice.smm.unPauseFlow(flow.id))
         assertEquals(false, restartedAlice.smm.unPauseFlow(flow.id))

@@ -272,11 +272,10 @@ class SingleThreadedStateMachineManager(
         val pausedFlows = restoreFlowPrimitivesFromPausedCheckpoint()
         mutex.locked {
             nonResidentFlows.putAll(pausedFlows)
-            for (flow in pausedFlows) {
-                val checkpoint = flow.value.checkpoint
+            for ((id, flow) in pausedFlows) {
+                val checkpoint = flow.checkpoint
                 for (sessionId in getFlowSessionIds(checkpoint)) {
-                    sessionToFlow[sessionId] = flow.key
-                    logger.error("Added to MAP ${sessionId} : ${flow.key}")
+                    sessionToFlow[sessionId] = id
                 }
             }
         }
@@ -399,7 +398,7 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    override fun markFlowsAsPaused(id: StateMachineRunId): Boolean {
+    override fun markFlowAsPaused(id: StateMachineRunId): Boolean {
         mutex.locked {
             var success = false
             if (flowHospital.contains(id)) {
@@ -421,18 +420,9 @@ class SingleThreadedStateMachineManager(
     override fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
         return checkpointStorage.getCheckpointsToRun().use {
             it.map { (id, _) ->
-                val paused = markFlowsAsPaused(id)
+                val paused = markFlowAsPaused(id)
                 id to paused
-            }.toList().map {pair -> pair.first to pair.second}.toMap()
-        }
-    }
-
-    private fun markAllHosipitalisedFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
-        return checkpointStorage.getHospitalizedCheckpoints().use {
-            it.map { (id, _) ->
-                val paused = markFlowsAsPaused(id)
-                id to paused
-            }.toList().map {pair -> pair.first to pair.second}.toMap()
+            }.toList().toMap()
         }
     }
 
@@ -537,7 +527,7 @@ class SingleThreadedStateMachineManager(
                 // If a flow is added before start() then don't attempt to restore it
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
                 id to NonResidentFlow(id, checkpoint, true, false, null)
-            }.toList().map {pair -> pair.first to pair.second}.toMap()
+            }.toList().toMap()
         }
     }
 

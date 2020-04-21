@@ -92,7 +92,7 @@ interface StateMachineManager {
      *
      * @return whether the flow was successfully marked as paused.
      */
-    fun markFlowsAsPaused(id: StateMachineRunId): Boolean
+    fun markFlowAsPaused(id: StateMachineRunId): Boolean
 
     /**
      * Mark all flows as paused, this stops the flow from running next time the state machine manager starts up.
