@@ -161,6 +161,7 @@ import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.RestrictedConnection
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -1185,7 +1186,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
-        override fun jdbcSession(): Connection = database.createSession()
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction {
