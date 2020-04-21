@@ -19,6 +19,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATI
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
+import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
@@ -51,7 +52,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
-                             private val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val maxMessageSize: Int,
+                             private val journalBufferTimeout : Int?) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -135,6 +137,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         isPopulateValidatedUser = true
         journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
         journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+        journalBufferTimeout_NIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutNio()
+        journalBufferTimeout_AIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutAio()
         journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
 

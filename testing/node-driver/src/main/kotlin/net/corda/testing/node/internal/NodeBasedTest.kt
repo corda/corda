@@ -159,4 +159,7 @@ class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, 
     }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
+
+    // Switch journal buffering off or else for many nodes it is possible to receive OOM in un-managed heap space
+    override val journalBufferTimeout = 0
 }

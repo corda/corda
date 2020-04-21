@@ -279,6 +279,8 @@ open class Node(configuration: NodeConfiguration,
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var rpcBroker: ArtemisBroker? = null
 
+    protected open val journalBufferTimeout : Int? = null
+
     private var shutdownHook: ShutdownHook? = null
 
     // DISCUSSION
@@ -360,7 +362,7 @@ open class Node(configuration: NodeConfiguration,
         val messageBroker = if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress
                     ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
+            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, journalBufferTimeout)
         } else {
             null
         }
@@ -436,10 +438,10 @@ open class Node(configuration: NodeConfiguration,
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
                         ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                null,jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
                         ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
-                                null, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.addresses
