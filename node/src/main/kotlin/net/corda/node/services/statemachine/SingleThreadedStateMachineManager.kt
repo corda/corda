@@ -667,6 +667,7 @@ class SingleThreadedStateMachineManager(
                 val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender)
                 mutex.locked {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
+                        // If flow is not running add it to the list of external events to be processed if/when the flow resumes.
                         ?: nonResidentFlows[flowId]?.run { addExternalEvent(event) }
                         ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
                 }
