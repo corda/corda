@@ -5,6 +5,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
@@ -26,13 +27,22 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
+        val hbm2dll: String =
+                if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                    "update"
+                } else if ((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                        || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                    "validate"
+                } else {
+                    "none"
+                }
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
-                .setProperty("hibernate.hbm2ddl.auto", "validate")
+                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
