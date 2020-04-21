@@ -199,7 +199,6 @@ class SingleThreadedStateMachineManager(
         flowHospital.close()
         timeoutScheduler.shutdown()
         scheduler.shutdown()
-        executor.shutdown()
     }
 
     /**
