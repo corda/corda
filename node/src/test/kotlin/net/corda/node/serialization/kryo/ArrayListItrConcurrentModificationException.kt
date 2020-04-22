@@ -50,32 +50,32 @@ class ArrayListItrConcurrentModificationException(private val compression: Corda
                 })
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `ArrayList iterator can checkpoint without error`() {
         runTestWithCollection(ArrayList())
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `HashSet iterator can checkpoint without error`() {
         runTestWithCollection(HashSet())
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `LinkedHashSet iterator can checkpoint without error`() {
         runTestWithCollection(LinkedHashSet())
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `HashMap iterator can checkpoint without error`() {
         runTestWithCollection(HashMap())
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `LinkedHashMap iterator can checkpoint without error`() {
         runTestWithCollection(LinkedHashMap())
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `LinkedList iterator can checkpoint without error`() {
         runTestWithCollection(LinkedList())
     }
@@ -84,7 +84,9 @@ class ArrayListItrConcurrentModificationException(private val compression: Corda
 
     private fun runTestWithCollection(collection: MutableCollection<Int>) {
 
-        (1..100).forEach { i -> collection.add(i) }
+        for (i in 1..100) {
+            collection.add(i)
+        }
 
         val iterator = collection.iterator()
         iterator.next()
@@ -101,7 +103,9 @@ class ArrayListItrConcurrentModificationException(private val compression: Corda
 
     private fun runTestWithCollection(collection: MutableMap<Int, Int>) {
 
-        (1..100).forEach { i -> collection[i] = i }
+        for (i in 1..100) {
+            collection[i] = i
+        }
 
         val iterator = collection.iterator()
         iterator.next()
