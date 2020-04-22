@@ -15,12 +15,12 @@ import java.time.Instant
  */
 interface FlowReadOperations {
 
-    fun getFlows(ids: List<StateMachineRunId>): List<FlowInfo>
+    fun getWaitingFlows(ids: List<StateMachineRunId>): Set<FlowInfo>
 
     fun getFlowsCurrentlyWaitingForParties(
         parties: List<Party>,
         onlyIfSuspendedLongerThan: Duration = 0.seconds
-    ): List<FlowInfo>
+    ): Set<FlowInfo>
 
     fun getFlowsCurrentlyWaitingForPartiesGrouped(
         parties: List<Party>,
@@ -37,23 +37,23 @@ interface FlowWriteOperations
 
 class FlowOperator(private val smm: StateMachineManager, private val clock: Clock) : FlowReadOperations, FlowWriteOperations {
 
-    override fun getFlows(ids: List<StateMachineRunId>): List<FlowInfo> {
+    override fun getWaitingFlows(ids: List<StateMachineRunId>): Set<FlowInfo> {
         val now = clock.instant()
         // this part is generic between the flow monitor
         return getWaitingFlows()
             .filter { flow -> flow.id in ids }
             .map { flow -> FlowInfo(flow.id, flow.suspendedTimestamp!!, flow.waitingForParties()) }
-            .toList()
+            .toSet()
     }
 
-    override fun getFlowsCurrentlyWaitingForParties(parties: List<Party>, onlyIfSuspendedLongerThan: Duration): List<FlowInfo> {
+    override fun getFlowsCurrentlyWaitingForParties(parties: List<Party>, onlyIfSuspendedLongerThan: Duration): Set<FlowInfo> {
         val now = clock.instant()
         // this part is generic between the flow monitor
         return getWaitingFlows()
             .filter { flow -> flow.isWaitingForParties(parties) }
             .filter { flow -> flow.ongoingDuration(now) >= onlyIfSuspendedLongerThan }
             .map { flow -> FlowInfo(flow.id, flow.suspendedTimestamp!!, flow.waitingForParties()) }
-            .toList()
+            .toSet()
     }
 
     override fun getFlowsCurrentlyWaitingForPartiesGrouped(
