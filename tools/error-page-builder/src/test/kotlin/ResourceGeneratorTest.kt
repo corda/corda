@@ -1,35 +1,19 @@
 import junit.framework.TestCase.assertEquals
-import net.corda.common.logging.errorReporting.ErrorCodes
+import net.corda.common.logging.errorReporting.ResourceBundleProperties
 import net.corda.errorPageBuilder.ResourceGenerator
 import org.junit.Test
 import java.net.URLClassLoader
+import java.util.*
 
 class ResourceGeneratorTest {
 
-    private enum class TestNamespaces {
-        TN1,
-        TN2
+    private val urls = (TestCodes1::class.java.classLoader as URLClassLoader).urLs.filter {
+        it.toString().matches(".*classes/kotlin/test.*".toRegex())
     }
-
-    private enum class TestCodes1 : ErrorCodes {
-        CASE1,
-        CASE2;
-
-        override val namespace = TestNamespaces.TN1.toString()
-    }
-
-    private enum class TestCodes2 : ErrorCodes {
-        CASE1,
-        CASE3;
-
-        override val namespace = TestNamespaces.TN2.toString()
-    }
-
-    private val urls = (TestCodes1::class.java.classLoader as URLClassLoader).urLs.toList()
 
     private fun expectedCodes() : List<String> {
-        val codes1 = TestCodes1.values().map { "${it.namespace}-${it.name.replace("_", "-")}" }
-        val codes2 = TestCodes2.values().map { "${it.namespace}-${it.name.replace("_", "-")}" }
+        val codes1 = TestCodes1.values().map { "${it.namespace.toLowerCase()}-${it.name.replace("_", "-").toLowerCase()}" }
+        val codes2 = TestCodes2.values().map { "${it.namespace.toLowerCase()}-${it.name.replace("_", "-").toLowerCase()}" }
         return codes1 + codes2
     }
 
@@ -38,6 +22,37 @@ class ResourceGeneratorTest {
         val resourceGenerator = ResourceGenerator(listOf())
         val currentFiles = expectedCodes().map { "$it.properties" }
         val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
-        assertEquals(listOf<String>(), missing)
+        assertEquals(setOf<String>(), missing.toSet())
+    }
+
+    @Test(timeout = 300_000)
+    fun `missing locales are marked as missing when other locales are present`() {
+        val resourceGenerator = ResourceGenerator(listOf("en-US", "ga-IE").map { Locale.forLanguageTag(it) })
+        val currentFiles = expectedCodes().flatMap { listOf("$it.properties", "${it}_en_US.properties") }
+        val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
+        assertEquals(expectedCodes().map { "${it}_ga_IE.properties" }.toSet(), missing.toSet())
+    }
+
+    @Test(timeout = 300_000)
+    fun `test writing out files works correctly`() {
+        // First test that if all files are missing then the resource generator detects this
+        val resourceGenerator = ResourceGenerator(listOf())
+        val currentFiles = listOf<String>()
+        val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
+        assertEquals(expectedCodes().map { "$it.properties" }.toSet(), missing.toSet())
+
+        // Now check that all resource files that should be created are
+        val tempDir = createTempDir()
+        resourceGenerator.createResources(missing, tempDir.toPath())
+        val createdFiles = tempDir.walkTopDown().filter { it.isFile && it.extension == "properties" }.map { it.name }.toList()
+        assertEquals(missing, createdFiles)
+
+        // Now check that a created file has the expected properties and values
+        val properties = Properties()
+        properties.load(tempDir.walk().filter { it.isFile && it.extension == "properties"}.first().inputStream())
+        assertEquals(ResourceGenerator.SHORT_DESCRIPTION_DEFAULT, properties.getProperty(ResourceBundleProperties.SHORT_DESCRIPTION))
+        assertEquals(ResourceGenerator.ACTIONS_TO_FIX_DEFAULT, properties.getProperty(ResourceBundleProperties.ACTIONS_TO_FIX))
+        assertEquals(ResourceGenerator.MESSAGE_TEMPLATE_DEFAULT, properties.getProperty(ResourceBundleProperties.MESSAGE_TEMPLATE))
+        assertEquals(ResourceGenerator.ALIASES_DEFAULT, properties.getProperty(ResourceBundleProperties.ALIASES))
     }
 }

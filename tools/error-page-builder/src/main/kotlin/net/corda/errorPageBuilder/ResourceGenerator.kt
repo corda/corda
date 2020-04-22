@@ -14,13 +14,20 @@ import java.util.*
  */
 class ResourceGenerator(private val locales: List<Locale>) {
 
+    companion object {
+        internal const val MESSAGE_TEMPLATE_DEFAULT = "<Message template>"
+        internal const val SHORT_DESCRIPTION_DEFAULT = "<Short description>"
+        internal const val ACTIONS_TO_FIX_DEFAULT = "<Actions to fix>"
+        internal const val ALIASES_DEFAULT = ""
+    }
+
     private fun createResourceFile(name: String, location: Path) {
         val file = location.resolve(name)
         val text = """
-            |${ResourceBundleProperties.MESSAGE_TEMPLATE} = <Message template>
-            |${ResourceBundleProperties.SHORT_DESCRIPTION} = <Short description>
-            |${ResourceBundleProperties.ACTIONS_TO_FIX} = <Actions to fix>
-            |${ResourceBundleProperties.ALIASES} = 
+            |${ResourceBundleProperties.MESSAGE_TEMPLATE} = $MESSAGE_TEMPLATE_DEFAULT
+            |${ResourceBundleProperties.SHORT_DESCRIPTION} = $SHORT_DESCRIPTION_DEFAULT
+            |${ResourceBundleProperties.ACTIONS_TO_FIX} = $ACTIONS_TO_FIX_DEFAULT
+            |${ResourceBundleProperties.ALIASES} = $ALIASES_DEFAULT
         """.trimMargin()
         file.toFile().writeText(text)
     }
@@ -36,7 +43,7 @@ class ResourceGenerator(private val locales: List<Locale>) {
 
     private fun readDefinedCodes(urls: List<URL>) : List<String> {
         val reflections = Reflections(ConfigurationBuilder()
-                .setScanners(SubTypesScanner())
+                .setScanners(SubTypesScanner(false))
                 .addUrls(urls)
         )
         return reflections.getSubTypesOf(ErrorCodes::class.java).flatMap {
