@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import net.corda.common.logging.errorReporting.ErrorCodes
 import net.corda.common.logging.errorReporting.ResourceBundleProperties

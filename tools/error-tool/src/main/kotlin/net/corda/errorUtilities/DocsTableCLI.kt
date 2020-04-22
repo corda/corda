@@ -1,11 +1,9 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
-import net.corda.cliutils.start
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
-import java.io.File
 import java.lang.IllegalArgumentException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,7 +17,7 @@ import java.util.*
  *
  * In the event that the file already exists, the tool will report an error and exit.
  */
-class ErrorPageBuilder : CordaCliWrapper("build-docs", "Builds the error table for the error codes page") {
+class DocsTableCLI : CordaCliWrapper("build-docs", "Builds the error table for the error codes page") {
 
     @CommandLine.Parameters(
             index = "0",
@@ -45,24 +43,24 @@ class ErrorPageBuilder : CordaCliWrapper("build-docs", "Builds the error table f
     var localeTag: String? = null
 
     companion object {
-        private val logger = LoggerFactory.getLogger(ErrorPageBuilder::class.java)
+        private val logger = LoggerFactory.getLogger(DocsTableCLI::class.java)
         private const val ERROR_CODES_FILE = "error-codes.md"
     }
 
     override fun runProgram(): Int {
         val locale = if (localeTag != null) Locale.forLanguageTag(localeTag) else Locale.getDefault()
         val (outputFile, resources) = try {
-            val output = ErrorToolUtilities.checkDirectory(outputDir, "output file")
+            val output = ErrorToolCLIUtilities.checkDirectory(outputDir, "output file")
             val outputPath = output.resolve(ERROR_CODES_FILE)
             require(Files.notExists(outputPath)) {
                 "Output file $outputPath exists, please remove it and run again."
             }
-            Pair(outputPath, ErrorToolUtilities.checkDirectory(resourceLocation, "resource bundle files"))
+            Pair(outputPath, ErrorToolCLIUtilities.checkDirectory(resourceLocation, "resource bundle files"))
         } catch (e: IllegalArgumentException) {
             logger.error(e.message, e)
             return ExitCodes.FAILURE
         }
-        val tableGenerator = ErrorTableGenerator(resources, locale)
+        val tableGenerator = DocsTableGenerator(resources, locale)
         try {
             val table = tableGenerator.generateMarkdown()
             outputFile.toFile().writeText(table)

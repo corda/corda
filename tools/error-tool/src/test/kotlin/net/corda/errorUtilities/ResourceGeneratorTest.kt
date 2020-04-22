@@ -1,6 +1,7 @@
+package net.corda.errorUtilities
+
 import junit.framework.TestCase.assertEquals
 import net.corda.common.logging.errorReporting.ResourceBundleProperties
-import net.corda.errorPageBuilder.ResourceGenerator
 import org.junit.Test
 import java.net.URLClassLoader
 import java.util.*

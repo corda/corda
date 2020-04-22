@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import java.lang.IllegalArgumentException
 import java.nio.file.Files
@@ -7,7 +7,7 @@ import java.nio.file.Path
 /**
  * Common functions to use among multiple of the error code subcommands
  */
-class ErrorToolUtilities {
+class ErrorToolCLIUtilities {
     companion object {
         /**
          * Checks that a directory provided through Picocli exists.

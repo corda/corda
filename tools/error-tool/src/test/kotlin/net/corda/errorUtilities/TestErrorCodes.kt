@@ -1,3 +1,5 @@
+package net.corda.errorUtilities
+
 import net.corda.common.logging.errorReporting.ErrorCodes
 
 // These test errors are not used directly, but their compiled class files are used to verify the resource generator functionality.

@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -6,7 +6,7 @@ import java.nio.file.Path
 /**
  * A class for reading and processing error code resource bundles from a given directory.
  */
-class ErrorResourceUtilities() {
+class ErrorResourceUtilities {
 
     companion object {
         private const val ERROR_INFO_RESOURCE = ".*ErrorInfo.*"

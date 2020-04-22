@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import net.corda.common.logging.errorReporting.ErrorResource
 import java.lang.IllegalArgumentException
@@ -8,8 +8,8 @@ import java.util.*
 /**
  * Generate the documentation table given a resource file location set.
  */
-class ErrorTableGenerator(private val resourceLocation: Path,
-                          private val locale: Locale) {
+class DocsTableGenerator(private val resourceLocation: Path,
+                         private val locale: Locale) {
 
     companion object {
         private const val ERROR_CODE_HEADING = "codeHeading"

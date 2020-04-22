@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
@@ -16,8 +16,8 @@ fun main(args: Array<String>) {
  */
 class ErrorTool : CordaCliWrapper("error-utils", "Utilities for working with error codes and error reporting") {
 
-    private val errorPageBuilder = ErrorPageBuilder()
-    private val errorResourceGenerator = ErrorResourceGenerator()
+    private val errorPageBuilder = DocsTableCLI()
+    private val errorResourceGenerator = ResourceGeneratorCLI()
 
     override fun additionalSubCommands() = setOf(errorPageBuilder, errorResourceGenerator)
 

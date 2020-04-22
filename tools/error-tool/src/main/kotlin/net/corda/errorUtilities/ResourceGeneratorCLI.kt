@@ -1,4 +1,4 @@
-package net.corda.errorPageBuilder
+package net.corda.errorUtilities
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
@@ -15,7 +15,7 @@ import java.util.*
  * existing resource bundles. From this, it generates any missing resource files with the properties specified. The data under these
  * properties should then be filled in by hand.
  */
-class ErrorResourceGenerator : CordaCliWrapper(
+class ResourceGeneratorCLI : CordaCliWrapper(
         "generate-resources",
         "Generate any missing resource files for a set of error codes"
 ) {
@@ -44,12 +44,12 @@ class ErrorResourceGenerator : CordaCliWrapper(
     var locales: List<String> = listOf("en-US")
 
     companion object {
-        private val logger = LoggerFactory.getLogger(ErrorResourceGenerator::class.java)
+        private val logger = LoggerFactory.getLogger(ResourceGeneratorCLI::class.java)
     }
 
     override fun runProgram(): Int {
-        val buildFileLocation = ErrorToolUtilities.checkDirectory(buildDir, "error code definition class files")
-        val resourceLocation = ErrorToolUtilities.checkDirectory(resourceDir, "resource bundle files")
+        val buildFileLocation = ErrorToolCLIUtilities.checkDirectory(buildDir, "error code definition class files")
+        val resourceLocation = ErrorToolCLIUtilities.checkDirectory(resourceDir, "resource bundle files")
         val resourceGenerator = ResourceGenerator(locales.map { Locale.forLanguageTag(it) })
         try {
             val resources = ErrorResourceUtilities.listResourceFiles(resourceLocation)
