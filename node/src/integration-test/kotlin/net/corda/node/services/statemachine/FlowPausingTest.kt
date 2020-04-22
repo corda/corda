@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -11,6 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
@@ -108,6 +110,35 @@ class FlowPausingTest {
                 sequenceNumber++
             }
             session.send(pass)
+        }
+    }
+
+
+    @Test(timeout = 300_000)
+    fun TestSemaphore() {
+        val rpcUser = User("demo", "demo", setOf(Permissions.startFlow<HardRestartTest.Ping>(), Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false)) {
+            val alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))).getOrThrow()
+            val semaphore = MySemaphore(0)
+            val flow = alice.rpc.startFlow(::WaitingFlow, semaphore)
+            println("Before Release")
+            semaphore.release()
+            println("After Release")
+            flow.returnValue.getOrThrow()
+            alice.stop()
+        }
+    }
+
+    @CordaSerializable
+    class MySemaphore(val permits: Int): Semaphore(permits)
+
+    @StartableByRPC
+    class WaitingFlow(@Transient val semaphore: MySemaphore): FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            logger.error("Before Acquire")
+            semaphore.acquire()
+            logger.error("After Acquire")
         }
     }
 }

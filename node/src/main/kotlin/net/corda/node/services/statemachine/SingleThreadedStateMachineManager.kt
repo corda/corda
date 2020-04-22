@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
-import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.fibers.instrument.JavaAgent
 import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
@@ -24,11 +23,9 @@ import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
@@ -39,6 +36,8 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.FlowCreator.Flow
+import net.corda.node.services.statemachine.FlowCreator.FlowCreatorFromCheckpoint
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
@@ -61,6 +60,7 @@ import java.lang.Integer.min
 import java.security.SecureRandom
 import java.time.Duration
 import java.util.HashSet
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -90,101 +90,6 @@ class SingleThreadedStateMachineManager(
         private val logger = contextLogger()
     }
 
-    private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
-
-    private inner class NonResidentFlow(val id: StateMachineRunId,
-                                        oldCheckpoint: Checkpoint,
-                                        val isAnyCheckpointPersisted: Boolean,
-                                        val isStartIdempotent: Boolean,
-                                        val initialDeduplicationHandler: DeduplicationHandler?
-    ) {
-
-        val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
-
-        val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-
-        fun addExternalEvent(message: Event.DeliverSessionMessage) {
-            externalEvents.add(message)
-        }
-
-        fun createFlow() : Flow? {
-            val fiber = getFibreFromCheckpoint() ?: return null
-            val state = StateMachineState(
-                    checkpoint = checkpoint,
-                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                    isFlowResumed = false,
-                    isWaitingForFuture = false,
-                    future = null,
-                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                    isStartIdempotent = isStartIdempotent,
-                    isRemoved = false,
-                    isKilled = false,
-                    flowLogic = fiber.logic,
-                    senderUUID = null)
-            val resultFuture = openFuture<Any?>()
-            fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
-            fiber.transientState = TransientReference(state)
-            fiber.logic.stateMachine = fiber
-            verifyFlowLogicIsSuspendable(fiber.logic)
-            return Flow(fiber, resultFuture)
-        }
-
-        private fun getFibreFromCheckpoint(): FlowStateMachineImpl<*>? {
-            return when (checkpoint.flowState) {
-                is FlowState.Unstarted -> {
-                    val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
-                    FlowStateMachineImpl(id, logic, scheduler)
-                }
-                is FlowState.Started -> {
-                    tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
-                }
-                // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-                is FlowState.Completed -> {
-                    return null
-                }
-            }
-        }
-
-        @Suppress("TooGenericExceptionCaught")
-        private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
-            return try {
-                bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
-            } catch (e: Exception) {
-                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-                null
-            }
-         }
-
-        private fun verifyFlowLogicIsSuspendable(logic: FlowLogic<Any?>) {
-            // Quasar requires (in Java 8) that at least the call method be annotated suspendable. Unfortunately, it's
-            // easy to forget to add this when creating a new flow, so we check here to give the user a better error.
-            //
-            // The Kotlin compiler can sometimes generate a synthetic bridge method from a single call declaration, which
-            // forwards to the void method and then returns Unit. However annotations do not get copied across to this
-            // bridge, so we have to do a more complex scan here.
-            val call = logic.javaClass.methods.first { !it.isSynthetic && it.name == "call" && it.parameterCount == 0 }
-            if (call.getAnnotation(Suspendable::class.java) == null) {
-                throw FlowException("${logic.javaClass.name}.call() is not annotated as @Suspendable. Please fix this.")
-            }
-        }
-
-        private fun createTransientValues(id: StateMachineRunId, resultFuture: CordaFuture<Any?>): FlowStateMachineImpl.TransientValues {
-            return FlowStateMachineImpl.TransientValues(
-                    eventQueue = Channels.newChannel(-1, Channels.OverflowPolicy.BLOCK),
-                    resultFuture = resultFuture,
-                    database = database,
-                    transitionExecutor = transitionExecutor,
-                    actionExecutor = actionExecutor!!,
-                    stateMachine = StateMachine(id, secureRandom),
-                    serviceHub = serviceHub,
-                    checkpointSerializationContext = checkpointSerializationContext!!,
-                    unfinishedFibers = unfinishedFibers,
-                    waitTimeUpdateHook = { flowId, timeout -> resetCustomTimeout(flowId, timeout) }
-            )
-        }
-    }
-
-
     private data class ScheduledTimeout(
         /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
         val scheduledFuture: ScheduledFuture<*>,
@@ -200,7 +105,7 @@ class SingleThreadedStateMachineManager(
         var stopping = false
         var stopped = false
         val flows = HashMap<StateMachineRunId, Flow>()
-        val nonResidentFlows = HashMap<StateMachineRunId, NonResidentFlow>()
+        val nonResidentFlows = HashMap<StateMachineRunId, FlowCreatorFromCheckpoint>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
@@ -223,6 +128,7 @@ class SingleThreadedStateMachineManager(
 
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
     private var actionExecutor: ActionExecutor? = null
+    private var flowCreator: FlowCreator? = null
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
     private val transitionExecutor = makeTransitionExecutor()
@@ -258,6 +164,16 @@ class SingleThreadedStateMachineManager(
             StateMachineManager.StartMode.ResumeAll -> {}
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
         }
+        this.flowCreator = FlowCreator(
+                checkpointSerializationContext,
+                scheduler,
+                database,
+                transitionExecutor,
+                actionExecutor,
+                secureRandom,
+                serviceHub,
+                unfinishedFibers,
+                ::resetCustomTimeout)
 
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
@@ -514,18 +430,18 @@ class SingleThreadedStateMachineManager(
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                val flowPrimative = NonResidentFlow(id, checkpoint, true, false, null)
+                val flowPrimative = flowCreator!!.FlowCreatorFromCheckpoint(id, checkpoint, true, false, null)
                 flowPrimative.createFlow()
             }.toList()
         }
     }
 
-    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, NonResidentFlow> {
+    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, FlowCreatorFromCheckpoint> {
         return checkpointStorage.getPausedCheckpoints().use {
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                id to NonResidentFlow(id, checkpoint, true, false, null)
+                id to flowCreator!!.FlowCreatorFromCheckpoint(id, checkpoint, true, false, null)
             }.toList().toMap()
         }
     }
@@ -557,7 +473,7 @@ class SingleThreadedStateMachineManager(
                 }
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
-                val nonResidentFlow = NonResidentFlow(flowId, checkpoint, true, false, null)
+                val nonResidentFlow = flowCreator!!.FlowCreatorFromCheckpoint(flowId, checkpoint, true, false, null)
 
                 // Resurrect flow
                 nonResidentFlow.createFlow() ?: return
