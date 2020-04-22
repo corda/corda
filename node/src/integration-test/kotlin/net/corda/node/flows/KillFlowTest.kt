@@ -26,6 +26,7 @@ import org.apache.logging.log4j.core.config.Configurator
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Semaphore
+import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -88,23 +89,27 @@ class KillFlowTest {
     }
 
     @Test(timeout = 300_000)
-    fun `a killed flow will end if it was suspended`() {
+    fun `killing a flow that is sleeping ends the flow immediately`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.let { rpc ->
-                val handle = rpc.startFlow(::AFlowThatGetsMurdered, bob.nodeInfo.singleIdentity())
+                val handle = rpc.startFlow(::AFlowThatGetsMurdered)
                 Thread.sleep(5000)
-                rpc.killFlow(handle.id)
-                assertFailsWith<KilledFlowException> {
-                    handle.returnValue.getOrThrow(1.minutes)
+                val time = measureTimeMillis {
+                    rpc.killFlow(handle.id)
+                    assertFailsWith<KilledFlowException> {
+                        handle.returnValue.getOrThrow(1.minutes)
+                    }
                 }
+                assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
+                assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
                 val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
                 assertEquals(1, checkpoints)
             }
         }
     }
-
+    
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties if it was suspended`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
@@ -243,7 +248,7 @@ class KillFlowTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class AFlowThatGetsMurdered(private val party: Party) : FlowLogic<Unit>() {
+    class AFlowThatGetsMurdered : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
