@@ -796,3 +796,19 @@ task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
 }
 apply plugin: 'com.r3.testing.distributed-testing'
 apply plugin: 'com.r3.testing.image-building'
+
+subprojects {
+    apply plugin: "maven-publish"
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/ingzkp/corda")
+                credentials {
+                    username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+                    password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+}
