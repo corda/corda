@@ -84,33 +84,33 @@ fun X509Certificate.distributionPointsToString() : String {
     }
 }
 
+fun certPathToString(certPath: Array<out X509Certificate>?): String {
+    if (certPath == null) {
+        return "<empty certpath>"
+    }
+    val certs = certPath.map {
+        val bcCert = it.toBc()
+        val subject = bcCert.subject.toString()
+        val issuer = bcCert.issuer.toString()
+        val keyIdentifier = try {
+            SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
+        } catch (ex: Exception) {
+            "null"
+        }
+        val authorityKeyIdentifier = try {
+            AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
+        } catch (ex: Exception) {
+            "null"
+        }
+        "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
+    }
+    return certs.joinToString("\r\n")
+}
+
 @VisibleForTesting
 class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
         val log = contextLogger()
-    }
-
-    private fun certPathToString(certPath: Array<out X509Certificate>?): String {
-        if (certPath == null) {
-            return "<empty certpath>"
-        }
-        val certs = certPath.map {
-            val bcCert = it.toBc()
-            val subject = bcCert.subject.toString()
-            val issuer = bcCert.issuer.toString()
-            val keyIdentifier = try {
-                SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
-            } catch (ex: Exception) {
-                "null"
-            }
-            val authorityKeyIdentifier = try {
-                AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
-            } catch (ex: Exception) {
-                "null"
-            }
-            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
-        }
-        return certs.joinToString("\r\n")
     }
 
     private fun certPathToStringFull(chain: Array<out X509Certificate>?): String {

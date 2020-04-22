@@ -199,6 +199,7 @@ class AMQPBridgeTest {
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
+            doReturn(false).whenever(it).crlCheckArtemisServer
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
         }

@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -170,12 +171,17 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = config.p2pSslOptions.keyStore.get().value.internal
         val trustStore = config.p2pSslOptions.trustStore.get().value.internal
+        val revocationMode = when {
+            config.crlCheckArtemisServer && config.crlCheckSoftFail -> RevocationConfig.Mode.SOFT_FAIL
+            config.crlCheckArtemisServer && !config.crlCheckSoftFail -> RevocationConfig.Mode.HARD_FAIL
+            else -> RevocationConfig.Mode.OFF
+        }
 
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore),
+                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore, revocationMode),
                         BrokerJaasLoginModule.NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
                 )
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
