@@ -3,6 +3,7 @@ package net.corda.node.services.rpc
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.debug
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
@@ -51,18 +52,18 @@ class ArtemisRpcBroker internal constructor(
     }
 
     override fun start() {
-        logger.debug("Artemis RPC broker is starting for: $addresses")
+        logger.debug { "Artemis RPC broker is starting for: $addresses" }
         try {
             server.start()
         } catch (e: IOException) {
-            logger.error("Unexpected IO error", e)
+            logger.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
             } else {
                 throw e
             }
         } catch (th: Throwable) {
-            logger.error("Unexpected error", th)
+            logger.error("Unexpected error starting message broker", th)
             throw th
         }
         logger.debug("Artemis RPC broker is started.")

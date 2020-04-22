@@ -532,7 +532,7 @@ open class Node(configuration: NodeConfiguration,
                 val url = try {
                     server.start().url
                 } catch (e: JdbcSQLNonTransientConnectionException) {
-                    log.error("Unexpected DB connectivity error", e)
+                    log.error("Unexpected database connectivity error", e)
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {

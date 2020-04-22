@@ -105,7 +105,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         try {
             activeMQServer.start()
         } catch (e: IOException) {
-            log.error("Unexpected IO error", e)
+            log.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
             } else {
