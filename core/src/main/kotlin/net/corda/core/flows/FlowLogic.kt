@@ -147,8 +147,9 @@ abstract class FlowLogic<out T> {
      * }
      * ```
      *
-     * Note, once the [isKilled] flag is set to `true` the flow will terminate once it reaches its next suspension point. Therefore, it is
-     * possible to write a flow that does not interact with the [isKilled] flag.
+     * Note, once the [isKilled] flag is set to `true` the flow may terminate once it reaches the next API function marked with the
+     * @[Suspendable] annotation. Therefore, it is possible to write a flow that does not interact with the [isKilled] flag while still
+     * terminating correctly.
      */
     val isKilled: Boolean get() = stateMachine.isKilled
 
