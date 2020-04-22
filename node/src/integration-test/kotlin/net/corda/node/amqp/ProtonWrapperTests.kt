@@ -424,6 +424,7 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(true).whenever(it).crlCheckArtemisServer
         }
         artemisConfig.configureWithDevSSLCertificate()
 

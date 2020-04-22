@@ -1594,7 +1594,7 @@
     <ID>TooGenericExceptionCaught:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ReconnectingObservable.kt$ReconnectingObservable.ReconnectingSubscriber$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RpcServerObservableSerializerTests.kt$RpcServerObservableSerializerTests$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SSLHelper.kt$LoggingTrustManagerWrapper$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:SSLHelper.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:SerializationOutputTests.kt$SerializationOutputTests$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:ShutdownManager.kt$ShutdownManager$t: Throwable</ID>
