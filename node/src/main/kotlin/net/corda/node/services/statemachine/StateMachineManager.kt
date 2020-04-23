@@ -87,22 +87,6 @@ interface StateMachineManager {
     fun killFlow(id: StateMachineRunId): Boolean
 
     /**
-     * Mark a flow as paused, this stops the flow from running next time the state machine manager starts up.
-     * Note this function will fail with the flow is currently running and so it should be used in combination with stop.
-     *
-     * @return whether the flow was successfully marked as paused.
-     */
-    fun markFlowAsPaused(id: StateMachineRunId): Boolean
-
-    /**
-     * Mark all flows as paused, this stops the flow from running next time the state machine manager starts up.
-     * Note this function will fail with the flow is currently running and so it should be used in combination with stop.
-     *
-     * @return a map with an entry for each flow marking whether or not the flow was successfully paused.
-     */
-    fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean>
-
-    /**
      * Start a paused flow.
      *
      * @return whether the flow was successfully started.

@@ -54,56 +54,6 @@ class FlowPausingTests {
     }
 
     @Test(timeout = 300_000)
-    fun `Hospitalized flow can be paused and resumed`() {
-        val flow = aliceNode.services.startFlow(HospitalizingFlow())
-        assertEquals(true, waitForHospitalizedCheckpoint(flow.id))
-        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
-        aliceNode.database.transaction {
-            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
-            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
-        }
-        val restartedAlice = mockNet.restartNode(aliceNode)
-        assertEquals(0, restartedAlice.smm.snapshot().size)
-        assertEquals(false, restartedAlice.smm.waitForFlowToBeHospitalised(flow.id))
-        restartedAlice.smm.unPauseFlow(flow.id)
-        assertEquals(true, restartedAlice.smm.waitForFlowToBeHospitalised(flow.id))
-    }
-
-    @Test(timeout = 300_000)
-    fun `Checkpointing flow can be paused and resumed if the statemachine is stopped`() {
-        val flow = aliceNode.services.startFlow(CheckpointingFlow())
-        aliceNode.smm.stop(0)
-        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
-        aliceNode.database.transaction {
-            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoint(flow.id)
-            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpoint!!.status)
-        }
-        val restartedAlice = mockNet.restartNode(aliceNode)
-        assertEquals(0, restartedAlice.smm.snapshot().size)
-        assertEquals(true, restartedAlice.smm.unPauseFlow(flow.id))
-        assertEquals(1, restartedAlice.smm.snapshot().size)
-        restartedAlice.smm.allStateMachines[0].stateMachine.resultFuture.getOrThrow()
-        restartedAlice.database.transaction {
-            assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `A paused flow cannot be resumed twice`() {
-        val flow = aliceNode.services.startFlow(CheckpointingFlow())
-        aliceNode.smm.stop(0)
-        assertEquals(true, aliceNode.smm.markFlowAsPaused(flow.id))
-        val restartedAlice = mockNet.restartNode(aliceNode)
-        assertEquals(true, restartedAlice.smm.unPauseFlow(flow.id))
-        assertEquals(false, restartedAlice.smm.unPauseFlow(flow.id))
-        assertEquals(1, restartedAlice.smm.snapshot().size)
-        restartedAlice.smm.allStateMachines[0].stateMachine.resultFuture.getOrThrow()
-        restartedAlice.database.transaction {
-            assertNull(restartedAlice.internals.checkpointStorage.getCheckpoint(flow.id))
-        }
-    }
-
-    @Test(timeout = 300_000)
     fun `All are paused when the node is restarted in safe start mode`() {
         val flows = ArrayList<FlowStateMachine<Unit>>()
         for (i in 1..NUMBER_OF_FLOWS) {
