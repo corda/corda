@@ -34,7 +34,7 @@ class ArrayListItrConcurrentModificationException(private val compression: Corda
     }
 
     @get:Rule
-    val serializationRule = CheckpointSerializationEnvironmentRule()
+    val serializationRule = CheckpointSerializationEnvironmentRule(inheritable = true)
     private lateinit var context: CheckpointSerializationContext
 
     @Before
