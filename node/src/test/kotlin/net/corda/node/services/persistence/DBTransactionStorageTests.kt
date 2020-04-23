@@ -29,6 +29,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import rx.plugins.RxJavaHooks
@@ -40,6 +41,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
+@Ignore
 class DBTransactionStorageTests {
     private companion object {
         val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
