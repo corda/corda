@@ -91,6 +91,7 @@ class HibernateConfiguration(
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("hibernate.jdbc.time_zone", "UTC")
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
