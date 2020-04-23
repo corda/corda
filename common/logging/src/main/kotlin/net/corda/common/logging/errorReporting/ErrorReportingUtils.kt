@@ -9,10 +9,10 @@ import org.slf4j.Logger
  *
  * @param error The error that has occurred.
  */
-fun Logger.report(error: ErrorCode<*, *>) = ErrorReporting().getReporter().report(error, this)
+fun Logger.report(error: ErrorCode<*>) = ErrorReporting().getReporter().report(error, this)
 
-internal fun ErrorCode<*, *>.formatCode() : String {
-    val namespaceString = this.namespace.toString().toLowerCase().replace("_", "-")
+internal fun ErrorCode<*>.formatCode() : String {
+    val namespaceString = this.code.namespace.toLowerCase().replace("_", "-")
     val codeString = this.code.toString().toLowerCase().replace("_", "-")
     return "$namespaceString-$codeString"
 }

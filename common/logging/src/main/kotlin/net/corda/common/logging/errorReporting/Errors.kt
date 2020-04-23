@@ -10,9 +10,11 @@ enum class NodeNamespaces {
 /**
  * Errors related to database connectivity
  */
-enum class NodeDatabaseErrors {
+enum class NodeDatabaseErrors : ErrorCodes {
     COULD_NOT_CONNECT,
     MISSING_DRIVER,
     FAILED_STARTUP,
-    PASSWORD_REQUIRED_FOR_H2
+    PASSWORD_REQUIRED_FOR_H2;
+
+    override val namespace = NodeNamespaces.DATABASE.toString()
 }

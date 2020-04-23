@@ -1,5 +1,6 @@
 package net.corda.common.logging.errorReporting
 
+import java.lang.UnsupportedOperationException
 import java.util.*
 
 /**
@@ -27,7 +28,9 @@ class ErrorReporting private constructor(private val localeString: String,
      * @param locale The locale tag to use when reporting errors, e.g. en-US
      */
     fun withLocale(locale: String) : ErrorReporting {
-        return ErrorReporting(locale, resourceLocation, contextProvider)
+        // Currently, if anything other than the default is used this is entirely untested. As a result, an exception is thrown here to
+        // indicate that this functionality is not ready at this point in time.
+        throw LocaleSettingUnsupportedException()
     }
 
     /**

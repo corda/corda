@@ -491,7 +491,7 @@ interface NodeStartupLogging {
 
     fun handleStartError(error: Throwable) {
         when {
-            error is ErrorCode<*, *> -> logger.report(error)
+            error is ErrorCode<*> -> logger.report(error)
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")

@@ -17,3 +17,11 @@ class NoContextProviderSuppliedException
  * Occurs if the error reporting framework has been initialized twice
  */
 class DoubleInitializationException : ErrorReportingException("Error reporting has previously been initialized")
+
+/**
+ * Occurs if a locale is set while initializing the error reporting framework.
+ *
+ * This is done as locale support has not yet been properly designed, and so using anything other than the default is untested.
+ */
+class LocaleSettingUnsupportedException :
+        ErrorReportingException("Setting a locale other than the default is not supported in the first release")

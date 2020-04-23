@@ -1,5 +1,9 @@
 package net.corda.common.logging.errorReporting
 
+import net.corda.common.logging.errorReporting.ResourceBundleProperties.ACTIONS_TO_FIX
+import net.corda.common.logging.errorReporting.ResourceBundleProperties.ALIASES
+import net.corda.common.logging.errorReporting.ResourceBundleProperties.MESSAGE_TEMPLATE
+import net.corda.common.logging.errorReporting.ResourceBundleProperties.SHORT_DESCRIPTION
 import java.text.MessageFormat
 import java.util.*
 
@@ -19,7 +23,7 @@ class ErrorResource private constructor(private val bundle: ResourceBundle,
          * @param resourceLocation The location in the JAR of the error code resource bundles
          * @param locale The locale to use for this resource
          */
-        fun fromErrorCode(errorCode: ErrorCode<*, *>, resourceLocation: String, locale: Locale) : ErrorResource {
+        fun fromErrorCode(errorCode: ErrorCode<*>, resourceLocation: String, locale: Locale) : ErrorResource {
             val resource = "$resourceLocation/${errorCode.formatCode()}"
             val bundle = ResourceBundle.getBundle(resource, locale)
             return ErrorResource(bundle, locale)
@@ -36,11 +40,6 @@ class ErrorResource private constructor(private val bundle: ResourceBundle,
             val bundle = ResourceBundle.getBundle(resource, locale, classLoader)
             return ErrorResource(bundle, locale)
         }
-
-        private const val MESSAGE_TEMPLATE = "errorTemplate"
-        private const val SHORT_DESCRIPTION = "shortDescription"
-        private const val ACTIONS_TO_FIX = "actionsToFix"
-        private const val ALIASES = "aliases"
     }
 
     private fun getProperty(propertyName: String) : String = bundle.getString(propertyName)
