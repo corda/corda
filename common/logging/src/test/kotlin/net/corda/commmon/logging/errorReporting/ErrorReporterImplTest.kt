@@ -2,10 +2,12 @@ package net.corda.commmon.logging.errorReporting
 
 import junit.framework.TestCase.assertEquals
 import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.ErrorCodes
 import net.corda.common.logging.errorReporting.ErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorReporterImpl
 import org.junit.After
 import org.junit.Test
+import org.junit.rules.TestName
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.slf4j.Logger
@@ -35,26 +37,25 @@ class ErrorReporterImplTest {
         TEST
     }
 
-    private enum class TestErrors {
+    private enum class TestErrors : ErrorCodes {
         CASE1,
         CASE2,
-        CASE_3
+        CASE_3;
+
+        override val namespace = TestNamespaces.TEST.toString()
     }
 
-    private val TEST_ERROR_1 = object : ErrorCode<TestNamespaces, TestErrors> {
-        override val namespace = TestNamespaces.TEST
+    private val TEST_ERROR_1 = object : ErrorCode<TestErrors> {
         override val code = TestErrors.CASE1
         override val parameters = listOf<Any>()
     }
 
-    private class TestError2(currentDate: Date) : ErrorCode<TestNamespaces, TestErrors> {
-        override val namespace = TestNamespaces.TEST
+    private class TestError2(currentDate: Date) : ErrorCode<TestErrors> {
         override val code = TestErrors.CASE2
         override val parameters: List<Any> = listOf("foo", 1, currentDate)
     }
 
-    private val TEST_ERROR_3 = object : ErrorCode<TestNamespaces, TestErrors> {
-        override val namespace = TestNamespaces.TEST
+    private val TEST_ERROR_3 = object : ErrorCode<TestErrors> {
         override val code = TestErrors.CASE_3
         override val parameters = listOf<Any>()
     }
