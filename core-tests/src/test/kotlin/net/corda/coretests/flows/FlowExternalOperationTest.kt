@@ -20,11 +20,13 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
+import org.junit.Ignore
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@Ignore("Excluding slow, irrelevant tests for ING build")
 class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)

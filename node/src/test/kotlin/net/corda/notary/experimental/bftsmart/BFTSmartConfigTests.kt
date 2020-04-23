@@ -3,9 +3,11 @@ package net.corda.notary.experimental.bftsmart
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.notary.experimental.bftsmart.BFTSmartConfigInternal.Companion.portIsClaimedFormat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
+@Ignore("Excluding slow, irrelevant tests for ING build")
 class BFTSmartConfigTests {
     @Test(timeout=300_000)
 	fun `replica arithmetic`() {
