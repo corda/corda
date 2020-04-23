@@ -28,7 +28,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./build-light.ing.sh
 
       - name: Publish to GitHub Packages
         run: ./gradlew publish
