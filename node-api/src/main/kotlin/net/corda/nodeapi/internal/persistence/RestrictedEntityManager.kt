@@ -7,16 +7,6 @@ import javax.persistence.metamodel.Metamodel
 
 /**
  * A delegate of [EntityManager] which disallows some operations.
- * We want to make sure users have a restricted access to administrative functions.
- * The blocked methods are the following:
- * - close()
- * - clear()
- * - getMetamodel()
- * - getTransaction()
- * - joinTransaction()
- * - lock(entity: Any?, lockMode: LockModeType?)
- * - lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?)
- * - setProperty(propertyName: String?, value: Any?)
  */
 class RestrictedEntityManager(private val delegate: EntityManager) : EntityManager by delegate {
 

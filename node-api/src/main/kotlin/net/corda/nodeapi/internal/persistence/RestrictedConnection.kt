@@ -6,25 +6,6 @@ import java.util.concurrent.Executor
 
 /**
  * A delegate of [Connection] which disallows some operations.
- * We want to make sure users have a restricted access to administrative functions.
- * The blocked methods are the following:
- * - abort(executor: Executor?)
- * - clearWarnings()
- * - close()
- * - commit()
- * - setSavepoint()
- * - setSavepoint(name : String?)
- * - releaseSavepoint(savepoint: Savepoint?)
- * - rollback()
- * - rollback(savepoint: Savepoint?)
- * - setCatalog(catalog : String?)
- * - setTransactionIsolation(level: Int)
- * - setTypeMap(map: MutableMap<String, Class<*>>?)
- * - setHoldability(holdability: Int)
- * - setSchema(schema: String?)
- * - setNetworkTimeout(executor: Executor?, milliseconds: Int)
- * - setAutoCommit(autoCommit: Boolean)
- * - setReadOnly(readOnly: Boolean)
  */
 @Suppress("TooManyFunctions")
 class RestrictedConnection(private val delegate : Connection) : Connection by delegate {
