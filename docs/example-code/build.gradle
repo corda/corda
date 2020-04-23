@@ -1,0 +1,112 @@
+apply plugin: 'kotlin'
+apply plugin: 'application'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.quasar-utils'
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+
+    compile {
+        // We already have a SLF4J implementation on our runtime classpath,
+        // and we don't need another one.
+        exclude group: "org.apache.logging.log4j"
+    }
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+    }
+}
+
+compileTestJava.dependsOn tasks.getByPath(':node:capsule:buildCordaJAR')
+
+dependencies {
+    // Cordformation needs a SLF4J implementation when executing the Network
+    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
+    // Use a much simpler SLF4J implementation here instead.
+    cordaRuntime "org.slf4j:slf4j-simple:$slf4j_version"
+
+    compile project(':core')
+    compile project(':client:jfx')
+    compile project(':node-driver')
+    compile project(':testing:testserver')
+
+    testCompile project(':test-utils')
+
+    compile "org.graphstream:gs-core:1.3"
+    compile("org.graphstream:gs-ui:1.3") {
+        exclude group: "bouncycastle"
+        exclude group: "junit"
+    }
+
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":testing:testserver:testcapsule:", configuration: 'runtimeArtifacts')
+
+    // CorDapps: dependent flows and services
+    compile project(':finance:contracts')
+    compile project(':finance:workflows')
+}
+
+mainClassName = "net.corda.docs.ClientRpcTutorialKt"
+
+task getClientRpcTutorial(type: CreateStartScripts) {
+    dependsOn(classes)
+    mainClassName = "net.corda.docs.ClientRpcTutorialKt"
+    applicationName = "client-rpc-tutorial"
+    defaultJvmOpts = []
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(getClientRpcTutorial)
+    fileMode = 0755
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    directory "./build/nodes"
+    node {
+        name "O=Notary Service,OU=corda,L=London,C=GB"
+        notary = [validating : true]
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10013"
+        }
+        webPort 10004
+        extraConfig = ['h2Settings.address' : 'localhost:10014']
+        cordapps = []
+    }
+    node {
+        name "O=Alice Corp,L=London,C=GB"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10016"
+        }
+        webPort 10007
+        extraConfig = ['h2Settings.address' : 'localhost:10017']
+        cordapps = []
+        rpcUsers = [
+                ['username' : "user",
+                 'password' : "password",
+                 'permissions' : ["StartFlow.net.corda.finance.flows.CashFlow"]]
+        ]
+    }
+}
