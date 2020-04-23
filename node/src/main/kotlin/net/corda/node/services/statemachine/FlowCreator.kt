@@ -36,6 +36,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
 
     class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
+
     inner class FlowCreatorFromCheckpoint(val id: StateMachineRunId,
                                         oldCheckpoint: Checkpoint,
                                         val isAnyCheckpointPersisted: Boolean,
@@ -52,7 +53,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
         }
 
         fun createFlow() : Flow? {
-            val fiber = getFibreFromCheckpoint() ?: return null
+            val fiber = getFiberFromCheckpoint() ?: return null
             val state = StateMachineState(
                 checkpoint = checkpoint,
                 pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -73,7 +74,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
             return Flow(fiber, resultFuture)
         }
 
-        private fun getFibreFromCheckpoint(): FlowStateMachineImpl<*>? {
+        private fun getFiberFromCheckpoint(): FlowStateMachineImpl<*>? {
             return when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
                     val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null

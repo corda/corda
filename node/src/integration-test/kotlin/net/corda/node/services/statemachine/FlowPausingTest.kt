@@ -112,33 +112,4 @@ class FlowPausingTest {
             session.send(pass)
         }
     }
-
-
-    @Test(timeout = 300_000)
-    fun TestSemaphore() {
-        val rpcUser = User("demo", "demo", setOf(Permissions.startFlow<HardRestartTest.Ping>(), Permissions.all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false)) {
-            val alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))).getOrThrow()
-            val semaphore = MySemaphore(0)
-            val flow = alice.rpc.startFlow(::WaitingFlow, semaphore)
-            println("Before Release")
-            semaphore.release()
-            println("After Release")
-            flow.returnValue.getOrThrow()
-            alice.stop()
-        }
-    }
-
-    @CordaSerializable
-    class MySemaphore(val permits: Int): Semaphore(permits)
-
-    @StartableByRPC
-    class WaitingFlow(@Transient val semaphore: MySemaphore): FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            logger.error("Before Acquire")
-            semaphore.acquire()
-            logger.error("After Acquire")
-        }
-    }
 }
