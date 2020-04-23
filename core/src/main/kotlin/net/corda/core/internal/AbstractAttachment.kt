@@ -8,7 +8,6 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.FileNotFoundException

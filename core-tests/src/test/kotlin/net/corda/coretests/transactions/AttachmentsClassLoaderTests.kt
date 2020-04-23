@@ -479,7 +479,7 @@ class AttachmentsClassLoaderTests {
         createClassloader(trustedAttachment).use {}
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `Load both JAR and ZIP archives into the attachments classloader`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val zip = importAttachment(fakeZIPAttachment("importantDoc.pdf", "I am a pdf!").inputStream(), "app", "importantDoc")

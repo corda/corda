@@ -157,12 +157,18 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             path.endsWith("/") -> false                     // Directories (packages) can overlap.
             targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
-            !isJARWithManifest -> false                            // Entry not a class and within a .zip file then no need to be unique.
+            isReferenceData(isJARWithManifest) -> false     // Entry not a class and within a .zip file then no need to be unique.
             !path.startsWith("meta-inf") -> true            // All files outside of META-INF need to be unique.
             (path == "meta-inf/services/net.corda.core.serialization.serializationwhitelist") -> false // Allow overlapping on the SerializationWhitelist.
             path.startsWith("meta-inf/services") -> true    // Services can't overlap to prevent a malicious party from injecting additional implementations of an interface used by a contract.
             else -> false                                          // This allows overlaps over any non-class files in "META-INF" - except 'services'.
         }
+    }
+
+    private fun isReferenceData(isJARWithManifest: Boolean): Boolean {
+        // For networks with a minimum platform version less than 7 the no overlap rule still
+        // applies for reference data, i.e. maintain previous behaviour.
+        return !isJARWithManifest && params.minimumPlatformVersion >= PlatformVersionSwitches.REMOVE_NO_OVERLAP_RULE_FOR_REFERENCE_DATA_ATTACHMENTS
     }
 
     private fun checkAttachments(attachments: List<Attachment>) {
