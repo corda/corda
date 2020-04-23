@@ -50,7 +50,7 @@ class ArtemisRpcTests {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+    private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test(timeout=300_000)
 	fun rpc_with_ssl_enabled() {
@@ -108,9 +108,9 @@ class ArtemisRpcTests {
         val jmxEnabled = false
 
         val artemisBroker: ArtemisBroker = if (useSslForBroker) {
-            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withSsl(nodeSSlconfig, address, adminAddress, brokerSslOptions!!, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
         } else {
-            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, jmxEnabled, baseDirectory, false)
+            ArtemisRpcBroker.withoutSsl(nodeSSlconfig, address, adminAddress, securityManager, maxMessageSize, null, jmxEnabled, baseDirectory, false)
         }
         artemisBroker.use { broker ->
             broker.start()

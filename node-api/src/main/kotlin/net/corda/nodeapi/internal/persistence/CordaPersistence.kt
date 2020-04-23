@@ -289,7 +289,13 @@ class CordaPersistence(
 
     override fun close() {
         // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
-        (_dataSource as? AutoCloseable)?.close()
+        val mayBeAutoClosableDataSource = _dataSource as? AutoCloseable
+        if(mayBeAutoClosableDataSource != null) {
+            log.info("Closing $mayBeAutoClosableDataSource")
+            mayBeAutoClosableDataSource.close()
+        } else {
+            log.warn("$_dataSource has not been properly closed")
+        }
     }
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
