@@ -25,7 +25,6 @@ import rx.observers.Subscribers
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.ByteArrayOutputStream
-import java.io.DataInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -640,25 +639,3 @@ fun Logger.warnOnce(warning: String) {
 
 const val JDK5_CLASS_FILE_FORMAT_MAJOR_VERSION = 49
 const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52
-const val CLASS_FILE_HEADER = -0x35014542
-fun verifyClassVersionNumber(classloader: ClassLoader, classes: List<String>, jarPath: URL? = null) {
-    classes.forEach {
-        val resourceAsStream = classloader.getResourceAsStream("${it.replace('.', '/')}.class") ?:
-            throw IllegalStateException("Could not find $it in class loader")
-        DataInputStream(resourceAsStream).use { dataStream -> checkClassVersionFromDataStream(it, dataStream, jarPath) }
-    }
-}
-
-private fun checkClassVersionFromDataStream(className: String, dataStream: DataInputStream, jarPath: URL?) {
-    val magic = dataStream.readInt()
-    if (magic != CLASS_FILE_HEADER) {
-        val jarDetails = jarPath?.let { "in jar file $it" } ?: ""
-        throw java.lang.IllegalStateException("Invalid Java class $className found $jarDetails")
-    }
-    dataStream.readShort() // minor version number
-    val major = dataStream.readShort().toInt()
-    if (major < JDK5_CLASS_FILE_FORMAT_MAJOR_VERSION || major > JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION) {
-        val jarDetails = jarPath?.let { "from jar file $it " } ?: ""
-        throw IllegalStateException("Class $className ${jarDetails}has an invalid version of $major")
-    }
-}

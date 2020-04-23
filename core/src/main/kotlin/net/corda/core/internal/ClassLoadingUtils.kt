@@ -18,8 +18,9 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  * - either be a Kotlin object or have a constructor with no parameters (or only optional ones)
  */
 @StubOutForDJVM
-fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
-    return getNamesOfClassesImplementing(classloader, clazz)
+fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
+                                                  classVersionRange: IntRange = IntRange.EMPTY): Set<T> {
+    return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
         .map { classloader.loadClass(it).asSubclass(clazz) }
         .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
 }
@@ -32,13 +33,20 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  * @return names of the identified classes.
  */
 @StubOutForDJVM
-fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<String> {
+fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
+                                           classVersionRange: IntRange = IntRange.EMPTY): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()
         .use { result ->
+            if (classVersionRange != IntRange.EMPTY) {
+                result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
+                    throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
+                            "has an unsupported class version of ${it.classfileMajorVersion}")
+                }
+            }
             result.getClassesImplementing(clazz.name)
                 .filterNot(ClassInfo::isAbstract)
                 .mapTo(LinkedHashSet(), ClassInfo::getName)
