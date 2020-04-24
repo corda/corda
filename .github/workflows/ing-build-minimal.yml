@@ -6,7 +6,7 @@ on:
       - ing-fork
 
 jobs:
-  build:
+  assemble:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -26,13 +26,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build with Gradle
-        run: ./gradlew build --stacktrace --build-cache
+        run: ./gradlew assemble --stacktrace --build-cache --parallel
         env:
           ING_MINIMAL_BUILD: 1
 
   publish:
     runs-on: ubuntu-latest
-    needs: build
+    needs: assemble
     steps:
       - uses: actions/checkout@v2
 
@@ -51,7 +51,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Publish to GitHub Packages (should never fail)
-        run: ./gradlew publish --continue --build-cache
+        run: ./gradlew publish --continue --build-cache --parallel
         env:
           ING_MINIMAL_BUILD: 1
           GITHUB_USERNAME: ${{ github.actor }}
