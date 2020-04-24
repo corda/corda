@@ -1,11 +1,9 @@
-name: ING Corda Fork Build
+name: ING Corda Fork Minimal Build
 
 on:
   push:
     branches:
       - ing-fork
-      - feature/*
-      - fix/*
 
 jobs:
   build:
@@ -28,10 +26,13 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle
 
       - name: Build with Gradle
-        run: ./build-light.ing.sh
+        run: ./gradlew build --stacktrace
+        env:
+          ING_MINIMAL_BUILD: 1
 
       - name: Publish to GitHub Packages
-        run: ./gradlew publish
+        run: ./gradlew publish --continue
         env:
+          ING_MINIMAL_BUILD: 1
           GITHUB_USERNAME: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

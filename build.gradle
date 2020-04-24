@@ -812,3 +812,144 @@ subprojects {
         }
     }
 }
+
+// This exists to reduce ING's CI build time when the envvar is set (can save up to 40 minutes)
+if (System.getenv('ING_MINIMAL_BUILD') != null) {
+    logger.info("Running minimal ING build due to the presence of envvar ING_MINIMAL_BUILD")
+
+
+    // Disable all tasks from the following projects:
+    ext.excludedProjects = [
+            ':samples',
+            ':samples:attachment-demo',
+            ':samples:attachment-demo:contracts',
+            ':samples:attachment-demo:workflows',
+            ':samples:bank-of-corda-demo',
+            ':samples:cordapp-configuration',
+            ':samples:cordapp-configuration:workflows',
+            ':samples:irs-demo',
+            ':samples:irs-demo:cordapp',
+            ':samples:irs-demo:web',
+            ':samples:network-verifier',
+            ':samples:network-verifier:contracts',
+            ':samples:network-verifier:workflows',
+            ':samples:notary-demo',
+            ':samples:notary-demo:contracts',
+            ':samples:notary-demo:workflows',
+            ':samples:simm-valuation-demo',
+            ':samples:simm-valuation-demo:contracts-states',
+            ':samples:simm-valuation-demo:flows',
+            ':samples:trader-demo',
+            ':samples:trader-demo:workflows-trader',
+
+            ':example-code',
+
+            ':docker',
+
+            ':docs',
+
+            ':client:jfx',
+
+            ':tools',
+            ':tools:blobinspector',
+            ':tools:bootstrapper',
+            ':tools:checkpoint-agent',
+            ':tools:demobench',
+            ':tools:explorer',
+            ':tools:explorer:capsule',
+            ':tools:graphs',
+            ':tools:loadtest',
+            ':tools:network-builder',
+            ':tools:worldmap',
+
+            ':experimental',
+            ':experimental:avalanche',
+            ':experimental:blobwriter',
+            ':experimental:corda-utils',
+            ':experimental:netparams',
+            ':experimental:nodeinfo',
+            ':experimental:quasar-hook',
+
+            ':isolated',
+
+            ':serialization-tests',
+
+            ':core-deterministic:testing',
+            ':core-deterministic:testing:data',
+            ':core-deterministic:testing:verifier',
+
+            ':testing',
+            ':testing:testserver',
+            ':testing:testserver:testcapsule:',
+            ':testing:testserver:testcapsule',
+            ':testing:cordapps',
+            ':testing:cordapps:dbfailure',
+            ':testing:cordapps:dbfailure:dbfcontracts',
+            ':testing:cordapps:dbfailure:dbfworkflows',
+            ':smoke-test-utils',
+
+            ':test-db'
+
+    ]
+
+    allprojects {
+        test {
+            exclude '*/**'
+        }
+
+        it.afterEvaluate {
+            logger.info("EXCL CHECK")
+            it.childProjects.each { entry ->
+                logger.info("Project:  $entry.value.path")
+                if (ext.excludedProjects.contains(entry.value.path)) {
+                    logger.info("YES EXCLUDED")
+                    entry.value.tasks.each {
+                        it.onlyIf { false }
+                    }
+                }
+
+                // TODO: make this recursive
+                // Some projects have child projects, we check those too
+                entry.value.childProjects.each { childEntry ->
+                    logger.info("Child:  $childEntry.value.path")
+                    if (ext.excludedProjects.contains(childEntry.value.path)) {
+                        logger.info("YES EXCLUDED")
+                        childEntry.value.tasks.each {
+                            it.onlyIf { false }
+                        }
+                    }
+                    // Some projects have grandChild projects, we check those too (should make this recursive...)
+                    childEntry.value.childProjects.each { grandChildEntry ->
+                        logger.info("GrandChild:  $grandChildEntry.value.path")
+                        if (ext.excludedProjects.contains(grandChildEntry.value.path)) {
+                            logger.info("YES EXCLUDED")
+                            grandChildEntry.value.tasks.each {
+                                it.onlyIf { false }
+                            }
+                        }
+
+                        // THere are even deeper levels to skip, so again, make recursive
+                    }
+                }
+
+
+            }
+        }
+
+        it.afterEvaluate {
+            if (it.tasks.findByName("integrationTest") != null) {
+                integrationTest {
+                    exclude '*/**'
+                }
+            }
+        }
+
+        it.afterEvaluate {
+            if (it.tasks.findByName("smokeTest") != null) {
+                smokeTest {
+                    exclude '*/**'
+                }
+            }
+        }
+    }
+}
