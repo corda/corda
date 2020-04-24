@@ -91,7 +91,7 @@ class HibernateConfiguration(
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
 
         schemas.forEach { schema ->
-            // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
+            // T0DO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
