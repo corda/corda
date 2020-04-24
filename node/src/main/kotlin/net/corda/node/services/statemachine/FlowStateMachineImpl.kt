@@ -494,8 +494,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents) { "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation " }
-            unpark(SERIALIZER_BLOCKER)
+
+            // If the flow has been aborted then do not resume the fiber
+            if (continuation != FlowContinuation.Abort) {
+                require(continuation == FlowContinuation.ProcessEvents) {
+                    "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation"
+                }
+                unpark(SERIALIZER_BLOCKER)
+            }
         }
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
