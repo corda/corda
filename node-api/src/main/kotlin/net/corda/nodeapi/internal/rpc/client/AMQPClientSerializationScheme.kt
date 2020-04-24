@@ -8,18 +8,8 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._rpcClientSerializationEnv
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
-import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
-import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
-import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.*
+import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 
 /**

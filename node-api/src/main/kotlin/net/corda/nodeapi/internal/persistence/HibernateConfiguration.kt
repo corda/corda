@@ -7,8 +7,11 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.factory.CordaSessionFactoryFactory
 import org.hibernate.SessionFactory
+import org.hibernate.cfg.Configuration
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
+import org.hibernate.boot.MetadataSources
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.service.UnknownUnwrapTypeException
 import java.lang.management.ManagementFactory
@@ -64,7 +67,36 @@ class HibernateConfiguration(
     fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
+        logger.info("Creating session factory for schemas: $schemas")
+        val serviceRegistry = BootstrapServiceRegistryBuilder().build()
+        val metadataSources = MetadataSources(serviceRegistry)
+
+        val hbm2dll: String =
+        if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+            "update"
+        } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+            "validate"
+        } else {
+            "none"
+        }
+
+        // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
+        // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
+                .setProperty("hibernate.format_sql", "true")
+                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+                .setProperty("javax.persistence.validation.mode", "none")
+                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("hibernate.jdbc.time_zone", "UTC")
+
+        schemas.forEach { schema ->
+            // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
+            schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
+        }
+
         val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(databaseConfig, schemas, customClassLoader, attributeConverters)
+        logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
         if (databaseConfig.exportHibernateJMXStatistics)
