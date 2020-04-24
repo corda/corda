@@ -6,11 +6,11 @@ import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
-import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -18,7 +18,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import java.util.*
+import java.util.LinkedList
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
