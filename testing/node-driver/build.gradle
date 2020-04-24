@@ -43,7 +43,7 @@ dependencies {
     compile "javax.servlet:javax.servlet-api:${servlet_version}"
 
     compile "org.gradle:gradle-tooling-api:${gradle.gradleVersion}"
-    
+
     // Jersey for JAX-RS implementation for use in Jetty
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
