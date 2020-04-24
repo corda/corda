@@ -84,6 +84,7 @@ tasks.named('javadoc', Javadoc) {
 }
 
 publish {
+    publishJavadoc = false
     name jar.baseName
 }
 
