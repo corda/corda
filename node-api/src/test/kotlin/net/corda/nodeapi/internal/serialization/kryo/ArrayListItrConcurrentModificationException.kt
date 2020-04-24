@@ -1,4 +1,4 @@
-package net.corda.node.serialization.kryo
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -6,11 +6,11 @@ import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.coretesting.internal.rigorousMock
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
-import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
