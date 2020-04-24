@@ -527,8 +527,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs)
-            notaryService = maybeStartNotaryService(myNotaryIdentity)
             installCordaServices()
+            notaryService = maybeStartNotaryService(myNotaryIdentity)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
