@@ -207,6 +207,7 @@ class KillFlowTest {
             val sessionTwo = initiateFlow(parties[1])
             // trigger sessions with 2 counter parties
             sessionOne.sendAndReceive<String>("what is up")
+            sessionOne.send("what is up 2")
             sessionTwo.sendAndReceive<String>("what is up")
             sessionTwo.send("what is up 2")
             lockA.release()
