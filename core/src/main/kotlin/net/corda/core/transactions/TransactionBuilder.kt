@@ -100,7 +100,7 @@ open class TransactionBuilder(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                references = references,
+                references = ArrayList(references),
                 serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
@@ -813,19 +813,19 @@ open class TransactionBuilder(
         this.privacySalt = privacySalt
     }
 
-    /** Returns an immutable list of input [StateRef]s. */
+    /** Returns a mutable copy of the list of input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    /** Returns an immutable list of reference input [StateRef]s. */
+    /** Returns a mutable copy of the list of reference input [StateRef]s. */
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
-    /** Returns an immutable list of attachment hashes. */
+    /** Returns a mutable copy of the list of attachment hashes. */
     fun attachments(): List<AttachmentId> = ArrayList(attachments)
 
-    /** Returns an immutable list of output [TransactionState]s. */
+    /** Returns a mutable copy of the list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s. */
+    /** Returns a mutable copy of the list of [Command]s. */
     fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
