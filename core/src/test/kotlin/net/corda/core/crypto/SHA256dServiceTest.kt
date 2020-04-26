@@ -5,7 +5,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class SHA256dServiceTest {
-    private val service: DigestService = DefaultDigestServiceFactory.getService(Algorithm.SHA256d())
+    private val service: DigestService = SHA256dDigestService
 
     @Test(timeout = 300_000)
     fun testHashBytes() {
@@ -30,7 +30,7 @@ class SHA256dServiceTest {
     }
 
     @Test(timeout = 300_000)
-    fun `sha256 does not retain state between same-thread invocations`() {
+    fun `sha256d does not retain state between same-thread invocations`() {
         assertEquals(service.hash("abc"), service.hash("abc"))
     }
 }

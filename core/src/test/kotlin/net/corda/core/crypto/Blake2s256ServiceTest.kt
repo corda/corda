@@ -7,8 +7,8 @@ import org.junit.Assert
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class Blake2s256ServiceTest {
-    private val service: DigestService = DefaultDigestServiceFactory.getService(Algorithm.BLAKE2s256())
+class Blake2s256DigestServiceTest {
+    private val service: DigestService = BLAKE2s256DigestService
 
     @Test(timeout = 300_000)
     fun testBlankHash() {
@@ -41,7 +41,7 @@ class Blake2s256ServiceTest {
     }
 
     @Test(timeout = 300_000)
-    fun `Blake2b256 does not retain state between same-thread invocations`() {
+    fun `Blake2s256 does not retain state between same-thread invocations`() {
         assertEquals(service.hash("abc"), service.hash("abc"))
     }
 }

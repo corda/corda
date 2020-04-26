@@ -5,7 +5,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class Blake2b256ServiceTest {
-    private val service: DigestService = DefaultDigestServiceFactory.getService(Algorithm.BLAKE2b256())
+    private val service: DigestService = BLAKE2b256DigestService
 
     @Test(timeout = 300_000)
     fun testHashBytes() {

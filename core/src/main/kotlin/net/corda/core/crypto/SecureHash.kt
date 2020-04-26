@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.crypto
 
 import io.netty.util.concurrent.FastThreadLocal
@@ -20,21 +21,21 @@ import java.util.function.Supplier
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** BLAKE2s256  Generated hash is fixed size, 256-bits (32-bytes). */
-    class BLAKE2s256(bytes: ByteArray, private val digestServiceFactory: DigestServiceFactory = DefaultDigestServiceFactory) : SecureHash(bytes) {
+    class BLAKE2s256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
 
-        override fun hashConcat(other: SecureHash) = digestServiceFactory.getService(Algorithm.BLAKE2s256()).hash(this.bytes + other.bytes)
+        override fun hashConcat(other: SecureHash) = BLAKE2s256DigestService.hash(this.bytes + other.bytes)
     }
 
     /** BLAKE2b256  Generated hash is fixed size, 256-bits (32-bytes). */
-    class BLAKE2b256(bytes: ByteArray, private val digestServiceFactory: DigestServiceFactory = DefaultDigestServiceFactory) : SecureHash(bytes) {
+    class BLAKE2b256(bytes: ByteArray) : SecureHash(bytes) {
         init {
             require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
 
-        override fun hashConcat(other: SecureHash) = digestServiceFactory.getService(Algorithm.BLAKE2b256()).hash(this.bytes + other.bytes)
+        override fun hashConcat(other: SecureHash) = BLAKE2b256DigestService.hash(this.bytes + other.bytes)
     }
 
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -73,7 +74,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
      * @param prefixLen The number of characters in the prefix.
      */
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
-
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
