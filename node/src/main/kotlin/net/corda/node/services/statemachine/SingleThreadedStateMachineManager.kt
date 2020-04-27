@@ -212,7 +212,7 @@ class SingleThreadedStateMachineManager(
             check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
         }
         flowHospital.close()
-        timeoutScheduler.shutdown()
+        scheduledFutureExecutor.shutdown()
         scheduler.shutdown()
     }
 
