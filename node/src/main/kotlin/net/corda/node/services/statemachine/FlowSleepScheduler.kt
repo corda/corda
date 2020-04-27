@@ -52,7 +52,6 @@ internal class FlowSleepScheduler(private val smm: StateMachineManagerInternal, 
                     log.debug { "Cancelling the sleep scheduled future for flow ${currentState.flowLogic.runId}" }
                     cancelIfRunning()
                     currentState.future = null
-                    currentState.isWaitingForFuture = false
                 }
             }
 
