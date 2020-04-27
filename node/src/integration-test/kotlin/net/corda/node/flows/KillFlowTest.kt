@@ -92,7 +92,6 @@ class KillFlowTest {
     fun `killing a flow that is sleeping ends the flow immediately`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurdered)
                 Thread.sleep(5000)
