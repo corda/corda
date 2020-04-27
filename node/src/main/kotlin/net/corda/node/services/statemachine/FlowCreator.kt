@@ -84,7 +84,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
                     tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
                 }
                 // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-                is FlowState.Completed -> {
+                else -> {
                     return null
                 }
             }

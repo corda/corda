@@ -204,7 +204,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext)
                 fiber to fiber.logic
             }
-            is FlowState.Completed -> {
+            else -> {
                 throw IllegalStateException("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
             }
         }

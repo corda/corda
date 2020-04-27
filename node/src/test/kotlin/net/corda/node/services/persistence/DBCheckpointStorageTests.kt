@@ -6,6 +6,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -748,6 +749,32 @@ class DBCheckpointStorageTests {
         System.getProperty("line.separator").length == 2 -> // Windows
             152
         else -> throw IllegalStateException("Unknown line.separator")
+    }
+
+    @Test(timeout = 300_000)
+    fun `paused checkpoints can be extracted`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        val pausedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, pausedCheckpoint, serializedFlowState)
+        }
+
+        database.transaction {
+            val (extractedId, extractedCheckpoint)  = checkpointStorage.getPausedCheckpoints().toList().single()
+            assertEquals(id, extractedId)
+            //We don't extract the result or the flowstate from a paused checkpoint
+            assertEquals(null, extractedCheckpoint.serializedFlowState)
+            assertEquals(null, extractedCheckpoint.result)
+
+            assertEquals(pausedCheckpoint.status, extractedCheckpoint.status)
+            assertEquals(pausedCheckpoint.progressStep, extractedCheckpoint.progressStep)
+            assertEquals(pausedCheckpoint.flowIoRequest, extractedCheckpoint.flowIoRequest)
+
+            val deserialisedCheckpoint = extractedCheckpoint.deserialize()
+            assertEquals(pausedCheckpoint.checkpointState, deserialisedCheckpoint.checkpointState)
+            assertEquals(FlowState.Paused, deserialisedCheckpoint.flowState)
+        }
     }
 
     private fun newCheckpointStorage() {

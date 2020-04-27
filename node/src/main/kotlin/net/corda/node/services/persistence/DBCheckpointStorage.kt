@@ -328,14 +328,44 @@ class DBCheckpointStorage(
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
-    
+
     @VisibleForTesting
     internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
+    private class DBPausedFields(
+        val id: String,
+        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+        val status: FlowStatus,
+        val progressStep: String?,
+        val ioRequestType: String?,
+        val compatible: Boolean
+    ) {
+        fun toSerializedCheckpoint(): Checkpoint.Serialized {
+            return Checkpoint.Serialized(
+                    serializedCheckpointState = SerializedBytes(checkpoint),
+                    serializedFlowState = null,
+                    // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
+                    errorState = ErrorState.Clean,
+                    result = null,
+                    status = status,
+                    progressStep = progressStep,
+                    flowIoRequest = ioRequestType,
+                    compatible = compatible
+            )
+        }
+    }
+
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        return getAllCheckpointsWithStatus(FlowStatus.PAUSED)
+        val session = currentDBSession()
+        val jpqlQuery = "select new ${DBPausedFields::class.java.name}(f.id, c.checkpoint, f.status, f.progressStep, f.ioRequestType, " +
+                "f.compatible) from ${DBFlowCheckpoint::class.java.name} f join " +
+                "${DBFlowCheckpointBlob::class.java.name} c on f.blob = c.id"
+        val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
+        return query.resultList.stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
     }
 
     override fun getHospitalizedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
