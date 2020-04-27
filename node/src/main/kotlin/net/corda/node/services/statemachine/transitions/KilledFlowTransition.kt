@@ -41,11 +41,14 @@ class KilledFlowTransition(
             if (!startingState.isFlowResumed) {
                 actions.add(Action.CreateTransaction)
             }
-
-            // The checkpoint and soft locks are removed directly in [StateMachineManager.killFlow]
+            // The checkpoint and soft locks are also removed directly in [StateMachineManager.killFlow]
+            if(startingState.isAnyCheckpointPersisted) {
+                actions.add(Action.RemoveCheckpoint(context.id))
+            }
             actions.addAll(
                 arrayOf(
                     Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                    Action.ReleaseSoftLocks(context.id.uuid),
                     Action.CommitTransaction,
                     Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                     Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
