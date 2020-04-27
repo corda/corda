@@ -61,7 +61,8 @@ private val DEFAULT_BASE_TYPES = BaseLocalTypes(
     mapClass = Map::class.java,
     stringClass = String::class.java,
     isEnum = Predicate { clazz -> clazz.isEnum },
-    enumConstants = Function { clazz ->
+    enumConstants = Function { clazz -> clazz.enumConstants },
+    enumConstantNames = Function { clazz ->
         (clazz as Class<out Enum<*>>).enumConstants.map(Enum<*>::name)
     }
 )

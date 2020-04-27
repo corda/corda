@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.model.BaseLocalTypes
 import org.apache.qpid.proton.codec.Data
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
@@ -34,6 +35,7 @@ import java.lang.reflect.Type
 class EnumEvolutionSerializer(
         override val type: Type,
         factory: LocalSerializerFactory,
+        private val baseLocalTypes: BaseLocalTypes,
         private val conversions: Map<String, String>,
         private val ordinals: Map<String, Int>) : AMQPSerializer<Any> {
     override val typeDescriptor = factory.createDescriptor(type)
@@ -46,7 +48,7 @@ class EnumEvolutionSerializer(
         val converted = conversions[enumName] ?: throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")
         val ordinal = ordinals[converted] ?: throw AMQPNotSerializableException(type, "Ordinal not found for enum value $type::$converted")
 
-        return type.asClass().enumConstants[ordinal]
+        return baseLocalTypes.enumConstants.apply(type.asClass())[ordinal]
     }
 
     override fun writeClassInfo(output: SerializationOutput) {
