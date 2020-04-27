@@ -1178,12 +1178,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                 manager.flush()
                             } else {
                                 connection.rollback(savepoint)
-                                // mark flow as errored?
                             }
                         }
                     } catch (e: PersistenceException) {
-                        // do we need this if statement?
-                        // can we assume that receiving a persistence exception is enough to denote a rollback?
                         if (manager.transaction.rollbackOnly) {
                             connection.rollback(savepoint)
                         }
