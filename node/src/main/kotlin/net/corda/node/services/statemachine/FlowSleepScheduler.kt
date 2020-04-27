@@ -48,7 +48,7 @@ internal class FlowSleepScheduler(private val smm: StateMachineManagerInternal, 
     fun cancel(currentState: StateMachineState) {
         (currentState.checkpoint.flowState as? FlowState.Started)?.let { flowState ->
             if (currentState.isWaitingForFuture && flowState.flowIORequest is FlowIORequest.Sleep) {
-                (currentState.future as? ScheduledFuture<Unit>)?.run {
+                (currentState.future as? ScheduledFuture)?.run {
                     log.debug { "Cancelling the sleep scheduled future for flow ${currentState.flowLogic.runId}" }
                     cancelIfRunning()
                     currentState.future = null
