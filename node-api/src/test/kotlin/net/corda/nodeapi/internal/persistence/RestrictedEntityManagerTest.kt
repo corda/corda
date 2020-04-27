@@ -1,12 +1,17 @@
 package net.corda.nodeapi.internal.persistence
 
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import org.junit.Test
 import javax.persistence.EntityManager
+import javax.persistence.EntityTransaction
 import javax.persistence.LockModeType
+import kotlin.test.assertTrue
 
-class RestrtictedEntityManagerTest {
+class RestrictedEntityManagerTest {
     private val entitymanager = mock<EntityManager>()
+    private val transaction = mock<EntityTransaction>()
     private val restrictedEntityManager = RestrictedEntityManager(entitymanager)
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
@@ -14,7 +19,7 @@ class RestrtictedEntityManagerTest {
         restrictedEntityManager.close()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout = 300_000)
     fun testClear() {
         restrictedEntityManager.clear()
     }
@@ -24,9 +29,10 @@ class RestrtictedEntityManagerTest {
         restrictedEntityManager.getMetamodel()
     }
 
-    @Test(expected = UnsupportedOperationException::class, timeout=300_000)
+    @Test(timeout = 300_000)
     fun testGetTransaction() {
-        restrictedEntityManager.getTransaction()
+        whenever(entitymanager.transaction).doReturn(transaction)
+        assertTrue(restrictedEntityManager.transaction is RestrictedEntityTransaction)
     }
 
     @Test(expected = UnsupportedOperationException::class, timeout=300_000)
