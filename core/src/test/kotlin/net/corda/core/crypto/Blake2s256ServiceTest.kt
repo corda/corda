@@ -1,8 +1,5 @@
 package net.corda.core.crypto
 
-import net.corda.core.utilities.hexToByteArray
-import org.bouncycastle.crypto.digests.Blake2sDigest
-import org.bouncycastle.jcajce.provider.digest.BCMessageDigest
 import org.junit.Assert
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -21,13 +18,13 @@ class Blake2s256DigestServiceTest {
     @Test(timeout = 300_000)
     fun testHashBytes() {
         val hash = service.hash(byteArrayOf(0x64, -0x13, 0x42, 0x3a))
-        Assert.assertEquals("B79E85986C249B4CAAF61D4308DC4A7BF1D07F684D7A42A6B17D9F3D9F2962E4", hash.toString())
+        Assert.assertEquals("9EEA14092257E759ADAA56539A7A88DA1F68F03ABE3D9552A21D4731F4E6ECA0", hash.toString())
     }
 
     @Test(timeout = 300_000)
     fun testHashString() {
         val hash = service.hash("test")
-        Assert.assertEquals("928B20366943E2AFD11EBC0EAE2E53A93BF177A4FCF35BCC64D503704E65E202", hash.toString())
+        Assert.assertEquals("AB76E8F7EEA1968C183D343B756EC812E47D4BC7A3F061F4DDE8948B3E05DAF2", hash.toString())
     }
 
     @Test(timeout = 300_000)

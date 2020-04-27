@@ -1,9 +1,13 @@
 package net.corda.core.crypto
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SingletonSerializeAsToken
 import org.bouncycastle.crypto.digests.Blake2sDigest
 import org.bouncycastle.jcajce.provider.digest.Blake2b
 
+@CordaSerializable
 interface DigestService {
     /**
      * The length of the digest in bytes
@@ -37,6 +41,7 @@ interface DigestService {
     val zeroHash: SecureHash
 }
 
+@CordaSerializable
 object SHA256DigestService : DigestService {
     override val digestLength = 32
     override fun hash(bytes: ByteArray) = SecureHash.sha256(bytes)
@@ -45,6 +50,7 @@ object SHA256DigestService : DigestService {
     override val zeroHash = SecureHash.zeroHash
 }
 
+@CordaSerializable
 object SHA256dDigestService : DigestService {
     override val digestLength = 32
     override fun hash(bytes: ByteArray) = SecureHash.sha256Twice(bytes)
@@ -53,6 +59,7 @@ object SHA256dDigestService : DigestService {
     override val zeroHash = SecureHash.zeroHash
 }
 
+@CordaSerializable
 object BLAKE2s256DigestService : DigestService {
     private val blake2s256 = Blake2sDigest(null, 32, null, "12345678".toByteArray())
     override val digestLength: Int by lazy { blake2s256.digestSize }
@@ -69,10 +76,11 @@ object BLAKE2s256DigestService : DigestService {
     }
 
     override fun hash(str: String): SecureHash = hash(str.toByteArray())
-    override val allOnesHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 255.toByte() })
-    override val zeroHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 0.toByte() })
+    override val allOnesHash = SecureHash.BLAKE2s256(ByteArray(digestLength) { 255.toByte() })
+    override val zeroHash = SecureHash.BLAKE2s256(ByteArray(digestLength) { 0.toByte() })
 }
 
+@CordaSerializable
 object BLAKE2b256DigestService : DigestService {
     private val blake2b256 = Blake2b.Blake2b256()
     override val digestLength: Int by lazy { blake2b256.digestLength }
@@ -91,8 +99,10 @@ object BLAKE2b256DigestService : DigestService {
  */
 @DeleteForDJVM
 fun SHA256dDigestService.random() = SecureHash.randomSHA256()
+
 @DeleteForDJVM
 fun BLAKE2b256DigestService.random() = SecureHash.BLAKE2b256(secureRandomBytes(32))
+
 @DeleteForDJVM
 fun BLAKE2s256DigestService.random() = SecureHash.BLAKE2s256(secureRandomBytes(32))
 
