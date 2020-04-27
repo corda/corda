@@ -36,7 +36,6 @@ function generateGenericCZConfig() {
     : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
     : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
     : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
-    : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
     : ${RPC_USER=:? '$RPC_USER, the name of the primary rpc user must be set as environment variable'}
 
 
