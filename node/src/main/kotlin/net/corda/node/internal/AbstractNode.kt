@@ -1188,6 +1188,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                             connection.rollback(savepoint)
                         }
                         throw e
+                    } finally {
+                        manager.close()
                     }
                 }
             }
