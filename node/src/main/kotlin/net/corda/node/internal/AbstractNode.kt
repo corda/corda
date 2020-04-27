@@ -1201,8 +1201,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 block(savepoint)
             } finally {
                 // Release the save point even if we occur an error
-                connection.releaseSavepoint(savepoint)
+                if (savepoint.supportsReleasing()) {
+                    connection.releaseSavepoint(savepoint)
+                }
             }
+        }
+
+        /**
+         * Not all databases support releasing of savepoints.
+         * The type of savepoints are referenced by string names since we do not have access to the JDBC drivers
+         * at compile time.
+         */
+        private fun Savepoint.supportsReleasing(): Boolean {
+            return this::class.simpleName != "SQLServerSavepoint" && this::class.simpleName != "OracleSavepoint"
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
