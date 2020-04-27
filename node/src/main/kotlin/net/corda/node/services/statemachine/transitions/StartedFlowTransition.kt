@@ -92,8 +92,8 @@ class StartedFlowTransition(
         // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
         return if (!startingState.isWaitingForFuture) {
             builder {
-                actions.add(Action.SleepUntil(flowIORequest.wakeUpAfter))
                 currentState = currentState.copy(isWaitingForFuture = true)
+                actions.add(Action.SleepUntil(currentState, flowIORequest.wakeUpAfter))
                 FlowContinuation.ProcessEvents
             }
         } else {

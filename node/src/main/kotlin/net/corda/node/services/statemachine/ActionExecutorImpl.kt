@@ -170,7 +170,11 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSleepUntil(fiber: FlowFiber, action: Action.SleepUntil) {
-        stateMachineManager.scheduleFlowSleep(fiber.id, Duration.between(services.clock.instant(), action.time))
+        stateMachineManager.scheduleFlowSleep(
+            fiber,
+            action.currentState,
+            Duration.between(services.clock.instant(), action.time)
+        )
     }
 
     @Suspendable

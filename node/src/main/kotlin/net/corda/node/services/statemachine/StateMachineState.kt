@@ -11,6 +11,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
+import java.util.concurrent.Future
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -40,7 +41,8 @@ data class StateMachineState(
     val flowLogic: FlowLogic<*>,
     val pendingDeduplicationHandlers: List<DeduplicationHandler>,
     val isFlowResumed: Boolean,
-    val isWaitingForFuture: Boolean,
+    var isWaitingForFuture: Boolean,
+    var future: Future<*>?,
     val isAnyCheckpointPersisted: Boolean,
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,

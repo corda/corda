@@ -533,6 +533,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override val stateMachine get() = getTransientField(TransientValues::stateMachine)
 
+    override val instanceId: StateMachineInstanceId get() = StateMachineInstanceId(id, super.getId())
+
     /**
      * Records the duration of this flow – from call() to completion or failure.
      * Note that the duration will include the time the flow spent being parked, and not just the total

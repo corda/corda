@@ -18,6 +18,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
@@ -55,6 +56,7 @@ import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
+import rx.subjects.PublishSubject
 import java.lang.Integer.min
 import java.security.SecureRandom
 import java.time.Duration
@@ -88,6 +90,27 @@ class SingleThreadedStateMachineManager(
         private val logger = contextLogger()
     }
 
+    private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
+
+    private data class ScheduledTimeout(
+        /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
+        val scheduledFuture: ScheduledFuture<*>,
+        /** Specifies the number of times this flow has been retried. */
+        val retryCount: Int = 0
+    )
+
+    // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
+    // property.
+    private class InnerState {
+        val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
+        /** True if we're shutting down, so don't resume anything. */
+        var stopping = false
+        val flows = HashMap<StateMachineRunId, Flow>()
+        val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
+        /** Flows scheduled to be retried if not finished within the specified timeout period. */
+        val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
+    }
+
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
@@ -99,7 +122,7 @@ class SingleThreadedStateMachineManager(
     private val metrics = serviceHub.monitoringService.metrics
     private val sessionToFlow = ConcurrentHashMap<SessionId, StateMachineRunId>()
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
-    private val flowSleepScheduler = FlowSleepScheduler(scheduledFutureExecutor)
+    private val flowSleepScheduler = FlowSleepScheduler(this, scheduledFutureExecutor)
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
@@ -289,7 +312,7 @@ class SingleThreadedStateMachineManager(
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         mutex.locked {
             cancelTimeoutIfScheduled(flowId)
-            cancelFlowSleep(flowId)
+            cancelFlowSleep(lastState)
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -621,6 +644,7 @@ class SingleThreadedStateMachineManager(
             pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
             isFlowResumed = false,
             isWaitingForFuture = false,
+            future = null,
             isAnyCheckpointPersisted = existingCheckpoint != null,
             isStartIdempotent = isStartIdempotent,
             isRemoved = false,
@@ -645,12 +669,23 @@ class SingleThreadedStateMachineManager(
         mutex.locked { cancelTimeoutIfScheduled(flowId) }
     }
 
-    override fun scheduleFlowSleep(flowId: StateMachineRunId, duration: Duration) {
-        mutex.locked { flowSleepScheduler.sleep(this, flowId, duration) }
+    override fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration) {
+        flowSleepScheduler.sleep(fiber, currentState, duration)
     }
 
-    private fun InnerState.cancelFlowSleep(flowId: StateMachineRunId) {
-        flowSleepScheduler.cancel(this, flowId)
+    override fun scheduleFlowWakeUp(instanceId: StateMachineInstanceId) {
+        mutex.locked {
+            flows[instanceId.runId]?.let { flow ->
+                // Only schedule a wake up event if the fiber the flow is executing on has not changed
+                if (flow.fiber.instanceId == instanceId) {
+                    flowSleepScheduler.scheduleWakeUp(flow.fiber)
+                }
+            }
+        }
+    }
+
+    private fun cancelFlowSleep(currentState: StateMachineState) {
+        flowSleepScheduler.cancel(currentState)
     }
 
     /**
@@ -786,6 +821,7 @@ class SingleThreadedStateMachineManager(
                     pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                     isFlowResumed = false,
                     isWaitingForFuture = false,
+                    future = null,
                     isAnyCheckpointPersisted = isAnyCheckpointPersisted,
                     isStartIdempotent = isStartIdempotent,
                     isRemoved = false,
@@ -811,6 +847,7 @@ class SingleThreadedStateMachineManager(
                     pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
                     isFlowResumed = false,
                     isWaitingForFuture = false,
+                    future = null,
                     isAnyCheckpointPersisted = isAnyCheckpointPersisted,
                     isStartIdempotent = isStartIdempotent,
                     isRemoved = false,
