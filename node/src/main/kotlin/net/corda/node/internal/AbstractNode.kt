@@ -1186,6 +1186,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
+        /**
+         * Exposes the database connection as a [RestrictedConnection] to the users.
+         */
         override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
