@@ -1,6 +1,8 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -11,6 +13,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
@@ -20,12 +23,14 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -108,7 +113,84 @@ class KillFlowTest {
             }
         }
     }
-    
+
+    @Test(timeout = 300_000)
+    fun `killing a flow suspended in send + receive + sendAndReceive ends the flow immediately`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val bobParty = bob.nodeInfo.singleIdentity()
+            bob.stop()
+            val terminated = (bob as OutOfProcess).process.waitFor(30, TimeUnit.SECONDS)
+            if (terminated) {
+                alice.rpc.run {
+                    killFlowAndAssert(::AFlowThatGetsMurderedTryingToSendAMessage, bobParty)
+                    killFlowAndAssert(::AFlowThatGetsMurderedTryingToReceiveAMessage, bobParty)
+                    killFlowAndAssert(::AFlowThatGetsMurderedTryingToSendAndReceiveAMessage, bobParty)
+                }
+            } else {
+                throw IllegalStateException("The node should have terminated!")
+            }
+        }
+    }
+
+    private inline fun <reified T : FlowLogic<Unit>> CordaRPCOps.killFlowAndAssert(flow: (Party) -> T, party: Party) {
+        val handle = startFlow(flow, party)
+        Thread.sleep(5000)
+        val time = measureTimeMillis {
+            killFlow(handle.id)
+            assertFailsWith<KilledFlowException> {
+                handle.returnValue.getOrThrow(1.minutes)
+            }
+        }
+        assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
+        assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
+        val checkpoints = startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+        assertEquals(1, checkpoints)
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a flow suspended in waitForLedgerCommit ends the flow immediately`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.let { rpc ->
+                val handle = rpc.startFlow(::AFlowThatGetsMurderedTryingToWaitForATransaction)
+                Thread.sleep(5000)
+                val time = measureTimeMillis {
+                    rpc.killFlow(handle.id)
+                    assertFailsWith<KilledFlowException> {
+                        handle.returnValue.getOrThrow(1.minutes)
+                    }
+                }
+                assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
+                assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a flow suspended in await ends the flow immediately`() {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.let { rpc ->
+                val handle = rpc.startFlow(::AFlowThatGetsMurderedTryingToAwaitAFuture)
+                Thread.sleep(5000)
+                val time = measureTimeMillis {
+                    rpc.killFlow(handle.id)
+                    assertFailsWith<KilledFlowException> {
+                        handle.returnValue.getOrThrow(1.minutes)
+                    }
+                }
+                assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
+                assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
+            }
+        }
+    }
+
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties if it was suspended`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
@@ -253,6 +335,84 @@ class KillFlowTest {
         @Suspendable
         override fun call() {
             sleep(1.minutes)
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedTryingToSendAMessage(private val party: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            session.send("hi")
+        }
+    }
+
+    @InitiatedBy(AFlowThatGetsMurderedTryingToSendAMessage::class)
+    class AFlowThatGetsMurderedTryingToSendAMessageResponder(private val session: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            session.send("haha")
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedTryingToReceiveAMessage(private val party: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            session.receive<String>()
+        }
+    }
+
+    @InitiatedBy(AFlowThatGetsMurderedTryingToReceiveAMessage::class)
+    class AFlowThatGetsMurderedTryingToReceiveAMessageResponder(private val session: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            session.receive<String>()
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedTryingToSendAndReceiveAMessage(private val party: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            session.sendAndReceive<String>("hi")
+        }
+    }
+
+    @InitiatedBy(AFlowThatGetsMurderedTryingToSendAndReceiveAMessage::class)
+    class AFlowThatGetsMurderedTryingToSendAndReceiveAMessageResponder(private val session: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            session.receive<String>()
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedTryingToWaitForATransaction : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            waitForLedgerCommit(SecureHash.randomSHA256())
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class AFlowThatGetsMurderedTryingToAwaitAFuture : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            await(MyFuture())
+        }
+
+        class MyFuture : FlowExternalOperation<Unit> {
+            override fun execute(deduplicationId: String) {
+                Thread.sleep(3.minutes.toMillis())
+            }
         }
     }
 
