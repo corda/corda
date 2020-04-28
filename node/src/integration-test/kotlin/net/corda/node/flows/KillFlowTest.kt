@@ -1,6 +1,7 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowExternalOperation
 import net.corda.core.flows.FlowLogic
@@ -15,20 +16,30 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.CashIssueFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.Configurator
+import org.assertj.core.api.Assertions
 import org.junit.Before
 import org.junit.Test
+import java.time.Duration
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
@@ -254,6 +265,45 @@ class KillFlowTest {
             assertEquals(1, bobCheckpoints)
             val charlieCheckpoints = charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
             assertEquals(1, charlieCheckpoints)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `killing a flow releases soft lock`() {
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val alice = startNode(
+                providedName = ALICE_NAME,
+                defaultParameters = NodeParameters(additionalCordapps = FINANCE_CORDAPPS)
+            ).getOrThrow()
+            alice.rpc.let { rpc ->
+                val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
+                val cash = rpc.startFlow(
+                    ::CashIssueFlow,
+                    10.DOLLARS,
+                    issuerRef,
+                    defaultNotaryIdentity
+                ).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
+                val flow = rpc.startFlow(::SoftLock, cash.ref, Duration.ofMinutes(5))
+
+                var locked = false
+                while (!locked) {
+                    try {
+                        rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow()
+                    } catch (e: StatesNotAvailableException) {
+                        locked = true
+                    }
+                }
+
+                val killed = rpc.killFlow(flow.id)
+                assertTrue(killed)
+                Assertions.assertThatCode {
+                    rpc.startFlow(
+                        ::SoftLock,
+                        cash.ref,
+                        Duration.ofSeconds(1)
+                    ).returnValue.getOrThrow()
+                }.doesNotThrowAnyException()
+            }
         }
     }
 
@@ -523,6 +573,16 @@ class KillFlowTest {
                 locks[ourIdentity.name]!!.release()
                 throw e
             }
+        }
+    }
+
+    @StartableByRPC
+    class SoftLock(private val stateRef: StateRef, private val duration: Duration) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            logger.info("Soft locking state with hash $stateRef...")
+            serviceHub.vaultService.softLockReserve(runId.uuid, NonEmptySet.of(stateRef))
+            sleep(duration)
         }
     }
 
