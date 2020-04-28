@@ -28,6 +28,12 @@ interface CheckpointStorage {
     fun markCheckpointAsPaused(id: StateMachineRunId): Boolean
 
     /**
+     * Update all persisted checkpoints with status [Checkpoint.FlowStatus.RUNNABLE] or [Checkpoint.FlowStatus.HOSPITALIZED],
+     * changing the status to [Checkpoint.FlowStatus.PAUSED].
+     */
+    fun markAllPaused()
+
+    /**
      * Remove existing checkpoint from the store.
      * @return whether the id matched a checkpoint that was removed.
      */

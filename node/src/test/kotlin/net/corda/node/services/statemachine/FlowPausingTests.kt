@@ -72,36 +72,6 @@ class FlowPausingTests {
         }
     }
 
-    fun StateMachineManager.waitForFlowToBeHospitalised(id: StateMachineRunId) : Boolean {
-        for (i in 0..1000) {
-            if (this.flowHospital.contains(id)) return true
-            Thread.sleep(10)
-        }
-        return false
-    }
-
-    fun waitForHospitalizedCheckpoint(id: StateMachineRunId) : Boolean {
-        var paused = false
-        for (i in 0..100) {
-            aliceNode.database.transaction {
-                val status = aliceNode.internals.checkpointStorage.getDBCheckpoint(id)!!.status
-                if ( status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                    paused = true
-                }
-            }
-            if (!paused) Thread.sleep(10)
-            else break
-        }
-        return paused
-    }
-
-    internal class HospitalizingFlow: FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            throw HospitalizeFlowException("Something went wrong.")
-        }
-    }
-
     internal class CheckpointingFlow: FlowLogic<Unit>() {
         @Suspendable
         override fun call() {

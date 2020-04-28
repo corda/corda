@@ -777,6 +777,52 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `checkpoints correctly change there status to paused`() {
+        val (_, checkpoint) = newCheckpoint(1)
+        // runnables
+        val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
+        val hospitalized = changeStatus(checkpoint, Checkpoint.FlowStatus.HOSPITALIZED)
+        // not runnables
+        val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
+        val failed = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED)
+        val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
+        // paused
+        val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
+        database.transaction {
+            val serializedFlowState =
+                    checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
+            checkpointStorage.addCheckpoint(runnable.id, runnable.checkpoint, serializedFlowState)
+            checkpointStorage.addCheckpoint(hospitalized.id, hospitalized.checkpoint, serializedFlowState)
+            checkpointStorage.addCheckpoint(completed.id, completed.checkpoint, serializedFlowState)
+            checkpointStorage.addCheckpoint(failed.id, failed.checkpoint, serializedFlowState)
+            checkpointStorage.addCheckpoint(killed.id, killed.checkpoint, serializedFlowState)
+            checkpointStorage.addCheckpoint(paused.id, paused.checkpoint, serializedFlowState)
+        }
+
+        database.transaction {
+            checkpointStorage.markAllPaused()
+        }
+
+        database.transaction {
+            //Hospitalised and paused checkpoints status should update
+            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpointStorage.getDBCheckpoint(runnable.id)!!.status)
+            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpointStorage.getDBCheckpoint(hospitalized.id)!!.status)
+            //Other checkpoints should not be updated
+            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpointStorage.getDBCheckpoint(completed.id)!!.status)
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStorage.getDBCheckpoint(failed.id)!!.status)
+            assertEquals(Checkpoint.FlowStatus.KILLED, checkpointStorage.getDBCheckpoint(killed.id)!!.status)
+            assertEquals(Checkpoint.FlowStatus.PAUSED, checkpointStorage.getDBCheckpoint(paused.id)!!.status)
+        }
+    }
+
+    data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
+
+    private fun changeStatus(oldCheckpoint: Checkpoint, status: Checkpoint.FlowStatus): IdAndCheckpoint {
+        return IdAndCheckpoint(StateMachineRunId.createRandom(), oldCheckpoint.copy(status = status))
+    }
+
     private fun newCheckpointStorage() {
         database.transaction {
             checkpointStorage = DBCheckpointStorage(

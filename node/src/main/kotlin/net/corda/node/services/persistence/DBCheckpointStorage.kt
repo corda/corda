@@ -281,6 +281,16 @@ class DBCheckpointStorage(
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
     }
 
+    override fun markAllPaused() {
+        val session = currentDBSession()
+        val notRunnableOrdinals = NOT_RUNNABLE_CHECKPOINTS.map{ "${it.ordinal}"}.joinToString { it }
+        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
+                "where status not in ($notRunnableOrdinals)"
+        val query = session.createNativeQuery(sqlQuery)
+        query.executeUpdate()
+    }
+
+    //TODO: Remove this function
     override fun markCheckpointAsPaused(id: StateMachineRunId) : Boolean {
         val checkpoint = getDBCheckpoint(id) ?: return false
         checkpoint.status = FlowStatus.PAUSED
@@ -360,8 +370,7 @@ class DBCheckpointStorage(
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = "select new ${DBPausedFields::class.java.name}(f.id, c.checkpoint, f.status, f.progressStep, f.ioRequestType, " +
-                "f.compatible) from ${DBFlowCheckpoint::class.java.name} f join " +
-                "${DBFlowCheckpointBlob::class.java.name} c on f.blob = c.id"
+                "f.compatible) from ${DBFlowCheckpoint::class.java.name} f join ${DBFlowCheckpointBlob::class.java.name} c on f.blob = c.id"
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
