@@ -47,7 +47,20 @@ class DeterministicVerifierFactoryService(
                 ConstructorForDeserialization::class.java,
                 DeprecatedConstructorForDeserialization::class.java
             ),
-            bootstrapSource = bootstrapSource
+            bootstrapSource = bootstrapSource,
+            overrideClasses = setOf(
+                /**
+                 * These classes are all duplicated into the sandbox
+                 * without the DJVM modifying their byte-code first.
+                 * The goal is to delegate cryptographic operations
+                 * out to the Node rather than perform them inside
+                 * the sandbox, because this is MUCH FASTER.
+                 */
+                sandbox.net.corda.core.crypto.Crypto::class.java.name,
+                "sandbox.net.corda.core.crypto.DJVM",
+                "sandbox.net.corda.core.crypto.DJVMPublicKey",
+                "sandbox.net.corda.core.crypto.internal.ProviderMapKt"
+            )
         )
 
         baseSandboxConfiguration = SandboxConfiguration.createFor(

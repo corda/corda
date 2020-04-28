@@ -304,6 +304,11 @@ quasar {
 
 jar {
     baseName 'corda-node'
+    exclude 'sandbox/java/**'
+    exclude 'sandbox/org/**'
+    exclude 'sandbox/net/corda/core/crypto/SecureHash.class'
+    exclude 'sandbox/net/corda/core/crypto/SignatureScheme.class'
+    exclude 'sandbox/net/corda/core/crypto/TransactionSignature.class'
     manifest {
         attributes('Corda-Deterministic-Runtime': configurations.jdkRt.singleFile.name)
         attributes('Corda-Deterministic-Classpath': configurations.deterministic.collect { it.name }.join(' '))
