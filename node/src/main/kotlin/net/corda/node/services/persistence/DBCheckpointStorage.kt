@@ -290,14 +290,6 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
-    //TODO: Remove this function
-    override fun markCheckpointAsPaused(id: StateMachineRunId) : Boolean {
-        val checkpoint = getDBCheckpoint(id) ?: return false
-        checkpoint.status = FlowStatus.PAUSED
-        currentDBSession().update(checkpoint)
-        return true
-    }
-
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         // This will be changed after performance tuning
         return currentDBSession().let { session ->

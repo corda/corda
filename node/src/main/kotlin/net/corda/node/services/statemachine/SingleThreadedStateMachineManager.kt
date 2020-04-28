@@ -308,32 +308,8 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun markFlowAsPaused(id: StateMachineRunId): Boolean {
-        mutex.locked {
-            var success = false
-            if (flowHospital.contains(id)) {
-                database.transaction {
-                    success = checkpointStorage.markCheckpointAsPaused(id)
-                }
-                return success
-            } else {
-                if (flows[id] != null) return false // Flow is running already hence we cannot pause it.
-                if (nonResidentFlows[id] != null) return true // Flow is already paused hence we don't need to do anything
-                database.transaction {
-                    success = checkpointStorage.markCheckpointAsPaused(id)
-                }
-                return success
-            }
-        }
-    }
-
-    private fun markAllFlowsAsPaused(): Map<StateMachineRunId, Boolean> {
-        return checkpointStorage.getCheckpointsToRun().use {
-            it.map { (id, _) ->
-                val paused = markFlowAsPaused(id)
-                id to paused
-            }.toList().toMap()
-        }
+    private fun markAllFlowsAsPaused() {
+        return checkpointStorage.markAllPaused()
     }
 
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
