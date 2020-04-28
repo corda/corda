@@ -6,10 +6,8 @@ import net.corda.cliutils.start
 import net.corda.errorUtilities.docsTable.DocsTableCLI
 import net.corda.errorUtilities.resourceGenerator.ResourceGeneratorCLI
 
-fun main(args: Array<String>) {
-    val tool = ErrorTool()
-    tool.start(args)
-}
+fun main(args: Array<String>) = ErrorTool().start(args)
+
 
 /**
  * Entry point for the error utilities.

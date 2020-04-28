@@ -9,14 +9,16 @@ import java.nio.file.Path
 class ErrorResourceUtilities {
 
     companion object {
-        private const val ERROR_INFO_RESOURCE = ".*ErrorInfo.*"
+        private val ERROR_INFO_RESOURCE_REGEX= ".*ErrorInfo.*".toRegex()
+        private val DEFAULT_RESOURCE_FILE_REGEX = "[^_]*\\.properties".toRegex()
+        private val PROPERTIES_FILE_REGEX = ".*\\.properties".toRegex()
 
         /**
          * List all resource bundle names in a given directory
          */
         fun listResourceNames(location: Path) : List<String> {
             return location.toFile().walkTopDown().filter {
-                it.name.matches("[^_]*\\.properties".toRegex()) && !it.name.matches(ERROR_INFO_RESOURCE.toRegex())
+                it.name.matches(DEFAULT_RESOURCE_FILE_REGEX) && !it.name.matches(ERROR_INFO_RESOURCE_REGEX)
             }.map {
                 it.nameWithoutExtension
             }.toList()
@@ -27,7 +29,7 @@ class ErrorResourceUtilities {
          */
         fun listResourceFiles(location: Path) : List<String> {
             return location.toFile().walkTopDown().filter {
-                it.name.matches(".*\\.properties".toRegex())
+                it.name.matches(PROPERTIES_FILE_REGEX)
             }.map { it.name }.toList()
         }
 
@@ -35,7 +37,6 @@ class ErrorResourceUtilities {
          * Create a classloader with all URLs in a given directory
          */
         fun loaderFromDirectory(location: Path) : URLClassLoader {
-//            val urls = location.toFile().walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
             val urls = arrayOf(location.toUri().toURL())
             val sysLoader = ClassLoader.getSystemClassLoader()
             return URLClassLoader(urls, sysLoader)

@@ -15,7 +15,7 @@ class ResourceGeneratorTest {
         return codes1 + codes2
     }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun `no codes marked as missing if all resources are present`() {
         val resourceGenerator = ResourceGenerator(listOf())
         val currentFiles = expectedCodes().map { "$it.properties" }
@@ -23,7 +23,7 @@ class ResourceGeneratorTest {
         assertEquals(setOf<String>(), missing.toSet())
     }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun `missing locales are marked as missing when other locales are present`() {
         val resourceGenerator = ResourceGenerator(listOf("en-US", "ga-IE").map { Locale.forLanguageTag(it) })
         val currentFiles = expectedCodes().flatMap { listOf("$it.properties", "${it}_en_US.properties") }
@@ -31,7 +31,7 @@ class ResourceGeneratorTest {
         assertEquals(expectedCodes().map { "${it}_ga_IE.properties" }.toSet(), missing.toSet())
     }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun `test writing out files works correctly`() {
         // First test that if all files are missing then the resource generator detects this
         val resourceGenerator = ResourceGenerator(listOf())
