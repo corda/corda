@@ -325,7 +325,7 @@ object AttachmentsClassLoaderBuilder {
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
-                        JDK5_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
+                        JDK1_1_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
                 }
                 catch(ex: UnsupportedClassVersionError) {
                     throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
