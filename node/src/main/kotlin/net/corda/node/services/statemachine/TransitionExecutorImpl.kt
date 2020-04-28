@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
@@ -23,7 +22,6 @@ class TransitionExecutorImpl(
         val secureRandom: SecureRandom,
         val database: CordaPersistence
 ) : TransitionExecutor {
-    override fun forceRemoveFlow(id: StateMachineRunId) {}
 
     private companion object {
         val log = contextLogger()
