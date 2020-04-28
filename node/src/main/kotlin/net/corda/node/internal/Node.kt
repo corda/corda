@@ -73,6 +73,7 @@ import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -503,7 +504,10 @@ open class Node(configuration: NodeConfiguration,
             if (effectiveH2Settings?.address != null) {
                 if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
                         && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
-                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                    throw CouldNotCreateDataSourceException(
+                            "Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.",
+                            NodeDatabaseErrors.PASSWORD_REQUIRED_FOR_H2,
+                            listOf(InetAddress.getByName(effectiveH2Settings.address.host).toString()))
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val baseDir = Paths.get(databaseName).parent.toString()
