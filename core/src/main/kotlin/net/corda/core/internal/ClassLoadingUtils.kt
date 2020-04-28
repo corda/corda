@@ -9,9 +9,11 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  * Creates instances of all the classes in the classpath of the provided classloader, which implement the interface of the provided class.
  * @param classloader the classloader, which will be searched for the classes.
  * @param clazz the class of the interface, which the classes - to be returned - must implement.
+ * @param classVersionRange if specified an exception is raised if class version is not within the passed range.
  *
  * @return instances of the identified classes.
  * @throws IllegalArgumentException if the classes found do not have proper constructors.
+ * @throws UnsupportedClassVersionError if the class version is not within range.
  *
  * Note: In order to be instantiated, the associated classes must:
  * - be non-abstract
@@ -19,7 +21,7 @@ import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.a
  */
 @StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                                  classVersionRange: IntRange = IntRange.EMPTY): Set<T> {
+                                                  classVersionRange: IntRange? = null): Set<T> {
     return getNamesOfClassesImplementing(classloader, clazz, classVersionRange)
         .map { classloader.loadClass(it).asSubclass(clazz) }
         .mapTo(LinkedHashSet()) { it.kotlin.objectOrNewInstance() }
@@ -29,19 +31,21 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
  * Scans for all the non-abstract classes in the classpath of the provided classloader which implement the interface of the provided class.
  * @param classloader the classloader, which will be searched for the classes.
  * @param clazz the class of the interface, which the classes - to be returned - must implement.
+ * @param classVersionRange if specified an exception is raised if class version is not within the passed range.
  *
  * @return names of the identified classes.
+ * @throws UnsupportedClassVersionError if the class version is not within range.
  */
 @StubOutForDJVM
 fun <T: Any> getNamesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>,
-                                           classVersionRange: IntRange = IntRange.EMPTY): Set<String> {
+                                           classVersionRange: IntRange? = null): Set<String> {
     return ClassGraph().overrideClassLoaders(classloader)
         .enableURLScheme(attachmentScheme)
         .ignoreParentClassLoaders()
         .enableClassInfo()
         .pooledScan()
         .use { result ->
-            if (classVersionRange != IntRange.EMPTY) {
+            classVersionRange?.let {
                 result.allClasses.firstOrNull { c -> c.classfileMajorVersion !in classVersionRange }?.also {
                     throw UnsupportedClassVersionError("Class ${it.name} found in ${it.classpathElementURL} " +
                             "has an unsupported class version of ${it.classfileMajorVersion}")

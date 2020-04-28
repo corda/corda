@@ -164,6 +164,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         val minPlatformVersion = manifest?.get(CordappImpl.MIN_PLATFORM_VERSION)?.toIntOrNull() ?: 1
         val targetPlatformVersion = manifest?.get(CordappImpl.TARGET_PLATFORM_VERSION)?.toIntOrNull() ?: minPlatformVersion
         validateContractStateClassVersion(this)
+        validateWhitelistClassVersion(this)
         return CordappImpl(
                 findContractClassNamesWithVersionCheck(this),
                 findInitiatedFlows(this),
@@ -296,6 +297,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun validateContractStateClassVersion(scanResult: RestrictedScanResult) {
         coreContractClasses.forEach { scanResult.versionCheckClassesImplementing(it) }
+    }
+
+    private fun validateWhitelistClassVersion(scanResult: RestrictedScanResult) {
+        scanResult.versionCheckClassesImplementing(SerializationWhitelist::class)
     }
 
     private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
