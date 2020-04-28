@@ -43,6 +43,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+                .setProperty("hibernate.jdbc.time_zone", "UTC")
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
