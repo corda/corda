@@ -381,7 +381,7 @@ interface ServiceHub : ServicesForResolution {
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
      * We want to make sure users have a restricted access to administrative functions, this function will return a [RestrictedConnection] instance.
-     * The blocked methods are the following:
+     * The following methods are blocked:
      * - abort(executor: Executor?)
      * - clearWarnings()
      * - close()
@@ -415,15 +415,22 @@ interface ServiceHub : ServicesForResolution {
      * @param block a lambda function with access to an [EntityManager].
      *
      * We want to make sure users have a restricted access to administrative functions.
-     * The blocked methods are the following:
+     * The following methods are blocked:
      * - close()
-     * - clear()
+     * - unwrap(cls: Class<T>?)
+     * - getDelegate(): Any
      * - getMetamodel()
-     * - getTransaction()
      * - joinTransaction()
      * - lock(entity: Any?, lockMode: LockModeType?)
      * - lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?)
      * - setProperty(propertyName: String?, value: Any?)
+     *
+     * getTransaction returns a [RestrictedEntityTransaction] to prevent unsafe manipulation of a flow's underlying
+     * database transaction.
+     * The following methods are blocked:
+     * - begin()
+     * - commit()
+     * - rollback()
      */
     fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T
 
@@ -435,6 +442,24 @@ interface ServiceHub : ServicesForResolution {
      * NOTE: Suspendable flow operations such as send, receive, subFlow and sleep, cannot be called within the lambda.
      *
      * @param block a lambda function with access to an [EntityManager].
+     *
+     * We want to make sure users have a restricted access to administrative functions.
+     * The following methods are blocked:
+     * - close()
+     * - unwrap(cls: Class<T>?)
+     * - getDelegate(): Any
+     * - getMetamodel()
+     * - joinTransaction()
+     * - lock(entity: Any?, lockMode: LockModeType?)
+     * - lock(entity: Any?, lockMode: LockModeType?, properties: MutableMap<String, Any>?)
+     * - setProperty(propertyName: String?, value: Any?)
+     *
+     * getTransaction returns a [RestrictedEntityTransaction] to prevent unsafe manipulation of a flow's underlying
+     * database transaction.
+     * The following methods are blocked:
+     * - begin()
+     * - commit()
+     * - rollback()
      */
     fun withEntityManager(block: Consumer<EntityManager>)
 

@@ -43,7 +43,10 @@ class TransitionExecutorImpl(
             try {
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Exception) {
-                contextTransactionOrNull?.close()
+                contextTransactionOrNull?.run {
+                    rollback()
+                    close()
+                }
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
                     // If we errored while transitioning to an error state then we cannot record the additional
                     // error as that may result in an infinite loop, e.g. error propagation fails -> record error -> propagate fails again.

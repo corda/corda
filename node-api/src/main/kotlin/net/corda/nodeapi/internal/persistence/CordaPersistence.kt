@@ -211,14 +211,15 @@ class CordaPersistence(
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
-            transaction(isolationLevel, 2, false, statement)
+    fun <T> transaction(isolationLevel: TransactionIsolationLevel, useErrorHandler: Boolean, statement: DatabaseTransaction.() -> T): T =
+            transaction(isolationLevel, 2, false, useErrorHandler, statement)
 
     /**
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
+    @JvmOverloads
+    fun <T> transaction(useErrorHandler: Boolean = true, statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, useErrorHandler, statement)
 
     /**
      * Executes given statement in the scope of transaction, with the given isolation level.
@@ -228,7 +229,7 @@ class CordaPersistence(
      * @param statement to be executed in the scope of this transaction.
      */
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
-                        recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
+                        recoverAnyNestedSQLException: Boolean, useErrorHandler: Boolean, statement: DatabaseTransaction.() -> T): T {
         _contextDatabase.set(this)
         val outer = contextTransactionOrNull
         return if (outer != null) {
@@ -237,16 +238,24 @@ class CordaPersistence(
             // previously been created by the flow state machine in ActionExecutorImpl#executeCreateTransaction
             // b. exceptions coming out from top level transactions are already being handled in CordaPersistence#inTopLevelTransaction
             // i.e. roll back and close the transaction
-            try {
+            if(useErrorHandler) {
+                outer.withErrorHandler(statement)
+            } else {
                 outer.statement()
-            } catch (e: Exception) {
-                if (e is SQLException || e is PersistenceException || e is HospitalizeFlowException) {
-                    outer.errorHandler(e)
-                }
-                throw e
             }
         } else {
             inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
+        }
+    }
+
+    private fun <T> DatabaseTransaction.withErrorHandler(statement: DatabaseTransaction.() -> T): T {
+        return try {
+            statement()
+        } catch (e: Exception) {
+            if ((e is SQLException || e is PersistenceException || e is HospitalizeFlowException)) {
+                errorHandler(e)
+            }
+            throw e
         }
     }
 
@@ -256,7 +265,7 @@ class CordaPersistence(
      * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
      */
     fun <T> transaction(recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
-        return transaction(defaultIsolationLevel, recoverableFailureTolerance, false, statement)
+        return transaction(defaultIsolationLevel, recoverableFailureTolerance, false, false, statement)
     }
 
     private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
