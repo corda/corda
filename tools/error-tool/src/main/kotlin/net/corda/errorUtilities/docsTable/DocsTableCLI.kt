@@ -1,7 +1,8 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.docsTable
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.errorUtilities.ErrorToolCLIUtilities
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import java.lang.IllegalArgumentException

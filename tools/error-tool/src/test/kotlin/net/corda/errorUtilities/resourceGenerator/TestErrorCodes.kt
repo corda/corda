@@ -1,4 +1,4 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.resourceGenerator
 
 import net.corda.common.logging.errorReporting.ErrorCodes
 

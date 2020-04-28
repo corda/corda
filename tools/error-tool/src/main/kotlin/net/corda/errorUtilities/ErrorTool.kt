@@ -3,6 +3,8 @@ package net.corda.errorUtilities
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
+import net.corda.errorUtilities.docsTable.DocsTableCLI
+import net.corda.errorUtilities.resourceGenerator.ResourceGeneratorCLI
 
 fun main(args: Array<String>) {
     val tool = ErrorTool()

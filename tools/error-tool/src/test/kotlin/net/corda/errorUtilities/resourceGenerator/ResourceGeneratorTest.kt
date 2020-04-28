@@ -1,16 +1,13 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.resourceGenerator
 
 import junit.framework.TestCase.assertEquals
 import net.corda.common.logging.errorReporting.ResourceBundleProperties
 import org.junit.Test
-import java.net.URLClassLoader
 import java.util.*
 
 class ResourceGeneratorTest {
 
-    private val urls = (TestCodes1::class.java.classLoader as URLClassLoader).urLs.filter {
-        it.toString().matches(".*classes/kotlin/test.*".toRegex())
-    }
+    private val classes = listOf(TestCodes1::class.qualifiedName!!, TestCodes2::class.qualifiedName!!)
 
     private fun expectedCodes() : List<String> {
         val codes1 = TestCodes1.values().map { "${it.namespace.toLowerCase()}-${it.name.replace("_", "-").toLowerCase()}" }
@@ -22,7 +19,7 @@ class ResourceGeneratorTest {
     fun `no codes marked as missing if all resources are present`() {
         val resourceGenerator = ResourceGenerator(listOf())
         val currentFiles = expectedCodes().map { "$it.properties" }
-        val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
+        val missing = resourceGenerator.calculateMissingResources(classes, currentFiles, TestCodes1::class.java.classLoader)
         assertEquals(setOf<String>(), missing.toSet())
     }
 
@@ -30,7 +27,7 @@ class ResourceGeneratorTest {
     fun `missing locales are marked as missing when other locales are present`() {
         val resourceGenerator = ResourceGenerator(listOf("en-US", "ga-IE").map { Locale.forLanguageTag(it) })
         val currentFiles = expectedCodes().flatMap { listOf("$it.properties", "${it}_en_US.properties") }
-        val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
+        val missing = resourceGenerator.calculateMissingResources(classes, currentFiles, TestCodes1::class.java.classLoader)
         assertEquals(expectedCodes().map { "${it}_ga_IE.properties" }.toSet(), missing.toSet())
     }
 
@@ -39,7 +36,7 @@ class ResourceGeneratorTest {
         // First test that if all files are missing then the resource generator detects this
         val resourceGenerator = ResourceGenerator(listOf())
         val currentFiles = listOf<String>()
-        val missing = resourceGenerator.calculateMissingResources(urls, currentFiles)
+        val missing = resourceGenerator.calculateMissingResources(classes, currentFiles, TestCodes1::class.java.classLoader)
         assertEquals(expectedCodes().map { "$it.properties" }.toSet(), missing.toSet())
 
         // Now check that all resource files that should be created are

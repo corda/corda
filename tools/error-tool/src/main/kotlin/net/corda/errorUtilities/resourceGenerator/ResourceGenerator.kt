@@ -1,11 +1,8 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.resourceGenerator
 
 import net.corda.common.logging.errorReporting.ErrorCodes
 import net.corda.common.logging.errorReporting.ResourceBundleProperties
-import org.reflections.Reflections
-import org.reflections.scanners.SubTypesScanner
-import org.reflections.util.ConfigurationBuilder
-import java.net.URL
+import net.corda.errorUtilities.ClassDoesNotExistException
 import java.nio.file.Path
 import java.util.*
 
@@ -34,6 +31,9 @@ class ResourceGenerator(private val locales: List<Locale>) {
 
     /**
      * Create a set of resource files in the given location.
+     *
+     * @param resources The resource file names to create
+     * @param resourceLocation The location to create the resource files
      */
     fun createResources(resources: List<String>, resourceLocation: Path) {
         for (resource in resources) {
@@ -41,18 +41,16 @@ class ResourceGenerator(private val locales: List<Locale>) {
         }
     }
 
-    private fun readDefinedCodes(urls: List<URL>) : List<String> {
-        val reflections = Reflections(ConfigurationBuilder()
-                .setScanners(SubTypesScanner(false))
-                .addUrls(urls)
-        )
-        return reflections.getSubTypesOf(ErrorCodes::class.java).flatMap {
-            if (it.isEnum) {
-                val values = (it as Class<Enum<*>>).enumConstants
-                values.map { constant ->
-                    val namespace = (constant as ErrorCodes).namespace.toLowerCase()
-                    "$namespace-${constant.name.toLowerCase().replace("_", "-")}"
-                }
+    private fun definedCodes(classes: List<String>, loader: ClassLoader) : List<String> {
+        return classes.flatMap {
+            val clazz = try {
+                loader.loadClass(it)
+            } catch (e: ClassNotFoundException) {
+                throw ClassDoesNotExistException(it)
+            }
+            if (ErrorCodes::class.java.isAssignableFrom(clazz) && clazz != ErrorCodes::class.java) {
+                val namespace = (clazz.enumConstants.first() as ErrorCodes).namespace.toLowerCase()
+                clazz.enumConstants.map { code -> "${namespace}-${code.toString().toLowerCase().replace("_", "-")}"}
             } else {
                 listOf()
             }
@@ -69,11 +67,11 @@ class ResourceGenerator(private val locales: List<Locale>) {
     /**
      * Calculate what resource files are missing from a set of resource files, given a set of error codes.
      *
-     * @param urls A list of URLs for each of the error code class files
+     * @param classes The classes to generate resource files for
      * @param resourceFiles The list of resource files
      */
-    fun calculateMissingResources(urls: List<URL>, resourceFiles: List<String>) : List<String> {
-        val codes = readDefinedCodes(urls)
+    fun calculateMissingResources(classes: List<String>, resourceFiles: List<String>, loader: ClassLoader) : List<String> {
+        val codes = definedCodes(classes, loader)
         val expected = getExpectedResources(codes)
         val missing = expected - resourceFiles.toSet()
         return missing.toList()

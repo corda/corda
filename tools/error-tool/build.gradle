@@ -10,7 +10,6 @@ dependencies {
     implementation project(":tools:cliutils")
     implementation "info.picocli:picocli:$picocli_version"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    implementation "org.reflections:reflections:0.9.11"
 
     testCompile "junit:junit:4.12"
 }
@@ -24,7 +23,7 @@ shadowJar {
     baseName = "corda-tools-error-utils"
     manifest {
         attributes(
-                'Main-Class': "net.corda.errorPageBuilder.ErrorToolKt"
+                'Main-Class': "net.corda.errorUtilities.ErrorToolKt"
         )
     }
 }

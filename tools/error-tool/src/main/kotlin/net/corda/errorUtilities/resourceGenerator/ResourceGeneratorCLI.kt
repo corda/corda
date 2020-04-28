@@ -1,7 +1,9 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.resourceGenerator
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.errorUtilities.ErrorResourceUtilities
+import net.corda.errorUtilities.ErrorToolCLIUtilities
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import java.lang.IllegalArgumentException
@@ -22,11 +24,11 @@ class ResourceGeneratorCLI : CordaCliWrapper(
 
     @CommandLine.Parameters(
             index = "0",
-            paramLabel = "BUILD_DIR",
+            paramLabel = "JAR_FILE",
             arity = "1",
-            description = ["Directory containing class files of the error code definitions"]
+            description = ["JAR file containing class files of the error code definitions"]
     )
-    var buildDir: Path? = null
+    var jarFile: Path? = null
 
     @CommandLine.Parameters(
             index = "1",
@@ -35,6 +37,13 @@ class ResourceGeneratorCLI : CordaCliWrapper(
             description = ["Directory containing resource bundles for the error codes"]
     )
     var resourceDir: Path? = null
+
+    @CommandLine.Parameters(
+            index="2..*",
+            paramLabel = "ERROR_CODE_CLASSES",
+            description = ["Fully qualified class names of the error code classes to generate resources for"]
+    )
+    var classes: List<String> = mutableListOf()
 
     @CommandLine.Option(
             names = ["--locales"],
@@ -48,13 +57,13 @@ class ResourceGeneratorCLI : CordaCliWrapper(
     }
 
     override fun runProgram(): Int {
-        val buildFileLocation = ErrorToolCLIUtilities.checkDirectory(buildDir, "error code definition class files")
+        val jarFileLocation = ErrorToolCLIUtilities.checkDirectory(jarFile, "error code definition class files")
         val resourceLocation = ErrorToolCLIUtilities.checkDirectory(resourceDir, "resource bundle files")
         val resourceGenerator = ResourceGenerator(locales.map { Locale.forLanguageTag(it) })
         try {
             val resources = ErrorResourceUtilities.listResourceFiles(resourceLocation)
-            val loader = ErrorResourceUtilities.loaderFromDirectory(buildFileLocation)
-            val missingResources = resourceGenerator.calculateMissingResources(loader.urLs.toList(), resources)
+            val loader = ErrorResourceUtilities.loaderFromDirectory(jarFileLocation)
+            val missingResources = resourceGenerator.calculateMissingResources(classes, resources, loader)
             resourceGenerator.createResources(missingResources, resourceLocation)
             loader.close()
         } catch (e: IllegalArgumentException) {

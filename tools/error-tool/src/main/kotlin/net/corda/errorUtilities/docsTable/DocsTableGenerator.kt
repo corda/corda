@@ -1,6 +1,7 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.docsTable
 
 import net.corda.common.logging.errorReporting.ErrorResource
+import net.corda.errorUtilities.ErrorResourceUtilities
 import java.lang.IllegalArgumentException
 import java.nio.file.Path
 import java.util.*

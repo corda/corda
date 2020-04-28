@@ -27,8 +27,7 @@ enum class CordappErrors : ErrorCodes {
     DUPLICATE_CORDAPPS_INSTALLED,
     MULTIPLE_CORDAPPS_FOR_FLOW,
     MISSING_VERSION_ATTRIBUTE,
-    INVALID_VERSION_IDENTIFIER,
-    SOME_OTHER_ERROR;
+    INVALID_VERSION_IDENTIFIER;
 
     override val namespace = NodeNamespaces.CORDAPP.toString()
 }

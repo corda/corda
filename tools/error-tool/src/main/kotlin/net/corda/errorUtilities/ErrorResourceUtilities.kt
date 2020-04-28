@@ -35,8 +35,10 @@ class ErrorResourceUtilities {
          * Create a classloader with all URLs in a given directory
          */
         fun loaderFromDirectory(location: Path) : URLClassLoader {
-            val urls = location.toFile().walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
-            return URLClassLoader(urls)
+//            val urls = location.toFile().walkTopDown().map { it.toURI().toURL() }.asIterable().toList().toTypedArray()
+            val urls = arrayOf(location.toUri().toURL())
+            val sysLoader = ClassLoader.getSystemClassLoader()
+            return URLClassLoader(urls, sysLoader)
         }
     }
 }

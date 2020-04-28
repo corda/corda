@@ -1,4 +1,4 @@
-package net.corda.errorUtilities
+package net.corda.errorUtilities.docsTable
 
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
