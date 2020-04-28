@@ -5,7 +5,7 @@ package net.corda.common.logging.errorReporting
  *
  * Error codes should be used in situations where an error is expected and information can be provided back to the user about what they've
  * done wrong. Each error code should have a resource bundle defined for it, which contains set of properties that define the error string
- * in different languages. See the resource bundles in node/src/main/resources/errorReporting for more details.
+ * in different languages. See the resource bundles in common/logging/src/main/resources/errorReporting for more details.
  */
 interface ErrorCode<CODES> where CODES: ErrorCodes, CODES: Enum<CODES> {
 

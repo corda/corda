@@ -1,5 +1,6 @@
 package net.corda.common.logging.errorReporting
 
+import java.lang.UnsupportedOperationException
 import java.util.*
 
 /**
@@ -9,9 +10,10 @@ import java.util.*
  * errors are reported.
  */
 class ErrorReporting private constructor(private val localeString: String,
-                                         private val resourceLocation: String) {
+                                         private val resourceLocation: String,
+                                         private val contextProvider: ErrorContextProvider?) {
 
-    constructor() : this(DEFAULT_LOCALE, DEFAULT_LOCATION)
+    constructor() : this(DEFAULT_LOCALE, DEFAULT_LOCATION, null)
 
     private companion object {
         private const val DEFAULT_LOCALE = "en-US"
@@ -25,8 +27,11 @@ class ErrorReporting private constructor(private val localeString: String,
      *
      * @param locale The locale tag to use when reporting errors, e.g. en-US
      */
+    @Suppress("UNUSED_PARAMETER")
     fun withLocale(locale: String) : ErrorReporting {
-        return ErrorReporting(locale, resourceLocation)
+        // Currently, if anything other than the default is used this is entirely untested. As a result, an exception is thrown here to
+        // indicate that this functionality is not ready at this point in time.
+        throw LocaleSettingUnsupportedException()
     }
 
     /**
@@ -35,14 +40,24 @@ class ErrorReporting private constructor(private val localeString: String,
      * @param location The location within the JAR of the resource bundle
      */
     fun usingResourcesAt(location: String) : ErrorReporting {
-        return ErrorReporting(localeString, location)
+        return ErrorReporting(localeString, location, contextProvider)
+    }
+
+    fun withContextProvider(contextProvider: ErrorContextProvider) : ErrorReporting {
+        return ErrorReporting(localeString, resourceLocation, contextProvider)
     }
 
     /**
      * Set up the reporting of errors.
      */
     fun initialiseReporting() {
-        errorReporter = ErrorReporterImpl(resourceLocation, Locale.forLanguageTag(localeString), CordaErrorContextProvider())
+        if (contextProvider == null) {
+            throw NoContextProviderSuppliedException()
+        }
+        if (errorReporter != null) {
+            throw DoubleInitializationException()
+        }
+        errorReporter = ErrorReporterImpl(resourceLocation, Locale.forLanguageTag(localeString), contextProvider)
     }
 
     internal fun getReporter() : ErrorReporter {
