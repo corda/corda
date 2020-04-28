@@ -79,37 +79,23 @@ abstract class TestBase(type: SandboxType) {
     }
 
     fun sandbox(action: Consumer<SandboxRuntimeContext>) {
-        sandbox(WARNING, emptySet(), emptySet(), action)
+        sandbox(WARNING, emptySet(), action)
     }
 
     inline fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, crossinline action: SandboxRuntimeContext.() -> Unit) {
         sandbox(visibleAnnotations, Consumer { ctx -> action(ctx) })
     }
 
-    fun sandbox(visibleAnnotations: Set<Class<out Annotation>>, action: Consumer<SandboxRuntimeContext>) {
-        sandbox(WARNING, visibleAnnotations, emptySet(), action)
-    }
-
-    inline fun sandbox(
-        visibleAnnotations: Set<Class<out Annotation>>,
-        sandboxOnlyAnnotations: Set<String>,
-        crossinline action: SandboxRuntimeContext.() -> Unit
-    ) {
-        sandbox(visibleAnnotations, sandboxOnlyAnnotations, Consumer { ctx -> action(ctx) })
-    }
-
     fun sandbox(
         visibleAnnotations: Set<Class<out Annotation>>,
-        sandboxOnlyAnnotations: Set<String>,
         action: Consumer<SandboxRuntimeContext>
     ) {
-        sandbox(WARNING, visibleAnnotations, sandboxOnlyAnnotations, action)
+        sandbox(WARNING, visibleAnnotations, action)
     }
 
     fun sandbox(
         minimumSeverityLevel: Severity,
         visibleAnnotations: Set<Class<out Annotation>>,
-        sandboxOnlyAnnotations: Set<String>,
         action: Consumer<SandboxRuntimeContext>
     ) {
         var thrownException: Throwable? = null
@@ -117,7 +103,6 @@ abstract class TestBase(type: SandboxType) {
             UserPathSource(classPaths).use { userSource ->
                 SandboxRuntimeContext(parentConfiguration.createChild(userSource, Consumer {
                     it.setMinimumSeverityLevel(minimumSeverityLevel)
-                    it.setSandboxOnlyAnnotations(sandboxOnlyAnnotations)
                     it.setVisibleAnnotations(visibleAnnotations)
                 })).use(action)
             }
