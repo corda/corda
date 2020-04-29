@@ -15,6 +15,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.Flow
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
@@ -148,14 +149,34 @@ class DBCheckpointStorageTests {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
         }
 
-        val completedCheckpoint = checkpoint.copy(flowState = FlowState.Completed)
+        val completedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
         database.transaction {
             checkpointStorage.updateCheckpoint(id, completedCheckpoint, null)
         }
         database.transaction {
             assertEquals(
-                completedCheckpoint,
+                completedCheckpoint.copy(flowState = FlowState.Completed),
                 checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `update a checkpoint to paused`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState)
+        }
+
+        val pausedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, pausedCheckpoint, null)
+        }
+        database.transaction {
+            assertEquals(
+                    pausedCheckpoint.copy(flowState = FlowState.Paused),
+                    checkpointStorage.checkpoints().single().deserialize()
             )
         }
     }
