@@ -6,7 +6,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -42,7 +41,7 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
-import java.util.ArrayList
+import java.util.*
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

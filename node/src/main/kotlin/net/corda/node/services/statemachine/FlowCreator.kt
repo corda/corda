@@ -13,6 +13,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.transitions.StateMachine
@@ -21,6 +22,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import java.security.SecureRandom
 
 class FlowCreator(val checkpointSerializationContext: CheckpointSerializationContext,
+                  private val checkpointStorage: CheckpointStorage,
                   val scheduler: FiberScheduler,
                   val database: CordaPersistence,
                   val transitionExecutor: TransitionExecutor,
@@ -37,8 +39,8 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
     class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
 
-    inner class FlowCreatorFromCheckpoint(val id: StateMachineRunId,
-                                        oldCheckpoint: Checkpoint,
+    inner class FlowCreatorFromCheckpoint(val runId: StateMachineRunId,
+                                        var checkpoint: Checkpoint,
                                         val isAnyCheckpointPersisted: Boolean,
                                         val isStartIdempotent: Boolean,
                                         val initialDeduplicationHandler: DeduplicationHandler?
@@ -46,14 +48,20 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
 
         val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
 
-        val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-
         fun addExternalEvent(message: Event.DeliverSessionMessage) {
             externalEvents.add(message)
         }
 
         fun createFlow() : Flow? {
-            val fiber = getFiberFromCheckpoint() ?: return null
+            when (checkpoint.status) {
+                Checkpoint.FlowStatus.PAUSED -> {
+                    val serializedCheckpoint = database.transaction {  checkpointStorage.getCheckpoint(runId)}
+                    checkpoint = serializedCheckpoint!!.copy(status = Checkpoint.FlowStatus.RUNNABLE).deserialize(checkpointSerializationContext)
+                }
+            }
+            checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
+
+            val fiber = getFiberFromCheckpoint(checkpoint) ?: return null
             val state = StateMachineState(
                 checkpoint = checkpoint,
                 pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -67,21 +75,21 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
                 flowLogic = fiber.logic,
                 senderUUID = null)
             val resultFuture = openFuture<Any?>()
-            fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
+            fiber.transientValues = TransientReference(createTransientValues(runId, resultFuture))
             fiber.transientState = TransientReference(state)
             fiber.logic.stateMachine = fiber
             verifyFlowLogicIsSuspendable(fiber.logic)
             return Flow(fiber, resultFuture)
         }
 
-        private fun getFiberFromCheckpoint(): FlowStateMachineImpl<*>? {
+        private fun getFiberFromCheckpoint(checkpoint: Checkpoint): FlowStateMachineImpl<*>? {
             return when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
-                    val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
-                    FlowStateMachineImpl(id, logic, scheduler)
+                    val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, runId) ?: return null
+                    FlowStateMachineImpl(runId, logic, scheduler)
                 }
                 is FlowState.Started -> {
-                    tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
+                    tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, runId) ?: return null
                 }
                 // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
                 else -> {
