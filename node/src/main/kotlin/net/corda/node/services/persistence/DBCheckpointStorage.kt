@@ -362,7 +362,8 @@ class DBCheckpointStorage(
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = "select new ${DBPausedFields::class.java.name}(f.id, c.checkpoint, f.status, f.progressStep, f.ioRequestType, " +
-                "f.compatible) from ${DBFlowCheckpoint::class.java.name} f join ${DBFlowCheckpointBlob::class.java.name} c on f.blob = c.id"
+                "f.compatible) from ${DBFlowCheckpoint::class.java.name} f join ${DBFlowCheckpointBlob::class.java.name} " +
+                "c on f.blob = c.id where f.status = ${FlowStatus.PAUSED.ordinal}"
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
