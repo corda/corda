@@ -4,7 +4,8 @@ package net.corda.common.logging.errorReporting
  * Namespaces for errors within the node.
  */
 enum class NodeNamespaces {
-    DATABASE
+    DATABASE,
+    CORDAPP
 }
 
 /**
@@ -17,4 +18,16 @@ enum class NodeDatabaseErrors : ErrorCodes {
     PASSWORD_REQUIRED_FOR_H2;
 
     override val namespace = NodeNamespaces.DATABASE.toString()
+}
+
+/**
+ * Errors related to loading of Cordapps
+ */
+enum class CordappErrors : ErrorCodes {
+    DUPLICATE_CORDAPPS_INSTALLED,
+    MULTIPLE_CORDAPPS_FOR_FLOW,
+    MISSING_VERSION_ATTRIBUTE,
+    INVALID_VERSION_IDENTIFIER;
+
+    override val namespace = NodeNamespaces.CORDAPP.toString()
 }

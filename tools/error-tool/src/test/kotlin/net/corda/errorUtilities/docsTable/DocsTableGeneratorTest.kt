@@ -1,15 +1,15 @@
+package net.corda.errorUtilities.docsTable
+
 import junit.framework.TestCase.assertEquals
-import net.corda.errorPageBuilder.ErrorTableGenerator
 import org.junit.Test
-import java.io.File
 import java.lang.IllegalArgumentException
 import java.nio.file.Paths
 import java.util.*
 
-class ErrorTableGeneratorTest {
+class DocsTableGeneratorTest {
 
     companion object {
-        private val RESOURCE_LOCATION = Paths.get("src/test/resources/test-errors").toAbsolutePath().toFile()
+        private val RESOURCE_LOCATION = Paths.get("src/test/resources/test-errors").toAbsolutePath()
     }
 
     private val englishTable = """| Error Code | Aliases | Description | Actions to Fix |
@@ -22,24 +22,24 @@ class ErrorTableGeneratorTest {
         /| test-error | foo, bar | Teachtaireacht tástála | Roinnt gníomhartha |
     """.trimMargin("/")
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun `check error table is produced as expected`() {
-        val generator = ErrorTableGenerator(RESOURCE_LOCATION, Locale.forLanguageTag("en-US"))
+        val generator = DocsTableGenerator(RESOURCE_LOCATION, Locale.forLanguageTag("en-US"))
         val table = generator.generateMarkdown()
         // Raw strings in Kotlin always use Unix line endings, so this is required to keep the test passing on Windows
         assertEquals(englishTable.split("\n").joinToString(System.lineSeparator()), table)
     }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 1000)
     fun `check table in other locales is produced as expected`() {
-        val generator = ErrorTableGenerator(RESOURCE_LOCATION, Locale.forLanguageTag("ga-IE"))
+        val generator = DocsTableGenerator(RESOURCE_LOCATION, Locale.forLanguageTag("ga-IE"))
         val table = generator.generateMarkdown()
         assertEquals(irishTable.split("\n").joinToString(System.lineSeparator()), table)
     }
 
-    @Test(expected = IllegalArgumentException::class, timeout = 300_000)
+    @Test(expected = IllegalArgumentException::class, timeout = 1000)
     fun `error thrown if unknown directory passed to generator`() {
-        val generator = ErrorTableGenerator(File("not/a/directory"), Locale.getDefault())
+        val generator = DocsTableGenerator(Paths.get("not/a/directory"), Locale.getDefault())
         generator.generateMarkdown()
     }
 }

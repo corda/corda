@@ -2,6 +2,10 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
+import net.corda.common.logging.errorReporting.CordappErrors
+import net.corda.common.logging.errorReporting.ErrorCode
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.common.logging.errorReporting.NodeNamespaces
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -144,9 +148,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             val duplicateCordapps = registeredCordapps.filter { it.jarHash == cordapp.jarHash }.toSet()
 
             if (duplicateCordapps.isNotEmpty()) {
-                throw IllegalStateException("The CorDapp (name: ${cordapp.info.shortName}, file: ${cordapp.name}) " +
-                        "is installed multiple times on the node. The following files correspond to the exact same content: " +
-                        "${duplicateCordapps.map { it.name }}")
+                throw DuplicateCordappsInstalledException(cordapp, duplicateCordapps)
             }
             if (registeredClassName in contractClasses) {
                 throw IllegalStateException("More than one CorDapp installed on the node for contract $registeredClassName. " +
@@ -227,12 +229,21 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun parseVersion(versionStr: String?, attributeName: String): Int {
         if (versionStr == null) {
-            throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
+            throw CordappInvalidVersionException(
+                    "Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.",
+                    CordappErrors.MISSING_VERSION_ATTRIBUTE,
+                    listOf(attributeName))
         }
         val version = versionStr.toIntOrNull()
-                ?: throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
+                ?: throw CordappInvalidVersionException(
+                        "Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.",
+                        CordappErrors.INVALID_VERSION_IDENTIFIER,
+                        listOf(versionStr, attributeName))
         if (version < 1) {
-            throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
+            throw CordappInvalidVersionException(
+                    "Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.",
+                    CordappErrors.INVALID_VERSION_IDENTIFIER,
+                    listOf(versionStr, attributeName))
         }
         return version
     }
@@ -403,12 +414,34 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 /**
  * Thrown when scanning CorDapps.
  */
-class MultipleCordappsForFlowException(message: String) : Exception(message)
+class MultipleCordappsForFlowException(
+        message: String,
+        flowName: String,
+        jars: String
+) : Exception(message), ErrorCode<CordappErrors> {
+    override val code = CordappErrors.MULTIPLE_CORDAPPS_FOR_FLOW
+    override val parameters = listOf(flowName, jars)
+}
 
 /**
  * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
  */
-class CordappInvalidVersionException(msg: String) : Exception(msg)
+class CordappInvalidVersionException(
+        msg: String,
+        override val code: CordappErrors,
+        override val parameters: List<Any> = listOf()
+) : Exception(msg), ErrorCode<CordappErrors>
+
+/**
+ * Thrown if duplicate CorDapps are installed on the node
+ */
+class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>)
+    : IllegalStateException("The CorDapp (name: ${app.info.shortName}, file: ${app.name}) " +
+        "is installed multiple times on the node. The following files correspond to the exact same content: " +
+        "${duplicates.map { it.name }}"), ErrorCode<CordappErrors> {
+    override val code = CordappErrors.DUPLICATE_CORDAPPS_INSTALLED
+    override val parameters = listOf(app.info.shortName, app.name, duplicates.map { it.name })
+}
 
 abstract class CordappLoaderTemplate : CordappLoader {
 
@@ -436,7 +469,9 @@ abstract class CordappLoaderTemplate : CordappLoader {
                             }
                         }
                         throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow " +
-                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
+                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].",
+                                entry.value.first().first.name,
+                                entry.value.joinToString { it.second.jarPath.toString() })
                     }
                     entry.value.single().second
                 }

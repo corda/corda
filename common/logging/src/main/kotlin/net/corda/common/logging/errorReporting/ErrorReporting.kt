@@ -43,6 +43,11 @@ class ErrorReporting private constructor(private val localeString: String,
         return ErrorReporting(localeString, location, contextProvider)
     }
 
+    /**
+     * Set the context provider to supply project-specific information about the errors.
+     *
+     * @param contextProvider The context provider to use with error reporting
+     */
     fun withContextProvider(contextProvider: ErrorContextProvider) : ErrorReporting {
         return ErrorReporting(localeString, resourceLocation, contextProvider)
     }
