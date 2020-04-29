@@ -11,7 +11,6 @@ import net.corda.common.validation.internal.Validated
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.nodeapi.internal.config.toConfigValue
 import java.io.File
 
 class ConfigExporter {

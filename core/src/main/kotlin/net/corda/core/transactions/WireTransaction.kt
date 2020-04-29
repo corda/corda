@@ -317,7 +317,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws [SignatureException] if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: TransactionSignature) {

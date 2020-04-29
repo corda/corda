@@ -12,25 +12,54 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.doOnComplete
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.node.services.statemachine.StaffedFlowHospital
+import org.junit.Before
 import java.sql.SQLTransientConnectionException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
+import kotlin.test.assertEquals
 
 abstract class AbstractFlowExternalOperationTest {
+
+    var dischargeCounter = 0
+    var observationCounter = 0
+
+    @Before
+    fun before() {
+        StaffedFlowHospital.onFlowDischarged.clear()
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.clear()
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
+        dischargeCounter = 0
+        observationCounter = 0
+    }
+
+    fun blockUntilFlowKeptInForObservation(flow: () -> FlowHandle<*>) {
+        val lock = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> lock.release() }
+        flow()
+        lock.acquire()
+    }
+
+    fun assertHospitalCounters(discharge: Int, observation: Int) {
+        assertEquals(discharge, dischargeCounter)
+        assertEquals(observation, observationCounter)
+    }
 
     @StartableByRPC
     @InitiatingFlow
@@ -44,11 +73,12 @@ abstract class AbstractFlowExternalOperationTest {
         @Suspendable
         override fun call(): Any {
             log.info("Started my flow")
+            subFlow(PingPongFlow(party))
             val result = testCode()
             val session = initiateFlow(party)
-            session.send("hi there")
-            log.info("ServiceHub value = $serviceHub")
-            session.receive<String>()
+            session.sendAndReceive<String>("hi there").unwrap { it }
+            session.sendAndReceive<String>("hi there").unwrap { it }
+            subFlow(PingPongFlow(party))
             log.info("Finished my flow")
             return result
         }
@@ -64,8 +94,28 @@ abstract class AbstractFlowExternalOperationTest {
     class FlowWithExternalOperationResponder(val session: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            session.receive<String>()
+            session.receive<String>().unwrap { it }
             session.send("go away")
+            session.receive<String>().unwrap { it }
+            session.send("go away")
+        }
+    }
+
+    @InitiatingFlow
+    class PingPongFlow(val party: Party): FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            session.sendAndReceive<String>("ping pong").unwrap { it }
+        }
+    }
+
+    @InitiatedBy(PingPongFlow::class)
+    class PingPongResponder(val session: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            session.receive<String>().unwrap { it }
+            session.send("I got you bro")
         }
     }
 
@@ -83,7 +133,7 @@ abstract class AbstractFlowExternalOperationTest {
         fun createFuture(): CompletableFuture<Any> {
             return CompletableFuture.supplyAsync(Supplier<Any> {
                 log.info("Starting sleep inside of future")
-                Thread.sleep(2000)
+                Thread.sleep(1000)
                 log.info("Finished sleep inside of future")
                 "Here is your return value"
             }, executorService)
@@ -181,31 +231,6 @@ abstract class AbstractFlowExternalOperationTest {
     object CustomSchema
 
     object CustomMappedSchema : MappedSchema(CustomSchema::class.java, 1, listOf(CustomTableEntity::class.java))
-
-    // Internal use for testing only!!
-    @StartableByRPC
-    class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
-        override fun call(): HospitalCounts =
-            HospitalCounts(
-                serviceHub.cordaService(HospitalCounter::class.java).dischargeCounter,
-                serviceHub.cordaService(HospitalCounter::class.java).observationCounter
-            )
-    }
-
-    @CordaSerializable
-    data class HospitalCounts(val discharge: Int, val observation: Int)
-
-    @Suppress("UNUSED_PARAMETER")
-    @CordaService
-    class HospitalCounter(services: AppServiceHub) : SingletonSerializeAsToken() {
-        var observationCounter: Int = 0
-        var dischargeCounter: Int = 0
-
-        init {
-            StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
-            StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> ++observationCounter }
-        }
-    }
 
     class MyCordaException(message: String) : CordaException(message)
 

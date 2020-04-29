@@ -32,6 +32,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertArrayEquals
@@ -39,6 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
@@ -341,6 +343,7 @@ class ProtonWrapperTests {
             val connection1ID = CordaX500Name.build(connection1.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection1ID.organisationUnit)
             val source1 = connection1.remoteAddress
+            val client2Connected = amqpClient2.onConnection.toFuture()
             amqpClient2.start()
             val connection2 = connectionEvents.next()
             assertEquals(true, connection2.connected)
@@ -353,6 +356,7 @@ class ProtonWrapperTests {
             assertEquals(false, connection3.connected)
             assertEquals(source1, connection3.remoteAddress)
             assertEquals(false, amqpClient1.connected)
+            client2Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient2.connected)
             // Now shutdown both
             amqpClient2.stop()
@@ -362,11 +366,13 @@ class ProtonWrapperTests {
             assertEquals(false, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
             // Now restarting one should work
+            val client1Connected = amqpClient1.onConnection.toFuture()
             amqpClient1.start()
             val connection5 = connectionEvents.next()
             assertEquals(true, connection5.connected)
             val connection5ID = CordaX500Name.build(connection5.remoteCert!!.subjectX500Principal)
             assertEquals("client 0", connection5ID.organisationUnit)
+            client1Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
             // Cleanup
@@ -380,13 +386,16 @@ class ProtonWrapperTests {
 	fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
-        var connected = false
+        // AmqpClient is set to auto-reconnect, there might be multiple connect/disconnect rounds
+        val connectedStack = mutableListOf<Boolean>()
         amqpClient.onConnection.subscribe { change ->
-            connected = change.connected
+            connectedStack.add(change.connected)
         }
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
+        assertEquals(1, connectedStack.size)
+        assertTrue(connectedStack.contains(true))
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val sendAddress = P2P_PREFIX + "Test"
         val testData = "Test".toByteArray()
@@ -395,7 +404,7 @@ class ProtonWrapperTests {
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Rejected, message.onComplete.get())
-        assertEquals(false, connected)
+        assertTrue(connectedStack.contains(false))
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
@@ -415,10 +424,11 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(true).whenever(it).crlCheckArtemisServer
         }
         artemisConfig.configureWithDevSSLCertificate()
 
-        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize)
+        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize, null)
         val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", artemisPort), maxMessageSize)
         server.start()
         client.start()
@@ -447,7 +457,6 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
@@ -479,7 +488,6 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
@@ -502,7 +510,6 @@ class ProtonWrapperTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -512,8 +519,8 @@ class ProtonWrapperTests {
             override val keyStore = serverKeystore
             override val trustStore = serverTruststore
             override val trace: Boolean = true
+            override val revocationConfig = crlCheckSoftFail.toRevocationConfig()
             override val maxMessageSize: Int = maxMessageSize
-            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
         }
         return AMQPServer(
                 "0.0.0.0",

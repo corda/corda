@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -150,9 +151,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
-import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
-import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
-import net.corda.common.logging.errorReporting.NodeDatabaseErrors
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
@@ -162,7 +161,10 @@ import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.RestrictedConnection
+import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -177,6 +179,7 @@ import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 import java.sql.Connection
+import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
@@ -190,6 +193,7 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import javax.persistence.PersistenceException
 import kotlin.collections.ArrayList
 
 /**
@@ -267,11 +271,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
-    val cryptoService = CryptoServiceFactory.makeCryptoService(
-            SupportedCryptoServices.BC_SIMPLE,
-            configuration.myLegalName,
-            configuration.signingCertificateStore
-    )
+    @Suppress("LeakingThis")
+    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -371,6 +372,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private var _started: S? = null
 
     private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
+
+    private var notaryService: NotaryService? = null
 
     private val nodeServicesContext = object : NodeServicesContext {
         override val platformVersion = versionInfo.platformVersion
@@ -529,8 +532,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs)
-            val notaryService = maybeStartNotaryService(myNotaryIdentity)
             installCordaServices()
+            notaryService = maybeStartNotaryService(myNotaryIdentity)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -634,7 +637,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
             val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
-            networkMapCache.addNode(newNodeInfo)
+            networkMapCache.addOrUpdateNode(newNodeInfo)
             log.info("New node-info: $newNodeInfo")
             newNodeInfo
         }
@@ -879,6 +882,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {
         return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    }
+
+    protected open fun makeCryptoService(): CryptoService {
+        return BCCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
     }
 
     @VisibleForTesting
@@ -1161,6 +1168,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
+        override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
@@ -1183,13 +1191,56 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
-        override fun jdbcSession(): Connection = database.createSession()
+        /**
+         * Exposes the database connection as a [RestrictedConnection] to the users.
+         */
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-            return database.transaction {
+            return database.transaction(useErrorHandler = false) {
                 session.flush()
-                block(restrictedEntityManager)
+                val manager = entityManager
+                withSavePoint { savepoint ->
+                    // Restrict what entity manager they can use inside the block
+                    try {
+                        block(RestrictedEntityManager(manager)).also {
+                            if (!manager.transaction.rollbackOnly) {
+                                manager.flush()
+                            } else {
+                                connection.rollback(savepoint)
+                            }
+                        }
+                    } catch (e: PersistenceException) {
+                        if (manager.transaction.rollbackOnly) {
+                            connection.rollback(savepoint)
+                        }
+                        throw e
+                    } finally {
+                        manager.close()
+                    }
+                }
             }
+        }
+
+        private fun <T: Any?> DatabaseTransaction.withSavePoint(block: (savepoint: Savepoint) -> T) : T {
+            val savepoint = connection.setSavepoint()
+            return try {
+                block(savepoint)
+            } finally {
+                // Release the save point even if we occur an error
+                if (savepoint.supportsReleasing()) {
+                    connection.releaseSavepoint(savepoint)
+                }
+            }
+        }
+
+        /**
+         * Not all databases support releasing of savepoints.
+         * The type of savepoints are referenced by string names since we do not have access to the JDBC drivers
+         * at compile time.
+         */
+        private fun Savepoint.supportsReleasing(): Boolean {
+            return this::class.simpleName != "SQLServerSavepoint" && this::class.simpleName != "OracleSavepoint"
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {

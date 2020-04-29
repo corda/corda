@@ -10,11 +10,20 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
+import net.corda.serialization.internal.ByteBufferInputStream
+import net.corda.serialization.internal.CheckpointSerializationContextImpl
+import net.corda.serialization.internal.CordaSerializationEncoding
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.QuasarWhitelist
+import net.corda.serialization.internal.SectionId
+import net.corda.serialization.internal.encodingNotPermittedFormat
 import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))

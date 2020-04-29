@@ -14,11 +14,12 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Local
     override val typeDescriptor = factory.createDescriptor(type)
 
     init {
+        @Suppress("unchecked_cast")
         typeNotation = RestrictedType(
                 AMQPTypeIdentifiers.nameForType(declaredType),
                 null, emptyList(), "list", Descriptor(typeDescriptor),
-                declaredClass.enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
-                    Choice(it.first.toString(), it.second.toString())
+                (declaredClass as Class<out Enum<*>>).enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
+                    Choice(it.first.name, it.second.toString())
                 })
     }
 

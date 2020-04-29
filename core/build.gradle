@@ -101,7 +101,8 @@ task copyQuasarJar(type: Copy) {
 
 jar {
     finalizedBy(copyQuasarJar)
-    baseName 'corda-core'
+    archiveBaseName = 'corda-core'
+    archiveClassifier = ''
 }
 
 configurations {

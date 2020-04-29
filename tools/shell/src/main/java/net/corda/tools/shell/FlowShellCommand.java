@@ -26,6 +26,7 @@ import static net.corda.tools.shell.InteractiveShell.runStateMachinesView;
                 "command with either a full class name, or a substring of the class name that's unambiguous. The parameters to the \n" +
                 "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
 )
+@Named("flow")
 public class FlowShellCommand extends InteractiveShellCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(FlowShellCommand.class);

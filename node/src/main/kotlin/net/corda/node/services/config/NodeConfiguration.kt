@@ -70,6 +70,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val crlCheckSoftFail: Boolean
+    val crlCheckArtemisServer: Boolean
     val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
 
     val baseDirectory: Path
@@ -217,7 +218,7 @@ data class FlowTimeoutConfiguration(
 
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
-fun Config.parseAsNodeConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
+fun Config.parseAsNodeConfiguration(options: Configuration.Options = Configuration.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
 
 data class NodeH2Settings(
         val address: NetworkHostAndPort?

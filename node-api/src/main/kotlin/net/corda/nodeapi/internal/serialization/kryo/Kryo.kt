@@ -18,6 +18,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.SgxSupport
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -67,13 +68,17 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
  * set via the constructor and the class is immutable.
  */
 class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
-    val props = klass.memberProperties.sortedBy { it.name }
-    val propsByName = props.associateBy { it.name }
-    val constructor = klass.primaryConstructor!!
+    val props by lazy { klass.memberProperties.sortedBy { it.name } }
+    val propsByName by lazy { props.associateBy { it.name } }
+    val constructor by lazy { klass.primaryConstructor!! }
 
     init {
-        props.forEach {
-            require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
+        // Verify that this class is immutable (all properties are final).
+        // We disable this check inside SGX as the reflection blows up.
+        if (!SgxSupport.isInsideEnclave) {
+            props.forEach {
+                require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
+            }
         }
     }
 

@@ -88,21 +88,30 @@ class StartedFlowTransition(
     }
 
     private fun sleepTransition(flowIORequest: FlowIORequest.Sleep): TransitionResult {
-        return builder {
-            actions.add(Action.SleepUntil(flowIORequest.wakeUpAfter))
-            resumeFlowLogic(Unit)
+        // This ensures that the [Sleep] request is not executed multiple times if extra
+        // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
+        return if (!startingState.isWaitingForFuture) {
+            builder {
+                currentState = currentState.copy(isWaitingForFuture = true)
+                actions.add(Action.SleepUntil(currentState, flowIORequest.wakeUpAfter))
+                FlowContinuation.ProcessEvents
+            }
+        } else {
+            TransitionResult(startingState)
         }
     }
 
     private fun waitForLedgerCommitTransition(flowIORequest: FlowIORequest.WaitForLedgerCommit): TransitionResult {
-        return if (!startingState.isTransactionTracked) {
+        // This ensures that the [WaitForLedgerCommit] request is not executed multiple times if extra
+        // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
+        return if (!startingState.isWaitingForFuture) {
             TransitionResult(
-                    newState = startingState.copy(isTransactionTracked = true),
-                    actions = listOf(
-                            Action.CreateTransaction,
-                            Action.TrackTransaction(flowIORequest.hash),
-                            Action.CommitTransaction
-                    )
+                newState = startingState.copy(isWaitingForFuture = true),
+                actions = listOf(
+                    Action.CreateTransaction,
+                    Action.TrackTransaction(flowIORequest.hash),
+                    Action.CommitTransaction
+                )
             )
         } else {
             TransitionResult(startingState)
@@ -289,7 +298,9 @@ class StartedFlowTransition(
             }
         } ?: emptyList()
 
-        actions.add(Action.SendMultiple(sendInitialActions, sendExistingActions))
+        if (sendInitialActions.isNotEmpty() || sendExistingActions.isNotEmpty()) {
+            actions.add(Action.SendMultiple(sendInitialActions, sendExistingActions))
+        }
         currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
     }
 
@@ -414,12 +425,19 @@ class StartedFlowTransition(
     }
 
     private fun executeAsyncOperation(flowIORequest: FlowIORequest.ExecuteAsyncOperation<*>): TransitionResult {
-        return builder {
-            // The `numberOfSuspends` is added to the deduplication ID in case an async
-            // operation is executed multiple times within the same flow.
-            val deduplicationId = context.id.toString() + ":" + currentState.checkpoint.numberOfSuspends.toString()
-            actions.add(Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation))
-            FlowContinuation.ProcessEvents
+        // This ensures that the [ExecuteAsyncOperation] request is not executed multiple times if extra
+        // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
+        return if (!startingState.isWaitingForFuture) {
+            builder {
+                // The `numberOfSuspends` is added to the deduplication ID in case an async
+                // operation is executed multiple times within the same flow.
+                val deduplicationId = context.id.toString() + ":" + currentState.checkpoint.numberOfSuspends.toString()
+                actions.add(Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation))
+                currentState = currentState.copy(isWaitingForFuture = true)
+                FlowContinuation.ProcessEvents
+            }
+        } else {
+            TransitionResult(startingState)
         }
     }
 

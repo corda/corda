@@ -2,9 +2,9 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.common.configuration.parsing.internal.get
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.configuration.parsing.internal.withOptions
 import net.corda.common.validation.internal.Validated
 import net.corda.core.internal.noPackageOverlap
 import net.corda.core.internal.requirePackageValid
@@ -17,7 +17,7 @@ import java.security.KeyStoreException
 
 typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
-fun Config.parseAsNetworkParametersConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = false)):
+fun Config.parseAsNetworkParametersConfiguration(options: Configuration.Options = Configuration.Options.defaults):
         Valid<NetworkParametersOverrides> = NetworkParameterOverridesSpec.parse(this, options)
 
 internal fun <T> badValue(msg: String): Valid<T> = Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of(msg)).toSet())
@@ -36,11 +36,12 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
         private val keystorePassword by string()
         private val keystoreAlias by string()
 
-        override fun parseValid(configuration: Config): Validated<PackageOwner, Configuration.Validation.Error> {
-            val suppliedKeystorePath = configuration[keystore]
-            val keystorePassword = configuration[keystorePassword]
+        override fun parseValid(configuration: Config, options: Configuration.Options): Validated<PackageOwner, Configuration.Validation.Error> {
+            val config = configuration.withOptions(options)
+            val suppliedKeystorePath = config[keystore]
+            val keystorePassword = config[keystorePassword]
             return try {
-                val javaPackageName = configuration[packageName]
+                val javaPackageName = config[packageName]
                 val absoluteKeystorePath = if (suppliedKeystorePath.isAbsolute) {
                     suppliedKeystorePath
                 } else {
@@ -49,10 +50,10 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
                 }.toAbsolutePath()
                 val ks = loadKeyStore(absoluteKeystorePath, keystorePassword)
                 return try {
-                    val publicKey = ks.getCertificate(configuration[keystoreAlias]).publicKey
+                    val publicKey = ks.getCertificate(config[keystoreAlias]).publicKey
                     valid(PackageOwner(javaPackageName, publicKey))
                 } catch (kse: KeyStoreException) {
-                    badValue("Keystore has not been initialized for alias ${configuration[keystoreAlias]}.")
+                    badValue("Keystore has not been initialized for alias ${config[keystoreAlias]}")
                 }
             } catch (kse: KeyStoreException) {
                 badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: $suppliedKeystorePath.")
@@ -79,8 +80,9 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
         }
     }
 
-    override fun parseValid(configuration: Config): Valid<NetworkParametersOverrides> {
-        val packageOwnership = configuration[packageOwnership]
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NetworkParametersOverrides> {
+        val config = configuration.withOptions(options)
+        val packageOwnership = config[packageOwnership]
         if (packageOwnership != null && !noPackageOverlap(packageOwnership.map { it.javaPackageName })) {
             return Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of(
                     "Package namespaces must not overlap",
@@ -89,11 +91,11 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
             )).toSet())
         }
         return valid(NetworkParametersOverrides(
-                minimumPlatformVersion = configuration[minimumPlatformVersion],
-                maxMessageSize = configuration[maxMessageSize],
-                maxTransactionSize = configuration[maxTransactionSize],
+                minimumPlatformVersion = config[minimumPlatformVersion],
+                maxMessageSize = config[maxMessageSize],
+                maxTransactionSize = config[maxTransactionSize],
                 packageOwnership = packageOwnership,
-                eventHorizon = configuration[eventHorizon]
+                eventHorizon = config[eventHorizon]
         ))
     }
 

@@ -194,3 +194,5 @@ style:
     active: true
     excludes: "**/buildSrc/**"
     excludeImports: 'java.util.*,kotlinx.android.synthetic.*'
+  UnusedImports:
+    active: true

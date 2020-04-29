@@ -9,12 +9,32 @@ import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.flows.*
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowStackSnapshot
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.KilledFlowException
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.isIdempotentFlow
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.location
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -110,6 +130,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val resultFuture: CordaFuture<R> get() = uncheckedCast(getTransientField(TransientValues::resultFuture))
     override val context: InvocationContext get() = transientState!!.value.checkpoint.invocationContext
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.ourIdentity
+    override val isKilled: Boolean get() = transientState!!.value.isKilled
+
     internal var hasSoftLockedStates: Boolean = false
         set(value) {
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
@@ -128,6 +150,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val actionExecutor = getTransientField(TransientValues::actionExecutor)
         val transition = stateMachine.transition(event, oldState)
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
+        // Ensure that the next state that is being written to the transient state maintains the [isKilled] flag
+        // This condition can be met if a flow is killed during [TransitionExecutor.executeTransition]
+        if (oldState.isKilled && !newState.isKilled) {
+            newState.isKilled = true
+        }
         transientState = TransientReference(newState)
         setLoggingContext()
         return continuation
@@ -154,6 +181,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     eventQueue.receive()
                 } catch (interrupted: InterruptedException) {
                     log.error("Flow interrupted while waiting for events, aborting immediately")
+                    (transientValues?.value?.resultFuture as? OpenFuture<*>)?.setException(KilledFlowException(id))
                     abortFiber()
                 }
                 val continuation = processEvent(transitionExecutor, nextEvent)
@@ -315,7 +343,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-    override fun <R> subFlow(subFlow: FlowLogic<R>): R {
+    override fun <R> subFlow(currentFlow: FlowLogic<*>, subFlow: FlowLogic<R>): R {
+        subFlow.stateMachine = this
+        maybeWireUpProgressTracking(currentFlow, subFlow)
+
         checkpointIfSubflowIdempotent(subFlow.javaClass)
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
@@ -335,6 +366,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = true
             )
+        }
+    }
+
+    private fun maybeWireUpProgressTracking(currentFlow: FlowLogic<*>, subFlow: FlowLogic<*>) {
+        val currentFlowProgressTracker = currentFlow.progressTracker
+        val subflowProgressTracker = subFlow.progressTracker
+        if (currentFlowProgressTracker != null && subflowProgressTracker != null && currentFlowProgressTracker != subflowProgressTracker) {
+            if (currentFlowProgressTracker.currentStep == ProgressTracker.UNSTARTED) {
+                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
+                currentFlowProgressTracker.nextStep()
+            }
+            currentFlowProgressTracker.setChildProgressTracker(currentFlowProgressTracker.currentStep, subflowProgressTracker)
         }
     }
 
@@ -414,6 +457,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
     }
 
+    override fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
+        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
+
+        return payloads.mapValues { (_, payload) ->
+            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
+        }
+    }
+
     @Suspendable
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
@@ -443,8 +494,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents) { "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation " }
-            unpark(SERIALIZER_BLOCKER)
+
+            // If the flow has been aborted then do not resume the fiber
+            if (continuation != FlowContinuation.Abort) {
+                require(continuation == FlowContinuation.ProcessEvents) {
+                    "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation"
+                }
+                unpark(SERIALIZER_BLOCKER)
+            }
         }
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
@@ -475,6 +532,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     override val stateMachine get() = getTransientField(TransientValues::stateMachine)
+
+    override val instanceId: StateMachineInstanceId get() = StateMachineInstanceId(id, super.getId())
 
     /**
      * Records the duration of this flow – from call() to completion or failure.

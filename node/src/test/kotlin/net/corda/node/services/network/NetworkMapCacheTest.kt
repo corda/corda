@@ -37,7 +37,7 @@ class NetworkMapCacheTest {
         val bob = bobNode.info.singleIdentity()
         assertEquals(alice, bob)
 
-        aliceNode.services.networkMapCache.addNode(bobNode.info)
+        aliceNode.services.networkMapCache.addOrUpdateNode(bobNode.info)
         // The details of node B write over those for node A
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(alice.owningKey).singleOrNull(), bobNode.info)
     }
@@ -86,7 +86,7 @@ class NetworkMapCacheTest {
         assertNull(bobCache.getPeerByLegalName(ALICE_NAME))
         assertThat(bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).isEmpty())
 
-        bobCacheInternal.addNode(aliceNode.info)
+        bobCacheInternal.addOrUpdateNode(aliceNode.info)
 
         assertEquals(aliceNode.info.singleIdentity(), bobCache.getPeerByLegalName(ALICE_NAME))
         assertEquals(aliceNode.info, bobCache.getNodesByLegalIdentityKey(aliceNode.info.singleIdentity().owningKey).single())
@@ -113,7 +113,7 @@ class NetworkMapCacheTest {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val aliceCache = aliceNode.services.networkMapCache
         val alicePartyAndCert2 = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public)
-        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(alicePartyAndCert2)))
+        aliceCache.addOrUpdateNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(alicePartyAndCert2)))
         // This is correct behaviour as we may have distributed service nodes.
         assertEquals(2, aliceCache.getNodesByLegalName(ALICE_NAME).size)
     }

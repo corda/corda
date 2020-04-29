@@ -4,7 +4,6 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.utilities.Try
 import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.*

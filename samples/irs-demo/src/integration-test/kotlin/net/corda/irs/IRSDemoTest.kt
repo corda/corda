@@ -48,7 +48,7 @@ class IRSDemoTest {
     private val rpcUsers = listOf(User("user", "password", setOf("ALL")))
     private val currentDate: LocalDate = LocalDate.now()
     private val futureDate: LocalDate = currentDate.plusMonths(6)
-    private val maxWaitTime: Duration = 60.seconds
+    private val maxWaitTime: Duration = 150.seconds
 
     @Test(timeout=300_000)
 	fun `runs IRS demo`() {

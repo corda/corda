@@ -1,7 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
-import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -16,7 +15,7 @@ class SpecificationTest {
             val principal by string().mapValid(::parseAddress)
             val admin by string().mapValid(::parseAddress)
 
-            override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal], configuration[admin]))
+            override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid(Addresses(it[principal], it[admin])) }
 
             private fun parseAddress(rawValue: String): Valid<Address> {
 
@@ -27,7 +26,7 @@ class SpecificationTest {
         val useSsl by boolean()
         val addresses by nested(AddressesSpec)
 
-        override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(configuration[addresses], configuration[useSsl]))
+        override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid<RpcSettings>(RpcSettingsImpl(it[addresses], it[useSsl])) }
     }
 
     @Test(timeout=300_000)
@@ -60,9 +59,9 @@ class SpecificationTest {
 
             private val maxElement by long("elements").list().map { elements -> elements.max() }
 
-            override fun parseValid(configuration: Config): Valid<AtomicLong> {
-
-                return valid(AtomicLong(configuration[maxElement]!!))
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<AtomicLong> {
+                val config = configuration.withOptions(options)
+                return valid(AtomicLong(config[maxElement]!!))
             }
         }
 
@@ -111,9 +110,9 @@ class SpecificationTest {
 
             private val maxElement by long("elements").list().mapValid(::parseMax)
 
-            override fun parseValid(configuration: Config): Valid<AtomicLong> {
-
-                return valid(AtomicLong(configuration[maxElement]))
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<AtomicLong> {
+                val config = configuration.withOptions(options)
+                return valid(AtomicLong(config[maxElement]))
             }
         }
 
@@ -159,7 +158,7 @@ class SpecificationTest {
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parseValid(configuration: Config) = valid(configuration[myProp])
+            override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid(it[myProp]) }
         }
 
         assertThat(spec.properties).hasSize(1)

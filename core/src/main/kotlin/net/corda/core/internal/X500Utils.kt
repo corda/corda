@@ -4,7 +4,6 @@ package net.corda.core.internal
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.identity.CordaX500Name
-import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
 import org.bouncycastle.asn1.x500.X500Name

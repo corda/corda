@@ -15,7 +15,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key)
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -34,7 +34,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key)
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -53,7 +53,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key).list()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -72,7 +72,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key).list()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -94,7 +94,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
 
-        assertThat(property.validate(configuration).errors).isEmpty()
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).isEmpty()
     }
 
     @Test(timeout=300_000)
@@ -114,7 +114,7 @@ class PropertyValidationTest {
 
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
@@ -134,7 +134,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to false).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -154,7 +154,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to 1.2).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -174,7 +174,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to 1).toConfig()
 
-        assertThat(property.validate(configuration).isValid).isTrue()
+        assertThat(property.validate(configuration, Configuration.Options.defaults).isValid).isTrue()
     }
 
     @Test(timeout=300_000)
@@ -186,7 +186,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -206,7 +206,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -226,7 +226,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to 1).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -249,7 +249,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
@@ -272,7 +272,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject()).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -295,7 +295,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
-        assertThat(property.validate(configuration).errors).satisfies { errors ->
+        assertThat(property.validate(configuration, Configuration.Options.defaults).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -317,7 +317,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
-        assertThat(property.validate(configuration).isValid).isTrue()
+        assertThat(property.validate(configuration, Configuration.Options.defaults).isValid).isTrue()
     }
 
     @Test(timeout=300_000)
@@ -333,7 +333,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to value).toConfig()
 
-        assertThat(property.validate(configuration).isValid).isTrue()
+        assertThat(property.validate(configuration, Configuration.Options.defaults).isValid).isTrue()
     }
 
     @Test(timeout=300_000)
@@ -350,7 +350,7 @@ class PropertyValidationTest {
 
         val configuration = configObject(key to value).toConfig()
 
-        val result = property.validate(configuration)
+        val result = property.validate(configuration, Configuration.Options.defaults)
 
         assertThat(result.errors).satisfies { errors ->
 

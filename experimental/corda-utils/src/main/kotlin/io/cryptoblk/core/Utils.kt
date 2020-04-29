@@ -1,17 +1,13 @@
 package io.cryptoblk.core
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 inline fun <reified T : ContractState> ServiceHub.queryStateByRef(ref: StateRef): StateAndRef<T> {

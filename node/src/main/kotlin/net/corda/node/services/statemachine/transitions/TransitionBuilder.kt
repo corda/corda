@@ -68,13 +68,13 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
 
     fun resumeFlowLogic(result: Any?): FlowContinuation {
         actions.add(Action.CreateTransaction)
-        currentState = currentState.copy(isFlowResumed = true)
+        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false, future = null)
         return FlowContinuation.Resume(result)
     }
 
     fun resumeFlowLogic(result: Throwable): FlowContinuation {
         actions.add(Action.CreateTransaction)
-        currentState = currentState.copy(isFlowResumed = true)
+        currentState = currentState.copy(isFlowResumed = true, isWaitingForFuture = false, future = null)
         return FlowContinuation.Throw(result)
     }
 }

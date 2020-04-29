@@ -3,7 +3,6 @@ package net.corda.core.serialization.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
-import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.sequence
