@@ -47,19 +47,20 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
     }
 
     fun createFlowFromNonResidentFlow(nonResidentFlow: NonResidentFlow): Flow? {
-        return createFlowFromCheckpoint(nonResidentFlow.runId, nonResidentFlow.checkpoint)
+        val checkpoint = when (nonResidentFlow.checkpoint.status) {
+            Checkpoint.FlowStatus.PAUSED -> {
+                val serialized = database.transaction {
+                    checkpointStorage.getCheckpoint(nonResidentFlow.runId)
+                }
+                serialized?.copy(status = Checkpoint.FlowStatus.RUNNABLE)?.deserialize(checkpointSerializationContext) ?: return null
+            }
+            else -> nonResidentFlow.checkpoint
+        }
+        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint)
     }
 
     fun createFlowFromCheckpoint(runId: StateMachineRunId, oldCheckpoint: Checkpoint): Flow? {
-        var checkpoint = oldCheckpoint
-        when (checkpoint.status) {
-            Checkpoint.FlowStatus.PAUSED -> {
-                val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(runId) }
-                checkpoint = serializedCheckpoint!!.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-                        .deserialize(checkpointSerializationContext)
-            }
-        }
-        checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
+        val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
 
         val fiber = getFiberFromCheckpoint(runId, checkpoint) ?: return null
         val state = StateMachineState(
@@ -101,7 +102,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
     @Suppress("TooGenericExceptionCaught")
     private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
         return try {
-            bytes.checkpointDeserialize(context = checkpointSerializationContext!!)
+            bytes.checkpointDeserialize(context = checkpointSerializationContext)
         } catch (e: Exception) {
             logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
             null
@@ -130,7 +131,7 @@ class FlowCreator(val checkpointSerializationContext: CheckpointSerializationCon
                 actionExecutor = actionExecutor!!,
                 stateMachine = StateMachine(id, secureRandom),
                 serviceHub = serviceHub,
-                checkpointSerializationContext = checkpointSerializationContext!!,
+                checkpointSerializationContext = checkpointSerializationContext,
                 unfinishedFibers = unfinishedFibers,
                 waitTimeUpdateHook = { flowId, timeout -> resetCustomTimeout(flowId, timeout) }
         )
