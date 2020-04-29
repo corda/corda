@@ -276,6 +276,13 @@ class NodeConfigurationImplTest {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `check crlCheckArtemisServer flag`() {
+        assertFalse(getConfig("working-config.conf").parseAsNodeConfiguration().value().crlCheckArtemisServer)
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("crlCheckArtemisServer" to true)))
+        assertTrue(rawConfig.parseAsNodeConfiguration().value().crlCheckArtemisServer)
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }

@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import static net.corda.testing.driver.Driver.driver;
-import static org.junit.Assert.assertEquals;
 
 public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperationTest {
 
@@ -32,16 +31,16 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             NodeHandle bob = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
-            ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
+            ).getReturnValue(), Duration.of(1, ChronoUnit.MINUTES));
         });
     }
 
@@ -50,16 +49,16 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             NodeHandle bob = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalAsyncOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
-            ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
+            ).getReturnValue(), Duration.of(1, ChronoUnit.MINUTES));
         });
     }
 
@@ -68,22 +67,18 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             NodeHandle bob = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(20, ChronoUnit.SECONDS)
+                    Duration.of(1, ChronoUnit.MINUTES)
             );
             KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationThatGetsRetriedInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
-            ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
+            ).getReturnValue(), Duration.of(1, ChronoUnit.MINUTES));
 
-            HospitalCounts counts = KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
-                    GetHospitalCountersFlow.class
-            ).getReturnValue(), Duration.of(20, ChronoUnit.SECONDS));
-            assertEquals(1, counts.getDischarge());
-            assertEquals(0, counts.getObservation());
+            assertHospitalCounters(1, 0);
 
             return null;
         });

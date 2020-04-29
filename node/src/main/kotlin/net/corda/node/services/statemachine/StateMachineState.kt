@@ -11,6 +11,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
+import java.util.concurrent.Future
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -21,28 +22,34 @@ import java.time.Instant
  * @param pendingDeduplicationHandlers the list of incomplete deduplication handlers.
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
- * @param isTransactionTracked true if a ledger transaction has been tracked as part of a
- *   [FlowIORequest.WaitForLedgerCommit]. This used is to make tracking idempotent.
+ * @param isWaitingForFuture true if the flow is waiting for the completion of a future triggered by one of the statemachine's actions
+ * @param future If the flow is relying on a [Future] completing, then this field will be set otherwise it remains null
  * @param isAnyCheckpointPersisted true if at least a single checkpoint has been persisted. This is used to determine
  *   whether we should DELETE the checkpoint at the end of the flow.
  * @param isStartIdempotent true if the start of the flow is idempotent, making the skipping of the initial checkpoint
  *   possible.
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
+ * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
+ * what event it is set to process next. [isKilled] is a `var` and set as [Volatile] to prevent concurrency errors that can occur if a flow
+ * is killed during the middle of a state transition.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
 data class StateMachineState(
-        val checkpoint: Checkpoint,
-        val flowLogic: FlowLogic<*>,
-        val pendingDeduplicationHandlers: List<DeduplicationHandler>,
-        val isFlowResumed: Boolean,
-        val isTransactionTracked: Boolean,
-        val isAnyCheckpointPersisted: Boolean,
-        val isStartIdempotent: Boolean,
-        val isRemoved: Boolean,
-        val senderUUID: String?
+    val checkpoint: Checkpoint,
+    val flowLogic: FlowLogic<*>,
+    val pendingDeduplicationHandlers: List<DeduplicationHandler>,
+    val isFlowResumed: Boolean,
+    val isWaitingForFuture: Boolean,
+    var future: Future<*>?,
+    val isAnyCheckpointPersisted: Boolean,
+    val isStartIdempotent: Boolean,
+    val isRemoved: Boolean,
+    @Volatile
+    var isKilled: Boolean,
+    val senderUUID: String?
 )
 
 /**

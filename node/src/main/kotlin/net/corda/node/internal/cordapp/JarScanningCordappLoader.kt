@@ -4,8 +4,6 @@ import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.common.logging.errorReporting.ErrorCode
-import net.corda.common.logging.errorReporting.NodeDatabaseErrors
-import net.corda.common.logging.errorReporting.NodeNamespaces
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256

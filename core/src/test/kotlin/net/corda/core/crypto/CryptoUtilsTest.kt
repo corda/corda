@@ -471,9 +471,9 @@ class CryptoUtilsTest {
         val privKeyDecoded = Crypto.decodePrivateKey(privKey.encoded)
         val pubKeyDecoded = Crypto.decodePublicKey(pubKey.encoded)
 
-        assertEquals(privKeyDecoded.algorithm, "ECDSA")
+        assertEquals(privKeyDecoded.algorithm, "EC")
         assertEquals((privKeyDecoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
-        assertEquals(pubKeyDecoded.algorithm, "ECDSA")
+        assertEquals(pubKeyDecoded.algorithm, "EC")
         assertEquals((pubKeyDecoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
     }
 
@@ -481,9 +481,9 @@ class CryptoUtilsTest {
 	fun `ECDSA secp256r1 scheme finder by key type`() {
         val keyPairR1 = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (privR1, pubR1) = keyPairR1
-        assertEquals(privR1.algorithm, "ECDSA")
+        assertEquals(privR1.algorithm, "EC")
         assertEquals((privR1 as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
-        assertEquals(pubR1.algorithm, "ECDSA")
+        assertEquals(pubR1.algorithm, "EC")
         assertEquals((pubR1 as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
     }
 
@@ -530,11 +530,11 @@ class CryptoUtilsTest {
         val encodedPubK1 = pubK1.encoded
 
         val decodedPrivK1 = Crypto.decodePrivateKey(encodedPrivK1)
-        assertEquals(decodedPrivK1.algorithm, "ECDSA")
+        assertEquals(decodedPrivK1.algorithm, "EC")
         assertEquals(decodedPrivK1, privK1)
 
         val decodedPubK1 = Crypto.decodePublicKey(encodedPubK1)
-        assertEquals(decodedPubK1.algorithm, "ECDSA")
+        assertEquals(decodedPubK1.algorithm, "EC")
         assertEquals(decodedPubK1, pubK1)
     }
 
@@ -546,11 +546,11 @@ class CryptoUtilsTest {
         val encodedPubR1 = pubR1.encoded
 
         val decodedPrivR1 = Crypto.decodePrivateKey(encodedPrivR1)
-        assertEquals(decodedPrivR1.algorithm, "ECDSA")
+        assertEquals(decodedPrivR1.algorithm, "EC")
         assertEquals(decodedPrivR1, privR1)
 
         val decodedPubR1 = Crypto.decodePublicKey(encodedPubR1)
-        assertEquals(decodedPubR1.algorithm, "ECDSA")
+        assertEquals(decodedPubR1.algorithm, "EC")
         assertEquals(decodedPubR1, pubR1)
     }
 

@@ -1,7 +1,6 @@
 package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.common.logging.errorReporting.CordappErrors
 import net.corda.core.flows.*
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES

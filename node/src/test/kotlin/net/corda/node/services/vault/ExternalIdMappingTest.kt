@@ -19,7 +19,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 
 class ExternalIdMappingTest {

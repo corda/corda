@@ -18,12 +18,20 @@ import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import kotlin.test.assertFailsWith
 
+@RunWith(Parameterized::class)
 @Suppress("FunctionName")
-class ContractWithCustomSerializerTest {
+class ContractWithCustomSerializerTest(private val runInProcess: Boolean) {
     companion object {
         const val CURRANTS = 5000L
+
+        @Parameters
+        @JvmStatic
+        fun modes(): List<Array<Boolean>> = listOf(Array(1) { true }, Array(1) { false })
 
         @BeforeClass
         @JvmStatic
@@ -37,7 +45,7 @@ class ContractWithCustomSerializerTest {
         val user = User("u", "p", setOf(Permissions.all()))
         driver(DriverParameters(
             portAllocation = incrementalPortAllocation(),
-            startNodesInProcess = false,
+            startNodesInProcess = runInProcess,
             notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = true)),
             cordappsForAllNodes = listOf(
                 cordappWithPackages("net.corda.flows.serialization.custom").signed(),

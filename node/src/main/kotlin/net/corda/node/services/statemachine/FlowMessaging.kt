@@ -64,7 +64,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     @Suspendable
     override fun sendSessionMessages(messageData: List<Message>) {
         val addressedMessages = messageData.map { createMessage(it.destination, it.sessionMessage, it.dedupId) }
-        serviceHub.networkService.send(addressedMessages)
+        serviceHub.networkService.sendAll(addressedMessages)
     }
 
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {

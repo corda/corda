@@ -17,6 +17,7 @@ dependencies {
 
 jar {
     archiveBaseName = 'corda-deserializers-djvm'
+    archiveClassifier = ''
     manifest {
         attributes('Automatic-Module-Name': 'net.corda.serialization.djvm.deserializers')
         attributes('Sealed': true)

@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
@@ -91,7 +90,7 @@ interface MessagingService : ServiceLifecycleSupport {
      * @param addressedMessages The list of messages together with the recipients, retry ids and sequence keys.
      */
     @Suspendable
-    fun send(addressedMessages: List<AddressedMessage>)
+    fun sendAll(addressedMessages: List<AddressedMessage>)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.

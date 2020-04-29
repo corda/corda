@@ -134,7 +134,7 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
-     * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)

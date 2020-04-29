@@ -5,10 +5,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
-import net.corda.nodeapi.internal.KeyOwningIdentity
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey

@@ -3,7 +3,6 @@ package net.corda.node.services.persistence
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.identity.PersistentIdentityService

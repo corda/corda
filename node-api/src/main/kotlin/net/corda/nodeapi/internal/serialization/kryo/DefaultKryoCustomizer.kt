@@ -10,7 +10,11 @@ import com.esotericsoftware.kryo.serializers.FieldSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
-import de.javakaffee.kryoserializers.guava.*
+import de.javakaffee.kryoserializers.guava.ImmutableListSerializer
+import de.javakaffee.kryoserializers.guava.ImmutableMapSerializer
+import de.javakaffee.kryoserializers.guava.ImmutableMultimapSerializer
+import de.javakaffee.kryoserializers.guava.ImmutableSetSerializer
+import de.javakaffee.kryoserializers.guava.ImmutableSortedSetSerializer
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.PrivacySalt
@@ -24,7 +28,11 @@ import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.transactions.*
+import net.corda.core.transactions.ContractUpgradeFilteredTransaction
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.serialization.internal.DefaultWhitelist
@@ -51,8 +59,9 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
-import java.util.*
-import kotlin.collections.ArrayList
+import java.util.Arrays
+import java.util.BitSet
+import java.util.ServiceLoader
 
 object DefaultKryoCustomizer {
     private val serializationWhitelists: List<SerializationWhitelist> by lazy {
@@ -70,7 +79,8 @@ object DefaultKryoCustomizer {
             instantiatorStrategy = CustomInstantiatorStrategy()
 
             // Required for HashCheckingStream (de)serialization.
-            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
+            // Note that return type should be specifically set to InputStream, otherwise it may not work,
+            // i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
@@ -79,8 +89,10 @@ object DefaultKryoCustomizer {
             // WARNING: reordering the registrations here will cause a change in the serialized form, since classes
             // with custom serializers get written as registration ids. This will break backwards-compatibility.
             // Please add any new registrations to the end.
-            // TODO: re-organise registrations into logical groups before v1.0
 
+            addDefaultSerializer(LinkedHashMapIteratorSerializer.getIterator()::class.java.superclass, LinkedHashMapIteratorSerializer)
+            register(LinkedHashMapEntrySerializer.getEntry()::class.java, LinkedHashMapEntrySerializer)
+            register(LinkedListItrSerializer.getListItr()::class.java, LinkedListItrSerializer)
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
             register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
@@ -128,6 +140,10 @@ object DefaultKryoCustomizer {
             register(ClosureSerializer.Closure::class.java, CordaClosureBlacklistSerializer)
             register(ContractUpgradeWireTransaction::class.java, ContractUpgradeWireTransactionSerializer)
             register(ContractUpgradeFilteredTransaction::class.java, ContractUpgradeFilteredTransactionSerializer)
+
+            addDefaultSerializer(Iterator::class.java) {kryo, type ->
+                IteratorSerializer(type, CompatibleFieldSerializer<Iterator<*>>(kryo, type).apply { setIgnoreSyntheticFields(false) })
+            }
 
             for (whitelistProvider in serializationWhitelists) {
                 val types = whitelistProvider.whitelist

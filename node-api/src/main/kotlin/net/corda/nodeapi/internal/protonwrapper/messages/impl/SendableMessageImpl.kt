@@ -11,11 +11,15 @@ import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
  * An internal packet management class that allows handling of the encoded buffers and
  * allows registration of an acknowledgement handler when the remote receiver confirms durable storage.
  */
-internal class SendableMessageImpl(override val payload: ByteArray,
+internal class SendableMessageImpl(override var payload: ByteArray,
                                    override val topic: String,
                                    override val destinationLegalName: String,
                                    override val destinationLink: NetworkHostAndPort,
                                    override val applicationProperties: Map<String, Any?>) : SendableMessage {
+    companion object {
+        private val emptyPayload = ByteArray(0)
+    }
+
     var buf: ByteBuf? = null
     @Volatile
     var status: MessageStatus = MessageStatus.Unsent
@@ -23,12 +27,14 @@ internal class SendableMessageImpl(override val payload: ByteArray,
     private val _onComplete = openFuture<MessageStatus>()
     override val onComplete: CordaFuture<MessageStatus> get() = _onComplete
 
-    fun release() {
+    override fun release() {
+        payload = emptyPayload
         buf?.release()
         buf = null
     }
 
     fun doComplete(status: MessageStatus) {
+        release()
         this.status = status
         _onComplete.set(status)
     }

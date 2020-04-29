@@ -87,11 +87,9 @@
     <ID>ComplexCondition:InternalUtils.kt$it.type == this &amp;&amp; it.isPublic &amp;&amp; it.isStatic &amp;&amp; it.isFinal</ID>
     <ID>ComplexCondition:Main.kt$Main$(hostname != null) &amp;&amp; (port != null) &amp;&amp; (username != null) &amp;&amp; (password != null)</ID>
     <ID>ComplexCondition:Schema.kt$obj == null || obj is DescribedType || obj is Binary || forGenericType(type).run { isPrimitive(this) || this == TopType }</ID>
-    <ID>ComplexCondition:TopLevelTransition.kt$TopLevelTransition$currentState.isTransactionTracked &amp;&amp; checkpoint.flowState is FlowState.Started &amp;&amp; checkpoint.flowState.flowIORequest is FlowIORequest.WaitForLedgerCommit &amp;&amp; checkpoint.flowState.flowIORequest.hash == event.transaction.id</ID>
     <ID>ComplexCondition:WireTransaction.kt$WireTransaction$notary != null &amp;&amp; (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)</ID>
     <ID>ComplexMethod:AMQPBridgeManager.kt$AMQPBridgeManager.AMQPBridge$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
     <ID>ComplexMethod:AMQPBridgeTest.kt$AMQPBridgeTest$@Test(timeout=300_000) fun `test acked and nacked messages`()</ID>
-    <ID>ComplexMethod:AMQPChannelHandler.kt$AMQPChannelHandler$override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any)</ID>
     <ID>ComplexMethod:AMQPTypeIdentifierParser.kt$AMQPTypeIdentifierParser$// Make sure our inputs aren't designed to blow things up. private fun validate(typeString: String)</ID>
     <ID>ComplexMethod:ANSIProgressRenderer.kt$ANSIProgressRenderer$// Returns number of lines rendered. private fun renderLevel(ansi: Ansi, error: Boolean): Int</ID>
     <ID>ComplexMethod:ANSIProgressRenderer.kt$ANSIProgressRenderer$@Synchronized protected fun draw(moveUp: Boolean, error: Throwable? = null)</ID>
@@ -124,13 +122,10 @@
     <ID>ComplexMethod:ConfigUtilities.kt$// For Iterables figure out the type parameter and apply the same logic as above on the individual elements. private fun Iterable&lt;*&gt;.toConfigIterable(field: Field): Iterable&lt;Any?&gt;</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$// TODO Move this to KeyStoreConfigHelpers. fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path, cryptoService: CryptoService? = null)</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") // Reflect over the fields of the receiver and generate a value Map that can use to create Config object. private fun Any.toConfigMap(): Map&lt;String, Any&gt;</ID>
-    <ID>ComplexMethod:ConfigUtilities.kt$private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set&lt;String&gt;, logger: Logger) -&gt; Unit, nestedPath: String?, baseDirectory: Path?): Collection&lt;Any&gt;</ID>
-    <ID>ComplexMethod:ConfigUtilities.kt$private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set&lt;String&gt;, logger: Logger) -&gt; Unit, nestedPath: String?, baseDirectory: Path?): Any?</ID>
     <ID>ComplexMethod:ConfigUtilities.kt$private fun convertValue(value: Any): Any</ID>
     <ID>ComplexMethod:ConnectionStateMachine.kt$ConnectionStateMachine$override fun onConnectionFinal(event: Event)</ID>
     <ID>ComplexMethod:ConnectionStateMachine.kt$ConnectionStateMachine$override fun onDelivery(event: Event)</ID>
     <ID>ComplexMethod:ConstraintsUtils.kt$ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean</ID>
-    <ID>ComplexMethod:CordaCliWrapper.kt$fun CordaCliWrapper.start(args: Array&lt;String&gt;)</ID>
     <ID>ComplexMethod:CordaPersistence.kt$CordaPersistence$private fun &lt;T&gt; inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -&gt; T): T</ID>
     <ID>ComplexMethod:CordaRPCClient.kt$CordaRPCClientConfiguration$override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:CordaRPCClientTest.kt$CordaRPCClientTest$@Test(timeout=300_000) fun `shutdown command stops the node`()</ID>
@@ -164,7 +159,6 @@
     <ID>ComplexMethod:MerkleTransaction.kt$FilteredTransaction.Companion$ private fun filterWithFun(wtx: WireTransaction, filtering: Predicate&lt;Any&gt;): List&lt;FilteredComponentGroup&gt;</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun bootstrap( directory: Path, cordappJars: List&lt;Path&gt;, copyCordapps: CopyCordapps, fromCordform: Boolean, networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides() )</ID>
     <ID>ComplexMethod:NetworkBootstrapper.kt$NetworkBootstrapper$private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean</ID>
-    <ID>ComplexMethod:NetworkMapUpdater.kt$NetworkMapUpdater$fun updateNetworkMapCache(): Duration</ID>
     <ID>ComplexMethod:NetworkParametersReader.kt$NetworkParametersReader$fun read(): NetworkParametersAndSigned</ID>
     <ID>ComplexMethod:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$ private fun pollServerForCertificates(requestId: String): List&lt;X509Certificate&gt;</ID>
     <ID>ComplexMethod:NewTransaction.kt$NewTransaction$fun show(window: Window)</ID>
@@ -182,7 +176,6 @@
     <ID>ComplexMethod:RPCClientProxyHandler.kt$RPCClientProxyHandler$// This is the general function that transforms a client side RPC to internal Artemis messages. override fun invoke(proxy: Any, method: Method, arguments: Array&lt;out Any?&gt;?): Any?</ID>
     <ID>ComplexMethod:RPCClientProxyHandler.kt$RPCClientProxyHandler$private fun attemptReconnect()</ID>
     <ID>ComplexMethod:RPCServer.kt$RPCServer$private fun clientArtemisMessageHandler(artemisMessage: ClientMessage)</ID>
-    <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ErrorInterceptingHandler$ private fun doInvoke(method: Method, args: Array&lt;out Any&gt;?, maxNumberOfAttempts: Int): Any?</ID>
     <ID>ComplexMethod:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ private tailrec fun establishConnectionWithRetry( retryInterval: Duration, roundRobinIndex: Int = 0, retries: Int = -1 ): CordaRPCConnection?</ID>
     <ID>ComplexMethod:RemoteTypeCarpenter.kt$SchemaBuildingRemoteTypeCarpenter$override fun carpent(typeInformation: RemoteTypeInformation): Type</ID>
     <ID>ComplexMethod:RpcReconnectTests.kt$RpcReconnectTests$ @Test(timeout=300_000) fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`()</ID>
@@ -215,7 +208,6 @@
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$AsyncRetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$RetryFlow$()</ID>
     <ID>EmptyDefaultConstructor:FlowRetryTest.kt$ThrowingFlow$()</ID>
-    <ID>EmptyElseBlock:CordaCliWrapper.kt${ }</ID>
     <ID>EmptyIfBlock:ContentSignerBuilder.kt$ContentSignerBuilder.SignatureOutputStream$if (alreadySigned) throw IllegalStateException("Cannot write to already signed object")</ID>
     <ID>EmptyIfBlock:InMemoryIdentityService.kt$InMemoryIdentityService${ }</ID>
     <ID>EmptyKtFile:KryoHook.kt$.KryoHook.kt</ID>
@@ -327,11 +319,9 @@
     <ID>ForbiddenComment:CustomSerializer.kt$CustomSerializer.SubClass$// TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?</ID>
     <ID>ForbiddenComment:CustomSerializer.kt$CustomSerializer.SubClass$// TODO: should this be empty or contain the schema of the super?</ID>
     <ID>ForbiddenComment:DbTransactionsResolver.kt$DbTransactionsResolver$// TODO: This approach has two problems. Analyze and resolve them:</ID>
-    <ID>ForbiddenComment:DefaultKryoCustomizer.kt$DefaultKryoCustomizer$// TODO: re-organise registrations into logical groups before v1.0</ID>
     <ID>ForbiddenComment:DigitalSignatureWithCert.kt$// TODO: Rename this to DigitalSignature.WithCert once we're happy for it to be public API. The methods will need documentation</ID>
     <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl$// TODO: Derive name from the full picked name, don't just wrap the common name</ID>
     <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl$//TODO: remove this once we can bundle quasar properly.</ID>
-    <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl.Companion$// TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.</ID>
     <ID>ForbiddenComment:DriverDSLImpl.kt$DriverDSLImpl.LocalNetworkMap$// TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/</ID>
     <ID>ForbiddenComment:DummyFungibleContract.kt$DummyFungibleContract$// TODO: This doesn't work with the trader demo, so use the underlying key instead</ID>
     <ID>ForbiddenComment:E2ETestKeyManagementService.kt$E2ETestKeyManagementService$// TODO: A full KeyManagementService implementation needs to record activity to the Audit Service and to limit</ID>
@@ -350,7 +340,6 @@
     <ID>ForbiddenComment:FlowLogicRefFactoryImpl.kt$FlowLogicRefFactoryImpl$// TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly</ID>
     <ID>ForbiddenComment:GenerateRpcSslCertsCli.kt$GenerateRpcSslCerts$// TODO: consider adding a password strength policy.</ID>
     <ID>ForbiddenComment:GuiUtilities.kt$// TODO: This is a temporary fix for the UI to show the correct issuer identity, this will break when we start randomizing keys. More work is needed here when the identity work is done.</ID>
-    <ID>ForbiddenComment:HibernateConfiguration.kt$HibernateConfiguration$// TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session</ID>
     <ID>ForbiddenComment:IRS.kt$FloatingRatePaymentEvent$// TODO: Should an uncalculated amount return a zero ? null ? etc.</ID>
     <ID>ForbiddenComment:IRS.kt$InterestRateSwap$// TODO: Confirm: would someone really enter a swap with a negative fixed rate?</ID>
     <ID>ForbiddenComment:IRS.kt$InterestRateSwap$// TODO: further tests</ID>
@@ -388,6 +377,7 @@
     <ID>ForbiddenComment:LegalNameValidator.kt$LegalNameValidator.Rule.Companion$// TODO: Implement confusable character detection if we add more scripts.</ID>
     <ID>ForbiddenComment:LocalTypeInformationBuilder.kt$// TODO: Revisit this when Kotlin issue is fixed.</ID>
     <ID>ForbiddenComment:LoggingBuyerFlow.kt$LoggingBuyerFlow$// TODO: This is potentially very expensive, and requires transaction details we may no longer have once</ID>
+    <ID>ForbiddenComment:LoopbackBridgeManager.kt$LoopbackBridgeManager.LoopbackBridge$// TODO: refactor MDC support, duplicated in AMQPBridgeManager.</ID>
     <ID>ForbiddenComment:MockServices.kt$MockServices.Companion$// TODO: Can we use an X509 principal generator here?</ID>
     <ID>ForbiddenComment:NetParams.kt$NetParamsSigner$// TODO: not supported</ID>
     <ID>ForbiddenComment:NetworkBootstrapper.kt$NetworkBootstrapper$// TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map</ID>
@@ -630,8 +620,6 @@
     <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_metadata()</ID>
     <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_no_value()</ID>
     <ID>FunctionNaming:VersionExtractorTest.kt$VersionExtractorTest$@Test(timeout=300_000) fun version_header_extraction_present()</ID>
-    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test(timeout=300_000) fun correct_parsing_function_is_used_for_present_version()</ID>
-    <ID>FunctionNaming:VersionedParsingExampleTest.kt$VersionedParsingExampleTest$@Test(timeout=300_000) fun default_value_is_used_for_absent_version()</ID>
     <ID>LargeClass:AbstractNode.kt$AbstractNode&lt;S&gt; : SingletonSerializeAsToken</ID>
     <ID>LargeClass:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager : StateMachineManagerStateMachineManagerInternal</ID>
     <ID>LongMethod:FlowCookbook.kt$InitiatorFlow$@Suppress("RemoveExplicitTypeArguments") @Suspendable override fun call()</ID>
@@ -643,8 +631,8 @@
     <ID>LongParameterList:AbstractNode.kt$(databaseConfig: DatabaseConfig, wellKnownPartyFromX500Name: (CordaX500Name) -&gt; Party?, wellKnownPartyFromAnonymous: (AbstractParty) -&gt; Party?, schemaService: SchemaService, hikariProperties: Properties, cacheFactory: NamedCacheFactory, customClassLoader: ClassLoader?)</ID>
     <ID>LongParameterList:AbstractNode.kt$(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set&lt;MappedSchema&gt;, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name)</ID>
     <ID>LongParameterList:ArtemisMessagingServer.kt$ArtemisMessagingServer$(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false, deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false, deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
-    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
+    <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
     <ID>LongParameterList:ArtemisRpcTests.kt$ArtemisRpcTests$(nodeSSlconfig: MutualSslConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(), adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = tempFolder.root.toPath() )</ID>
     <ID>LongParameterList:AttachmentsClassLoader.kt$AttachmentsClassLoaderBuilder$(attachments: List&lt;Attachment&gt;, params: NetworkParameters, txId: SecureHash, isAttachmentTrusted: (Attachment) -&gt; Boolean, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -&gt; T)</ID>
     <ID>LongParameterList:BFTSmart.kt$BFTSmart.Replica$( states: List&lt;StateRef&gt;, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; = emptyList() )</ID>
@@ -655,7 +643,6 @@
     <ID>LongParameterList:CertificateRevocationListNodeTests.kt$CertificateRevocationListNodeTests$(port: Int, name: CordaX500Name = ALICE_NAME, crlCheckSoftFail: Boolean, nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl", tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl", maxMessageSize: Int = MAX_MESSAGE_SIZE)</ID>
     <ID>LongParameterList:CertificateRevocationListNodeTests.kt$CertificateRevocationListNodeTests.Companion$(clrServer: CrlServer, signatureAlgorithm: String, caCertificate: X509Certificate, caPrivateKey: PrivateKey, endpoint: String, indirect: Boolean, vararg serialNumbers: BigInteger)</ID>
     <ID>LongParameterList:CertificateStoreStubs.kt$CertificateStoreStubs.P2P.Companion$(baseDirectory: Path, certificatesDirectoryName: String = DEFAULT_CERTIFICATES_DIRECTORY_NAME, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD)</ID>
-    <ID>LongParameterList:CertificateStoreStubs.kt$CertificateStoreStubs.P2P.Companion$(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, keyPassword: String = keyStorePassword, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD, trustStoreKeyPassword: String = TrustStore.DEFAULT_KEY_PASSWORD, @Suppress("UNUSED_PARAMETER") useOpenSsl: Boolean = false)</ID>
     <ID>LongParameterList:ContractAttachment.kt$ContractAttachment.Companion$(attachment: Attachment, contract: ContractClassName, additionalContracts: Set&lt;ContractClassName&gt; = emptySet(), uploader: String? = null, signerKeys: List&lt;PublicKey&gt; = emptyList(), version: Int = DEFAULT_CORDAPP_VERSION)</ID>
     <ID>LongParameterList:ContractFunctions.kt$(expiry: String, notional: BigDecimal, strike: BigDecimal, foreignCurrency: Currency, domesticCurrency: Currency, partyA: Party, partyB: Party)</ID>
     <ID>LongParameterList:ContractFunctions.kt$(expiry: String, notional: Long, strike: Double, foreignCurrency: Currency, domesticCurrency: Currency, partyA: Party, partyB: Party)</ID>
@@ -925,7 +912,6 @@
     <ID>MagicNumber:IrsDemoWebApplication.kt$IrsDemoWebApplication$1000</ID>
     <ID>MagicNumber:JarScanningCordappLoader.kt$CordappLoaderTemplate$36</ID>
     <ID>MagicNumber:JarScanningCordappLoader.kt$CordappLoaderTemplate$64</ID>
-    <ID>MagicNumber:JarScanningCordappLoader.kt$JarScanningCordappLoader$1000</ID>
     <ID>MagicNumber:JarSignatureCollector.kt$JarSignatureCollector$1024</ID>
     <ID>MagicNumber:JarSignatureTestUtils.kt$JarSignatureTestUtils$14</ID>
     <ID>MagicNumber:KMSUtils.kt$3650</ID>
@@ -1207,7 +1193,6 @@
     <ID>MatchingDeclarationName:ConfigException.kt$net.corda.core.cordapp.ConfigException.kt</ID>
     <ID>MatchingDeclarationName:ConfigUtilities.kt$net.corda.node.services.config.ConfigUtilities.kt</ID>
     <ID>MatchingDeclarationName:ContractsDSL.kt$net.corda.core.contracts.ContractsDSL.kt</ID>
-    <ID>MatchingDeclarationName:CordaUtils.kt$net.corda.core.internal.CordaUtils.kt</ID>
     <ID>MatchingDeclarationName:CurrencyParameterSensitivitySerialiser.kt$net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitySerialiser.kt</ID>
     <ID>MatchingDeclarationName:FinanceWorkflowsUtils.kt$net.corda.finance.workflows.utils.FinanceWorkflowsUtils.kt</ID>
     <ID>MatchingDeclarationName:FlowStackSnapshot.kt$net.corda.testing.internal.FlowStackSnapshot.kt</ID>
@@ -1229,8 +1214,6 @@
     <ID>MatchingDeclarationName:Query.kt$net.corda.webserver.api.Query.kt</ID>
     <ID>MatchingDeclarationName:ReceiveAllFlowTests.kt$net.corda.coretests.flows.ReceiveAllFlowTests.kt</ID>
     <ID>MatchingDeclarationName:ReferenceInputStateTests.kt$net.corda.coretests.transactions.ReferenceInputStateTests.kt</ID>
-    <ID>MatchingDeclarationName:RigorousMock.kt$net.corda.testing.internal.RigorousMock.kt</ID>
-    <ID>MatchingDeclarationName:RpcServerCordaFutureSerialiser.kt$net.corda.node.serialization.amqp.RpcServerCordaFutureSerialiser.kt</ID>
     <ID>MatchingDeclarationName:SSLHelper.kt$net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper.kt</ID>
     <ID>MatchingDeclarationName:SampleData.kt$net.corda.deterministic.verifier.SampleData.kt</ID>
     <ID>MatchingDeclarationName:SerializationHelper.kt$net.corda.networkbuilder.serialization.SerializationHelper.kt</ID>
@@ -1285,7 +1268,6 @@
     <ID>NestedBlockDepth:RPCClientProxyHandler.kt$RPCClientProxyHandler$// The handler for Artemis messages. private fun artemisMessageHandler(message: ClientMessage)</ID>
     <ID>NestedBlockDepth:ShutdownManager.kt$ShutdownManager$fun shutdown()</ID>
     <ID>NestedBlockDepth:SpringDriver.kt$SpringBootDriverDSL$private fun queryWebserver(handle: NodeHandle, process: Process, checkUrl: String): WebserverHandle</ID>
-    <ID>NestedBlockDepth:StartedFlowTransition.kt$StartedFlowTransition$private fun TransitionBuilder.sendToSessionsTransition(sourceSessionIdToMessage: Map&lt;SessionId, SerializedBytes&lt;Any&gt;&gt;)</ID>
     <ID>NestedBlockDepth:StatusTransitions.kt$StatusTransitions$ fun verify(tx: LedgerTransaction)</ID>
     <ID>NestedBlockDepth:ThrowableSerializer.kt$ThrowableSerializer$override fun fromProxy(proxy: ThrowableProxy): Throwable</ID>
     <ID>NestedBlockDepth:TransactionVerifierServiceInternal.kt$Verifier$ private fun verifyConstraintsValidity(contractAttachmentsByContract: Map&lt;ContractClassName, ContractAttachment&gt;)</ID>
@@ -1316,7 +1298,6 @@
     <ID>SpreadOperator:ConfigUtilities.kt$(*pairs)</ID>
     <ID>SpreadOperator:Configuration.kt$Configuration.Validation.Error$(*(containingPath.toList() + this.containingPath).toTypedArray())</ID>
     <ID>SpreadOperator:ContractJarTestUtils.kt$ContractJarTestUtils$(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray())</ID>
-    <ID>SpreadOperator:CordaCliWrapper.kt$(RunLast().useOut(System.out).useAnsi(defaultAnsiMode), DefaultExceptionHandler&lt;List&lt;Any&gt;&gt;().useErr(System.err).useAnsi(defaultAnsiMode).andExit(ExitCodes.FAILURE), *args)</ID>
     <ID>SpreadOperator:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$(logicType, context(), *args)</ID>
     <ID>SpreadOperator:CordaX500Name.kt$CordaX500Name.Companion$(*Locale.getISOCountries(), unspecifiedCountry)</ID>
     <ID>SpreadOperator:CustomCordapp.kt$CustomCordapp$(*classes.map { it.name }.toTypedArray())</ID>
@@ -1326,7 +1307,6 @@
     <ID>SpreadOperator:DockerInstantiator.kt$DockerInstantiator$(*it.toTypedArray())</ID>
     <ID>SpreadOperator:DummyContract.kt$DummyContract.Companion$( /* INPUTS */ *priors.toTypedArray(), /* COMMAND */ Command(cmd, priorState.owner.owningKey), /* OUTPUT */ StateAndContract(state, PROGRAM_ID) )</ID>
     <ID>SpreadOperator:DummyContract.kt$DummyContract.Companion$(*items)</ID>
-    <ID>SpreadOperator:DummyContractV2.kt$DummyContractV2.Companion$( /* INPUTS */ *priors.toTypedArray(), /* COMMAND */ Command(cmd, priorState.owners.map { it.owningKey }), /* OUTPUT */ StateAndContract(state, DummyContractV2.PROGRAM_ID) )</ID>
     <ID>SpreadOperator:ExceptionsErrorCodeFunctions.kt$(*fields)</ID>
     <ID>SpreadOperator:ExceptionsErrorCodeFunctions.kt$(*fields, cause.staticLocationBasedHash(hashedFields, visited + cause))</ID>
     <ID>SpreadOperator:ExceptionsErrorCodeFunctions.kt$(*hashedFields.invoke(this))</ID>
@@ -1483,6 +1463,7 @@
     <ID>TooGenericExceptionCaught:AbstractNode.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:AbstractNodeTests.kt$ColdJVM.Companion$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:Amount.kt$Amount.Companion$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ArtemisRpcBroker.kt$ArtemisRpcBroker$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:AttachmentDemo.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AttachmentLoadingTests.kt$AttachmentLoadingTests.ConsumeAndBroadcastResponderFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AttachmentVersionNumberMigration.kt$AttachmentVersionNumberMigration$e: Exception</ID>
@@ -1491,7 +1472,6 @@
     <ID>TooGenericExceptionCaught:BankOfCordaWebApi.kt$BankOfCordaWebApi$e: Exception</ID>
     <ID>TooGenericExceptionCaught:BlobInspector.kt$BlobInspector$e: Exception</ID>
     <ID>TooGenericExceptionCaught:BootstrapperView.kt$BootstrapperView$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:BridgeControlListener.kt$BridgeControlListener$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:BrokerJaasLoginModule.kt$BrokerJaasLoginModule$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CertRole.kt$CertRole.Companion$ex: ArrayIndexOutOfBoundsException</ID>
     <ID>TooGenericExceptionCaught:CheckpointAgent.kt$CheckpointAgent.Companion$e: Exception</ID>
@@ -1506,9 +1486,6 @@
     <ID>TooGenericExceptionCaught:ContractUpgradeTransactions.kt$ContractUpgradeWireTransaction$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaAuthenticationPlugin.kt$CordaAuthenticationPlugin$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaClassResolver.kt$LoggingWhitelist.Companion$ioEx: Exception</ID>
-    <ID>TooGenericExceptionCaught:CordaFutureImpl.kt$CordaFutureImpl$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:CordaFutureImpl.kt$ValueOrException$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:CordaFutureImpl.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaPersistence.kt$CordaPersistence$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaRPCClientTest.kt$CordaRPCClientTest$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CordaRPCOpsImpl.kt$CordaRPCOpsImpl$e: Exception</ID>
@@ -1522,6 +1499,7 @@
     <ID>TooGenericExceptionCaught:DeserializeSimpleTypesTests.kt$DeserializeSimpleTypesTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DockerInstantiator.kt$DockerInstantiator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl.Companion$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverTests.kt$DriverTests$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ErrorCodeLoggingTests.kt$e: Exception</ID>
@@ -1616,7 +1594,7 @@
     <ID>TooGenericExceptionCaught:ReconnectingCordaRPCOps.kt$ReconnectingCordaRPCOps.ReconnectingRPCConnection$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ReconnectingObservable.kt$ReconnectingObservable.ReconnectingSubscriber$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RpcServerObservableSerializerTests.kt$RpcServerObservableSerializerTests$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SSLHelper.kt$LoggingTrustManagerWrapper$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:SSLHelper.kt$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:SerializationOutputTests.kt$SerializationOutputTests$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:ShutdownManager.kt$ShutdownManager$t: Throwable</ID>
@@ -1644,7 +1622,6 @@
     <ID>TooGenericExceptionCaught:ValidatingNotaryFlow.kt$ValidatingNotaryFlow$e: Exception</ID>
     <ID>TooGenericExceptionCaught:VaultStateMigration.kt$VaultStateIterator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:VaultStateMigration.kt$VaultStateMigration$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:VersionedParsingExampleTest.kt$VersionedParsingExampleTest.RpcSettingsSpec$e: Exception</ID>
     <ID>TooGenericExceptionCaught:WebServer.kt$WebServer$e: Exception</ID>
     <ID>TooGenericExceptionCaught:WebServer.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:WebServer.kt$ex: Exception</ID>
@@ -1699,7 +1676,6 @@
     <ID>TooManyFunctions:CryptoUtils.kt$net.corda.core.crypto.CryptoUtils.kt</ID>
     <ID>TooManyFunctions:Currencies.kt$net.corda.finance.Currencies.kt</ID>
     <ID>TooManyFunctions:Driver.kt$DriverParameters</ID>
-    <ID>TooManyFunctions:DriverDSLImpl.kt$DriverDSLImpl : InternalDriverDSL</ID>
     <ID>TooManyFunctions:EncodingUtils.kt$net.corda.core.utilities.EncodingUtils.kt</ID>
     <ID>TooManyFunctions:FlowLogic.kt$FlowLogic&lt;out T&gt;</ID>
     <ID>TooManyFunctions:FlowStateMachineImpl.kt$FlowStateMachineImpl&lt;R&gt; : FiberFlowStateMachineFlowFiber</ID>
@@ -1761,6 +1737,18 @@
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField&lt;SerializationEnvironment&gt;("inheritableContextSerializationEnv") { stack -&gt; stack.fold(false) { isAGlobalThreadBeingCreated, e -&gt; isAGlobalThreadBeingCreated || (e.className == "io.netty.util.concurrent.GlobalEventExecutor" &amp;&amp; e.methodName == "startThread") || (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" &amp;&amp; e.methodName == "newThread") } }</ID>
     <ID>TopLevelPropertyNaming:SerializationEnvironment.kt$val _rpcClientSerializationEnv = SimpleToggleField&lt;SerializationEnvironment&gt;("rpcClientSerializationEnv")</ID>
     <ID>TopLevelPropertyNaming:SerializationFormat.kt$const val encodingNotPermittedFormat = "Encoding not permitted: %s"</ID>
+    <ID>UnusedImports:Amount.kt$import net.corda.core.crypto.CompositeKey</ID>
+    <ID>UnusedImports:Amount.kt$import net.corda.core.identity.Party</ID>
+    <ID>UnusedImports:DummyLinearStateSchemaV1.kt$import net.corda.core.contracts.ContractState</ID>
+    <ID>UnusedImports:FlowsExecutionModeRpcTest.kt$import net.corda.core.internal.packageName</ID>
+    <ID>UnusedImports:FlowsExecutionModeRpcTest.kt$import net.corda.finance.schemas.CashSchemaV1</ID>
+    <ID>UnusedImports:InternalTestUtils.kt$import java.nio.file.Files</ID>
+    <ID>UnusedImports:InternalTestUtils.kt$import net.corda.nodeapi.internal.loadDevCaTrustStore</ID>
+    <ID>UnusedImports:NetworkMap.kt$import net.corda.core.node.NodeInfo</ID>
+    <ID>UnusedImports:NodeParameters.kt$import net.corda.core.identity.Party</ID>
+    <ID>UnusedImports:SerializerFactory.kt$import java.io.NotSerializableException</ID>
+    <ID>UnusedImports:TransformTypes.kt$import net.corda.core.serialization.CordaSerializationTransformEnumDefaults</ID>
+    <ID>UnusedImports:VaultSchema.kt$import net.corda.core.contracts.ContractState</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party</ID>
     <ID>VariableNaming:AttachmentsClassLoaderSerializationTests.kt$AttachmentsClassLoaderSerializationTests$val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party</ID>
     <ID>VariableNaming:BootstrapperView.kt$BootstrapperView$val YAML_MAPPER = Constants.getContextMapper()</ID>
@@ -1885,8 +1873,6 @@
     <ID>VariableNaming:VaultQueryTests.kt$VaultQueryTestsBase$// Beware: do not use `MyContractClass::class.qualifiedName` as this returns a fully qualified name using "dot" notation for enclosed class val MYCONTRACT_ID = "net.corda.node.services.vault.VaultQueryTestsBase\$MyContractClass"</ID>
     <ID>VariableNaming:ZeroCouponBond.kt$ZeroCouponBond$val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")</ID>
     <ID>WildcardImport:AMQPClient.kt$import io.netty.channel.*</ID>
-    <ID>WildcardImport:AMQPClientSerializationScheme.kt$import net.corda.serialization.internal.*</ID>
-    <ID>WildcardImport:AMQPClientSerializationScheme.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:AMQPRemoteTypeModel.kt$import net.corda.serialization.internal.model.*</ID>
     <ID>WildcardImport:AMQPSerializationScheme.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:AMQPServerSerializationScheme.kt$import net.corda.serialization.internal.amqp.*</ID>
@@ -2023,9 +2009,6 @@
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.identity.*</ID>
     <ID>WildcardImport:CordaModule.kt$import net.corda.core.transactions.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.context.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.core.messaging.*</ID>
-    <ID>WildcardImport:CordaRPCClientTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:CordaRPCOps.kt$import net.corda.core.node.services.vault.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import net.corda.core.messaging.*</ID>
     <ID>WildcardImport:CordaRPCOpsImplTest.kt$import org.assertj.core.api.Assertions.*</ID>
@@ -2056,8 +2039,6 @@
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:DBTransactionStorage.kt$import net.corda.nodeapi.internal.persistence.*</ID>
     <ID>WildcardImport:DBTransactionStorageTests.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:DefaultKryoCustomizer.kt$import de.javakaffee.kryoserializers.guava.*</ID>
-    <ID>WildcardImport:DefaultKryoCustomizer.kt$import net.corda.core.transactions.*</ID>
     <ID>WildcardImport:DeleteForDJVM.kt$import kotlin.annotation.AnnotationTarget.*</ID>
     <ID>WildcardImport:DemoBench.kt$import tornadofx.*</ID>
     <ID>WildcardImport:DemoBenchNodeInfoFilesCopier.kt$import tornadofx.*</ID>
@@ -2121,8 +2102,6 @@
     <ID>WildcardImport:FlowStateMachineImpl.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FlowStateMachineImpl.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:FlowsDrainingModeContentionTest.kt$import net.corda.core.flows.*</ID>
-    <ID>WildcardImport:FxTransactionBuildTutorial.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:FxTransactionBuildTutorial.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:FxTransactionBuildTutorialTest.kt$import net.corda.finance.*</ID>
     <ID>WildcardImport:GenericsTests.kt$import net.corda.serialization.internal.amqp.testutils.*</ID>
     <ID>WildcardImport:Gui.kt$import tornadofx.*</ID>
@@ -2168,10 +2147,7 @@
     <ID>WildcardImport:InternalMockNetwork.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:InternalMockNetwork.kt$import net.corda.node.services.config.*</ID>
     <ID>WildcardImport:InternalMockNetwork.kt$import net.corda.testing.node.*</ID>
-    <ID>WildcardImport:InternalSerializationTestHelpers.kt$import net.corda.serialization.internal.*</ID>
     <ID>WildcardImport:InternalTestUtils.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:InternalUtils.kt$import java.security.cert.*</ID>
-    <ID>WildcardImport:InternalUtils.kt$import net.corda.core.crypto.*</ID>
     <ID>WildcardImport:IssuerModel.kt$import tornadofx.*</ID>
     <ID>WildcardImport:JVMConfig.kt$import tornadofx.*</ID>
     <ID>WildcardImport:JacksonSupport.kt$import com.fasterxml.jackson.core.*</ID>
@@ -2194,8 +2170,6 @@
     <ID>WildcardImport:KotlinIntegrationTestingTutorial.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:Kryo.kt$import com.esotericsoftware.kryo.*</ID>
     <ID>WildcardImport:Kryo.kt$import net.corda.core.transactions.*</ID>
-    <ID>WildcardImport:KryoCheckpointSerializer.kt$import net.corda.core.serialization.*</ID>
-    <ID>WildcardImport:KryoCheckpointSerializer.kt$import net.corda.serialization.internal.*</ID>
     <ID>WildcardImport:KryoStreamsTest.kt$import java.io.*</ID>
     <ID>WildcardImport:KryoTests.kt$import kotlin.test.*</ID>
     <ID>WildcardImport:KryoTests.kt$import net.corda.core.crypto.*</ID>
@@ -2249,19 +2223,12 @@
     <ID>WildcardImport:NetworkBootstrapper.kt$import net.corda.nodeapi.internal.*</ID>
     <ID>WildcardImport:NetworkBootstrapperRunnerTests.kt$import org.junit.*</ID>
     <ID>WildcardImport:NetworkBootstrapperTest.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NetworkBootstrapperTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:NetworkBuilder.kt$import net.corda.networkbuilder.nodes.*</ID>
     <ID>WildcardImport:NetworkIdentityModel.kt$import net.corda.client.jfx.utils.*</ID>
     <ID>WildcardImport:NetworkMapServer.kt$import javax.ws.rs.*</ID>
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:NetworkMapTest.kt$import net.corda.testing.node.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdater.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdater.kt$import net.corda.nodeapi.internal.network.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import com.nhaarman.mockito_kotlin.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:NetworkMapUpdaterTest.kt$import org.junit.*</ID>
     <ID>WildcardImport:NetworkParametersReader.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkParametersReaderTest.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:NetworkParametersReaderTest.kt$import net.corda.nodeapi.internal.network.*</ID>
@@ -2362,7 +2329,6 @@
     <ID>WildcardImport:PathUtils.kt$import java.io.*</ID>
     <ID>WildcardImport:PathUtils.kt$import java.nio.file.*</ID>
     <ID>WildcardImport:PersistentIdentityMigrationNewTableTest.kt$import net.corda.testing.core.*</ID>
-    <ID>WildcardImport:PersistentIdentityServiceTests.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:PersistentNetworkMapCacheTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:PersistentStateServiceTests.kt$import net.corda.core.contracts.*</ID>
     <ID>WildcardImport:Portfolio.kt$import net.corda.core.contracts.*</ID>
@@ -2387,8 +2353,6 @@
     <ID>WildcardImport:QueryCriteriaUtils.kt$import net.corda.core.node.services.vault.LikenessOperator.*</ID>
     <ID>WildcardImport:RPCMultipleInterfacesTests.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:RPCSecurityManagerImpl.kt$import org.apache.shiro.authc.*</ID>
-    <ID>WildcardImport:RPCServer.kt$import net.corda.core.utilities.*</ID>
-    <ID>WildcardImport:RPCServer.kt$import org.apache.activemq.artemis.api.core.client.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.node.services.statemachine.StaffedFlowHospital.*</ID>
     <ID>WildcardImport:ReceiveFinalityFlowTest.kt$import net.corda.testing.node.internal.*</ID>
     <ID>WildcardImport:ReceiveTransactionFlow.kt$import net.corda.core.contracts.*</ID>
@@ -2427,7 +2391,6 @@
     <ID>WildcardImport:SearchField.kt$import tornadofx.*</ID>
     <ID>WildcardImport:SecureHashTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:SendTransactionFlow.kt$import net.corda.core.internal.*</ID>
-    <ID>WildcardImport:SerializationEnvironmentRule.kt$import net.corda.testing.internal.*</ID>
     <ID>WildcardImport:SerializationHelper.kt$import java.lang.reflect.*</ID>
     <ID>WildcardImport:SerializationHelper.kt$import net.corda.core.serialization.*</ID>
     <ID>WildcardImport:SerializationOutputTests.kt$import java.time.*</ID>
@@ -2572,7 +2535,6 @@
     <ID>WildcardImport:VaultWithCashTest.kt$import net.corda.testing.core.*</ID>
     <ID>WildcardImport:VaultWithCashTest.kt$import net.corda.testing.internal.vault.*</ID>
     <ID>WildcardImport:VerifyTransactionTest.kt$import net.corda.finance.contracts.asset.Cash.Commands.*</ID>
-    <ID>WildcardImport:VersionedParsingExampleTest.kt$import net.corda.common.configuration.parsing.internal.*</ID>
     <ID>WildcardImport:WebServerController.kt$import tornadofx.*</ID>
     <ID>WildcardImport:WhitelistBasedTypeModelConfiguration.kt$import org.apache.qpid.proton.amqp.*</ID>
     <ID>WildcardImport:WhitelistGenerator.kt$import net.corda.core.internal.*</ID>
@@ -2581,8 +2543,6 @@
     <ID>WildcardImport:WireTransaction.kt$import net.corda.core.internal.*</ID>
     <ID>WildcardImport:WithFinality.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:WithMockNet.kt$import com.natpryce.hamkrest.*</ID>
-    <ID>WildcardImport:WorkflowTransactionBuildTutorial.kt$import net.corda.core.contracts.*</ID>
-    <ID>WildcardImport:WorkflowTransactionBuildTutorial.kt$import net.corda.core.flows.*</ID>
     <ID>WildcardImport:X509CRLSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:X509CertificateSerializer.kt$import net.corda.serialization.internal.amqp.*</ID>
     <ID>WildcardImport:X509EdDSAEngine.kt$import java.security.*</ID>

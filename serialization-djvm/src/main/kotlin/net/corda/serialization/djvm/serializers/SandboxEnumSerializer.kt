@@ -4,6 +4,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.serialization.djvm.deserializers.CheckEnum
 import net.corda.serialization.djvm.deserializers.DescribeEnum
+import net.corda.serialization.djvm.deserializers.GetEnumNames
 import net.corda.serialization.djvm.toSandboxAnyClass
 import net.corda.serialization.internal.amqp.AMQPNotSerializableException
 import net.corda.serialization.internal.amqp.AMQPSerializer
@@ -29,8 +30,12 @@ class SandboxEnumSerializer(
     private val localFactory: LocalSerializerFactory
 ) : CustomSerializer.Implements<Any>(clazz = classLoader.toSandboxAnyClass(Enum::class.java)) {
     @Suppress("unchecked_cast")
-    private val describeEnum: Function<Class<*>, Array<Any>>
-        = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<Any>>
+    private val describeEnum: Function<Class<*>, Array<out Any>>
+        = taskFactory.apply(DescribeEnum::class.java) as Function<Class<*>, Array<out Any>>
+    @Suppress("unchecked_cast")
+    private val getEnumNames: Function<Array<out Any>, List<String>>
+        = (taskFactory.apply(GetEnumNames::class.java) as Function<Array<out Any>, Array<out Any>>)
+            .andThen { it.map(Any::toString) }
     @Suppress("unchecked_cast")
     private val isEnum: Predicate<Class<*>>
         = predicateFactory.apply(CheckEnum::class.java) as Predicate<Class<*>>
@@ -46,7 +51,8 @@ class SandboxEnumSerializer(
             return null
         }
         val members = describeEnum.apply(declaredType)
-        return ConcreteEnumSerializer(declaredType, members, localFactory)
+        val memberNames = getEnumNames.apply(members)
+        return ConcreteEnumSerializer(declaredType, members, memberNames, localFactory)
     }
 
     override fun readObject(
@@ -64,7 +70,8 @@ class SandboxEnumSerializer(
 
 private class ConcreteEnumSerializer(
     declaredType: Class<*>,
-    private val members: Array<Any>,
+    private val members: Array<out Any>,
+    private val memberNames: List<String>,
     factory: LocalSerializerFactory
 ) : AMQPSerializer<Any> {
     override val type: Class<*> = declaredType
@@ -78,7 +85,7 @@ private class ConcreteEnumSerializer(
             LocalTypeInformation.AnEnum(
                 declaredType,
                 TypeIdentifier.forGenericType(declaredType),
-                members.map(Any::toString),
+                memberNames,
                 emptyList(),
                 EnumTransforms.empty
             )
@@ -92,7 +99,7 @@ private class ConcreteEnumSerializer(
         val enumOrd = obj[1] as Int
         val fromOrd = members[enumOrd]
 
-        if (enumName != fromOrd.toString()) {
+        if (enumName != memberNames[enumOrd]) {
             throw AMQPNotSerializableException(
                 type,
                 "Deserializing obj as enum $type with value $enumName.$enumOrd but ordinality has changed"

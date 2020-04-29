@@ -24,9 +24,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -129,6 +126,32 @@ abstract class FlowLogic<out T> {
      * access this lazily or from inside [call].
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
+
+    /**
+     * Returns `true` when the current [FlowLogic] has been killed (has received a command to halt its progress and terminate).
+     *
+     * Check this property in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * while (!isKilled) {
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Ideal usage would include throwing a [KilledFlowException] which will lead to the termination of the flow:
+     * ```
+     * for (item in list) {
+     *   if (isKilled) {
+     *     throw KilledFlowException(runId)
+     *   }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Note, once the [isKilled] flag is set to `true` the flow may terminate once it reaches the next API function marked with the
+     * @[Suspendable] annotation. Therefore, it is possible to write a flow that does not interact with the [isKilled] flag while still
+     * terminating correctly.
+     */
+    val isKilled: Boolean get() = stateMachine.isKilled
 
     /**
      * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
@@ -267,7 +290,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
         val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
                 shouldRetrySend = true
         )
         return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
@@ -333,7 +356,7 @@ abstract class FlowLogic<out T> {
     @JvmOverloads
     fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
         val sessionToPayload = sessions.map { it to payload }.toMap()
-        return sendAll(sessionToPayload, maySkipCheckpoint)
+        return sendAllMap(sessionToPayload, maySkipCheckpoint)
     }
 
     /**
@@ -348,22 +371,12 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     @JvmOverloads
-    fun sendAll(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
+    fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
         val request = FlowIORequest.Send(
-                sessionToMessage = serializePayloads(payloadsPerSession)
+                sessionToMessage = stateMachine.serialize(payloadsPerSession)
         )
         stateMachine.suspend(request, maySkipCheckpoint)
     }
-
-    @Suspendable
-    private fun serializePayloads(payloadsPerSession: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
-        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
-
-        return payloadsPerSession.mapValues { (_, payload) ->
-            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
-        }
-    }
-
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
@@ -380,10 +393,8 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>): R {
-        subLogic.stateMachine = stateMachine
-        maybeWireUpProgressTracking(subLogic)
         logger.debug { "Calling subflow: $subLogic" }
-        val result = stateMachine.subFlow(subLogic)
+        val result = stateMachine.subFlow(this, subLogic)
         logger.debug { "Subflow finished with result ${result.toString().abbreviate(300)}" }
         return result
     }
@@ -540,18 +551,6 @@ abstract class FlowLogic<out T> {
             _stateMachine = value
         }
 
-    private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
-        val ours = progressTracker
-        val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null && ours != theirs) {
-            if (ours.currentStep == ProgressTracker.UNSTARTED) {
-                logger.debug { "Initializing the progress tracker for flow: ${this::class.java.name}." }
-                ours.nextStep()
-            }
-            ours.setChildProgressTracker(ours.currentStep, theirs)
-        }
-    }
-
     private fun enforceNoDuplicates(sessions: List<FlowSession>) {
         require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
     }
@@ -579,12 +578,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun <R : Any> await(operation: FlowExternalAsyncOperation<R>): R {
         // Wraps the passed in [FlowExternalAsyncOperation] so its [CompletableFuture] can be converted into a [CordaFuture]
-        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalAsyncOperation<R> {
-            override val operation = operation
-            override fun execute(deduplicationId: String): CordaFuture<R> {
-                return this.operation.execute(deduplicationId).asCordaFuture()
-            }
-        }
+        val flowAsyncOperation = WrappedFlowExternalAsyncOperation(operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
     }
@@ -598,20 +592,49 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun <R : Any> await(operation: FlowExternalOperation<R>): R {
-        val flowAsyncOperation = object : FlowAsyncOperation<R>, WrappedFlowExternalOperation<R> {
-            override val serviceHub = this@FlowLogic.serviceHub as ServiceHubCoreInternal
-            override val operation = operation
-            override fun execute(deduplicationId: String): CordaFuture<R> {
-                // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
-                // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
-                return CompletableFuture.supplyAsync(
-                    Supplier { this.operation.execute(deduplicationId) },
-                    serviceHub.externalOperationExecutor
-                ).asCordaFuture()
-            }
-        }
+        val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub as ServiceHubCoreInternal, operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed.
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled()
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled() {
+        if (isKilled) {
+            throw KilledFlowException(runId)
+        }
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed. The provided message is added to the
+     * thrown [KilledFlowException].
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled { "The flow $runId was killed while iterating through the list of items" }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled(lazyMessage: () -> Any) {
+        if (isKilled) {
+            val message = lazyMessage()
+            throw KilledFlowException(runId, message.toString())
+        }
     }
 }
 
@@ -619,21 +642,32 @@ abstract class FlowLogic<out T> {
  * [WrappedFlowExternalAsyncOperation] is added to allow jackson to properly reference the data stored within the wrapped
  * [FlowExternalAsyncOperation].
  */
-private interface WrappedFlowExternalAsyncOperation<R : Any> {
-    val operation: FlowExternalAsyncOperation<R>
+private class WrappedFlowExternalAsyncOperation<R : Any>(val operation: FlowExternalAsyncOperation<R>) : FlowAsyncOperation<R> {
+    override fun execute(deduplicationId: String): CordaFuture<R> {
+        return operation.execute(deduplicationId).asCordaFuture()
+    }
 }
 
 /**
  * [WrappedFlowExternalOperation] is added to allow jackson to properly reference the data stored within the wrapped
  * [FlowExternalOperation].
  *
- * The reference to [ServiceHub] is is also needed by Kryo to properly keep a reference to [ServiceHub] so that
+ * The reference to [ServiceHub] is also needed by Kryo to properly keep a reference to [ServiceHub] so that
  * [FlowExternalOperation] can be run from the [ServiceHubCoreInternal.externalOperationExecutor] without causing errors when retrying a
  * flow. A [NullPointerException] is thrown if [FlowLogic.serviceHub] is accessed from [FlowLogic.await] when retrying a flow.
  */
-private interface WrappedFlowExternalOperation<R : Any> {
-    val serviceHub: ServiceHub
+private class WrappedFlowExternalOperation<R : Any>(
+    val serviceHub: ServiceHubCoreInternal,
     val operation: FlowExternalOperation<R>
+) : FlowAsyncOperation<R> {
+    override fun execute(deduplicationId: String): CordaFuture<R> {
+        // Using a [CompletableFuture] allows unhandled exceptions to be thrown inside the background operation
+        // the exceptions will be set on the future by [CompletableFuture.AsyncSupply.run]
+        return CompletableFuture.supplyAsync(
+            Supplier { this.operation.execute(deduplicationId) },
+            serviceHub.externalOperationExecutor
+        ).asCordaFuture()
+    }
 }
 
 /**

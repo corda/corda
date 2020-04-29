@@ -270,7 +270,8 @@ task slowIntegrationTest(type: Test) {
 // quasar exclusions upon agent code instrumentation at run-time
 quasar {
     excludeClassLoaders.addAll(
-            'net.corda.djvm.**'
+            'net.corda.djvm.**',
+            'net.corda.core.serialization.internal.**'
     )
     excludePackages.addAll(
             "antlr**",

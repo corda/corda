@@ -1,14 +1,9 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.model.LocalTypeInformation
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
-import java.util.*
 
 /**
  * Used whenever a deserialized enums fingerprint doesn't match the fingerprint of the generated

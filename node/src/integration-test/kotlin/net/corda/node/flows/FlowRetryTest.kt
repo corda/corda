@@ -4,13 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaRuntimeException
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.IdempotentFlow
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.executeAsync
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
