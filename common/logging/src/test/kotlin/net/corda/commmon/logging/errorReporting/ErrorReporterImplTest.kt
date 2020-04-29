@@ -7,7 +7,6 @@ import net.corda.common.logging.errorReporting.ErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorReporterImpl
 import org.junit.After
 import org.junit.Test
-import org.junit.rules.TestName
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.slf4j.Logger

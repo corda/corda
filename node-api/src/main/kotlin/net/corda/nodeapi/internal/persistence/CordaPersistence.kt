@@ -10,7 +10,6 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
-import net.corda.common.logging.errorReporting.NodeNamespaces
 import org.hibernate.tool.schema.spi.SchemaManagementException
 import rx.Observable
 import rx.Subscriber
