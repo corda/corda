@@ -36,8 +36,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.statemachine.FlowCreator.Flow
-import net.corda.node.services.statemachine.FlowCreator.FlowCreatorFromCheckpoint
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
@@ -104,7 +102,7 @@ class SingleThreadedStateMachineManager(
         /** True if we're shutting down, so don't resume anything. */
         var stopping = false
         val flows = HashMap<StateMachineRunId, Flow>()
-        val nonResidentFlows = HashMap<StateMachineRunId, FlowCreatorFromCheckpoint>()
+        val pausedFlows = HashMap<StateMachineRunId, NonResidentFlow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
@@ -187,7 +185,7 @@ class SingleThreadedStateMachineManager(
 
         val pausedFlows = restoreFlowPrimitivesFromPausedCheckpoint()
         mutex.locked {
-            nonResidentFlows.putAll(pausedFlows)
+            this.pausedFlows.putAll(pausedFlows)
             for ((id, flow) in pausedFlows) {
                 val checkpoint = flow.checkpoint
                 for (sessionId in getFlowSessionIds(checkpoint)) {
@@ -315,10 +313,10 @@ class SingleThreadedStateMachineManager(
 
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
-            val flowPrimitive = nonResidentFlows.remove(id) ?: return false
-            val flow = flowPrimitive.createFlow() ?: return false
+            val pausedFlow = pausedFlows.remove(id) ?: return false
+            val flow = flowCreator!!.createFlowFromNonResidentFlow(pausedFlow) ?: return false
             addAndStartFlow(flow.fiber.id, flow)
-            for (event in flowPrimitive.externalEvents) {
+            for (event in pausedFlow.externalEvents) {
                 flow.fiber.scheduleEvent(event)
             }
         }
@@ -401,18 +399,17 @@ class SingleThreadedStateMachineManager(
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                val flowPrimative = flowCreator!!.FlowCreatorFromCheckpoint(id, checkpoint, true, false, null)
-                flowPrimative.createFlow()
+                flowCreator!!.createFlowFromCheckpoint(id, checkpoint)
             }.toList()
         }
     }
 
-    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, FlowCreatorFromCheckpoint> {
+    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, NonResidentFlow> {
         return checkpointStorage.getPausedCheckpoints().use {
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                id to flowCreator!!.FlowCreatorFromCheckpoint(id, checkpoint, true, false, null)
+                id to NonResidentFlow(id, checkpoint)
             }.toList().toMap()
         }
     }
@@ -444,10 +441,8 @@ class SingleThreadedStateMachineManager(
                 }
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
-                val nonResidentFlow = flowCreator!!.FlowCreatorFromCheckpoint(flowId, checkpoint, true, false, null)
-
                 // Resurrect flow
-                nonResidentFlow.createFlow() ?: return
+                flowCreator!!.createFlowFromCheckpoint(flowId, checkpoint) ?: return
             } else {
                 // Just flow initiation message
                 null
@@ -554,7 +549,7 @@ class SingleThreadedStateMachineManager(
                 mutex.locked {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.
-                        ?: nonResidentFlows[flowId]?.run { addExternalEvent(event) }
+                        ?: pausedFlows[flowId]?.run { addExternalEvent(event) }
                         ?: logger.info("Cannot find fiber corresponding to flow ID $flowId")
                 }
             }
