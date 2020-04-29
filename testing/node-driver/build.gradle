@@ -74,7 +74,7 @@ jar {
 }
 
 publish {
-    publishSources = false
+    publishSources = true
     publishJavadoc = false
     name jar.baseName
 }
