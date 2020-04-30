@@ -1,4 +1,3 @@
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -8,6 +7,7 @@ pipeline {
     agent { label 'k8s' }
     options {
         timestamps()
+        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         timeout(time: 3, unit: 'HOURS')
     }
 
@@ -22,7 +22,7 @@ pipeline {
         stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-                    sh "./gradlew --no-daemon " +
+                    sh "./gradlew " +
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
@@ -35,36 +35,32 @@ pipeline {
             }
         }
 
-        stage('Corda Pull Request - Run Tests') {
+        stage('Testing phase') {
             parallel {
-                stage('Integration Tests') {
+                stage('Regression Test') {
                     steps {
-                        sh "./gradlew --no-daemon " +
+                        sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                                 "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-                                "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
-                                "-Ddependx.branch.origin=${env.GIT_COMMIT} " +
-                                "-Ddependx.branch.target=${CHANGE_TARGET} " +
-                                " allParallelIntegrationTest  --stacktrace"
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " parallelRegressionTest --stacktrace"
                     }
                 }
-                stage('Unit Tests') {
+                stage('Slow Integration Test') {
                     steps {
-                        sh "./gradlew --no-daemon " +
+                        sh "./gradlew " +
                                 "-DbuildId=\"\${BUILD_ID}\" " +
                                 "-Dkubenetize=true " +
                                 "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                                 "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                                 "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-                                "-Dgit.target.branch=\"\${CHANGE_TARGET}\" " +
-                                "-Ddependx.branch.origin=${env.GIT_COMMIT} " +
-                                "-Ddependx.branch.target=${CHANGE_TARGET} " +
-                                " allParallelUnitTest --stacktrace"
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " allParallelSlowIntegrationTest --stacktrace"
                     }
                 }
             }
