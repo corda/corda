@@ -37,6 +37,7 @@ function generateGenericCZConfig() {
     : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
     : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
     : ${RPC_USER=:? '$RPC_USER, the name of the primary rpc user must be set as environment variable'}
+    : ${SSHPORT=:? 'SSHPORT, the port number for the SSHD must be set as enviroment variable'}
 
 
     if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
@@ -51,6 +52,7 @@ function generateGenericCZConfig() {
       MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
       java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
   fi
+
   java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
     --initial-registration \
     --base-directory /opt/corda \
