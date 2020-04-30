@@ -42,8 +42,8 @@ class ResourceGeneratorTest {
         // Now check that all resource files that should be created are
         val tempDir = createTempDir()
         resourceGenerator.createResources(missing, tempDir.toPath())
-        val createdFiles = tempDir.walkTopDown().filter { it.isFile && it.extension == "properties" }.map { it.name }.toList()
-        assertEquals(missing, createdFiles)
+        val createdFiles = tempDir.walkTopDown().filter { it.isFile && it.extension == "properties" }.map { it.name }.toSet()
+        assertEquals(missing.toSet(), createdFiles)
 
         // Now check that a created file has the expected properties and values
         val properties = Properties()
