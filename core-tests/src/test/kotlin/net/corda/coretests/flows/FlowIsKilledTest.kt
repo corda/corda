@@ -151,7 +151,7 @@ class FlowIsKilledTest {
                 assertThatExceptionOfType(KilledFlowException::class.java)
                     .isThrownBy { handle.returnValue.getOrThrow(1.minutes) }
                     .withMessage(EXCEPTION_MESSAGE)
-                assertEquals(11, AFlowThatChecksIfItWantsToDie.position)
+                assertEquals(11, AFlowThatChecksIfItWantsToDieAndLeavesANote.position)
                 val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
                 assertEquals(1, checkpoints)
             }
