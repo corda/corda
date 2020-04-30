@@ -70,11 +70,7 @@ class RPCStabilityTests {
     private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, List<StackTraceElement>> {
         val values = ConcurrentLinkedQueue<Map<Thread, List<StackTraceElement>>>()
         return poll(executorService, "number of threads to become stable", 250.millis) {
-            // Exclude threads from JUnits timeout group which we use for timing out tests
-            val map: Map<Thread, List<StackTraceElement>> = Thread.getAllStackTraces()
-                .filterKeys { it.threadGroup.name != "FailOnTimeoutGroup" }
-                .mapValues { it.value.toList() }
-            values.add(map)
+            values.add(Thread.getAllStackTraces().mapValues { it.value.toList() })
             if (values.size > 5) {
                 values.poll()
             }
