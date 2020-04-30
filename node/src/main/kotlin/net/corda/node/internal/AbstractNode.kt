@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -1353,10 +1354,19 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         start(dataSource)
     } catch (ex: Exception) {
         when {
-            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
+                    "Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.",
+                    NodeDatabaseErrors.COULD_NOT_CONNECT,
+                    cause = ex)
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
+                    "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
+                    NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
-            else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
+            else ->
+                throw CouldNotCreateDataSourceException(
+                        "Could not create the DataSource: ${ex.message}",
+                        NodeDatabaseErrors.FAILED_STARTUP,
+                        cause = ex)
         }
     }
 }
