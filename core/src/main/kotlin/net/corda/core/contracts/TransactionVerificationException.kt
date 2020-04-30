@@ -337,6 +337,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class InvalidAttachmentException(txId: SecureHash, @Suppress("unused") val attachmentHash: AttachmentId) : TransactionVerificationException(txId,
             "The attachment $attachmentHash is not a valid ZIP or JAR file.".trimIndent(), null)
 
+    class UnsupportedClassVersionError(txId: SecureHash, message: String, cause: Throwable) : TransactionVerificationException(txId, message, cause)
+
     // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
     @KeepForDJVM
