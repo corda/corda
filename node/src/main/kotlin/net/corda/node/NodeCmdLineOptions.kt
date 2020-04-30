@@ -51,7 +51,7 @@ open class SharedNodeCmdLineOptions {
 
     @Option(
             names = ["--safe-mode"],
-            description = ["Do not run any flows on startup. Flows can be resumed via RCP."]
+            description = ["Do not run any flows on startup. Sets all flows to paused, which can be unpaused via RPC."]
     )
     var safeMode: Boolean = false
 
