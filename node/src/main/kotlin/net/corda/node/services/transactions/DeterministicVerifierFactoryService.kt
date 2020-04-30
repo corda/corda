@@ -4,6 +4,10 @@ import net.corda.core.internal.BasicVerifier
 import net.corda.core.internal.Verifier
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.CordaSerializationTransformEnumDefault
+import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
+import net.corda.core.serialization.CordaSerializationTransformRename
+import net.corda.core.serialization.CordaSerializationTransformRenames
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
@@ -38,6 +42,10 @@ class DeterministicVerifierFactoryService(
             whitelist = Whitelist.MINIMAL,
             visibleAnnotations = setOf(
                 CordaSerializable::class.java,
+                CordaSerializationTransformEnumDefault::class.java,
+                CordaSerializationTransformEnumDefaults::class.java,
+                CordaSerializationTransformRename::class.java,
+                CordaSerializationTransformRenames::class.java,
                 ConstructorForDeserialization::class.java,
                 DeprecatedConstructorForDeserialization::class.java
             ),
