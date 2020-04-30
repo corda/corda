@@ -75,7 +75,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageMatching("^NoSuchMethodError: .*\\Qsandbox.java.lang.System.currentTimeMillis()\\E.*\$")
+                .hasMessageStartingWith("RuleViolationError: Disallowed reference to API; java.lang.System.currentTimeMillis(), ")
         }
     }
 
@@ -88,7 +88,7 @@ class NonDeterministicContractVerifyTest {
                         .returnValue.getOrThrow()
             }
             assertThat(ex)
-                .hasMessageMatching("^NoSuchMethodError: .*\\Qsandbox.java.lang.System.nanoTime()\\E.*\$")
+                .hasMessageStartingWith("RuleViolationError: Disallowed reference to API; java.lang.System.nanoTime(), ")
         }
     }
 
