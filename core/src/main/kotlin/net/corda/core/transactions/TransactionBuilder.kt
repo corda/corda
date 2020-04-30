@@ -813,19 +813,19 @@ open class TransactionBuilder(
         this.privacySalt = privacySalt
     }
 
-    /** Returns a mutable copy of the list of input [StateRef]s. */
+    /** Returns an immutable list of input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    /** Returns a mutable copy of the list of reference input [StateRef]s. */
+    /** Returns an immutable list of reference input [StateRef]s. */
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
-    /** Returns a mutable copy of the list of attachment hashes. */
+    /** Returns an immutable list of attachment hashes. */
     fun attachments(): List<AttachmentId> = ArrayList(attachments)
 
-    /** Returns a mutable copy of the list of output [TransactionState]s. */
+    /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns a mutable copy of the list of [Command]s. */
+    /** Returns an immutable list of [Command]s. */
     fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
