@@ -14,12 +14,14 @@ import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.jms.JmsConnectionFactory
 import org.apache.qpid.jms.JmsQueue
+import org.junit.Ignore
 import org.junit.Test
 import javax.jms.BytesMessage
 import javax.jms.ConnectionFactory
 import javax.jms.MessageConsumer
 import javax.jms.Session
 
+@Ignore
 class AmqpRpcTests {
     private val CORDAPPS = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP) // TODO: Do we need CordApps at all?
 
@@ -36,7 +38,7 @@ class AmqpRpcTests {
 
                 val clientQueueName = loginToRPCAndGetClientQueue(node)
                 val sender = session.createProducer(JmsQueue(clientQueueName))
-                val message = session.createBytesMessage()
+                //val message = session.createBytesMessage()
 
                 /*
                 val serialisedArguments = emptyList().serialize(context = serializationContextWithObservableContext)
@@ -58,7 +60,7 @@ class AmqpRpcTests {
                 val consumer: MessageConsumer = session.createConsumer(receiveQueue)
 
                 // Step 7. receive the simple message
-                val m = consumer.receive(5000) as BytesMessage
+                /*val m = */consumer.receive(5000) as BytesMessage
             }
         }
     }
