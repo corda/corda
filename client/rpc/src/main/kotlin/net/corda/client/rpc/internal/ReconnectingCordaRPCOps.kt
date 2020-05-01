@@ -197,7 +197,7 @@ class ReconnectingCordaRPCOps private constructor(
             synchronized(this) {
                 currentRPCConnection = establishConnectionWithRetry(
                         rpcConfiguration.connectionRetryInterval,
-                        retries = maxConnectAttempts
+                        retries = rpcConfiguration.maxReconnectAttempts
                 )
                 // It's possible we could get closed while waiting for the connection to establish.
                 if (!isClosed()) {
@@ -207,37 +207,31 @@ class ReconnectingCordaRPCOps private constructor(
             return currentRPCConnection
         }
 
-        /**
-         * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
-         *
-         * @param retryInterval the interval between retries.
-         * @param roundRobinIndex index of the address that will be used for the connection.
-         * @param retries the number of retries remaining. A negative value implies infinite retries.
-         */
-        private tailrec fun establishConnectionWithRetry(
-                retryInterval: Duration,
-                roundRobinIndex: Int = 0,
-                retries: Int = -1
-        ): CordaRPCConnection? {
-            if (isClosed()) {
-                // We've decided to exit for some reason (maybe the client is being shutdown)
-                return null
-            }
-            val attemptedAddress = nodeHostAndPorts[roundRobinIndex]
-            log.info("Connecting to: $attemptedAddress")
-            try {
-                return CordaRPCClient(
-                        attemptedAddress,
-                        rpcConfiguration.copy(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1),
-                        sslConfiguration,
-                        classLoader
-                ).start(username, password).also {
-                    // Check connection is truly operational before returning it.
-                    require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
-                        "Could not establish connection to $attemptedAddress."
-                    }
-                    log.debug { "Connection successfully established with: $attemptedAddress" }
+
+        private fun startCordaRPCClient(
+                networkHostAndPort: NetworkHostAndPort,
+                retryInterval: Duration): CordaRPCConnection? {
+            return CordaRPCClient(
+                    networkHostAndPort,
+                    rpcConfiguration.copy(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1),
+                    sslConfiguration,
+                    classLoader
+            ).start(username, password).also {
+                // Check connection is truly operational before returning it.
+                require(it.proxy.nodeInfo().legalIdentitiesAndCerts.isNotEmpty()) {
+                    "Could not establish connection to $networkHostAndPort."
                 }
+            }
+        }
+
+        private fun establishConnection(
+                networkHostAndPort: NetworkHostAndPort,
+                retryInterval: Duration): CordaRPCConnection? {
+            var cordaRPCConnection: CordaRPCConnection? = null
+            try {
+                log.info("Connecting to: $networkHostAndPort")
+                cordaRPCConnection = startCordaRPCClient(networkHostAndPort, retryInterval)
+                log.debug { "Connection successfully established with: $networkHostAndPort" }
             } catch (ex: Exception) {
                 when (ex) {
                     is ActiveMQSecurityException -> {
@@ -257,19 +251,52 @@ class ReconnectingCordaRPCOps private constructor(
                     }
                 }
             }
-            val remainingRetries = if (retries < 0) retries else (retries - 1)
-            if (remainingRetries == 0) {
+            return cordaRPCConnection
+        }
+
+        /**
+         * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
+         *
+         * @param retryInterval the interval between retries.
+         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param retries the number of retries remaining. A negative value implies infinite retries.
+         */
+        private fun establishConnectionWithRetry(
+                retryInterval: Duration,
+                roundRobinIndex: Int = 0,
+                retries: Int = -1
+        ): CordaRPCConnection? {
+            val infiniteRetries = retries < 0
+            var currentRoundRobinIndex = roundRobinIndex
+            var currentRetryInterval = retryInterval
+            var retryAllowed = infiniteRetries
+            var establishedConnection: CordaRPCConnection? = null
+            var remainingRetryCount = retries
+
+            var nextRoundRobinIndex = { i: Int ->
+                (i + 1) % nodeHostAndPorts.size
+            }
+            var nextRetryInterval = { d: Duration ->
+                min(
+                    rpcConfiguration.connectionMaxRetryInterval,
+                    d * rpcConfiguration.connectionRetryIntervalMultiplier
+            )}
+            do {
+                if (isClosed()) break
+                log.debug { "Attempting to connect." }
+                establishConnection(nodeHostAndPorts[currentRoundRobinIndex], currentRetryInterval)
+                retryAllowed = establishedConnection == null && (infiniteRetries || --remainingRetryCount > 0)
+                if (retryAllowed){
+                    Thread.sleep(currentRetryInterval.toMillis())
+                    currentRetryInterval = nextRetryInterval(currentRetryInterval)
+                    if (remainingRetryCount > 0) currentRoundRobinIndex = nextRoundRobinIndex(currentRoundRobinIndex)
+                }
+            } while (retryAllowed)
+
+            if (establishedConnection == null && !isClosed()){
                 throw RPCException("Cannot connect to server(s). Tried with all available servers.")
             }
-            // Could not connect this time round - pause before giving another try.
-            Thread.sleep(retryInterval.toMillis())
-            val nextRoundRobinIndex = (roundRobinIndex + 1) % nodeHostAndPorts.size
-            val nextInterval = min(
-                    rpcConfiguration.connectionMaxRetryInterval,
-                    retryInterval * rpcConfiguration.connectionRetryIntervalMultiplier
-            )
-            log.info("Could not establish connection.  Next retry interval $nextInterval")
-            return establishConnectionWithRetry(nextInterval, nextRoundRobinIndex, remainingRetries)
+            return establishedConnection
         }
 
         override val proxy: CordaRPCOps
