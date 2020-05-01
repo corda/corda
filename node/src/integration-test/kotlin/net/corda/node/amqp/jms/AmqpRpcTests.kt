@@ -19,8 +19,8 @@ class AmqpRpcTests {
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = CORDAPPS, extraCordappPackagesToScan = emptyList())) {
             val node = startNode().get()
             val connectionFactory: ConnectionFactory = JmsConnectionFactory("amqp://${node.rpcAddress}")
-
-            connectionFactory.createConnection().use { connection ->
+            val rpcUser = node.rpcUsers.first()
+            connectionFactory.createConnection(rpcUser.username, rpcUser.password).use { connection ->
 
                 // Create a session
                 val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
