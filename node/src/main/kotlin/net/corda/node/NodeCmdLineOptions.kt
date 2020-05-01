@@ -194,7 +194,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
             configOverrides += "devMode" to it
         }
         if (safeMode) {
-            configOverrides += "ssmStartMode" to StateMachineManager.StartMode.Safe
+            configOverrides += "smmStartMode" to StateMachineManager.StartMode.Safe.toString()
         }
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
