@@ -60,9 +60,4 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
 
         return Pair(continuation, nextState)
     }
-
-    override fun forceRemoveFlow(id: StateMachineRunId) {
-        records.remove(id)
-        delegate.forceRemoveFlow(id)
-    }
 }

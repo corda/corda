@@ -33,7 +33,7 @@ class SandboxZonedDateTimeSerializer(
         )
         creator = task.andThen { input ->
             @Suppress("unchecked_cast", "SpreadOperator")
-            createTask(null, *(input as Array<Any?>))!!
+            createTask(null, *(input as Array<out Any?>))!!
         }
     }
 

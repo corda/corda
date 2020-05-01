@@ -100,7 +100,7 @@ open class TransactionBuilder(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                references = references,
+                references = ArrayList(references),
                 serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)

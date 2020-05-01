@@ -24,6 +24,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class NotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
@@ -53,6 +54,11 @@ class NotaryServiceTests {
     @Test(timeout=300_000)
 	fun `should reject a transaction with too many inputs`() {
         notariseWithTooManyInputs(aliceNode, alice, notary, mockNet)
+    }
+
+    @Test(timeout=300_000)
+    fun `notary node should have access to its notary service`() {
+        assertNotNull(mockNet.defaultNotaryNode.notaryService)
     }
 
     @Test(timeout=300_000)

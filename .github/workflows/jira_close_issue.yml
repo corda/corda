@@ -2,7 +2,7 @@ name: Sync closed jira issues
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '30 * * * *'
 
 jobs:
   sync_closed:

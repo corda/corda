@@ -8,12 +8,15 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
@@ -35,9 +38,10 @@ import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -183,6 +187,12 @@ class RetryFlowMockTest {
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)
+        assertFailsWith<KilledFlowException> {
+            flow.resultFuture.getOrThrow(20.seconds)
+        }
+        // Sleep added because the flow leaves the hospital after the future has returned
+        // This means that the removal code has not run by the time the snapshot is taken
+        Thread.sleep(2000)
         assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
     }
 

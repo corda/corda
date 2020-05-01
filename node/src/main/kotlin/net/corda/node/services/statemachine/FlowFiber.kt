@@ -9,6 +9,7 @@ import net.corda.node.services.statemachine.transitions.StateMachine
  */
 interface FlowFiber {
     val id: StateMachineRunId
+    val instanceId: StateMachineInstanceId
     val stateMachine: StateMachine
 
     @Suspendable

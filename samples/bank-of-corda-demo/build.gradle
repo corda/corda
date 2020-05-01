@@ -106,6 +106,12 @@ task runRPCCashIssue(type: JavaExec) {
     args 20000
     args '--currency'
     args 'USD'
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.time=ALL-UNNAMED'
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    }
 }
 
 task runWebCashIssue(type: JavaExec) {
@@ -117,6 +123,12 @@ task runWebCashIssue(type: JavaExec) {
     args 30000
     args '--currency'
     args 'GBP'
+    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.time=ALL-UNNAMED'
+        jvmArgs '--add-opens'
+        jvmArgs 'java.base/java.io=ALL-UNNAMED'
+    }
 }
 
 jar {

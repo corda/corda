@@ -5,6 +5,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.RolledBackDatabaseSessionException
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -179,6 +180,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
             }
         } catch (t: PersistenceException) {
             // This only helps if thrown on commit, otherwise other latches not counted down.
+            assertEquals(t.message, Outcome.SuccessButErrorOnCommit, a.outcome)
+        } catch (t: RolledBackDatabaseSessionException) {
             assertEquals(t.message, Outcome.SuccessButErrorOnCommit, a.outcome)
         }
         a.await(a::phase4)
