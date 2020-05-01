@@ -1,10 +1,19 @@
 package net.corda.node.amqp.jms
 
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.coretesting.internal.configureTestSSL
+import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.services.messaging.SimpleMQClient
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.qpid.jms.JmsConnectionFactory
+import org.apache.qpid.jms.JmsQueue
 import org.junit.Test
 import javax.jms.BytesMessage
 import javax.jms.ConnectionFactory
@@ -25,8 +34,8 @@ class AmqpRpcTests {
                 // Create a session
                 val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
 
-                val sendQueue = session.createQueue("exampleQueue")
-                val sender = session.createProducer(sendQueue)
+                val clientQueueName = loginToRPCAndGetClientQueue(node)
+                val sender = session.createProducer(JmsQueue(clientQueueName))
                 val message = session.createBytesMessage()
 
                 /*
@@ -52,5 +61,17 @@ class AmqpRpcTests {
                 val m = consumer.receive(5000) as BytesMessage
             }
         }
+    }
+
+    private fun loginToRPCAndGetClientQueue(nodeHandle: NodeHandle): String {
+        val rpcUser = nodeHandle.rpcUsers.first()
+        val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
+        val client = clientTo(nodeHandle.rpcAddress)
+        client.start(rpcUser.username, rpcUser.password, false)
+        return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
+    }
+
+    private fun clientTo(target: NetworkHostAndPort, sslConfiguration: MutualSslConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
+        return SimpleMQClient(target, sslConfiguration)
     }
 }
