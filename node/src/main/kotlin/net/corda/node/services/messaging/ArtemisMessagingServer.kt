@@ -164,7 +164,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         // Time interval after which every connected client is re-authenticated using BrokerJaasLoginModule.
-        // Keeping bigger than default value (10 seconds) to avoid to frequent expensive checks, e.g. CRL check.
+        // Keeping bigger than default value (10 seconds) to avoid frequent expensive checks, e.g. CRL check.
         securityInvalidationInterval = 1.hours.toMillis()
         return this
     }
