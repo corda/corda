@@ -33,6 +33,9 @@ class ArtemisMessagingComponent {
         // This is a rough guess on the extra space needed on top of maxMessageSize to store the journal.
         // TODO: we might want to make this value configurable.
         const val JOURNAL_HEADER_SIZE = 1024
+        // Time interval after which every connected client is re-authenticated using BrokerJaasLoginModule.
+        // Setting it to 1 hour (instead of default value of 10 seconds) to avoid frequent expensive checks, e.g. CRL check.
+        const val SECURITY_INVALIDATION_INTERVAL = 3600 * 1000L
 
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
