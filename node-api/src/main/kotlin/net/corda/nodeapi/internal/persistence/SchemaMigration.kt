@@ -51,28 +51,17 @@ class SchemaMigration(
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
     /**
-     * Main entry point to the schema migration.
-     * Called during node startup.
-     */
-    fun nodeStartup(existingCheckpoints: Boolean) {
-        when {
-            databaseConfig.initialiseSchema -> {
-                migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
-                runMigration(existingCheckpoints)
-            }
-            else -> checkState()
-        }
-    }
-
-    /**
      * Will run the Liquibase migration on the actual database.
      */
-    private fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, check = false, existingCheckpoints = existingCheckpoints)
+    fun runMigration(existingCheckpoints: Boolean) {
+        migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
+        doRunMigration(run = true, check = false, existingCheckpoints = existingCheckpoints)
+    }
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    private fun checkState() = doRunMigration(run = false, check = true)
+    fun checkState() = doRunMigration(run = false, check = true)
 
     /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
