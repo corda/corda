@@ -458,6 +458,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    fun runDatabaseMigrationScripts() {
+        check(started == null) { "Node has already been started" }
+        log.info("Running database schema migration scripts ...")
+        val props = configuration.dataSourceProperties
+        if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName) { migration: SchemaMigration, existingCheckpoints: Boolean -> migration.runMigration(existingCheckpoints) }
+        // Now log the vendor string as this will also cause a connection to be tested eagerly.
+        logVendorString(database, log)
+    }
+
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
@@ -1344,11 +1354,19 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
         })
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
+fun CordaPersistence.startHikariPool(
+        hikariProperties: Properties,
+        databaseConfig: DatabaseConfig,
+        schemas: Set<MappedSchema>,
+        metricRegistry: MetricRegistry? = null,
+        cordappLoader: CordappLoader? = null,
+        currentDir: Path? = null,
+        ourName: CordaX500Name,
+        migrationAction: (SchemaMigration, Boolean) -> Unit = { migration: SchemaMigration, _ -> migration.checkState() }) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        migrationAction(schemaMigration, dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(dataSource)
     } catch (ex: Exception) {
         when {
