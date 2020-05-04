@@ -171,9 +171,9 @@ data class Checkpoint(
          */
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             val flowState = when(status) {
-                FlowStatus.PAUSED -> {FlowState.Paused}
-                FlowStatus.COMPLETED -> {FlowState.Completed}
-                else -> {serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)}
+                FlowStatus.PAUSED -> FlowState.Paused
+                FlowStatus.COMPLETED -> FlowState.Completed
+                else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
             }
             return Checkpoint(
                 checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),

@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.instrument.JavaAgent
-import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.concurrent.CordaFuture
@@ -26,7 +25,6 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -36,13 +34,11 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
-import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.injectOldProgressTracker
@@ -124,8 +120,7 @@ class SingleThreadedStateMachineManager(
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
-    private var actionExecutor: ActionExecutor? = null
-    private var flowCreator: FlowCreator? = null
+    private lateinit var flowCreator: FlowCreator
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
     private val transitionExecutor = makeTransitionExecutor()
@@ -155,7 +150,7 @@ class SingleThreadedStateMachineManager(
                 )
         )
         this.checkpointSerializationContext = checkpointSerializationContext
-        this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
+        val actionExecutor = makeActionExecutor(checkpointSerializationContext)
         fiberDeserializationChecker?.start(checkpointSerializationContext)
         when (startMode) {
             StateMachineManager.StartMode.ResumeAll -> {}
@@ -183,7 +178,7 @@ class SingleThreadedStateMachineManager(
             }
         }
 
-        val pausedFlows = restoreFlowPrimitivesFromPausedCheckpoint()
+        val pausedFlows = restoreNonResidentFlowsFromPausedCheckpoints()
         mutex.locked {
             this.pausedFlows.putAll(pausedFlows)
             for ((id, flow) in pausedFlows) {
@@ -313,7 +308,7 @@ class SingleThreadedStateMachineManager(
     override fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
             val pausedFlow = pausedFlows.remove(id) ?: return false
-            val flow = flowCreator!!.createFlowFromNonResidentFlow(pausedFlow) ?: return false
+            val flow = flowCreator.createFlowFromNonResidentFlow(pausedFlow) ?: return false
             addAndStartFlow(flow.fiber.id, flow)
             for (event in pausedFlow.externalEvents) {
                 flow.fiber.scheduleEvent(event)
@@ -398,12 +393,12 @@ class SingleThreadedStateMachineManager(
                 // If a flow is added before start() then don't attempt to restore it
                 mutex.locked { if (id in flows) return@mapNotNull null }
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                flowCreator!!.createFlowFromCheckpoint(id, checkpoint)
+                flowCreator.createFlowFromCheckpoint(id, checkpoint)
             }.toList()
         }
     }
 
-    private fun restoreFlowPrimitivesFromPausedCheckpoint(): Map<StateMachineRunId, NonResidentFlow> {
+    private fun restoreNonResidentFlowsFromPausedCheckpoints(): Map<StateMachineRunId, NonResidentFlow> {
         return checkpointStorage.getPausedCheckpoints().use {
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
@@ -441,7 +436,7 @@ class SingleThreadedStateMachineManager(
 
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
                 // Resurrect flow
-                flowCreator!!.createFlowFromCheckpoint(flowId, checkpoint) ?: return
+                flowCreator.createFlowFromCheckpoint(flowId, checkpoint) ?: return
             } else {
                 // Just flow initiation message
                 null
@@ -663,7 +658,7 @@ class SingleThreadedStateMachineManager(
             null
         }
 
-        val flow = flowCreator!!.createFlowFromLogic(flowId, invocationContext, flowLogic, flowStart, ourIdentity, existingCheckpoint, deduplicationHandler, ourSenderUUID)
+        val flow = flowCreator.createFlowFromLogic(flowId, invocationContext, flowLogic, flowStart, ourIdentity, existingCheckpoint, deduplicationHandler, ourSenderUUID)
         val startedFuture = openFuture<Unit>()
         mutex.locked {
             startedFutures[flowId] = startedFuture
