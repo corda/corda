@@ -159,7 +159,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun addNodes(nodes: List<NodeInfo>) {
+    override fun addOrUpdateNodes(nodes: List<NodeInfo>) {
         synchronized(_changed) {
             val newNodes = mutableListOf<NodeInfo>()
             val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
@@ -226,9 +226,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun addNode(node: NodeInfo) {
+    override fun addOrUpdateNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
-        addNodes(listOf(node))
+        addOrUpdateNodes(listOf(node))
         logger.debug { "Done adding node with info: $node" }
     }
 
@@ -305,7 +305,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     private fun findByIdentityKeyIndex(session: Session, identityKeyIndex: String): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.legalIdentitiesAndCerts l WHERE l.owningKeyHash = :owningKeyHash",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("owningKeyHash", identityKeyIndex)
         return query.resultList
@@ -323,9 +323,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun queryIdentityByLegalName(session: Session, name: CordaX500Name): PartyAndCertificate? {
         val query = session.createQuery(
                 // We do the JOIN here to restrict results to those present in the network map
-                "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                "SELECT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
                 NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
         query.setParameter("name", name.toString())
+        query.maxResults = 1 // instead of DISTINCT in the query, DISTINCT is not supported in Oracle when one of the columns is BLOB
         val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
         // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
         return candidates.firstOrNull()
@@ -333,7 +334,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     private fun queryByLegalName(session: Session, name: CordaX500Name): List<NodeInfo> {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("name", name.toString())
         val result = query.resultList
@@ -342,7 +343,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     private fun queryByAddress(session: Session, hostAndPort: NetworkHostAndPort): NodeInfo? {
         val query = session.createQuery(
-                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.addresses a WHERE a.host = :host AND a.port = :port",
+                "SELECT n FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.addresses a WHERE a.host = :host AND a.port = :port",
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
