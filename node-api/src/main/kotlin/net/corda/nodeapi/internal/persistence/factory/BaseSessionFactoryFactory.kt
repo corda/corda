@@ -5,7 +5,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
@@ -28,13 +27,10 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
 
     open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
         val hbm2dll: String =
-                if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                if (databaseConfig.initialiseSchema) {
                     "update"
-                } else if ((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
-                        || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                } else  {
                     "validate"
-                } else {
-                    "none"
                 }
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
