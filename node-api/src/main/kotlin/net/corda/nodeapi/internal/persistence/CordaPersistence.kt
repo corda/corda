@@ -40,7 +40,7 @@ data class DatabaseConfig(
 ) {
     object Defaults {
         val initialiseSchema = false
-        val transactionIsolationLevel = TransactionIsolationLevel.UNSPECIFIED
+        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
     }
@@ -48,7 +48,6 @@ data class DatabaseConfig(
 
 // This class forms part of the node config and so any changes to it must be handled with care
 enum class TransactionIsolationLevel {
-    UNSPECIFIED,
     NONE,
     READ_UNCOMMITTED,
     READ_COMMITTED,
@@ -109,7 +108,7 @@ class CordaPersistence(
                 HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
             } catch (e: Exception) {
                 when (e) {
-                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
+                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)
                     else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
                 }
             }

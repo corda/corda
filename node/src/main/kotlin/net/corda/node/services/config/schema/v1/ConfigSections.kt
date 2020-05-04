@@ -277,7 +277,7 @@ enum class SchemaInitializationType{
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional()
     private val initialiseAppSchema by enum(SchemaInitializationType::class).optional()
-    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class)
+    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional()
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
