@@ -1,5 +1,6 @@
 package net.corda.core.serialization.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -33,6 +34,7 @@ import java.util.*
  *           this tx may be stale, that is, classloading might be triggered by the verification of some other transaction
  *           if not all code is invoked every time, however we want a txid for errors in case of attachment bogusness.
  */
+@DeleteForDJVM
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
@@ -356,11 +358,11 @@ object AttachmentsClassLoaderBuilder {
  * Registers a new internal "attachment" protocol.
  * This will not be exposed as an API.
  */
+@DeleteForDJVM
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
-    // TODO - what happens if this grows too large?
-    private val loadedAttachments = mutableMapOf<String, Attachment>().toSynchronised()
+    private val loadedAttachments = WeakHashMap<String, Attachment>().toSynchronised()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
         return if (attachmentScheme == protocol) {
@@ -373,6 +375,9 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
         loadedAttachments[id] = attachment
         return URL(attachmentScheme, "", -1, id, AttachmentURLStreamHandler)
     }
+
+    @VisibleForTesting
+    fun loadedAttachmentsSize(): Int = loadedAttachments.size
 
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {

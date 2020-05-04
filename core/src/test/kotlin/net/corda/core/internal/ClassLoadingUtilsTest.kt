@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.net.URL
 import java.net.URLClassLoader
 import java.security.PublicKey
 import java.util.jar.JarOutputStream
@@ -118,6 +119,34 @@ class ClassLoadingUtilsTest {
             assertEquals(STANDALONE_CLASS_NAME, standaloneClass.name)
             assertEquals(cordappClassLoader, standaloneClass.classLoader)
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `test weak reference removed from map`() {
+        val jarData = with(ByteArrayOutputStream()) {
+            val internalName = STANDALONE_CLASS_NAME.asInternalName
+            JarOutputStream(this, Manifest()).use {
+                it.setLevel(NO_COMPRESSION)
+                it.setMethod(DEFLATED)
+                it.putNextEntry(directoryEntry("com"))
+                it.putNextEntry(directoryEntry("com/example"))
+                it.putNextEntry(classEntry(internalName))
+                it.write(TemplateClassWithEmptyConstructor::class.java.renameTo(internalName))
+            }
+            toByteArray()
+        }
+        val attachment = signedAttachment(jarData)
+        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment)
+
+        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+        repeat(10) { System.gc() }
+        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+        url = null
+        var count = 0
+        while (AttachmentURLStreamHandlerFactory.loadedAttachmentsSize() != 0 && count++ < 100) {
+            System.gc()
+        }
+        assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
     private fun signedAttachment(data: ByteArray, vararg parties: Party) = ContractAttachment.create(
