@@ -21,6 +21,10 @@ open class MockTransactionStorage : WritableTransactionStorage, SingletonSeriali
         return getTransaction(id)?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
     }
 
+    override fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction> {
+        return trackTransaction(id)
+    }
+
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return DataFeed(txns.values.mapNotNull { if (it.isVerified) it.stx else null }, _updatesPublisher)
     }

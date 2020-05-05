@@ -166,7 +166,6 @@ abstract class AbstractAMQPSerializationScheme(
 
 fun registerCustomSerializers(factory: SerializerFactory) {
     with(factory) {
-        register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
         register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(this))
         register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
         register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
@@ -205,6 +204,7 @@ fun registerCustomSerializers(factory: SerializerFactory) {
 @StubOutForDJVM
 private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
     with(factory) {
+        register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
         register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
     }
 }

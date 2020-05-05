@@ -12,6 +12,7 @@ import java.util.*;
 
 import static java.util.stream.Collectors.joining;
 
+@Named("start")
 public class StartShellCommand extends InteractiveShellCommand {
 
     private static Logger logger = LoggerFactory.getLogger(StartShellCommand.class);

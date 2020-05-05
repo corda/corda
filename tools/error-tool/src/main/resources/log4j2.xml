@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info">
+    <Properties>
+        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
+        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%level{length=5}] %date{HH:mm:ssZ} - %msg%n%throwable{0}"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${defaultLogLevel}">
+            <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
+        </Root>
+    </Loggers>
+</Configuration>

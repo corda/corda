@@ -63,7 +63,8 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-serialization'
+    archiveBaseName = 'corda-serialization'
+    archiveClassifier = ''
 }
 
 publish {

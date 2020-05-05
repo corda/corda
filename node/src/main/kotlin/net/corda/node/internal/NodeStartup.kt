@@ -6,6 +6,8 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
+import net.corda.common.logging.errorReporting.CordaErrorContextProvider
+import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -16,6 +18,8 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
+import net.corda.common.logging.errorReporting.ErrorReporting
+import net.corda.common.logging.errorReporting.report
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
@@ -140,6 +144,7 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        const val ERROR_CODE_RESOURCE_LOCATION = "error-codes"
     }
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
@@ -169,6 +174,10 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
+        ErrorReporting()
+                .usingResourcesAt(ERROR_CODE_RESOURCE_LOCATION)
+                .withContextProvider(CordaErrorContextProvider())
+                .initialiseReporting()
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
@@ -482,6 +491,7 @@ interface NodeStartupLogging {
 
     fun handleStartError(error: Throwable) {
         when {
+            error is ErrorCode<*> -> logger.report(error)
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")

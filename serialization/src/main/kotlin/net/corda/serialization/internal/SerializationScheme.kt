@@ -17,6 +17,12 @@ internal object NullEncodingWhitelist : EncodingWhitelist {
     override fun acceptEncoding(encoding: SerializationEncoding) = false
 }
 
+internal object SnappyEncodingWhitelist: EncodingWhitelist {
+    override fun acceptEncoding(encoding: SerializationEncoding): Boolean {
+        return encoding == CordaSerializationEncoding.SNAPPY
+    }
+}
+
 @KeepForDJVM
 data class SerializationContextImpl @JvmOverloads constructor(override val preferredSerializationVersion: SerializationMagic,
                                                               override val deserializationClassLoader: ClassLoader,
@@ -25,7 +31,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
-                                                              override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
+                                                              override val encodingWhitelist: EncodingWhitelist = SnappyEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false,
                                                               override val carpenterDisabled: Boolean = false,
                                                               override val preventDataLoss: Boolean = false,

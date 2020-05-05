@@ -114,7 +114,7 @@ sealed class Action {
     /**
      * Sleep until [time].
      */
-    data class SleepUntil(val time: Instant) : Action()
+    data class SleepUntil(val currentState: StateMachineState, val time: Instant) : Action()
 
     /**
      * Create a new database transaction.

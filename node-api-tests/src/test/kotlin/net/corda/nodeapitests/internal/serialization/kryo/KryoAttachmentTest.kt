@@ -12,8 +12,6 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.serialization.internal.CordaSerializationEncoding
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.junit.Assert
 import org.junit.Before

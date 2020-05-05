@@ -2,10 +2,12 @@ package net.corda.tools.shell;
 
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
+import org.crsh.cli.Named;
 import org.crsh.cli.Usage;
 
 import static net.corda.tools.shell.InteractiveShell.*;
 
+@Named("checkpoints")
 public class CheckpointShellCommand extends InteractiveShellCommand {
 
     @Command

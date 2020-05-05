@@ -2,7 +2,7 @@
   <img src="https://www.corda.net/wp-content/themes/corda/assets/images/crda-logo-big.svg" alt="Corda" width="500">
 </p>
 
-<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_CordaBuild&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a> [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_Build_ActiveReleaseBranches_BuildOsRelease45&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_Build_ActiveReleaseBranches_BuildOsRelease45/statusIcon"/></a> [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Corda
 

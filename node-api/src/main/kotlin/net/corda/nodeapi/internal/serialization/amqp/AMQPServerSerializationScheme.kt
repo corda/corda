@@ -18,10 +18,16 @@ class AMQPServerSerializationScheme(
         cordappSerializationWhitelists: Set<SerializationWhitelist>,
         serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, cordappSerializationWhitelists, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
-    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, serializerFactoriesForContexts)
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists)
+    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>)
+        : this(cordapps.customSerializers, cordapps.serializationWhitelists, serializerFactoriesForContexts)
+    constructor(
+        cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
+        cordappSerializationWhitelists: Set<SerializationWhitelist>
+    ) : this(cordappCustomSerializers, cordappSerializationWhitelists, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
 
-    constructor() : this(emptySet(), emptySet(), AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised() )
+    @Suppress("UNUSED")
+    constructor() : this(emptySet(), emptySet())
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()

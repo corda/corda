@@ -199,11 +199,12 @@ class AMQPBridgeTest {
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
+            doReturn(false).whenever(it).crlCheckArtemisServer
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
         }
         artemisConfig.configureWithDevSSLCertificate()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE, null)
         val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()

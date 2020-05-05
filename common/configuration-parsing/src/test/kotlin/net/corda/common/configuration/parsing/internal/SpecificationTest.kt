@@ -1,7 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
-import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test

@@ -32,6 +32,7 @@ data class NodeConfigurationImpl(
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
+        override val crlCheckArtemisServer: Boolean = Defaults.crlCheckArtemisServer,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = Defaults.compatibilityZoneURL,
         override var networkServices: NetworkServicesConfig? = Defaults.networkServices,
@@ -91,6 +92,7 @@ data class NodeConfigurationImpl(
         val networkServices: NetworkServicesConfig? = null
         val tlsCertCrlDistPoint: URL? = null
         val tlsCertCrlIssuer: X500Principal? = null
+        const val crlCheckArtemisServer: Boolean = false
         val security: SecurityConfiguration? = null
         val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList()
         val rpcAddress: NetworkHostAndPort? = null

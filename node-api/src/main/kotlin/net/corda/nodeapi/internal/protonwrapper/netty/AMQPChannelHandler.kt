@@ -65,7 +65,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         val oldMDC = MDC.getCopyOfContextMap() ?: emptyMap<String, String>()
         try {
             MDC.put("serverMode", serverMode.toString())
-            MDC.put("remoteAddress", remoteAddress.toString())
+            MDC.put("remoteAddress", if (::remoteAddress.isInitialized) remoteAddress.toString() else null)
             MDC.put("localCert", localCert?.subjectDN?.toString())
             MDC.put("remoteCert", remoteCert?.subjectDN?.toString())
             MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames?.joinToString(separator = ";") { it.toString() })
@@ -299,6 +299,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
             cause is SSLException && cause.message == "handshake timed out" -> logWarnWithMDC("SSL Handshake timed out")
             cause is SSLException && (cause.message?.contains("close_notify") == true)
                                                                            -> logWarnWithMDC("Received close_notify during handshake")
+            // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()
+            cause is SSLException && (cause.message?.contains("writing TLS control frames") == true) -> logWarnWithMDC(cause.message!!)
 
             else -> badCert = true
         }

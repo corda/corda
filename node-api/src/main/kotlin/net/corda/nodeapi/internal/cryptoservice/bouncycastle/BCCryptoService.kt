@@ -162,20 +162,30 @@ class BCCryptoService(private val legalName: X500Principal,
         wrappingKeyStore.save(wrappingKeyStorePath!!, certificateStore.password)
     }
 
+    /**
+     * Using "AESWRAPPAD" cipher spec for key wrapping defined by [RFC 5649](https://tools.ietf.org/html/rfc5649).
+     * "AESWRAPPAD" (same as "AESKWP" or "AESRFC5649WRAP") is implemented in [org.bouncycastle.jcajce.provider.symmetric.AES.WrapPad] using
+     * [org.bouncycastle.crypto.engines.RFC5649WrapEngine]. See:
+     * - https://www.bouncycastle.org/docs/docs1.5on/org/bouncycastle/crypto/engines/AESWrapPadEngine.html
+     * - https://www.bouncycastle.org/docs/docs1.5on/org/bouncycastle/crypto/engines/RFC5649WrapEngine.html
+     *
+     * Keys encoded with "AESWRAPPAD" are stored with encodingVersion = 1. Previously used cipher spec ("AES" == "AES/ECB/PKCS5Padding")
+     * corresponds to encodingVersion = null.
+     */
     override fun generateWrappedKeyPair(masterKeyAlias: String, childKeyScheme: SignatureScheme): Pair<PublicKey, WrappedPrivateKey> {
         if (!wrappingKeyStore.containsAlias(masterKeyAlias)) {
             throw IllegalStateException("There is no master key under the alias: $masterKeyAlias")
         }
 
         val wrappingKey = wrappingKeyStore.getKey(masterKeyAlias, certificateStore.entryPassword.toCharArray())
-        val cipher = Cipher.getInstance("AES", cordaBouncyCastleProvider)
+        val cipher = Cipher.getInstance("AESWRAPPAD", cordaBouncyCastleProvider)
         cipher.init(Cipher.WRAP_MODE, wrappingKey)
 
         val keyPairGenerator = keyPairGeneratorFromScheme(childKeyScheme)
         val keyPair = keyPairGenerator.generateKeyPair()
         val privateKeyMaterialWrapped = cipher.wrap(keyPair.private)
 
-        return Pair(keyPair.public, WrappedPrivateKey(privateKeyMaterialWrapped, childKeyScheme))
+        return Pair(keyPair.public, WrappedPrivateKey(privateKeyMaterialWrapped, childKeyScheme, encodingVersion = 1))
     }
 
     override fun sign(masterKeyAlias: String, wrappedPrivateKey: WrappedPrivateKey, payloadToSign: ByteArray): ByteArray {
@@ -184,7 +194,12 @@ class BCCryptoService(private val legalName: X500Principal,
         }
 
         val wrappingKey = wrappingKeyStore.getKey(masterKeyAlias, certificateStore.entryPassword.toCharArray())
-        val cipher = Cipher.getInstance("AES", cordaBouncyCastleProvider)
+        // Keeping backwards compatibility with previous encoding algorithms
+        val algorithm = when(wrappedPrivateKey.encodingVersion) {
+            1 -> "AESWRAPPAD"
+            else -> "AES"
+        }
+        val cipher = Cipher.getInstance(algorithm, cordaBouncyCastleProvider)
         cipher.init(Cipher.UNWRAP_MODE, wrappingKey)
 
         val privateKey = cipher.unwrap(wrappedPrivateKey.keyMaterial, keyAlgorithmFromScheme(wrappedPrivateKey.signatureScheme), Cipher.PRIVATE_KEY) as PrivateKey

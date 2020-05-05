@@ -140,6 +140,8 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             val actTx = tx.peekableValue ?: return 0
             return actTx.sigs.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.txBits.size
         }
+
+        private val log = contextLogger()
     }
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheFactory, clock))
@@ -219,12 +221,24 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+
+        if (contextTransactionOrNull != null) {
+            log.warn("trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions.")
+        }
+
+        return trackTransactionWithNoWarning(id)
+    }
+
+    override fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction> {
+        val updateFuture = updates.filter { it.id == id }.toFuture()
         return database.transaction {
             txStorage.locked {
                 val existingTransaction = getTransaction(id)
                 if (existingTransaction == null) {
                     updates.filter { it.id == id }.toFuture()
+                    updateFuture
                 } else {
+                    updateFuture.cancel(false)
                     doneFuture(existingTransaction)
                 }
             }

@@ -5,8 +5,6 @@ import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 
-import java.io.NotSerializableException
-
 /**
  * This class wraps all serialized data, so that the schema can be carried along with it.  We will provide various
  * internal utilities to decompose and recompose with/without schema etc so that e.g. we can store objects with a
