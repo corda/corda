@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -128,6 +127,7 @@ class ClassLoadingUtilsTest {
     }
 
     @Test(timeout=300_000)
+    @Suppress("ExplicitGarbageCollectionCall")
     fun `test weak reference removed from map`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
