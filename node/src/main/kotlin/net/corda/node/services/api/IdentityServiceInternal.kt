@@ -2,7 +2,6 @@ package net.corda.node.services.api
 
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.contextLogger
 import java.security.InvalidAlgorithmParameterException
 import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException

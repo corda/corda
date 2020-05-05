@@ -1641,6 +1641,7 @@
     <ID>TooManyFunctions:Generator.kt$Generator$Companion</ID>
     <ID>TooManyFunctions:HibernateQueryCriteriaParser.kt$HibernateQueryCriteriaParser : AbstractQueryCriteriaParserIQueryCriteriaParser</ID>
     <ID>TooManyFunctions:HibernateStatistics.kt$DelegatingStatisticsService : StatisticsService</ID>
+    <ID>TooManyFunctions:InMemoryIdentityService.kt$InMemoryIdentityService : SingletonSerializeAsTokenIdentityServiceInternal</ID>
     <ID>TooManyFunctions:InteractiveShell.kt$InteractiveShell</ID>
     <ID>TooManyFunctions:InternalMockNetwork.kt$InternalMockNetwork : AutoCloseable</ID>
     <ID>TooManyFunctions:InternalMockNetwork.kt$InternalMockNetwork$MockNode : AbstractNode</ID>
