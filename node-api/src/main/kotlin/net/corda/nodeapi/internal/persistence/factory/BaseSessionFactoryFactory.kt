@@ -25,9 +25,9 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         private val logger = contextLogger()
     }
 
-    open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
+    open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
-                if (databaseConfig.initialiseSchema) {
+                if (allowHibernateToManageAppSchema) {
                     "update"
                 } else  {
                     "validate"
@@ -84,12 +84,13 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
-            attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
+            attributeConverters: Collection<AttributeConverter<*, *>>,
+            allowHibernateToManageAppSchema: Boolean): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val config = buildHibernateConfig(databaseConfig, metadataSources)
+        val config = buildHibernateConfig(databaseConfig, metadataSources, allowHibernateToManageAppSchema)
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }

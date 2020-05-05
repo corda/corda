@@ -210,7 +210,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
                                djvmBootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
+                               djvmCordaSource: UserSource? = null,
+                               protected val allowHibernateToManageAppSchema: Boolean = false) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -221,6 +222,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val monitoringService = MonitoringService(metricRegistry).tokenize()
 
     protected val runOnStop = ArrayList<() -> Any?>()
+
+    protected open val runMigrationScripts: Boolean = false
 
     init {
         (serverThread as? ExecutorService)?.let {
@@ -956,7 +959,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = runMigrationScripts)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1366,9 +1369,9 @@ fun CordaPersistence.startHikariPool(
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val schemaMigration = SchemaMigration(schemas, dataSource, cordappLoader, currentDir, ourName)
         if (runMigrationScripts) {
-            schemaMigration.checkState()
-        } else {
             schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        } else {
+            schemaMigration.checkState()
         }
         start(dataSource)
     } catch (ex: Exception) {

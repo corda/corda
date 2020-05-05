@@ -286,7 +286,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             args.version,
             mockFlowManager,
             args.network.getServerThread(args.id),
-            args.network.busyLatch
+            args.network.busyLatch,
+            allowHibernateToManageAppSchema = true
     ) {
         companion object {
             private val staticLog = contextLogger()
@@ -316,6 +317,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
         }
+
+        override val runMigrationScripts: Boolean = true
 
         val mockNet = args.network
         val id = args.id
