@@ -59,8 +59,10 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName) to signer
     }
 
+    @Suppress("LongParameterList")
     @JvmOverloads
-    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1, versionSeed: Int = 0, content: String? = null): Path {
+    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1, versionSeed: Int = 0,
+                            content: String? = null): Path {
         val packages = contractName.split(".")
         val jarName = "attachment-${packages.last()}-$version-$versionSeed-${(if (signed) "signed" else "")}.jar"
         val className = packages.last()
