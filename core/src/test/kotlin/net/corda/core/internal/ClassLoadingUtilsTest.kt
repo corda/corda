@@ -127,7 +127,7 @@ class ClassLoadingUtilsTest {
     }
 
     @Test(timeout=300_000)
-    @Suppress("ExplicitGarbageCollectionCall")
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
     fun `test weak reference removed from map`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
@@ -146,7 +146,7 @@ class ClassLoadingUtilsTest {
 
         val referenceQueue: ReferenceQueue<String?> = ReferenceQueue()
         val weakReference = WeakReference(attachmentWithKey!!.key, referenceQueue)
-        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey!!)
+        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey)
         assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
         // Clear both strong references below
         attachmentWithKey = null
