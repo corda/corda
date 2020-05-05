@@ -15,7 +15,6 @@ import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.nodeapi.internal.serialization.kryo.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
@@ -213,8 +212,7 @@ class CordaClassResolverTests {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage)
-        val attachmentsWithKeys = arrayOf(attachmentHash).map {AttachmentWithKey(attachmentHash.toString(), storage.openAttachment(it)!!) }
-        val classLoader = AttachmentsClassLoader(attachmentsWithKeys, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
+        val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
         val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
@@ -224,8 +222,7 @@ class CordaClassResolverTests {
         val storage = InternalMockAttachmentStorage(MockAttachmentStorage())
         val attachmentTrustCalculator = NodeAttachmentTrustCalculator(storage, TestingNamedCacheFactory())
         val attachmentHash = importJar(storage, "some_uploader")
-        val attachmentsWithKeys = arrayOf(attachmentHash).map {AttachmentWithKey(attachmentHash.toString(), storage.openAttachment(it)!!) }
-        val classLoader = AttachmentsClassLoader(attachmentsWithKeys, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
+        val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash, { attachmentTrustCalculator.calculate(it) })
         val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }

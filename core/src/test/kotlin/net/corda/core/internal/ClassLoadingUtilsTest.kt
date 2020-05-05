@@ -7,11 +7,9 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.lang.ref.ReferenceQueue
@@ -25,6 +23,7 @@ import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
 import java.util.zip.ZipEntry.DEFLATED
 import java.util.zip.ZipEntry.STORED
+import kotlin.test.assertNotNull
 
 class ClassLoadingUtilsTest {
     companion object {
@@ -114,8 +113,7 @@ class ClassLoadingUtilsTest {
             toByteArray()
         }
         val attachment = signedAttachment(jarData)
-        val attachmentWithKey = AttachmentWithKey(attachment.id.toString(), attachment)
-        val url = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey)
+        val url = AttachmentURLStreamHandlerFactory.toUrl(attachment)
 
         URLClassLoader(arrayOf(url)).use { cordappClassLoader ->
             val standaloneClass = createInstancesOfClassesImplementing(cordappClassLoader, BaseInterface::class.java)
@@ -142,19 +140,18 @@ class ClassLoadingUtilsTest {
             toByteArray()
         }
         val attachment = signedAttachment(jarData)
-        var attachmentWithKey: AttachmentWithKey? = AttachmentWithKey(attachment.id.toString(), attachment)
+        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment)
+        var path = url?.path
 
-        val referenceQueue: ReferenceQueue<String?> = ReferenceQueue()
-        val weakReference = WeakReference(attachmentWithKey!!.key, referenceQueue)
-        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey)
+        val referenceQueue: ReferenceQueue<URL> = ReferenceQueue()
+        val weakReference = WeakReference<URL>(url, referenceQueue)
+
         assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
-        // Clear both strong references below
-        attachmentWithKey = null
+        // Clear strong reference
         url = null
-
         System.gc()
         val ref = referenceQueue.remove(100000)
-        assertTrue(ref != null)
+        assertNotNull(ref)
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 

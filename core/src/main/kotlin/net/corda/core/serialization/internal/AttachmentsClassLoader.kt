@@ -13,12 +13,12 @@ import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
-import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.lang.ref.WeakReference
 import java.net.*
 import java.security.Permission
 import java.util.*
@@ -36,16 +36,12 @@ import java.util.*
  *           if not all code is invoked every time, however we want a txid for errors in case of attachment bogusness.
  */
 @DeleteForDJVM
-class AttachmentsClassLoader(attachmentsWithKeys: List<AttachmentWithKey>,
+class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
                              isAttachmentTrusted: (Attachment) -> Boolean,
                              parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
-        URLClassLoader(attachmentsWithKeys.map{ toUrl(it) }.toTypedArray(), parent) {
-
-    // Sole purpose of this is to maintain a strong reference to keys in the weakhashmap in
-    // AttachmentURLStreamHandlerFactory
-    private val attachmentKeys = attachmentsWithKeys.map { it.key }
+        URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
         private val log = contextLogger()
@@ -114,7 +110,7 @@ class AttachmentsClassLoader(attachmentsWithKeys: List<AttachmentWithKey>,
     }
 
     init {
-        val attachments = attachmentsWithKeys.map { it.attachment }
+
         // Make some preliminary checks to ensure that we're not loading invalid attachments.
 
         // All attachments need to be valid JAR or ZIP files.
@@ -305,8 +301,6 @@ class AttachmentsClassLoader(attachmentsWithKeys: List<AttachmentWithKey>,
 object AttachmentsClassLoaderBuilder {
     private const val CACHE_SIZE = 1000
 
-    data class AttachmentWithKey(val key: String, val attachment: Attachment)
-
     // We use a set here because the ordering of attachments doesn't affect code execution, due to the no
     // overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
     // can just do unordered comparisons here. But the same attachments run with different network parameters
@@ -328,11 +322,10 @@ object AttachmentsClassLoaderBuilder {
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
-        val attachmentsWithKeys = attachments.map { AttachmentWithKey(it.id.toString(), it) }
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachmentsWithKeys, params, txId, isAttachmentTrusted, parent)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = try {
                 createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
                         JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
@@ -370,7 +363,7 @@ object AttachmentsClassLoaderBuilder {
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
-    private val loadedAttachments = WeakHashMap<String, Attachment>().toSynchronised()
+    private val loadedAttachments = WeakHashMap<URL, Pair<WeakReference<URL>, Attachment>>().toSynchronised()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
         return if (attachmentScheme == protocol) {
@@ -378,9 +371,16 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
         } else null
     }
 
-    fun toUrl(attachmentWithKey: AttachmentWithKey): URL {
-        loadedAttachments[attachmentWithKey.key] = attachmentWithKey.attachment
-        return URL(attachmentScheme, "", -1, attachmentWithKey.key, AttachmentURLStreamHandler)
+    @Synchronized
+    fun toUrl(attachment: Attachment): URL {
+        val proposedURL = URL(attachmentScheme, "", -1, attachment.id.toString(), AttachmentURLStreamHandler)
+        val existingURL = loadedAttachments.get(proposedURL)?.first?.get()
+        return if (existingURL == null) {
+            loadedAttachments.put(proposedURL, WeakReference(proposedURL) to attachment)
+            proposedURL
+        } else {
+            existingURL
+        }
     }
 
     @VisibleForTesting
@@ -389,8 +389,19 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {
             if (url.protocol != attachmentScheme) throw IOException("Cannot handle protocol: ${url.protocol}")
-            val attachment = loadedAttachments[url.path] ?: throw IOException("Could not load url: $url .")
+            val attachment = loadedAttachments[url]?.second ?: throw IOException("Could not load url: $url .")
             return AttachmentURLConnection(url, attachment)
+        }
+
+        override fun equals(attachmentUrl: URL, otherURL: URL?): Boolean {
+            if (attachmentUrl.protocol != otherURL?.protocol) return false
+            if (attachmentUrl.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
+            return attachmentUrl.file == otherURL?.file
+        }
+
+        override fun hashCode(url: URL): Int {
+            if (url.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
+            return url.file.hashCode()
         }
     }
 
