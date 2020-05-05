@@ -85,7 +85,6 @@ dependencies {
     // Unit testing helpers.
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile "io.github.hakky54:logcaptor:1.1.1"
 
     testCompile project(':node-driver')
     testCompile project(':client:mock')

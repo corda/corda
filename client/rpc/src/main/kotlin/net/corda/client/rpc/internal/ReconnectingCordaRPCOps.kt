@@ -208,12 +208,18 @@ class ReconnectingCordaRPCOps private constructor(
         }
 
 
-        private fun startCordaRPCClient(
+        /**
+         * Starts a Corda RPC client connection.
+         *
+         * @param networkHostAndPort the RPC Client's host and port number.
+         * @param connectionMaxRetryInterval the connection max retry interval.
+         */
+        private fun doStartCordaRPCClient(
                 networkHostAndPort: NetworkHostAndPort,
-                retryInterval: Duration): CordaRPCConnection? {
+                connectionMaxRetryInterval: Duration): CordaRPCConnection? {
             return CordaRPCClient(
                     networkHostAndPort,
-                    rpcConfiguration.copy(connectionMaxRetryInterval = retryInterval, maxReconnectAttempts = 1),
+                    rpcConfiguration.copy(connectionMaxRetryInterval = connectionMaxRetryInterval, maxReconnectAttempts = 1),
                     sslConfiguration,
                     classLoader
             ).start(username, password).also {
@@ -224,13 +230,19 @@ class ReconnectingCordaRPCOps private constructor(
             }
         }
 
-        private fun establishConnection(
+        /**
+         * Starts a Corda RPC client connection with handling possible exceptions.
+         *
+         * @param networkHostAndPort the RPC Client's host and port number.
+         * @param connectionMaxRetryInterval the connection max retry interval.
+         */
+        private fun startCordaRPCClient(
                 networkHostAndPort: NetworkHostAndPort,
-                retryInterval: Duration): CordaRPCConnection? {
+                connectionMaxRetryInterval: Duration): CordaRPCConnection? {
             var cordaRPCConnection: CordaRPCConnection? = null
             try {
                 log.info("Connecting to: $networkHostAndPort")
-                cordaRPCConnection = startCordaRPCClient(networkHostAndPort, retryInterval)
+                cordaRPCConnection = doStartCordaRPCClient(networkHostAndPort, connectionMaxRetryInterval)
                 log.debug { "Connection successfully established with: $networkHostAndPort" }
             } catch (ex: Exception) {
                 when (ex) {
@@ -284,7 +296,7 @@ class ReconnectingCordaRPCOps private constructor(
             do {
                 if (isClosed()) break
                 log.debug { "Attempting to connect." }
-                establishConnection(nodeHostAndPorts[currentRoundRobinIndex], currentRetryInterval)
+                startCordaRPCClient(nodeHostAndPorts[currentRoundRobinIndex], currentRetryInterval)
                 retryAllowed = establishedConnection == null && (infiniteRetries || --remainingRetryCount > 0)
                 if (retryAllowed){
                     Thread.sleep(currentRetryInterval.toMillis())
@@ -317,6 +329,7 @@ class ReconnectingCordaRPCOps private constructor(
         }
         fun isClosed(): Boolean = currentState == CLOSED
     }
+
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
 

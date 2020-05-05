@@ -23,7 +23,6 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.rpcDriver
-import nl.altindag.log.LogCaptor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -276,18 +275,15 @@ class CordaRPCClientReconnectionTest {
     }
 
     @Test
-    fun `RPC retry test`(){
+    fun `RPC client connection after 2 attempts throws RPCException`(){
+        // should be improved to verify the connection invocation attempt counts
         val conf = config.copy(maxReconnectAttempts = 2)
-        val connection = CordaRPCClient(NetworkHostAndPort("localhost", 42), conf).start(rpcUser.username, rpcUser.password, gracefulReconnect)
-
+        assertThatThrownBy {
+            CordaRPCClient(NetworkHostAndPort("localhost", 42), conf)
+                    .start(rpcUser.username, rpcUser.password, gracefulReconnect)
+        }.isInstanceOf(RPCException::class.java)
     }
 
-    @Test
-    fun `RPC reconnect log capture test`(){
-        val expectedDebugMessage = "Attempting to connect.";
-        val logCaptor = LogCaptor.forClass<ReconnectingCordaRPCOps>(ReconnectingCordaRPCOps::class.java)//(ReconnectingCordaRPCOps.class)
-        assertThat(logCaptor.getLogs("debug").contains(expectedDebugMessage));
-    }
     @Test(timeout=300_000)
     fun `RPC connection stops reconnecting after config number of retries`() {
         driver(DriverParameters(cordappsForAllNodes = emptyList())) {
