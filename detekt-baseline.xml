@@ -242,7 +242,7 @@
     <ID>ForbiddenComment:AllButBlacklisted.kt$AllButBlacklisted$// TODO: add more from java.lang.reflect.</ID>
     <ID>ForbiddenComment:AllButBlacklisted.kt$AllButBlacklisted$// TODO: add more from java.net.</ID>
     <ID>ForbiddenComment:AllButBlacklisted.kt$AllButBlacklisted$// TODO: blacklistedClasses += type.name // add it, so checking is faster next time we encounter this class.</ID>
-    <ID>ForbiddenComment:AmqpRpcTests.kt$AmqpRpcTests$// TODO: Do we need CordApps at all?</ID>
+    <ID>ForbiddenComment:AmqpRpcTests.kt$AmqpRpcTests$// TODO: We can pretend to be someone else and elevate our permissions</ID>
     <ID>ForbiddenComment:Arrangement.kt$Obligation$// TODO: should be replaced with something that uses Corda assets and/or cash?</ID>
     <ID>ForbiddenComment:Arrangement.kt$Obligation$// TODO: should only be allowed to transfer non-negative amounts</ID>
     <ID>ForbiddenComment:Arrangement.kt$RollOut$// TODO: fixing offset</ID>
