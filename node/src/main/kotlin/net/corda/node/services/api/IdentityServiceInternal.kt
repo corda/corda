@@ -8,15 +8,17 @@ import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
 
 interface IdentityServiceInternal : IdentityService {
-    private companion object {
-        val log = contextLogger()
-    }
-
-    /** This method exists so it can be mocked with doNothing, rather than having to make up a possibly invalid return value. */
-    fun justVerifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean = false) {
-        verifyAndRegisterIdentity(identity, isNewRandomIdentity)
-    }
-
+    /**
+     * Lighter version of [verifyAndRegisterIdentity] for newly registered confidential identity.
+     * The identity will only be accessible from certain lookups by public key.
+     */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate?
+    fun verifyAndRegisterFreshIdentity(identity: PartyAndCertificate)
+
+    /**
+     * Extended version of [verifyAndRegisterIdentity] to register legal identity from NodeInfo.
+     * The identity will be available from lookups by X500 name.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun verifyAndRegisterLegalIdentity(identity: PartyAndCertificate)
 }

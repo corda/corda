@@ -46,7 +46,7 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertPath = X509Utilities.buildCertPath(ourCertificate, issuer.certPath.x509Certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
     if (identityService is IdentityServiceInternal) {
-        identityService.justVerifyAndRegisterIdentity(anonymisedIdentity, true)
+        identityService.verifyAndRegisterFreshIdentity(anonymisedIdentity)
     } else {
         identityService.verifyAndRegisterIdentity(anonymisedIdentity)
     }

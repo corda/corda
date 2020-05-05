@@ -6,6 +6,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
+import java.util.stream.Stream
 
 /**
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
@@ -222,4 +223,19 @@ class PersistentMap<K : Any, V, E, out EK>(
         criteriaQuery.select(criteriaQuery.from(persistentEntityClass))
         cache.getAll(session.createQuery(criteriaQuery).resultList.map { e -> fromPersistentEntity(e as E).first }.asIterable())
     }
+
+    /**
+     * Returns all key/value pairs from the underlying storage in a [Stream].
+     *
+     * Make sure to close the [Stream] once it's been processed.
+     */
+    val allPersisted: Stream<Pair<K, V>>
+        get() {
+            val session = currentDBSession()
+            val criteriaQuery = session.criteriaBuilder.createQuery(persistentEntityClass)
+            val root = criteriaQuery.from(persistentEntityClass)
+            criteriaQuery.select(root)
+            val query = session.createQuery(criteriaQuery)
+            return query.stream().map(fromPersistentEntity)
+        }
 }

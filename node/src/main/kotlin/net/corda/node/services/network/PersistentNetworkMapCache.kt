@@ -13,7 +13,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -22,6 +21,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -41,7 +41,7 @@ import javax.persistence.PersistenceException
 @Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
+                                     private val identityService: IdentityServiceInternal) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -250,7 +250,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         // First verify all the node's identities are valid before registering any of them
         return if (verifyIdentities(node)) {
             for (identity in node.legalIdentitiesAndCerts) {
-                identityService.verifyAndRegisterIdentity(identity)
+                identityService.verifyAndRegisterLegalIdentity(identity)
             }
             true
         } else {
