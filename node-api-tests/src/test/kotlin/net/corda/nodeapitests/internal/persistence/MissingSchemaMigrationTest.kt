@@ -41,8 +41,7 @@ class MissingSchemaMigrationTest {
     }
 
     private fun createSchemaMigration(schemasToMigrate: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): SchemaMigration {
-        val databaseConfig = DatabaseConfig()
-        return SchemaMigration(schemasToMigrate, dataSource, databaseConfig, null, null,
+        return SchemaMigration(schemasToMigrate, dataSource, null, null,
                 TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }
 
