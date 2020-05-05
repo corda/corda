@@ -498,7 +498,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // linear ids UUID
         criteria.uuid?.let {
             val uuids = criteria.uuid as List<UUID>
-            predicateSet.add(criteriaBuilder.and(vaultLinearStatesRoot.get<UUID>("uuid").`in`(uuids)))
+            if (uuids.isNotEmpty())
+                predicateSet.add(criteriaBuilder.and(vaultLinearStatesRoot.get<UUID>("uuid").`in`(uuids)))
         }
 
         // linear ids externalId

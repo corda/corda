@@ -250,6 +250,16 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test(timeout=300_000)
+    fun `query return empty result after called with empty list of uuids`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            val criteria = LinearStateQueryCriteria(participants = listOf(BIG_CORP), uuid = emptyList())
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(0)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
