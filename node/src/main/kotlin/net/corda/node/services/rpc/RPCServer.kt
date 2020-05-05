@@ -110,6 +110,12 @@ class RPCServer(
         private val log = contextLogger()
 
         private data class InvocationTarget(val method: Method, val instance: RPCOps)
+
+        private fun ClientMessage.getOptLongProperty(propName: String): Long? {
+            return if (containsProperty(propName)) {
+                getLongProperty(propName)
+            } else null
+        }
     }
 
     private enum class State {
@@ -377,8 +383,8 @@ class RPCServer(
         try {
             when (clientToServer) {
                 is RPCApi.ClientToServer.RpcRequest -> {
-                    val deduplicationSequenceNumber = artemisMessage.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
-                    if (deduplicationChecker.checkDuplicateMessageId(
+                    val deduplicationSequenceNumber = artemisMessage.getOptLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
+                    if (deduplicationSequenceNumber != null && deduplicationChecker.checkDuplicateMessageId(
                             identity = clientToServer.clientAddress,
                             sequenceNumber = deduplicationSequenceNumber
                     )) {
