@@ -1,11 +1,22 @@
 package net.corda.coretests.transactions
 
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentTrustCalculator
+import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
@@ -13,8 +24,15 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fakeAttachment
@@ -28,10 +46,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
+import java.nio.file.Path
+import java.security.PublicKey
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
@@ -48,7 +70,20 @@ class AttachmentsClassLoaderTests {
                 it.toByteArray()
             }
         }
+        val ALICE = TestIdentity(ALICE_NAME, 70).party
+        val BOB = TestIdentity(BOB_NAME, 80).party
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val DUMMY_NOTARY get() = dummyNotary.party
+        val PROGRAM_ID: String = "net.corda.testing.contracts.MyDummyContract"
     }
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     private lateinit var storage: MockAttachmentStorage
     private lateinit var internalStorage: InternalMockAttachmentStorage
@@ -471,5 +506,94 @@ class AttachmentsClassLoaderTests {
         )
 
         createClassloader(trustedAttachment).use {}
+    }
+
+    @Test(timeout=300_000)
+    fun `attachment still available in verify after forced gc in verify`() {
+        tempFolder.root.toPath().let { path ->
+            val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint)
+            val inputs = emptyList<StateAndRef<*>>()
+            val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
+            val commands = emptyList<CommandWithParties<CommandData>>()
+
+            val content = createContractString(PROGRAM_ID)
+            val contractJarPath = ContractJarTestUtils.makeTestContractJar(path, PROGRAM_ID, content = content)
+
+            val attachments = createAttachments(contractJarPath)
+
+            val id = SecureHash.randomSHA256()
+            val timeWindow: TimeWindow? = null
+            val privacySalt = PrivacySalt()
+            val transaction = createLedgerTransaction(
+                    inputs,
+                    outputs,
+                    commands,
+                    attachments,
+                    id,
+                    null,
+                    timeWindow,
+                    privacySalt,
+                    testNetworkParameters(),
+                    emptyList(),
+                    isAttachmentTrusted = { true }
+            )
+            transaction.verify()
+        }
+    }
+
+    private fun createContractString(contractName: String, versionSeed: Int = 0): String {
+        val pkgs = contractName.split(".")
+        val className = pkgs.last()
+        val packages = pkgs.subList(0, pkgs.size - 1)
+
+        val output = """package ${packages.joinToString(".")};
+                import net.corda.core.contracts.*;
+                import net.corda.core.transactions.*;
+                import java.net.URL;
+                import java.io.InputStream;
+
+                public class $className implements Contract {
+                    private int seed = $versionSeed;
+                    @Override
+                    public void verify(LedgerTransaction tx) throws IllegalArgumentException {
+                       System.gc();
+                       InputStream str = this.getClass().getClassLoader().getResourceAsStream("importantDoc.pdf");
+                       if (str == null) throw new IllegalStateException("Could not find importantDoc.pdf");
+                    }
+                }
+            """.trimIndent()
+
+        System.out.println(output)
+        return output
+    }
+
+    private fun createAttachments(contractJarPath: Path) : List<Attachment> {
+
+        val attachment = object : AbstractAttachment({contractJarPath.inputStream().readBytes()}, uploader = "app") {
+            @Suppress("OverridingDeprecatedMember")
+            override val signers: List<Party> = emptyList()
+            override val signerKeys: List<PublicKey> = emptyList()
+            override val size: Int = 1234
+            override val id: SecureHash = SecureHash.sha256(attachmentData)
+        }
+        val contractAttachment = ContractAttachment(attachment, PROGRAM_ID)
+
+        return listOf(
+                object : AbstractAttachment({ISOLATED_CONTRACTS_JAR_PATH.openStream().readBytes()}, uploader = "app") {
+                    @Suppress("OverridingDeprecatedMember")
+                    override val signers: List<Party> = emptyList()
+                    override val signerKeys: List<PublicKey> = emptyList()
+                    override val size: Int = 1234
+                    override val id: SecureHash = SecureHash.sha256(attachmentData)
+        },
+                object : AbstractAttachment({fakeAttachment("importantDoc.pdf", "I am a pdf!").inputStream().readBytes()
+                                                                                                                   }, uploader = "app") {
+                    @Suppress("OverridingDeprecatedMember")
+                    override val signers: List<Party> = emptyList()
+                    override val signerKeys: List<PublicKey> = emptyList()
+                    override val size: Int = 1234
+                    override val id: SecureHash = SecureHash.sha256(attachmentData)
+        },
+                contractAttachment)
     }
 }
