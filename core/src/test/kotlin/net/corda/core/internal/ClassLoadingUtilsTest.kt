@@ -7,11 +7,16 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import java.net.URL
 import java.net.URLClassLoader
 import java.security.PublicKey
@@ -110,7 +115,8 @@ class ClassLoadingUtilsTest {
             toByteArray()
         }
         val attachment = signedAttachment(jarData)
-        val url = AttachmentURLStreamHandlerFactory.toUrl(attachment)
+        val attachmentWithKey = AttachmentWithKey(attachment.id.toString(), attachment)
+        val url = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey)
 
         URLClassLoader(arrayOf(url)).use { cordappClassLoader ->
             val standaloneClass = createInstancesOfClassesImplementing(cordappClassLoader, BaseInterface::class.java)
@@ -136,16 +142,19 @@ class ClassLoadingUtilsTest {
             toByteArray()
         }
         val attachment = signedAttachment(jarData)
-        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment)
+        var attachmentWithKey: AttachmentWithKey? = AttachmentWithKey(attachment.id.toString(), attachment)
 
+        val referenceQueue: ReferenceQueue<String?> = ReferenceQueue()
+        val weakReference = WeakReference(attachmentWithKey!!.key, referenceQueue)
+        var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachmentWithKey!!)
         assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
-        repeat(10) { System.gc() }
-        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+        // Clear both strong references below
+        attachmentWithKey = null
         url = null
-        var count = 0
-        while (AttachmentURLStreamHandlerFactory.loadedAttachmentsSize() != 0 && count++ < 100) {
-            System.gc()
-        }
+
+        System.gc()
+        val ref = referenceQueue.remove(100000)
+        assertTrue(ref != null)
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 

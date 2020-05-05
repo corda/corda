@@ -11,6 +11,7 @@ import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder.AttachmentWithKey
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.common.internal.testNetworkParameters
@@ -67,7 +68,9 @@ class AttachmentsClassLoaderTests {
         params: NetworkParameters = networkParameters
     ): AttachmentsClassLoader {
         return AttachmentsClassLoader(
-            attachments.map { storage.openAttachment(it)!! },
+            attachments.map {
+                val attachment = storage.openAttachment(it)!!
+                AttachmentWithKey(attachment.id.toString(), attachment) },
             params,
             SecureHash.zeroHash,
             attachmentTrustCalculator::calculate
