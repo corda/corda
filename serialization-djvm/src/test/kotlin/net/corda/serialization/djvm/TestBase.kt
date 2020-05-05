@@ -10,7 +10,6 @@ import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.messages.Severity.WARNING
 import net.corda.djvm.source.BootstrapClassLoader
@@ -52,7 +51,6 @@ abstract class TestBase(type: SandboxType) {
             bootstrapClassLoader = BootstrapClassLoader(DETERMINISTIC_RT)
             val rootConfiguration = AnalysisConfiguration.createRoot(
                 userSource = UserPathSource(emptyList()),
-                whitelist = MINIMAL,
                 visibleAnnotations = setOf(
                     CordaSerializable::class.java,
                     CordaSerializationTransformEnumDefault::class.java,
