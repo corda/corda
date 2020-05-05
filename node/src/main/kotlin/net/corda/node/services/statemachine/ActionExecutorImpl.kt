@@ -2,13 +2,8 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
-import com.codahale.metrics.Histogram
-import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Reservoir
-import com.codahale.metrics.SlidingTimeWindowArrayReservoir
-import com.codahale.metrics.SlidingTimeWindowReservoir
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -19,8 +14,6 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * This is the bottom execution engine of flow side-effects.
