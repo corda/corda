@@ -95,7 +95,8 @@ class CordaPersistence(
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {},
+        allowHibernateToManageAppSchema: Boolean = false
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -105,7 +106,7 @@ class CordaPersistence(
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
             } catch (e: Exception) {
                 when (e) {
                     is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)
