@@ -25,7 +25,6 @@ import kotlin.concurrent.withLock
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
-        private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
         // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
