@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.lang.ref.ReferenceQueue
@@ -126,6 +127,7 @@ class ClassLoadingUtilsTest {
         }
     }
 
+    @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
     fun `test weak reference removed from map`() {
@@ -157,6 +159,7 @@ class ClassLoadingUtilsTest {
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
+    @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
     fun `test adding same attachment twice then removing`() {
@@ -197,6 +200,7 @@ class ClassLoadingUtilsTest {
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
+    @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
     fun `test adding two different attachments then removing`() {
