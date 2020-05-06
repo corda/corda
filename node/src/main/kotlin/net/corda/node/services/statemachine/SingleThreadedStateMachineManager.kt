@@ -305,7 +305,7 @@ class SingleThreadedStateMachineManager(
         return checkpointStorage.markAllPaused()
     }
 
-    override fun unPauseFlow(id: StateMachineRunId): Boolean {
+    private fun unPauseFlow(id: StateMachineRunId): Boolean {
         mutex.locked {
             val pausedFlow = pausedFlows.remove(id) ?: return false
             val flow = flowCreator.createFlowFromNonResidentFlow(pausedFlow) ?: return false
@@ -315,6 +315,18 @@ class SingleThreadedStateMachineManager(
             }
         }
         return true
+    }
+
+    override fun retryFlow(id: StateMachineRunId): Boolean {
+        if (mutex.locked{id in pausedFlows}) return unPauseFlow(id)
+        mutex.locked {
+            val currentState = flows[id]?.fiber?.transientState?.value ?: return false
+            val status = currentState.checkpoint.status
+            if (status == Checkpoint.FlowStatus.HOSPITALIZED || status == Checkpoint.FlowStatus.PAUSED) {
+                return retryFlowFromSafePoint(currentState)
+            }
+        }
+        return false
     }
 
     override fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId) {
@@ -415,7 +427,7 @@ class SingleThreadedStateMachineManager(
     }
 
     @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
-    override fun retryFlowFromSafePoint(currentState: StateMachineState) {
+    override fun retryFlowFromSafePoint(currentState: StateMachineState): Boolean {
         cancelFlowSleep(currentState)
         // Get set of external events
         val flowId = currentState.flowLogic.runId
@@ -423,7 +435,7 @@ class SingleThreadedStateMachineManager(
             val oldFlowLeftOver = mutex.locked { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
             if (oldFlowLeftOver == null) {
                 logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
+                return false
             }
             val flow = if (currentState.isAnyCheckpointPersisted) {
                 // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
@@ -431,19 +443,19 @@ class SingleThreadedStateMachineManager(
                 val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
                 if (serializedCheckpoint == null) {
                     logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                    return
+                    return false
                 }
 
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return false
                 // Resurrect flow
-                flowCreator.createFlowFromCheckpoint(flowId, checkpoint) ?: return
+                flowCreator.createFlowFromCheckpoint(flowId, checkpoint) ?: return false
             } else {
                 // Just flow initiation message
                 null
             }
             mutex.locked {
                 if (stopping) {
-                    return
+                    return false
                 }
                 // Remove any sessions the old flow has.
                 for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
@@ -477,6 +489,7 @@ class SingleThreadedStateMachineManager(
             flowHospital.forceIntoOvernightObservation(flowId, exceptions)
             throw e
         }
+        return true
     }
 
     override fun deliverExternalEvent(event: ExternalEvent) {

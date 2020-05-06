@@ -87,11 +87,11 @@ interface StateMachineManager {
     fun killFlow(id: StateMachineRunId): Boolean
 
     /**
-     * Start a paused flow.
+     * Retry a flow or start a paused flow.
      *
-     * @return whether the flow was successfully started.
+     * @return whether the flow was successfully retired or unpaused.
      */
-    fun unPauseFlow(id: StateMachineRunId): Boolean
+    fun retryFlow(id: StateMachineRunId): Boolean
 
     /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.
@@ -114,7 +114,7 @@ interface StateMachineManagerInternal {
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)
     fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
-    fun retryFlowFromSafePoint(currentState: StateMachineState)
+    fun retryFlowFromSafePoint(currentState: StateMachineState): Boolean
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
     fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration)
