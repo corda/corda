@@ -127,6 +127,7 @@ class ClassLoadingUtilsTest {
         }
     }
 
+    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs. 
     @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
@@ -159,6 +160,7 @@ class ClassLoadingUtilsTest {
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
+    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs.
     @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
@@ -200,6 +202,7 @@ class ClassLoadingUtilsTest {
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
+    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs.
     @Ignore
     @Test(timeout=300_000)
     @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
