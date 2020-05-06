@@ -54,14 +54,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
 
-        @VisibleForTesting
-        private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
-            ByteArrayOutputStream().use {
-                attachment.extractFile(filepath, it)
-                return it.toByteArray()
-            }
-        }
-
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
          * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.

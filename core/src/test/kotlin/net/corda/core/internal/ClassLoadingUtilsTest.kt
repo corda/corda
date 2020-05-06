@@ -5,11 +5,13 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.lang.ref.ReferenceQueue
@@ -155,9 +157,91 @@ class ClassLoadingUtilsTest {
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
-    private fun signedAttachment(data: ByteArray, vararg parties: Party) = ContractAttachment.create(
+    @Test(timeout=300_000)
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
+    fun `test adding same attachment twice then removing`() {
+        val jarData = with(ByteArrayOutputStream()) {
+            val internalName = STANDALONE_CLASS_NAME.asInternalName
+            JarOutputStream(this, Manifest()).use {
+                it.setLevel(NO_COMPRESSION)
+                it.setMethod(DEFLATED)
+                it.putNextEntry(directoryEntry("com"))
+                it.putNextEntry(directoryEntry("com/example"))
+                it.putNextEntry(classEntry(internalName))
+                it.write(TemplateClassWithEmptyConstructor::class.java.renameTo(internalName))
+            }
+            toByteArray()
+        }
+        val attachment1 = signedAttachment(jarData)
+        val attachment2 = signedAttachment(jarData)
+        var url1: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment1)
+        var url2: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment2)
+
+        val referenceQueue1: ReferenceQueue<URL> = ReferenceQueue()
+        val weakReference1 = WeakReference<URL>(url1, referenceQueue1)
+
+        val referenceQueue2: ReferenceQueue<URL> = ReferenceQueue()
+        val weakReference2 = WeakReference<URL>(url2, referenceQueue2)
+
+        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+        url1 = null
+        System.gc()
+        val ref1 = referenceQueue1.remove(500)
+        assertNull(ref1)
+        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+
+        url2 = null
+        System.gc()
+        val ref2 = referenceQueue2.remove(100000)
+        assertNotNull(ref2)
+        assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+    }
+
+    @Test(timeout=300_000)
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
+    fun `test adding two different attachments then removing`() {
+        val jarData1 = with(ByteArrayOutputStream()) {
+            val internalName = STANDALONE_CLASS_NAME.asInternalName
+            JarOutputStream(this, Manifest()).use {
+                it.setLevel(NO_COMPRESSION)
+                it.setMethod(DEFLATED)
+                it.putNextEntry(directoryEntry("com"))
+                it.putNextEntry(directoryEntry("com/example"))
+                it.putNextEntry(classEntry(internalName))
+                it.write(TemplateClassWithEmptyConstructor::class.java.renameTo(internalName))
+            }
+            toByteArray()
+        }
+
+        val attachment1 = signedAttachment(jarData1)
+        val attachment2 = signedAttachment(jarData1, id = SecureHash.randomSHA256())
+        var url1: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment1)
+        var url2: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment2)
+
+        val referenceQueue1: ReferenceQueue<URL> = ReferenceQueue()
+        val weakReference1 = WeakReference<URL>(url1, referenceQueue1)
+
+        val referenceQueue2: ReferenceQueue<URL> = ReferenceQueue()
+        val weakReference2 = WeakReference<URL>(url2, referenceQueue2)
+
+        assertEquals(2, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+        url1 = null
+        System.gc()
+        val ref1 = referenceQueue1.remove(100000)
+        assertNotNull(ref1)
+        assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+
+        url2 = null
+        System.gc()
+        val ref2 = referenceQueue2.remove(100000)
+        assertNotNull(ref2)
+        assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
+    }
+
+    private fun signedAttachment(data: ByteArray, id: AttachmentId = contractAttachmentId,
+                                 vararg parties: Party) = ContractAttachment.create(
         object : AbstractAttachment({ data }, "test") {
-            override val id: SecureHash get() = contractAttachmentId
+            override val id: SecureHash get() = id
 
             override val signerKeys: List<PublicKey> get() = parties.map(Party::owningKey)
         }, PROGRAM_ID, signerKeys = parties.map(Party::owningKey)
