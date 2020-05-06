@@ -76,6 +76,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         securityRoles["${ArtemisMessagingComponent.INTERNAL_PREFIX}#"] = setOf(nodeInternalRole)
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(BrokerJaasLoginModule.RPC_ROLE, send = true))
         securitySettingPlugins.add(rolesAdderOnLogin)
+        securityInvalidationInterval = ArtemisMessagingComponent.SECURITY_INVALIDATION_INTERVAL
     }
 
     private fun enableJmx() {
