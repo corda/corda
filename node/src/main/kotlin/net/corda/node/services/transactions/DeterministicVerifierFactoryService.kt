@@ -13,7 +13,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisConfiguration
-import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.execution.ExecutionProfile
 import net.corda.djvm.rewiring.ByteCode
 import net.corda.djvm.rewiring.ByteCodeKey
@@ -39,7 +38,6 @@ class DeterministicVerifierFactoryService(
     init {
         val baseAnalysisConfiguration = AnalysisConfiguration.createRoot(
             userSource = cordaSource,
-            whitelist = Whitelist.MINIMAL,
             visibleAnnotations = setOf(
                 CordaSerializable::class.java,
                 CordaSerializationTransformEnumDefault::class.java,
