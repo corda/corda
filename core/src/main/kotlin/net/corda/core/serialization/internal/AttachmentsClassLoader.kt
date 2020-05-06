@@ -1,6 +1,5 @@
 package net.corda.core.serialization.internal
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -35,7 +34,6 @@ import java.util.*
  *           this tx may be stale, that is, classloading might be triggered by the verification of some other transaction
  *           if not all code is invoked every time, however we want a txid for errors in case of attachment bogusness.
  */
-@DeleteForDJVM
 class AttachmentsClassLoader(attachments: List<Attachment>,
                              val params: NetworkParameters,
                              private val sampleTxId: SecureHash,
@@ -359,11 +357,10 @@ object AttachmentsClassLoaderBuilder {
  * Registers a new internal "attachment" protocol.
  * This will not be exposed as an API.
  */
-@DeleteForDJVM
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
-    private val loadedAttachments = WeakHashMap<URL, Pair<WeakReference<URL>, Attachment>>().toSynchronised()
+    private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
         return if (attachmentScheme == protocol) {
@@ -374,9 +371,9 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     @Synchronized
     fun toUrl(attachment: Attachment): URL {
         val proposedURL = URL(attachmentScheme, "", -1, attachment.id.toString(), AttachmentURLStreamHandler)
-        val existingURL = loadedAttachments.get(proposedURL)?.first?.get()
+        val existingURL = loadedAttachments.getKey(proposedURL)
         return if (existingURL == null) {
-            loadedAttachments.put(proposedURL, WeakReference(proposedURL) to attachment)
+            loadedAttachments[proposedURL] = attachment
             proposedURL
         } else {
             existingURL
@@ -389,7 +386,7 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {
             if (url.protocol != attachmentScheme) throw IOException("Cannot handle protocol: ${url.protocol}")
-            val attachment = loadedAttachments[url]?.second ?: throw IOException("Could not load url: $url .")
+            val attachment = loadedAttachments[url] ?: throw IOException("Could not load url: $url .")
             return AttachmentURLConnection(url, attachment)
         }
 
@@ -404,21 +401,46 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
             return url.file.hashCode()
         }
     }
+}
 
-    private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
-        override fun getContentLengthLong(): Long = attachment.size.toLong()
-        override fun getInputStream(): InputStream = attachment.open()
-        /**
-         * Define the permissions that [AttachmentsClassLoader] will need to
-         * use this [URL]. The attachment is stored in memory, and so we
-         * don't need any extra permissions here. But if we don't override
-         * [getPermission] then [AttachmentsClassLoader] will assign the
-         * default permission of ALL_PERMISSION to these classes'
-         * [java.security.ProtectionDomain]. This would be a security hole!
-         */
-        override fun getPermission(): Permission? = null
-        override fun connect() {
-            connected = true
-        }
+interface AttachmentsHolder {
+    val size: Int
+    fun getKey(key: URL): URL?
+    operator fun get(key: URL): Attachment?
+    operator fun set(key: URL, value: Attachment)
+}
+
+private class AttachmentsHolderImpl : AttachmentsHolder {
+    private val attachments = WeakHashMap<URL, Pair<WeakReference<URL>, Attachment>>().toSynchronised()
+
+    override val size: Int get() = attachments.size
+
+    override fun getKey(key: URL): URL? {
+        return attachments[key]?.first?.get()
+    }
+
+    override fun get(key: URL): Attachment? {
+        return attachments[key]?.second
+    }
+
+    override fun set(key: URL, value: Attachment) {
+        attachments[key] = WeakReference(key) to value
+    }
+}
+
+private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
+    override fun getContentLengthLong(): Long = attachment.size.toLong()
+    override fun getInputStream(): InputStream = attachment.open()
+    /**
+     * Define the permissions that [AttachmentsClassLoader] will need to
+     * use this [URL]. The attachment is stored in memory, and so we
+     * don't need any extra permissions here. But if we don't override
+     * [getPermission] then [AttachmentsClassLoader] will assign the
+     * default permission of ALL_PERMISSION to these classes'
+     * [java.security.ProtectionDomain]. This would be a security hole!
+     */
+    override fun getPermission(): Permission? = null
+    override fun connect() {
+        connected = true
     }
 }
