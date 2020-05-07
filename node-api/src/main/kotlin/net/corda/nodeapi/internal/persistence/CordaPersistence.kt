@@ -33,14 +33,10 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = Defaults.initialiseSchema,
-        val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
 ) {
     object Defaults {
-        val initialiseSchema = false
-        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
     }
@@ -59,6 +55,10 @@ enum class TransactionIsolationLevel {
      */
     val jdbcString = "TRANSACTION_$name"
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
+
+    companion object{
+        val default = REPEATABLE_READ
+    }
 }
 
 internal val _prohibitDatabaseAccess = ThreadLocal.withInitial { false }
@@ -102,7 +102,7 @@ class CordaPersistence(
         private val log = contextLogger()
     }
 
-    private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
+    private val defaultIsolationLevel = TransactionIsolationLevel.default
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
