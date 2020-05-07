@@ -3,7 +3,6 @@
 package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.listOrEmpty

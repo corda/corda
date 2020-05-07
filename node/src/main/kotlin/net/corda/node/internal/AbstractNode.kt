@@ -1329,6 +1329,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
+@Suppress("LongParameterList")
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
@@ -1362,6 +1363,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
+@Suppress("LongParameterList", "ComplexMethod", "ThrowsCount")
 fun CordaPersistence.startHikariPool(
         hikariProperties: Properties,
         schemas: Set<MappedSchema>,
