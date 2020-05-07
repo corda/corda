@@ -27,7 +27,6 @@ import java.util.zip.Deflater.NO_COMPRESSION
 import java.util.zip.ZipEntry
 import java.util.zip.ZipEntry.DEFLATED
 import java.util.zip.ZipEntry.STORED
-import kotlin.test.assertNotNull
 
 class ClassLoadingUtilsTest {
     companion object {
@@ -130,7 +129,7 @@ class ClassLoadingUtilsTest {
 
     @Ignore("Using System.gc in this test which has no guarantees when/if gc occurs.")
     @Test(timeout=300_000)
-    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE") 
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE")
     fun `test weak reference removed from map`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
