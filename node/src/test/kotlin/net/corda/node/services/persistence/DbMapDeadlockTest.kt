@@ -7,7 +7,6 @@ import net.corda.node.internal.startHikariPool
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
