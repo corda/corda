@@ -19,21 +19,22 @@ import java.util.Optional;
 @Named("hashLookup")
 public class HashLookupShellCommand extends InteractiveShellCommand {
     private static Logger logger = LoggerFactory.getLogger(HashLookupShellCommand.class);
-    final private String manualText ="Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
-            "Both the transaction Id and the hashed value of a transaction Id (as returned by the Notary in case of a double-spend) is a valid input.\n" +
-            "This is mainly intended to be used for troubleshooting notarisation issues when a\n" +
-            "state is claimed to be already consumed by another transaction.\n\n" +
-            "Example usage: hashLookup E470FD8A6350A74217B0A99EA5FB71F091C84C64AD0DE0E72ECC10421D03AAC9";
 
     @Command
-    @Man(manualText)
-
+    @Man("Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
+            "This is mainly intended to be used for troubleshooting notarisation issues when a\n" +
+            "state is claimed to be already consumed by another transaction.\n\n" +
+            "Example usage: hashLookup E470FD8A6350A74217B0A99EA5FB71F091C84C64AD0DE0E72ECC10421D03AAC9"
+    )
     public void main(@Usage("A hexadecimal SHA-256 hash value representing the hashed transaction Id") @Argument(unquote = false) String txIdHash) {
         logger.info("Executing command \"hashLookup\".");
 
         if (txIdHash == null) {
-            out.println(manualText);
-            out.println("Please provide a hexadecimal transaction Id hash value or a transaction Id", Decoration.bold, Color.red);
+            out.println("Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
+                    "This is mainly intended to be used for troubleshooting notarisation issues when a\n" +
+                    "state is claimed to be already consumed by another transaction.\n\n" +
+                    "Example usage: hashLookup E470FD8A6350A74217B0A99EA5FB71F091C84C64AD0DE0E72ECC10421D03AAC9");
+            out.println("Please provide a hexadecimal transaction Id hash value", Decoration.bold, Color.red);
             return;
         }
 
@@ -51,7 +52,7 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
         Optional<SecureHash> match = mapping.stream()
                 .map(StateMachineTransactionMapping::getTransactionId)
                 .filter(
-                        txId -> txId.equals(txIdHashParsed) || SecureHash.sha256(txId.getBytes()).equals(txIdHashParsed)
+                        txId -> SecureHash.sha256(txId.getBytes()).equals(txIdHashParsed)
                 )
                 .findFirst();
 
