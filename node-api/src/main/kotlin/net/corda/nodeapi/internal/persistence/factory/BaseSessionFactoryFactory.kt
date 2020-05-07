@@ -5,6 +5,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
@@ -37,7 +38,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("javax.persistence.validation.mode", "none")
-                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
     }
@@ -85,12 +86,12 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
             attributeConverters: Collection<AttributeConverter<*, *>>,
-            allowHibernateToManageAppSchema: Boolean): SessionFactory {
+            allowHibernateToMananageAppSchema: Boolean): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val config = buildHibernateConfig(databaseConfig, metadataSources, allowHibernateToManageAppSchema)
+        val config = buildHibernateConfig(databaseConfig, metadataSources, allowHibernateToMananageAppSchema)
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }

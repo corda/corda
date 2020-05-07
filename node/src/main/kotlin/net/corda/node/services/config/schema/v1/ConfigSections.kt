@@ -293,7 +293,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
         }
         val config = configuration.withOptions(options)
 
-        return valid(DatabaseConfig(false, DatabaseConfig.Defaults.transactionIsolationLevel, config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }
 
