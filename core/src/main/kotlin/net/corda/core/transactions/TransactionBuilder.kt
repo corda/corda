@@ -8,6 +8,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -87,6 +88,27 @@ open class TransactionBuilder(
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val excludedAttachments = arrayListOf<AttachmentId>()
+
+    /**
+     * Create a transaction builder suitable for sending over the wire to facilitate DVP
+     * with a given counter party.
+     */
+    fun toWireTransactionBuilder(): WireTransactionBuilder {
+        if (serviceHub == null) { throw IllegalAccessException("A TransactionBuilder must have been initialized with a servicehub") }
+        val signatureOverExisting = serviceHub.signInitialTransaction(this).sigs
+        return WireTransactionBuilder(
+            notary,
+            lockId,
+            inputs,
+            attachments,
+            outputs,
+            commands,
+            window,
+            privacySalt,
+            references,
+            signatureOverExisting
+        )
+    }
 
     /**
      * Creates a copy of the builder.
