@@ -163,7 +163,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         } else if(additionalNodeInfosPath != null) {
             val nodeinfos = mutableListOf<SimplifiedNodeInfo>()
             Files.walk(additionalNodeInfosPath)
-                .filter{item -> Files.isRegularFile(item)}
+                .filter{item -> item.getFileName().toString().startsWith("nodeInfo-")}
                 .forEach{
                     val nodeinfo = nodeInfoFromFile(it.toFile())
                     nodeinfos.add(SimplifiedNodeInfo(nodeinfo.legalIdentities[0].name, nodeinfo.addresses[0]))
@@ -196,7 +196,7 @@ class NodeInfoSigner : CordaCliWrapper("nodeinfo-signer", "Display and generate 
         val nodeInfoSigned = generateNodeInfo()
         val fileNameHash = nodeInfoSigned.nodeInfo.legalIdentities[0].name.serialize().hash
 
-        val outputFile = outputDirectory!!.toString() / "nodeinfo-${fileNameHash.toString()}"
+        val outputFile = outputDirectory!!.toString() / "nodeInfo-${fileNameHash.toString()}"
 
         println(outputFile)
 
