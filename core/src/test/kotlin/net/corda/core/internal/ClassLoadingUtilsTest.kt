@@ -145,7 +145,6 @@ class ClassLoadingUtilsTest {
         }
         val attachment = signedAttachment(jarData)
         var url: URL? = AttachmentURLStreamHandlerFactory.toUrl(attachment)
-        var path = url?.path
 
         val referenceQueue: ReferenceQueue<URL> = ReferenceQueue()
         val weakReference = WeakReference<URL>(url, referenceQueue)
