@@ -163,6 +163,7 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
 /**
  * Convenience method for configuring a database for some tests.
  */
+@Suppress("LongParameterList")
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
