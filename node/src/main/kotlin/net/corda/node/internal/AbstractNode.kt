@@ -253,7 +253,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory,
-            cordappLoader.appClassLoader)
+            cordappLoader.appClassLoader,
+            allowHibernateToManageAppSchema)
 
     private val transactionSupport = CordaTransactionSupportImpl(database)
 
@@ -1334,7 +1335,8 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            schemaService: SchemaService,
                            hikariProperties: Properties,
                            cacheFactory: NamedCacheFactory,
-                           customClassLoader: ClassLoader?): CordaPersistence {
+                           customClassLoader: ClassLoader?,
+                           allowHibernateToManageAppSchema: Boolean = false): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -1356,7 +1358,8 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
                 // register only the very first exception thrown throughout a chain of logical transactions
                 setException(e)
             }
-        })
+        },
+            allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
 fun CordaPersistence.startHikariPool(
