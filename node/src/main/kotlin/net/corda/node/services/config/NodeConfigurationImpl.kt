@@ -128,7 +128,6 @@ data class NodeConfigurationImpl(
         fun messagingServerExternal(messagingServerAddress: NetworkHostAndPort?) = messagingServerAddress != null
 
         fun database(devMode: Boolean) = DatabaseConfig(
-                initialiseSchema = devMode,
                 exportHibernateJMXStatistics = devMode
         )
     }
