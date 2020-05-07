@@ -28,8 +28,7 @@ data class WireTransactionBuilder(
         private val commands: List<Command<*>>,
         private val window: TimeWindow?,
         private val privacySalt: PrivacySalt,
-        private val references: List<StateRef>,
-        private val signatureOverExisting: List<TransactionSignature>
+        private val references: List<StateRef>
 ) {
     /**
      * A utility function used by both the initiating party and the counter party to transform a provided
@@ -42,20 +41,15 @@ data class WireTransactionBuilder(
      * @return Returns a [TransactionBuilder] suitable for further modification by a node
      */
     @Suspendable
-    fun toTransactionBuilder(serviceHub: ServiceHub): TransactionBuilder {
-        val tb = TransactionBuilder(
-                notary,
-                lockId,
-                inputs.toMutableList(),
-                attachments.toMutableList(),
-                outputs.toMutableList(),
-                commands.toMutableList(),
-                window,
-                privacySalt,
-                references.toMutableList(),
-                serviceHub
-        )
-        require(serviceHub.signInitialTransaction(tb).sigs == signatureOverExisting)
-        return tb
-    }
+    fun toTransactionBuilder(serviceHub: ServiceHub): TransactionBuilder = TransactionBuilder(
+        notary,
+        lockId,
+        inputs.toMutableList(),
+        attachments.toMutableList(),
+        outputs.toMutableList(),
+        commands.toMutableList(),
+        window,
+        privacySalt,
+        references.toMutableList(),
+        serviceHub)
 }

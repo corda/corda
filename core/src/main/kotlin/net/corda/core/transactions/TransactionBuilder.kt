@@ -94,8 +94,7 @@ open class TransactionBuilder(
      * with a given counter party.
      */
     fun toWireTransactionBuilder(): WireTransactionBuilder {
-        if (serviceHub == null) { throw IllegalAccessException("A TransactionBuilder must have been initialized with a servicehub") }
-        val signatureOverExisting = serviceHub.signInitialTransaction(this).sigs
+        if (serviceHub == null) { throw IllegalArgumentException("A TransactionBuilder must have been initialized with a servicehub") }
         return WireTransactionBuilder(
             notary,
             lockId,
@@ -105,8 +104,7 @@ open class TransactionBuilder(
             commands,
             window,
             privacySalt,
-            references,
-            signatureOverExisting
+            references
         )
     }
 
