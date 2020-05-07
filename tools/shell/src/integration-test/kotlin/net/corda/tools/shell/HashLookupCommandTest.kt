@@ -21,7 +21,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.bouncycastle.util.io.Streams
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertTrue
 
