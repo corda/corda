@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -127,10 +128,9 @@ class ClassLoadingUtilsTest {
         }
     }
 
-    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs. 
-    @Ignore
+    @Ignore("Using System.gc in this test which has no guarantees when/if gc occurs.")
     @Test(timeout=300_000)
-    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE") 
     fun `test weak reference removed from map`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
@@ -156,14 +156,13 @@ class ClassLoadingUtilsTest {
         url = null
         System.gc()
         val ref = referenceQueue.remove(100000)
-        assertNotNull(ref)
+        assertSame(weakReference, ref)
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
-    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs.
-    @Ignore
+    @Ignore("Using System.gc in this test which has no guarantees when/if gc occurs.")
     @Test(timeout=300_000)
-    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE")
     fun `test adding same attachment twice then removing`() {
         val jarData = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
@@ -198,14 +197,14 @@ class ClassLoadingUtilsTest {
         url2 = null
         System.gc()
         val ref2 = referenceQueue2.remove(100000)
-        assertNotNull(ref2)
+        assertSame(weakReference2, ref2)
+        assertSame(weakReference1, referenceQueue1.poll())
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
-    // Ignoring as using System.gc in this test which has no guarantees when/if gc occurs.
-    @Ignore
+    @Ignore("Using System.gc in this test which has no guarantees when/if gc occurs.")
     @Test(timeout=300_000)
-    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE", "UNUSED_VARIABLE", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE" )
+    @Suppress("ExplicitGarbageCollectionCall", "UNUSED_VALUE")
     fun `test adding two different attachments then removing`() {
         val jarData1 = with(ByteArrayOutputStream()) {
             val internalName = STANDALONE_CLASS_NAME.asInternalName
@@ -235,13 +234,13 @@ class ClassLoadingUtilsTest {
         url1 = null
         System.gc()
         val ref1 = referenceQueue1.remove(100000)
-        assertNotNull(ref1)
+        assertSame(weakReference1, ref1)
         assertEquals(1, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
 
         url2 = null
         System.gc()
         val ref2 = referenceQueue2.remove(100000)
-        assertNotNull(ref2)
+        assertSame(weakReference2, ref2)
         assertEquals(0, AttachmentURLStreamHandlerFactory.loadedAttachmentsSize())
     }
 
