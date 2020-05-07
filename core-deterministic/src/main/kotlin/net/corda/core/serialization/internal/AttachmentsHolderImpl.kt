@@ -3,7 +3,8 @@ package net.corda.core.serialization.internal
 import net.corda.core.contracts.Attachment
 import java.net.URL
 
-class AttachmentsHolderImpl : AttachmentsHolder {
+@Suppress("unused")
+private class AttachmentsHolderImpl : AttachmentsHolder {
     private val attachments = LinkedHashMap<URL, Pair<URL, Attachment>>()
 
     override val size: Int get() = attachments.size
