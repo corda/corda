@@ -19,6 +19,30 @@ pipeline {
     }
 
     stages {
+        stage('Check commit messages are in correct format') {
+            script {
+                def regex = /^((CORDA|EG|ENT|INFRA)-\d+|NOTICK)$/
+                def changeLogSets = currentBuild.changeSets
+                def sendMail = false
+                for (int i = 0; i < changeLogSets.size(); i++) {
+                    def entries = changeLogSets[i].items
+                    for (int j = 0; j < entries.length; j++) {
+                        def entry = entries[j]
+                        echo "${entry.commitId} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
+                        if (entry.msg !=~ regex) {
+                            sendMail = true
+                        }
+                    }
+                }
+                if(sendMail) {
+                    emailext to: entry.author.email,
+                    subject: 'Incorrect git message format',
+                    mimeType: 'text/html',
+                    body: 'Please adjust your future git commit messages to the following format: CORDA-123 message to follow'
+                }
+            }
+        }
+
         stage('Corda Pull Request - Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
