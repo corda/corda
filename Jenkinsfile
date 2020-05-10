@@ -35,7 +35,6 @@ pipeline {
                             }
                         }
                     }
-
                     if(sendMail) {
                         emailext to: entry.author.email,
                         subject: 'Incorrect git message format',
