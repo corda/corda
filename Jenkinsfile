@@ -22,6 +22,7 @@ pipeline {
         stage('Check commit messages are in correct format') {
             steps {
                 script {
+                    echo currentBuild.changeSets
                     def regex = /^((CORDA|EG|ENT|INFRA)-\d+|NOTICK)$/
                     def changeLogSets = currentBuild.changeSets
                     def sendMail = false
