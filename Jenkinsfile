@@ -22,7 +22,6 @@ pipeline {
         stage('Check commit messages are in correct format') {
             steps {
                 script {
-                    echo currentBuild.changeSets
                     def regex = /^((CORDA|EG|ENT|INFRA)-\d+|NOTICK)$/
                     def changeLogSets = currentBuild.changeSets
                     for (int i = 0; i < changeLogSets.size(); i++) {
