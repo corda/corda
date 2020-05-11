@@ -466,12 +466,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     fun runDatabaseMigrationScripts() {
         check(started == null) { "Node has already been started" }
-        log.info("Running database schema migration scripts ...")
+        Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = true)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
+        Node.printBasicNodeInfo("Database migration done.")
     }
 
     open fun start(): S {
