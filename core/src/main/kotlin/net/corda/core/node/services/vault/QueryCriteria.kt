@@ -303,7 +303,13 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
                 relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
-        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, relevancyStatus)
+        ) : this(participants,
+                linearId?.map { it.id }.takeIf { it != null && it.isNotEmpty() },
+                linearId?.mapNotNull { it.externalId }.takeIf { it != null && it.isNotEmpty() },
+                status,
+                contractStateTypes,
+                relevancyStatus
+        )
 
         // V3 c'tor
         @DeprecatedConstructorForDeserialization(version = 1)

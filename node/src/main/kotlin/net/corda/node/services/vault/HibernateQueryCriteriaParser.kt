@@ -153,6 +153,18 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
             NOT_NULL -> criteriaBuilder.isNotNull(column)
         }
     }
+
+    /**
+     * Returns the given predicate if the provided `args` list is not empty
+     * If the list is empty it returns an always false predicate (1=0)
+     */
+    protected fun checkIfListIsEmpty(args: List<Any>, criteriaBuilder: CriteriaBuilder, predicate: Predicate): Predicate {
+        return if (args.isEmpty()) {
+            criteriaBuilder.and(criteriaBuilder.equal(criteriaBuilder.literal(1), 0))
+        } else {
+            predicate
+        }
+    }
 }
 
 class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: CriteriaBuilder,
@@ -219,7 +231,14 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
                     (criteria.contractClassNamesCondition as EqualityComparison<List<ContractClassName>>).rightLiteral
                 else emptyList()
             val joinDBAttachmentToContractClassNames = root.joinList<NodeAttachmentService.DBAttachment, ContractClassName>("contractClassNames")
-            predicateSet.add(criteriaBuilder.and(joinDBAttachmentToContractClassNames.`in`(contractClassNames)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = contractClassNames,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(joinDBAttachmentToContractClassNames.`in`(contractClassNames))
+                    )
+            )
         }
 
         criteria.signersCondition?.let {
@@ -228,7 +247,14 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
                         (criteria.signersCondition as EqualityComparison<List<PublicKey>>).rightLiteral
                     else emptyList()
             val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
-            predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.`in`(signers)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = signers,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(joinDBAttachmentToSigners.`in`(signers))
+                    )
+            )
         }
 
         criteria.isSignedCondition?.let { isSigned ->
@@ -294,14 +320,27 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // notary names
         criteria.notary?.let {
-            predicateSet.add(criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary)))
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = criteria.notary!!,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultStates.get<AbstractParty>("notary").`in`(criteria.notary))
+                    )
+            )
         }
 
         // state references
         criteria.stateRefs?.let {
             val persistentStateRefs = (criteria.stateRefs as List<StateRef>).map(::PersistentStateRef)
             val compositeKey = vaultStates.get<PersistentStateRef>("stateRef")
-            predicateSet.add(criteriaBuilder.and(compositeKey.`in`(persistentStateRefs)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = persistentStateRefs,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
+                    )
+            )
         }
 
         // time constraints (recorded, consumed)
@@ -451,7 +490,14 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // owner
         criteria.owner?.let {
             val owners = criteria.owner as List<AbstractParty>
-            predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<AbstractParty>("owner").`in`(owners)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = owners,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultFungibleStatesRoot.get<AbstractParty>("owner").`in`(owners))
+                    )
+            )
         }
 
         // quantity
@@ -462,13 +508,27 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // issuer party
         criteria.issuer?.let {
             val issuerParties = criteria.issuer as List<AbstractParty>
-            predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<AbstractParty>("issuer").`in`(issuerParties)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = issuerParties,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultFungibleStatesRoot.get<AbstractParty>("issuer").`in`(issuerParties))
+                    )
+            )
         }
 
         // issuer reference
         criteria.issuerRef?.let {
             val issuerRefs = (criteria.issuerRef as List<OpaqueBytes>).map { it.bytes }
-            predicateSet.add(criteriaBuilder.and(vaultFungibleStatesRoot.get<ByteArray>("issuerRef").`in`(issuerRefs)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = issuerRefs,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultFungibleStatesRoot.get<ByteArray>("issuerRef").`in`(issuerRefs))
+                    )
+            )
         }
 
         if (criteria.participants != null && criteria.exactParticipants != null)
@@ -502,14 +562,27 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // linear ids UUID
         criteria.uuid?.let {
             val uuids = criteria.uuid as List<UUID>
-            predicateSet.add(criteriaBuilder.and(vaultLinearStatesRoot.get<UUID>("uuid").`in`(uuids)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = uuids,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultLinearStatesRoot.get<UUID>("uuid").`in`(uuids))
+                    )
+            )
         }
 
         // linear ids externalId
         criteria.externalId?.let {
             val externalIds = criteria.externalId as List<String>
-            if (externalIds.isNotEmpty())
-                predicateSet.add(criteriaBuilder.and(vaultLinearStatesRoot.get<String>("externalId").`in`(externalIds)))
+
+            predicateSet.add(
+                    checkIfListIsEmpty(
+                            args = externalIds,
+                            criteriaBuilder = criteriaBuilder,
+                            predicate = criteriaBuilder.and(vaultLinearStatesRoot.get<String>("externalId").`in`(externalIds))
+                    )
+            )
         }
 
         if (criteria.participants != null && criteria.exactParticipants != null)
@@ -698,8 +771,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
             else {
                 // Get the persistent party entity.
-                commonPredicates[predicateID] = criteriaBuilder.and(
-                        getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
+                commonPredicates[predicateID] = checkIfListIsEmpty(
+                        args = participants,
+                        criteriaBuilder = criteriaBuilder,
+                        predicate = criteriaBuilder.and(getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("x500Name").`in`(participants))
+                )
             }
 
             // Add the join for vault states to persistent entities (if this is not a Fungible nor Linear criteria query)
