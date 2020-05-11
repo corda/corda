@@ -250,7 +250,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         // First verify all the node's identities are valid before registering any of them
         return if (verifyIdentities(node)) {
             for (identity in node.legalIdentitiesAndCerts) {
-                identityService.verifyAndRegisterLegalIdentity(identity)
+                identityService.verifyAndRegisterNodeInfoIdentity(identity)
             }
             true
         } else {
