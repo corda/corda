@@ -54,8 +54,8 @@ import kotlin.test.currentStackTrace
 class RpcReconnectTests {
 
     companion object {
-        // 150 flows take ~5 minutes
-        const val NUMBER_OF_FLOWS_TO_RUN = 150
+        // this many flows take ~5 minutes
+        const val NUMBER_OF_FLOWS_TO_RUN = 100
 
         private val log = contextLogger()
     }
