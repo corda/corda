@@ -322,7 +322,7 @@ class SingleThreadedStateMachineManager(
         mutex.locked {
             val currentState = flows[id]?.fiber?.transientState?.value ?: return false
             val status = currentState.checkpoint.status
-            if (status == Checkpoint.FlowStatus.HOSPITALIZED || status == Checkpoint.FlowStatus.PAUSED) {
+            if (status == Checkpoint.FlowStatus.HOSPITALIZED) {
                 return retryFlowFromSafePoint(currentState)
             }
         }
@@ -440,7 +440,9 @@ class SingleThreadedStateMachineManager(
             val flow = if (currentState.isAnyCheckpointPersisted) {
                 // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
                 // we mirror exactly what happens when restarting the node.
-                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
+                val serializedCheckpoint = database.transaction {
+                    checkpointStorage.getCheckpoint(flowId)
+                }
                 if (serializedCheckpoint == null) {
                     logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
                     return false
