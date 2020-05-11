@@ -59,12 +59,12 @@ class InMemoryIdentityService(
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterFreshIdentity(identity: PartyAndCertificate) {
+    override fun verifyAndRegisterNewRandomIdentity(identity: PartyAndCertificate) {
         verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterLegalIdentity(identity: PartyAndCertificate) {
+    override fun verifyAndRegisterNodeInfoIdentity(identity: PartyAndCertificate) {
         verifyAndRegisterIdentity(trustAnchor, identity)
     }
 
