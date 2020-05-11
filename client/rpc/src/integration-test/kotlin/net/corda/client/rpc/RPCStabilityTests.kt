@@ -70,7 +70,11 @@ class RPCStabilityTests {
     private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, List<StackTraceElement>> {
         val values = ConcurrentLinkedQueue<Map<Thread, List<StackTraceElement>>>()
         return poll(executorService, "number of threads to become stable", 250.millis) {
-            values.add(Thread.getAllStackTraces().mapValues { it.value.toList() })
+            // Exclude threads which we don't use for timing our tests
+            val map: Map<Thread, List<StackTraceElement>> = Thread.getAllStackTraces()
+                .filterKeys { !it.name.contains("ForkJoinPool.commonPool") }
+                .mapValues { it.value.toList() }
+            values.add(map)
             if (values.size > 5) {
                 values.poll()
             }
