@@ -238,6 +238,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         quasarExcludePackages(configuration)
+
+        if (allowHibernateToManageAppSchema && !configuration.devMode) {
+            throw ConfigurationException("Hibernate can only be used to manage app schema in development while using dev mode. " +
+                    "Please remove the --allow-hibernate-to-manage-app-schema command line flag and provide schema migration scripts for your CorDapps."
+            )
+        }
     }
 
     private val notaryLoader = configuration.notary?.let {
@@ -1349,18 +1355,18 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-        databaseConfig,
-        schemaService.schemas,
-        jdbcUrl,
-        cacheFactory,
-        attributeConverters, customClassLoader,
-        errorHandler = { e ->
-            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
-            FlowStateMachineImpl.currentStateMachine()?.let {
-                // register only the very first exception thrown throughout a chain of logical transactions
-                setException(e)
-            }
-        },
+            databaseConfig,
+            schemaService.schemas,
+            jdbcUrl,
+            cacheFactory,
+            attributeConverters, customClassLoader,
+            errorHandler = { e ->
+                // "corrupting" a DatabaseTransaction only inside a flow state machine execution
+                FlowStateMachineImpl.currentStateMachine()?.let {
+                    // register only the very first exception thrown throughout a chain of logical transactions
+                    setException(e)
+                }
+            },
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
