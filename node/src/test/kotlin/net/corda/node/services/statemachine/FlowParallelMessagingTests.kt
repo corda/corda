@@ -165,7 +165,7 @@ class FlowParallelMessagingTests {
                 Pair(session, messageType)
             }.toMap()
 
-            sendAllMap(messagesPerSession)
+            sendAll(messagesPerSession)
             val messages = receiveAll(String::class.java, messagesPerSession.keys.toList())
 
             messages.map { it.unwrap { payload -> assertEquals("pong", payload) } }

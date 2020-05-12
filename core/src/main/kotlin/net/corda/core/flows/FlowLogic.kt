@@ -313,7 +313,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     @JvmOverloads
-    open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>, maySkipCheckpoint: Boolean = false): Map<FlowSession, UntrustworthyData<Any>> {
+    open fun receiveAll(sessions: Map<FlowSession, Class<out Any>>, maySkipCheckpoint: Boolean = false): Map<FlowSession, UntrustworthyData<Any>> {
         enforceNoPrimitiveInReceive(sessions.values)
         val replies = stateMachine.suspend(
                 ioRequest = FlowIORequest.Receive(sessions.keys.toNonEmptySet()),
@@ -338,7 +338,7 @@ abstract class FlowLogic<out T> {
     open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>, maySkipCheckpoint: Boolean = false): List<UntrustworthyData<R>> {
         enforceNoPrimitiveInReceive(listOf(receiveType))
         enforceNoDuplicates(sessions)
-        return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
+        return castMapValuesToKnownType(receiveAll(associateSessionsToReceiveType(receiveType, sessions)))
     }
 
     /**
@@ -356,7 +356,7 @@ abstract class FlowLogic<out T> {
     @JvmOverloads
     fun sendAll(payload: Any, sessions: Set<FlowSession>, maySkipCheckpoint: Boolean = false) {
         val sessionToPayload = sessions.map { it to payload }.toMap()
-        return sendAllMap(sessionToPayload, maySkipCheckpoint)
+        return sendAll(sessionToPayload, maySkipCheckpoint)
     }
 
     /**
@@ -371,7 +371,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     @JvmOverloads
-    fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
+    fun sendAll(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
         val request = FlowIORequest.Send(
                 sessionToMessage = stateMachine.serialize(payloadsPerSession)
         )
