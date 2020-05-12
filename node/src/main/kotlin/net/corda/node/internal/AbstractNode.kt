@@ -1194,6 +1194,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
          */
         override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
+        @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction(useErrorHandler = false) {
                 session.flush()

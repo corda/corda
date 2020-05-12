@@ -775,7 +775,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
                     persist(entityWithIdThree)
                     throw RuntimeException("die")
                 }
-            } catch (e: Exception) {
+            } catch (e: RuntimeException) {
                 logger.info("Caught error")
             }
             sleep(1.millis)
@@ -795,7 +795,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
                     flush()
                     throw RuntimeException("die")
                 }
-            } catch (e: Exception) {
+            } catch (e: RuntimeException) {
                 logger.info("Caught error")
             }
             sleep(1.millis)
@@ -824,7 +824,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
                     }
                     throw RuntimeException("die")
                 }
-            } catch (e: Exception) {
+            } catch (e: RuntimeException) {
                 logger.info("Caught error")
             }
             sleep(1.millis)
