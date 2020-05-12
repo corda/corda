@@ -15,7 +15,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
-import net.corda.node.services.statemachine.Flow
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState

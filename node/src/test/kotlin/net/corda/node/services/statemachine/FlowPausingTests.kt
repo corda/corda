@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.HospitalizeFlowException
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -18,7 +15,6 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.junit.jupiter.api.Assertions.assertNull
 import java.time.Duration
 import kotlin.test.assertEquals
 
