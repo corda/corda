@@ -32,6 +32,7 @@ import net.corda.testing.driver.driver
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.Before
 import org.junit.Test
+import java.lang.RuntimeException
 import java.sql.Connection
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -361,6 +362,62 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
                 alice.rpc.startFlow(::EntityManagerWithinTheSameDatabaseTransactionFlow).returnValue.getOrThrow(20.seconds)
             assertEquals(3, entities.size)
             assertEquals(0, counter)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `non database error caught outside entity manager does not save entities`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.startFlow(::EntityManagerSaveAndThrowNonDatabaseErrorFlow)
+                .returnValue.getOrThrow(30.seconds)
+            assertEquals(0, counter)
+            val entities = alice.rpc.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+            assertEquals(0, entities.size)
+
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `non database error caught outside entity manager after flush occurs does save entities`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.startFlow(::EntityManagerSaveFlushAndThrowNonDatabaseErrorFlow)
+                .returnValue.getOrThrow(30.seconds)
+            assertEquals(0, counter)
+            val entities = alice.rpc.startFlow(::GetCustomEntities).returnValue.getOrThrow()
+            assertEquals(3, entities.size)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `database error caught inside entity manager non database exception thrown and caught outside entity manager should not save entities`() {
+        var counter = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
+
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+
+            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
+                flow = ::EntityManagerCatchDatabaseErrorInsideEntityManagerThrowNonDatabaseErrorAndCatchOutsideFlow,
+                commitStatus = CommitStatus.NO_INTERMEDIATE_COMMIT,
+                numberOfDischarges = 0,
+                numberOfExpectedEntities = 1
+            )
+            alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
+                flow = ::EntityManagerCatchDatabaseErrorInsideEntityManagerThrowNonDatabaseErrorAndCatchOutsideFlow,
+                commitStatus = CommitStatus.INTERMEDIATE_COMMIT,
+                numberOfDischarges = 0,
+                numberOfExpectedEntities = 1
+            )
         }
     }
 
@@ -703,6 +760,74 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
                 criteria.select(criteria.from(CustomTableEntity::class.java))
                 createQuery(criteria).resultList
             }
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerSaveAndThrowNonDatabaseErrorFlow : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            try {
+                serviceHub.withEntityManager {
+                    persist(entityWithIdOne)
+                    persist(entityWithIdTwo)
+                    persist(entityWithIdThree)
+                    throw RuntimeException("die")
+                }
+            } catch (e: Exception) {
+                logger.info("Caught error")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerSaveFlushAndThrowNonDatabaseErrorFlow : FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            try {
+                serviceHub.withEntityManager {
+                    persist(entityWithIdOne)
+                    persist(entityWithIdTwo)
+                    persist(entityWithIdThree)
+                    flush()
+                    throw RuntimeException("die")
+                }
+            } catch (e: Exception) {
+                logger.info("Caught error")
+            }
+            sleep(1.millis)
+        }
+    }
+
+    @StartableByRPC
+    class EntityManagerCatchDatabaseErrorInsideEntityManagerThrowNonDatabaseErrorAndCatchOutsideFlow(private val commitStatus: CommitStatus) :
+        FlowLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            serviceHub.withEntityManager {
+                persist(entityWithIdOne)
+            }
+            if (commitStatus == CommitStatus.INTERMEDIATE_COMMIT) {
+                sleep(1.millis)
+            }
+            try {
+                serviceHub.withEntityManager {
+                    persist(anotherEntityWithIdOne)
+                    try {
+                        flush()
+                    } catch (e: PersistenceException) {
+                        logger.info("Caught the exception!")
+                    }
+                    throw RuntimeException("die")
+                }
+            } catch (e: Exception) {
+                logger.info("Caught error")
+            }
+            sleep(1.millis)
         }
     }
 
