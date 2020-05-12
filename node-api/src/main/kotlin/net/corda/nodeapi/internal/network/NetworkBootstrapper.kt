@@ -79,8 +79,7 @@ constructor(private val initSerEnv: Boolean,
                 Paths.get(System.getProperty("java.home"), "bin", "java").toString(),
                 "-jar",
                 "corda.jar",
-                "run-migration-scripts",
-                "--allow-hibernate-to-manage-app-schema"
+                "run-migration-scripts"
         )
 
         private const val LOGS_DIR_NAME = "logs"

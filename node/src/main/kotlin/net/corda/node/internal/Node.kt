@@ -561,6 +561,13 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
+    override fun runDatabaseMigrationScripts() {
+        if (allowHibernateToManageAppSchema) {
+            initialiseSerialization()
+        }
+        super.runDatabaseMigrationScripts()
+    }
+
     override fun start(): NodeInfo {
         registerDefaultExceptionHandler()
         initialiseSerialization()

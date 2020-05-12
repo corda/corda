@@ -470,7 +470,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    fun runDatabaseMigrationScripts() {
+    open fun runDatabaseMigrationScripts() {
         check(started == null) { "Node has already been started" }
         Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
@@ -478,6 +478,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = true)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
+        if (allowHibernateToManageAppSchema) {
+            Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
+            val trustRoot = initKeyStores()
+            networkMapClient?.start(trustRoot)
+            val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+            log.info("Loaded network parameters: $netParams")
+            check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
+                "Node's platform version is lower than network's required minimumPlatformVersion"
+            }
+            networkMapCache.start(netParams.notaries)
+
+            database.transaction {
+                networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+                cordappProvider.start()
+            }
+        }
         Node.printBasicNodeInfo("Database migration done.")
     }
 
