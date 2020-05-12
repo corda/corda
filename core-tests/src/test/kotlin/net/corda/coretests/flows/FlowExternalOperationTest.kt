@@ -11,7 +11,6 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -22,7 +21,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.Test
 import java.sql.SQLTransientConnectionException
-import java.util.concurrent.Semaphore
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 

@@ -868,7 +868,12 @@ class DriverDSLImpl(
                 val nodeInfo = node.start()
                 val nodeWithInfo = NodeWithInfo(node, nodeInfo)
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
-                    node.run()
+                    try {
+                        node.run()
+                    } catch (th: Throwable) {
+                        log.error("Node run terminated unexpectedly", th)
+                    }
+                    log.info("Node run completed")
                 }
                 nodeWithInfo to nodeThread
             }.flatMap { nodeAndThread ->

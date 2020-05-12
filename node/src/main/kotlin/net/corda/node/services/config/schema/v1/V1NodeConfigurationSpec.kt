@@ -47,6 +47,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val flowMonitorPeriodMillis by duration().optional().withDefaultValue(Defaults.flowMonitorPeriodMillis)
     private val flowMonitorSuspensionLoggingThresholdMillis by duration().optional().withDefaultValue(Defaults.flowMonitorSuspensionLoggingThresholdMillis)
     private val crlCheckSoftFail by boolean()
+    private val crlCheckArtemisServer by boolean().optional().withDefaultValue(Defaults.crlCheckArtemisServer)
     private val jmxReporterType by enum(JmxReporterType::class).optional().withDefaultValue(Defaults.jmxReporterType)
     private val baseDirectory by string().mapValid(::toPath)
     private val flowOverrides by nested(FlowOverridesConfigSpec).optional()
@@ -86,6 +87,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     keyStorePassword = config[keyStorePassword],
                     trustStorePassword = config[trustStorePassword],
                     crlCheckSoftFail = config[crlCheckSoftFail],
+                    crlCheckArtemisServer = config[crlCheckArtemisServer],
                     dataSourceProperties = config[dataSourceProperties],
                     rpcUsers = config[rpcUsers],
                     verifierType = config[verifierType],

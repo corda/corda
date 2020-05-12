@@ -1,15 +1,9 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
-import com.codahale.metrics.Histogram
-import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Reservoir
-import com.codahale.metrics.SlidingTimeWindowArrayReservoir
-import com.codahale.metrics.SlidingTimeWindowReservoir
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -20,8 +14,6 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * This is the bottom execution engine of flow side-effects.
@@ -57,7 +49,7 @@ class ActionExecutorImpl(
             is Action.AcknowledgeMessages -> executeAcknowledgeMessages(action)
             is Action.PropagateErrors -> executePropagateErrors(action)
             is Action.ScheduleEvent -> executeScheduleEvent(fiber, action)
-            is Action.SleepUntil -> executeSleepUntil(action)
+            is Action.SleepUntil -> executeSleepUntil(fiber, action)
             is Action.RemoveCheckpoint -> executeRemoveCheckpoint(action)
             is Action.SendInitial -> executeSendInitial(action)
             is Action.SendExisting -> executeSendExisting(action)
@@ -82,7 +74,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        services.validatedTransactions.trackTransaction(action.hash).thenMatch(
+        services.validatedTransactions.trackTransactionWithNoWarning(action.hash).thenMatch(
                 success = { transaction ->
                     fiber.scheduleEvent(Event.TransactionCommitted(transaction))
                 },
@@ -161,11 +153,12 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
-    private fun executeSleepUntil(action: Action.SleepUntil) {
-        // TODO introduce explicit sleep state + wakeup event instead of relying on Fiber.sleep. This is so shutdown
-        // conditions may "interrupt" the sleep instead of waiting until wakeup.
-        val duration = Duration.between(services.clock.instant(), action.time)
-        Fiber.sleep(duration.toNanos(), TimeUnit.NANOSECONDS)
+    private fun executeSleepUntil(fiber: FlowFiber, action: Action.SleepUntil) {
+        stateMachineManager.scheduleFlowSleep(
+            fiber,
+            action.currentState,
+            Duration.between(services.clock.instant(), action.time)
+        )
     }
 
     @Suspendable
@@ -220,7 +213,10 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        contextTransactionOrNull?.close()
+        contextTransactionOrNull?.run {
+            rollback()
+            close()
+        }
     }
 
     @Suspendable

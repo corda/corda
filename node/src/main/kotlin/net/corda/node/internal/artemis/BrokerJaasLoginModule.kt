@@ -7,6 +7,7 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.rpc.LoginListener
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
@@ -138,6 +139,8 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 requireTls(certificates)
                 // This check is redundant as it was performed already during the SSL handshake
                 CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates!!)
+                CertificateChainCheckPolicy.RevocationCheck(p2pJaasConfig!!.revocationMode)
+                        .createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
             }
             else -> {
@@ -161,7 +164,7 @@ data class RPCJaasConfig(
         val loginListener: LoginListener, //callback that dynamically assigns security roles to RPC users on their authentication
         val useSslForRPC: Boolean)
 
-data class P2PJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
+data class P2PJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore, val revocationMode: RevocationConfig.Mode)
 
 data class NodeJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
 

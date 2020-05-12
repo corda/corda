@@ -741,6 +741,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
 
+        override fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction> {
+            return database.transaction {
+                delegate.trackTransactionWithNoWarning(id)
+            }
+        }
+
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

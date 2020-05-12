@@ -16,6 +16,8 @@ dependencies {
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     testCompile project(":test-utils")
+    testCompile "com.nhaarman:mockito-kotlin:$mockito_kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
 }
 
 

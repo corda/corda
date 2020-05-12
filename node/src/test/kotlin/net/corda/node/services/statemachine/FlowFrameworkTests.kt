@@ -31,7 +31,6 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -45,9 +44,6 @@ import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextDatabase
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME

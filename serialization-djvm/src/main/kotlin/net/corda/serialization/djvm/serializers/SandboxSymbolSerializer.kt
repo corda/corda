@@ -24,7 +24,7 @@ class SandboxSymbolSerializer(
     init {
         val transformTask = taskFactory.apply(SymbolDeserializer::class.java)
         @Suppress("unchecked_cast")
-        transformer = basicInput.andThen(transformTask) as Function<String, Any?>
+        transformer = basicInput.andThen(transformTask) as Function<String, out Any?>
     }
 
     override val schemaForDocumentation: Schema = Schema(emptyList())

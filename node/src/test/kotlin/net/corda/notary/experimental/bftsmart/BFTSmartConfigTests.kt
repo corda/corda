@@ -1,11 +1,7 @@
 package net.corda.notary.experimental.bftsmart
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.notary.experimental.bftsmart.BFTSmartConfigInternal
 import net.corda.notary.experimental.bftsmart.BFTSmartConfigInternal.Companion.portIsClaimedFormat
-import net.corda.notary.experimental.bftsmart.maxFaultyReplicas
-import net.corda.notary.experimental.bftsmart.minClusterSize
-import net.corda.notary.experimental.bftsmart.minCorrectReplicas
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import kotlin.test.assertEquals

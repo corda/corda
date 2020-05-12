@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup

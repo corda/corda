@@ -40,7 +40,8 @@ class DefaultEvolutionSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,
         private val classLoader: ClassLoader,
         private val mustPreserveDataWhenEvolving: Boolean,
-        override val primitiveTypes: Map<Class<*>, Class<*>>
+        override val primitiveTypes: Map<Class<*>, Class<*>>,
+        private val baseTypes: BaseLocalTypes
 ): EvolutionSerializerFactory {
     // Invert the "primitive -> boxed primitive" mapping.
     private val primitiveBoxedTypes: Map<Class<*>, Class<*>>
@@ -172,7 +173,7 @@ class DefaultEvolutionSerializerFactory(
         if (constantsAreReordered(localOrdinals, convertedOrdinals)) throw EvolutionSerializationException(this,
                 "Constants have been reordered, additions must be appended to the end")
 
-        return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, conversions, localOrdinals)
+        return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, baseTypes, conversions, localOrdinals)
     }
 
     private fun constantsAreReordered(localOrdinals: Map<String, Int>, convertedOrdinals: Map<Int, String>): Boolean =

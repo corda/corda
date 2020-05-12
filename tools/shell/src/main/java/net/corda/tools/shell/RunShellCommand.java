@@ -6,6 +6,7 @@ import net.corda.core.messaging.CordaRPCOps;
 import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
+import org.crsh.cli.Named;
 import org.crsh.cli.Usage;
 import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
@@ -23,6 +24,7 @@ import static java.util.Comparator.comparing;
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
 
+@Named("run")
 public class RunShellCommand extends InteractiveShellCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(RunShellCommand.class);

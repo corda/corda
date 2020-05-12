@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.fibers.instrument.JavaAgent
 import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
@@ -13,11 +14,15 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.mapNotNull
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -35,7 +40,11 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
-import net.corda.node.services.statemachine.interceptors.*
+import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
+import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
@@ -50,11 +59,14 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Integer.min
 import java.security.SecureRandom
-import java.util.*
-import java.util.concurrent.*
+import java.time.Duration
+import java.util.HashSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -81,10 +93,10 @@ class SingleThreadedStateMachineManager(
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
     private data class ScheduledTimeout(
-            /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
-            val scheduledFuture: ScheduledFuture<*>,
-            /** Specifies the number of times this flow has been retried. */
-            val retryCount: Int = 0
+        /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
+        val scheduledFuture: ScheduledFuture<*>,
+        /** Specifies the number of times this flow has been retried. */
+        val retryCount: Int = 0
     )
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -101,13 +113,16 @@ class SingleThreadedStateMachineManager(
 
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
-    private val timeoutScheduler = Executors.newScheduledThreadPool(1)
+    private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
+        ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
+    )
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
     private val sessionToFlow = ConcurrentHashMap<SessionId, StateMachineRunId>()
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
+    private val flowSleepScheduler = FlowSleepScheduler(this, scheduledFutureExecutor)
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
@@ -196,6 +211,9 @@ class SingleThreadedStateMachineManager(
             val foundUnrestorableFibers = it.stop()
             check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
         }
+        flowHospital.close()
+        scheduledFutureExecutor.shutdown()
+        scheduler.shutdown()
     }
 
     /**
@@ -230,34 +248,34 @@ class SingleThreadedStateMachineManager(
 
     override fun killFlow(id: StateMachineRunId): Boolean {
         val killFlowResult = mutex.locked {
-            cancelTimeoutIfScheduled(id)
-            val flow = flows.remove(id)
+            val flow = flows[id]
             if (flow != null) {
-                flow.fiber.transientState?.let {
-                    flow.fiber.transientState = TransientReference(it.value.copy(isRemoved = true))
-                }
                 logger.info("Killing flow $id known to this node.")
-                decrementLiveFibers()
-                totalFinishedFlows.inc()
-                try {
-                    flow.fiber.interrupt()
+                // The checkpoint and soft locks are removed here instead of relying on the processing of the next event after setting
+                // the killed flag. This is to ensure a flow can be removed from the database, even if it is stuck in a infinite loop.
+                database.transaction {
+                    checkpointStorage.removeCheckpoint(id)
+                    serviceHub.vaultService.softLockRelease(id.uuid)
+                }
+                // the same code is NOT done in remove flow when an error occurs
+                // what is the point of this latch?
+                unfinishedFibers.countDown()
+
+                val state = flow.fiber.transientState
+                return@locked if (state != null) {
+                    state.value.isKilled = true
+                    flow.fiber.scheduleEvent(Event.DoRemainingWork)
                     true
-                } finally {
-                    database.transaction {
-                        checkpointStorage.removeCheckpoint(id)
-                        serviceHub.vaultService.softLockRelease(id.uuid)
-                    }
-                    transitionExecutor.forceRemoveFlow(id)
-                    unfinishedFibers.countDown()
+                } else {
+                    logger.info("Flow $id has not been initialised correctly and cannot be killed")
+                    false
                 }
             } else {
                 // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                database.transaction {
-                    checkpointStorage.removeCheckpoint(id)
-                }
+                database.transaction { checkpointStorage.removeCheckpoint(id) }
             }
         }
-        return if(killFlowResult) {
+        return if (killFlowResult) {
             true
         } else {
             flowHospital.dropSessionInit(id)
@@ -294,6 +312,7 @@ class SingleThreadedStateMachineManager(
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         mutex.locked {
             cancelTimeoutIfScheduled(flowId)
+            cancelFlowSleep(lastState)
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -357,6 +376,7 @@ class SingleThreadedStateMachineManager(
 
     @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
+        cancelFlowSleep(currentState)
         // Get set of external events
         val flowId = currentState.flowLogic.runId
         try {
@@ -621,15 +641,17 @@ class SingleThreadedStateMachineManager(
 
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
-                checkpoint = checkpoint,
-                pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                isFlowResumed = false,
-                isWaitingForFuture = false,
-                isAnyCheckpointPersisted = existingCheckpoint != null,
-                isStartIdempotent = isStartIdempotent,
-                isRemoved = false,
-                flowLogic = flowLogic,
-                senderUUID = ourSenderUUID
+            checkpoint = checkpoint,
+            pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
+            isFlowResumed = false,
+            isWaitingForFuture = false,
+            future = null,
+            isAnyCheckpointPersisted = existingCheckpoint != null,
+            isStartIdempotent = isStartIdempotent,
+            isRemoved = false,
+            isKilled = false,
+            flowLogic = flowLogic,
+            senderUUID = ourSenderUUID
         )
         flowStateMachineImpl.transientState = TransientReference(initialState)
         mutex.locked {
@@ -646,6 +668,25 @@ class SingleThreadedStateMachineManager(
 
     override fun cancelFlowTimeout(flowId: StateMachineRunId) {
         mutex.locked { cancelTimeoutIfScheduled(flowId) }
+    }
+
+    override fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration) {
+        flowSleepScheduler.sleep(fiber, currentState, duration)
+    }
+
+    override fun scheduleFlowWakeUp(instanceId: StateMachineInstanceId) {
+        mutex.locked {
+            flows[instanceId.runId]?.let { flow ->
+                // Only schedule a wake up event if the fiber the flow is executing on has not changed
+                if (flow.fiber.instanceId == instanceId) {
+                    flowSleepScheduler.scheduleWakeUp(flow.fiber)
+                }
+            }
+        }
+    }
+
+    private fun cancelFlowSleep(currentState: StateMachineState) {
+        flowSleepScheduler.cancel(currentState)
     }
 
     /**
@@ -700,7 +741,7 @@ class SingleThreadedStateMachineManager(
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
     private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
-            timeoutScheduler.schedule({
+            scheduledFutureExecutor.schedule({
                 val event = Event.Error(FlowTimeoutException())
                 flow.fiber.scheduleEvent(event)
             }, delay, TimeUnit.SECONDS)
@@ -785,15 +826,17 @@ class SingleThreadedStateMachineManager(
             is FlowState.Unstarted -> {
                 val logic = tryCheckpointDeserialize(checkpoint.flowState.frozenFlowLogic, id) ?: return null
                 val state = StateMachineState(
-                        checkpoint = checkpoint,
-                        pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                        isFlowResumed = false,
-                        isWaitingForFuture = false,
-                        isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                        isStartIdempotent = isStartIdempotent,
-                        isRemoved = false,
-                        flowLogic = logic,
-                        senderUUID = null
+                    checkpoint = checkpoint,
+                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
+                    isFlowResumed = false,
+                    isWaitingForFuture = false,
+                    future = null,
+                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
+                    isStartIdempotent = isStartIdempotent,
+                    isRemoved = false,
+                    isKilled = false,
+                    flowLogic = logic,
+                    senderUUID = null
                 )
                 val fiber = FlowStateMachineImpl(id, logic, scheduler)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
@@ -804,15 +847,17 @@ class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 val fiber = tryCheckpointDeserialize(checkpoint.flowState.frozenFiber, id) ?: return null
                 val state = StateMachineState(
-                        checkpoint = checkpoint,
-                        pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
-                        isFlowResumed = false,
-                        isWaitingForFuture = false,
-                        isAnyCheckpointPersisted = isAnyCheckpointPersisted,
-                        isStartIdempotent = isStartIdempotent,
-                        isRemoved = false,
-                        flowLogic = fiber.logic,
-                        senderUUID = null
+                    checkpoint = checkpoint,
+                    pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
+                    isFlowResumed = false,
+                    isWaitingForFuture = false,
+                    future = null,
+                    isAnyCheckpointPersisted = isAnyCheckpointPersisted,
+                    isStartIdempotent = isStartIdempotent,
+                    isRemoved = false,
+                    isKilled = false,
+                    flowLogic = fiber.logic,
+                    senderUUID = null
                 )
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)

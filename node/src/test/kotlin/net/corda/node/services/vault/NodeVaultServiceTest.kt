@@ -46,9 +46,6 @@ import org.mockito.Mockito.doReturn
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.security.PublicKey
-import java.security.cert.CertStore
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors

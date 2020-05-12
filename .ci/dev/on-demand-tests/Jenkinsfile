@@ -3,4 +3,4 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
-onDemandTestPipeline('local-k8s', '.ci/dev/on-demand-tests/commentMappings.yml')
+onDemandTestPipeline('k8s', '.ci/dev/on-demand-tests/commentMappings.yml')

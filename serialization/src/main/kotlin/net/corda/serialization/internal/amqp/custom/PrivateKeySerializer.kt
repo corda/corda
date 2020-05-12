@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.Storage
@@ -9,6 +10,7 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.PrivateKey
 
+@DeleteForDJVM
 object PrivateKeySerializer
     : CustomSerializer.Implements<PrivateKey>(
         PrivateKey::class.java

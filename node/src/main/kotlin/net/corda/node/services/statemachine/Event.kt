@@ -8,7 +8,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.DeduplicationHandler
-import java.util.*
+import java.util.UUID
 
 /**
  * Transitions in the flow state machine are triggered by [Event]s that may originate from the flow itself or from
@@ -161,6 +161,13 @@ sealed class Event {
      */
     object OvernightObservation : Event() {
         override fun toString() = "OvernightObservation"
+    }
+
+    /**
+     * Wake a flow up from its sleep.
+     */
+    object WakeUpFromSleep : Event() {
+        override fun toString() = "WakeUpSleepyFlow"
     }
 
     /**

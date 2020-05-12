@@ -1,6 +1,5 @@
 package net.corda.cliutils
 
-import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole

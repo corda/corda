@@ -79,8 +79,8 @@ buildscript {
     ext.djvm_version = constants.getProperty("djvmVersion")
     ext.deterministic_rt_version = constants.getProperty('deterministicRtVersion')
     ext.okhttp_version = '3.14.2'
-    ext.netty_version = '4.1.29.Final'
-    ext.tcnative_version = '2.0.14.Final'
+    ext.netty_version = '4.1.46.Final'
+    ext.tcnative_version = '2.0.29.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.4'
     ext.kryo_version = '4.0.2'
@@ -189,6 +189,7 @@ buildscript {
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
         classpath group: "com.r3.dependx", name: "gradle-dependx", version: "0.1.13", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
+        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
 }
 
@@ -241,6 +242,7 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
+    apply plugin: 'org.sonarqube'
 
     allOpen {
         annotations(
@@ -400,6 +402,16 @@ allprojects {
         }
     }
 }
+sonarqube {
+    properties {
+        property "sonar.projectName", "Corda"
+        property "sonar.projectKey", "corda"
+        property 'sonar.tests', '**/src/test/**,**/src/smoke-test/**,**/src/integration-test/**,**/src/integration-test-slow/**'
+        property 'sonar.coverage.jacoco.xmlReportPaths', "${rootDir.path}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+        property 'detekt.sonar.kotlin.baseline.path', "${rootDir.path}/detekt-baseline.xml"
+        property 'detekt.sonar.kotlin.config.path', "${rootDir.path}/detekt-config.yml"
+    }
+}
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
 // guarantee this because those are properties checked by the Java plugin, but we're using Kotlin.
@@ -457,6 +469,28 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     doFirst {
         executionData = files(executionData.findAll {
             it.exists()
+        })
+    }
+    afterEvaluate {
+        classDirectories = files(classDirectories.files.collect {
+            fileTree(dir: it,
+                    // these exclusions are necessary because jacoco gets confused by same class names
+                    // which occur due to deterministic versions of non deterministic classes
+                    exclude: ['**/net/corda/core/crypto/SHA256DigestSupplier**',
+                    '**/net/corda/core/crypto/DelegatingSecureRandomService',
+                    '**/net/corda/core/internal/ThreadLocalToggleField**',
+                    '**/net/corda/core/internal/InheritableThreadLocalToggleField**',
+                    '**/net/corda/core/internal/ToggleField**',
+                    'net/corda/core/internal/rules/StateContractValidationEnforcementRule**',
+                    'net/corda/core/internal/SimpleToggleField**',
+                    'net/corda/core/serialization/SerializationFactory**',
+                    'net/corda/serialization/internal/amqp/AMQPStreams**',
+                    'net/corda/serialization/internal/amqp/AMQPSerializerFactories**',
+                    'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext**',
+                    'net/corda/serialization/internal/ByteBufferStreams**',
+                    'net/corda/serialization/internal/model/DefaultCacheProvider**',
+                    'net/corda/serialization/internal/DefaultWhitelist**'
+                    ])
         })
     }
 }

@@ -636,3 +636,6 @@ fun Logger.warnOnce(warning: String) {
         this.warn(warning)
     }
 }
+
+const val JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION = 46
+const val JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION = 52

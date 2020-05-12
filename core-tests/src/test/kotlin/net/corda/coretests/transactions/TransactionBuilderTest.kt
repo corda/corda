@@ -29,6 +29,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.security.PublicKey
+import java.time.Instant
 
 class TransactionBuilderTest {
     @Rule
@@ -150,4 +151,100 @@ class TransactionBuilderTest {
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
     }, DummyContract.PROGRAM_ID, signerKeys = parties.map { it.owningKey })
+
+    @Test(timeout=300_000)
+    fun `list accessors are mutable copies`() {
+        val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState1, inputStateRef1))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
+
+        // List accessors are mutable.
+        assertThat((builder.inputStates() as ArrayList).also { it.add(inputStateRef2) }).hasSize(2)
+        assertThat((builder.attachments() as ArrayList).also { it.add(SecureHash.zeroHash) }).hasSize(2)
+        assertThat((builder.outputStates() as ArrayList).also { it.add(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)) }).hasSize(2)
+        assertThat((builder.commands() as ArrayList).also { it.add(Command(DummyCommandData, notary.owningKey)) }).hasSize(2)
+        assertThat((builder.referenceStates() as ArrayList).also { it.add(referenceStateRef2) }).hasSize(2)
+
+        // List accessors are copies.
+        assertThat(builder.inputStates()).hasSize(1)
+        assertThat(builder.attachments()).hasSize(1)
+        assertThat(builder.outputStates()).hasSize(1)
+        assertThat(builder.commands()).hasSize(1)
+        assertThat(builder.referenceStates()).hasSize(1)
+    }
+
+    @Test(timeout=300_000)
+    fun `copy makes copy except lockId`() {
+        val inputState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
+        val timeWindow = TimeWindow.untilOnly(Instant.now())
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState, inputStateRef))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .setTimeWindow(timeWindow)
+                .setPrivacySalt(PrivacySalt())
+                .addReferenceState(StateAndRef(referenceState, referenceStateRef).referenced())
+        val copy = builder.copy()
+
+        assertThat(builder.notary).isEqualTo(copy.notary)
+        assertThat(builder.lockId).isNotEqualTo(copy.lockId)
+        assertThat(builder.inputStates()).isEqualTo(copy.inputStates())
+        assertThat(builder.attachments()).isEqualTo(copy.attachments())
+        assertThat(builder.outputStates()).isEqualTo(copy.outputStates())
+        assertThat(builder.commands()).isEqualTo(copy.commands())
+//        assertThat(builder.timeWindow()).isEqualTo(copy.timeWindow())
+//        assertThat(builder.privacySalt()).isEqualTo(copy.privacySalt())
+        assertThat(builder.referenceStates()).isEqualTo(copy.referenceStates())
+    }
+
+    @Test(timeout=300_000)
+    fun `copy makes deep copy of lists`() {
+        val inputState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef1 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState1 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef1 = StateRef(SecureHash.randomSHA256(), 1)
+        val builder = TransactionBuilder(notary)
+                .addInputState(StateAndRef(inputState1, inputStateRef1))
+                .addAttachment(SecureHash.allOnesHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState1, referenceStateRef1).referenced())
+        val inputState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val inputStateRef2 = StateRef(SecureHash.randomSHA256(), 0)
+        val referenceState2 = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceStateRef2 = StateRef(SecureHash.randomSHA256(), 1)
+        val copy = builder.copy()
+                .addInputState(StateAndRef(inputState2, inputStateRef2))
+                .addAttachment(SecureHash.zeroHash)
+                .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
+                .addCommand(DummyCommandData, notary.owningKey)
+                .addReferenceState(StateAndRef(referenceState2, referenceStateRef2).referenced())
+
+        // Lists on the copy are longer
+        assertThat(copy.inputStates()).hasSize(2)
+        assertThat(copy.attachments()).hasSize(2)
+        assertThat(copy.outputStates()).hasSize(2)
+        assertThat(copy.commands()).hasSize(2)
+        assertThat(copy.referenceStates()).hasSize(2)
+
+        // Lists on the original are unchanged
+        assertThat(builder.inputStates()).hasSize(1)
+        assertThat(builder.attachments()).hasSize(1)
+        assertThat(builder.outputStates()).hasSize(1)
+        assertThat(builder.commands()).hasSize(1)
+        assertThat(builder.referenceStates()).hasSize(1)
+    }
 }

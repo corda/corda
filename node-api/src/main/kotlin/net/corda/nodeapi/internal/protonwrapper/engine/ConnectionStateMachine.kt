@@ -229,12 +229,17 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     override fun onTransportClosed(event: Event) {
-        val transport = event.transport
-        logDebugWithMDC { "Transport Closed ${transport.prettyPrint}" }
-        if (transport == this.transport) {
+        doTransportClose(event.transport) { "Transport Closed ${transport.prettyPrint}" }
+    }
+
+    private fun doTransportClose(transport: Transport?, msg: () -> String) {
+        if (transport != null && transport == this.transport && transport.context != null) {
+            logDebugWithMDC(msg)
             transport.unbind()
             transport.free()
             transport.context = null
+        } else {
+            logDebugWithMDC { "Nothing to do in case of: ${msg()}" }
         }
     }
 
@@ -264,6 +269,9 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
                 val channel = connection?.context as? Channel
                 channel?.writeAndFlush(transport)
             }
+        } else {
+            logDebugWithMDC { "Transport is already closed: ${transport.prettyPrint}" }
+            doTransportClose(transport) { "Freeing-up resources associated with transport" }
         }
     }
 
@@ -314,13 +322,7 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
             // If TRANSPORT_CLOSED event was already processed, the 'transport' in all subsequent events is set to null.
             // There is, however, a chance of missing TRANSPORT_CLOSED event, e.g. when disconnect occurs before opening remote session.
             // In such cases we must explicitly cleanup the 'transport' in order to guarantee the delivery of CONNECTION_FINAL event.
-            val transport = event.transport
-            if (transport == this.transport) {
-                logDebugWithMDC { "Missed TRANSPORT_CLOSED: force cleanup ${transport.prettyPrint}" }
-                transport.unbind()
-                transport.free()
-                transport.context = null
-            }
+            doTransportClose(event.transport) { "Missed TRANSPORT_CLOSED in onSessionFinal: force cleanup ${transport.prettyPrint}" }
         }
     }
 
