@@ -542,13 +542,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         rootEntities[entityStateClass] = entityRoot
                         entityRoot
                     }
+            if (entityRoot != vaultStates){ // to avoid self join
 
-            val joinPredicate = if(IndirectStatePersistable::class.java.isAssignableFrom(entityRoot.javaType)) {
-                        criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef"))
-                    } else {
-                criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
+                val joinPredicate = if(IndirectStatePersistable::class.java.isAssignableFrom(entityRoot.javaType)) {
+                    criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef"))
+                }
+                else {
+                    criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
+                }
+                predicateSet.add(joinPredicate)
             }
-            predicateSet.add(joinPredicate)
 
             // resolve general criteria expressions
             @Suppress("UNCHECKED_CAST")
