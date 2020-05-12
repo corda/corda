@@ -107,6 +107,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                 ],
                'h2Settings.address' : 'localhost:10038'
         ]
+        runSchemaMigration = true
+        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -122,6 +124,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                 ],
                 'h2Settings.address' : 'localhost:10039'
         ]
+        runSchemaMigration = true
+        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -137,6 +141,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                 ],
                 'h2Settings.address' : 'localhost:10040'
         ]
+        runSchemaMigration = true
+        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank C,L=Tokyo,C=JP"
@@ -152,6 +158,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                 ],
                 'h2Settings.address' : 'localhost:10041'
         ]
+        runSchemaMigration = true
+        allowHibernateToManageAppSchema = true
     }
 }
 
