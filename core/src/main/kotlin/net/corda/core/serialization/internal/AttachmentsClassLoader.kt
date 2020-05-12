@@ -147,7 +147,8 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
         return when {
             path.endsWith("/") -> false                     // Directories (packages) can overlap.
-            targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
+            targetPlatformVersion < PlatformVersionSwitches.INGORE_JOLOKIA_JSON_SIMPLE_IN_CORDAPPS &&
+                    ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
             !path.startsWith("meta-inf") -> true            // All files outside of META-INF need to be unique.
             (path == "meta-inf/services/net.corda.core.serialization.serializationwhitelist") -> false // Allow overlapping on the SerializationWhitelist.

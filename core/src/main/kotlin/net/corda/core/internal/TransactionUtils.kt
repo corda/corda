@@ -176,7 +176,7 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     // Transactions created on Corda 3.x or below do not contain network parameters,
     // so no checking is done until the minimum platform version is at least 4.
     if (networkParametersHash == null) {
-        if (serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        if (serviceHub.networkParameters.minimumPlatformVersion < PlatformVersionSwitches.NETWORK_PARAMETERS_COMPONENT_GROUP) return
         else throw IllegalArgumentException("Transaction for notarisation doesn't contain network parameters hash.")
     } else {
         serviceHub.networkParametersService.lookup(networkParametersHash) ?: throw IllegalArgumentException("Transaction for notarisation contains unknown parameters hash: $networkParametersHash")
