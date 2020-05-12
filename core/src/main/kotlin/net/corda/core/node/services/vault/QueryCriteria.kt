@@ -169,12 +169,19 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             return parser.parseCriteria(this)
         }
 
+        /**
+         * The following functions are copying over the existing [VaultQueryCriteria] object and setting the given value for the given field.
+         */
         fun withStatus(status: Vault.StateStatus): VaultQueryCriteria = copy(status = status)
         fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): VaultQueryCriteria = copy(contractStateTypes = contractStateTypes)
         fun withStateRefs(stateRefs: List<StateRef>): VaultQueryCriteria = copy(stateRefs = stateRefs)
         fun withNotary(notary: List<AbstractParty>): VaultQueryCriteria = copy(notary = notary)
         fun withSoftLockingCondition(softLockingCondition: SoftLockingCondition): VaultQueryCriteria = copy(softLockingCondition = softLockingCondition)
         fun withTimeCondition(timeCondition: TimeCondition): VaultQueryCriteria = copy(timeCondition = timeCondition)
+
+        /**
+         * The following functions are creating a new [VaultQueryCriteria] object with default values and setting the value of the given parameter.
+         */
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): VaultQueryCriteria = copy(relevancyStatus = relevancyStatus)
         fun withConstraintTypes(constraintTypes: Set<Vault.ConstraintInfo.Type>): VaultQueryCriteria = copy(constraintTypes = constraintTypes)
         fun withConstraints(constraints: Set<Vault.ConstraintInfo>): VaultQueryCriteria = copy(constraints = constraints)
@@ -182,6 +189,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun withExternalIds(externalIds: List<UUID>): VaultQueryCriteria = copy(externalIds = externalIds)
         fun withExactParticipants(exactParticipants: List<AbstractParty>): VaultQueryCriteria = copy(exactParticipants = exactParticipants)
 
+        /**
+         * Creates a [VaultQueryCriteria] object with the values passed, all the other fields are getting the default values.
+         */
         fun copy(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -211,6 +221,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             )
         }
 
+        /**
+         * Creates a [VaultQueryCriteria] object with the values passed, all the other fields are getting the default values.
+         */
         fun copy(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -238,6 +251,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             )
         }
 
+        /**
+         * Copies [this] [VaultQueryCriteria] object.
+         */
         fun copy(
                 status: Vault.StateStatus = this.status,
                 contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
