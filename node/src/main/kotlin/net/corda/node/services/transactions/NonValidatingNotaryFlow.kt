@@ -48,7 +48,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
                         checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                         checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                         checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
-                        if (minPlatformVersion >= PlatformVersionSwitches.PARAMETERS_GROUP_COMPONENTS) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
+                        if (minPlatformVersion >= PlatformVersionSwitches.NETWORK_PARAMETERS_COMPONENT_GROUP) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
                     }
                     val notary = tx.notary ?: throw IllegalArgumentException("Transaction does not specify a notary.")
                     checkNotaryWhitelisted(notary, tx.networkParametersHash)
@@ -68,7 +68,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
 
     /** Make sure the transaction notary is part of the network parameter whitelist. */
     private fun checkNotaryWhitelisted(notary: Party, attachedParameterHash: SecureHash?) {
-        if (minPlatformVersion >= PlatformVersionSwitches.NETWORK_PARAMETER_ATTACHMENTS) {
+        if (minPlatformVersion >= PlatformVersionSwitches.NETWORK_PARAMETERS_COMPONENT_GROUP) {
             // Expecting network parameters to be attached for platform version 4 or later.
             if (attachedParameterHash == null) {
                 throw IllegalArgumentException("Transaction must contain network parameters.")
