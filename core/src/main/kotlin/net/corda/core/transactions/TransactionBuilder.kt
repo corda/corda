@@ -516,7 +516,7 @@ open class TransactionBuilder(
             services: ServicesForResolution
     ): Boolean {
         return HashAttachmentConstraint.disableHashConstraints
-                && services.networkParameters.minimumPlatformVersion >= 4
+                && services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_HASH_TO_SIGNATURE_CONSTRAINTS
                 // `disableHashConstraints == true` therefore it does not matter if there are
                 // multiple input states with different hash constraints
                 && inputStates?.any { it.constraint is HashAttachmentConstraint } == true
@@ -583,7 +583,10 @@ open class TransactionBuilder(
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
-        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned && services.networkParameters.minimumPlatformVersion >= 4 -> transitionToSignatureConstraint(constraints, attachmentToUse)
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } &&
+                attachmentToUse.isSigned &&
+                services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS ->
+            transitionToSignatureConstraint(constraints, attachmentToUse)
 
         // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
         constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->

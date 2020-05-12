@@ -6,6 +6,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
@@ -47,7 +48,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
                         checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                         checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                         checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
-                        if (minPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
+                        if (minPlatformVersion >= PlatformVersionSwitches.PARAMETERS_GROUP_COMPONENTS) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
                     }
                     val notary = tx.notary ?: throw IllegalArgumentException("Transaction does not specify a notary.")
                     checkNotaryWhitelisted(notary, tx.networkParametersHash)
@@ -67,7 +68,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
 
     /** Make sure the transaction notary is part of the network parameter whitelist. */
     private fun checkNotaryWhitelisted(notary: Party, attachedParameterHash: SecureHash?) {
-        if (minPlatformVersion >= 4) {
+        if (minPlatformVersion >= PlatformVersionSwitches.NETWORK_PARAMETER_ATTACHMENTS) {
             // Expecting network parameters to be attached for platform version 4 or later.
             if (attachedParameterHash == null) {
                 throw IllegalArgumentException("Transaction must contain network parameters.")

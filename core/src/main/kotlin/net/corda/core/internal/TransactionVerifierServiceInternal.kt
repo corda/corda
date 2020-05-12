@@ -329,13 +329,15 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
                 /**
-                 * Support for signature constraints has been added on min. platform version >= 4.
-                 * On minimum platform version >= 5, an explicit check has been introduced on the supported number of leaf keys
-                 * in composite keys of signature constraints in order to harden consensus.
+                 * Support for signature constraints has been added on
+                 * min. platform version >= [PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS].
+                 * On minimum platform version >= [PlatformVersionSwitches.STRONG_KEY_CONSTRAINTS], an explicit check has
+                 * been introduced on the supported number of leaf keys in composite keys of signature constraints in
+                 * order to harden consensus.
                  */
                 checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
                 val constraintKey = constraint.key
-                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= 5) {
+                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= PlatformVersionSwitches.STRONG_KEY_CONSTRAINTS) {
                     if (constraintKey is CompositeKey && constraintKey.leafKeys.size > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT) {
                         throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
                                 "Signature constraint contains composite key with ${constraintKey.leafKeys.size} leaf keys, " +
