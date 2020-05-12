@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.HospitalizeFlowException
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
@@ -55,7 +56,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `A hospitalized flow can be retried`() {
-        val flow = aliceNode.services.startFlow(HospitalizingFlow())
+        val flow = aliceNode.services.startFlow(HospitalizeOnFirstRunFlow(Checkpoint.FlowStatus.HOSPITALIZED))
         assertEquals(true, aliceNode.waitForFlowStatus(flow.id, Checkpoint.FlowStatus.HOSPITALIZED))
         val retry = aliceNode.internals.smm.retryFlow(flow.id)
         assertEquals(true, retry)
@@ -65,7 +66,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `A flow will only rerun once when retried multiple times`() {
-        val flow = aliceNode.services.startFlow(HospitalizingFlow())
+        val flow = aliceNode.services.startFlow(HospitalizeOnFirstRunFlow(Checkpoint.FlowStatus.HOSPITALIZED))
         assertEquals(true, aliceNode.waitForFlowStatus(flow.id, Checkpoint.FlowStatus.HOSPITALIZED))
         val firstRetry = aliceNode.internals.smm.retryFlow(flow.id)
         assertEquals(true, firstRetry)
@@ -94,7 +95,7 @@ class FlowRetryTest {
     fun `A completed flow can not be retried`() {
         val flow = aliceNode.services.startFlow(FastCompletionFlow())
         flow.resultFuture.getOrThrow()
-        //This assumes that the checkpoint gets removed from the database when 
+        //This assumes that the checkpoint gets removed from the database when
         assertEquals(true, aliceNode.waitForFlowStatus(flow.id, null))
         for (i in 0..NUMBER_OF_RETRIES) {
             val retryAgain = aliceNode.internals.smm.retryFlow(flow.id)
@@ -127,15 +128,16 @@ class FlowRetryTest {
         }
     }
 
-    class HospitalizingFlow : FlowLogic<Boolean>() {
+    @StartableByRPC
+    class HospitalizeOnFirstRunFlow(private val statusForSuccess: Checkpoint.FlowStatus) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
-            val result = serviceHub.jdbcSession().prepareStatement("select status from node_checkpoints where flow_id = '${stateMachine.id.uuid}'").executeQuery()
+            val sqlStatement = "select status from node_checkpoints where flow_id = '${stateMachine.id.uuid}'"
+            val result = serviceHub.jdbcSession().prepareStatement(sqlStatement).executeQuery()
             result.next()
             val status = Checkpoint.FlowStatus.values()[result.getInt(1)]
             // The first time the flow is run the flow should end up in the Hospital. After which on a retry the flow should succeed.
-            if (status != Checkpoint.FlowStatus.HOSPITALIZED) {
-                logger.error("Status = $status")
+            if (status != statusForSuccess) {
                 throw HospitalizeFlowException("HospitalizeFlowException")
             }
             return true

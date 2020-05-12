@@ -33,6 +33,27 @@ class FlowPausingTest {
     }
 
     @Test(timeout = 300_000)
+    fun `Paused flows can be resumed using retryFlow`() {
+        val rpcUser = User("demo", "demo", setOf(Permissions.all()))
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false)) {
+            val alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))).getOrThrow()
+            val hospitalizedFlow = alice.rpc.startFlow(FlowRetryTest::HospitalizeOnFirstRunFlow, Checkpoint.FlowStatus.PAUSED)
+            val getStatusFlow = alice.rpc.startFlow(::GetStatusFlow, hospitalizedFlow.id)
+            val status = getStatusFlow.returnValue.getOrThrow()
+            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
+            alice.stop()
+            val restartedAlice = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    rpcUsers = listOf(rpcUser),
+                    customOverrides = mapOf("smmStartMode" to "Safe"))).getOrThrow()
+            assertEquals(true, (restartedAlice.rpc as InternalCordaRPCOps).retryFlow(hospitalizedFlow.id))
+            val finalStatusFlow = restartedAlice.rpc.startFlow(::GetStatusFlow, hospitalizedFlow.id)
+            //The final checkpoint gets removed when the flow completes so lets check this is gone.
+            assertEquals(null, finalStatusFlow.returnValue.getOrThrow())
+        }
+    }
+
+    @Test(timeout = 300_000)
     fun `Paused flows can recieve session messages`() {
         val rpcUser = User("demo", "demo", setOf(Permissions.startFlow<HardRestartTest.Ping>(), Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false)) {
@@ -108,6 +129,21 @@ class FlowPausingTest {
                 sequenceNumber++
             }
             session.send(pass)
+        }
+    }
+
+    @StartableByRPC
+    class GetStatusFlow(private val flowId: StateMachineRunId) : FlowLogic<Checkpoint.FlowStatus?>() {
+        @Suspendable
+        override fun call() : Checkpoint.FlowStatus? {
+            val sqlStatement = "select status from node_checkpoints where flow_id = '${flowId.uuid}'"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use {
+                it.executeQuery().use {query ->
+                    if (!query.next()) return null
+                    val ordinal = query.getInt(1)
+                    return Checkpoint.FlowStatus.values()[ordinal]
+                }
+            }
         }
     }
 }
