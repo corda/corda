@@ -22,18 +22,21 @@ pipeline {
         stage('Check commit messages are in correct format') {
             steps {
                 script {
-                    def regex = /^((CORDA|EG|ENT|INFRA)-\d+|NOTICK)$/
+                    def regex = /^((CORDA|EG|ENT|INFRA)-\d+|NOTICK)(.*)$/
                     def changeLogSets = currentBuild.changeSets
+                    def sendEmail = false
                     for (int i = 0; i < changeLogSets.size(); i++) {
                         def entries = changeLogSets[i].items
                         for (int j = 0; j < entries.length; j++) {
                             def entry = entries[j]
                             echo "${entry.commitId} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
                             if (entry.msg !=~ regex) {
+                                sendEmail = true
+                            }
+                            if(sendEmail) {
                                 emailext subject: 'Incorrect git message format',
                                     body: 'Please adjust your future git commit messages to the following format: CORDA-123 message to follow',
                                     recipientProviders: [[$class: 'DevelopersRecipientProvider']]
-
                             }
                         }
                     }
