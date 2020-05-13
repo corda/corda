@@ -429,12 +429,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Generating nodeInfo ...")
         val trustRoot = configuration.initKeyStores(cryptoService)
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity()
+        val (identity, identityKeyPairs) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), pkToIdCache = pkToIdCache)
         return database.use {
             it.transaction {
-                val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPair, publish = false)
+                val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPairs, publish = false)
                 nodeInfoAndSigned.nodeInfo
             }
         }
@@ -557,14 +557,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         schedulerService.closeOnStop()
         val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
 
-        val (identity, identityKeyPair) = obtainIdentity()
+        val (identity, identityKeyPairs) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            updateNodeInfo(identity, identityKeyPair, publish = true)
+            updateNodeInfo(identity, identityKeyPairs, publish = true)
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
@@ -691,9 +691,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun updateNodeInfo(identity: PartyAndCertificate,
-                               identityKeyPair: KeyPair,
+                               identityKeyPairs: Set<KeyPair>,
                                publish: Boolean): Triple<MutableSet<KeyPair>, NodeInfoAndSigned, PartyAndCertificate?> {
-        val keyPairs = mutableSetOf(identityKeyPair)
+        val keyPairs = identityKeyPairs.toMutableSet()
 
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
@@ -1081,11 +1081,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     /**
      * Loads or generates the node's legal identity and key-pair.
      * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
-     */
-    private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
-        val legalIdentityPrivateKeyAlias = "$NODE_IDENTITY_KEY_ALIAS"
+     *
+     * If certificate has been renewed, keystore may contain current and previous alias(es) for node legal identity.
+     * We assume that all node identity aliases start with NODE_IDENTITY_KEY_ALIAS, where current alias will be the last one
+     * in alphabetical sorting.
+     * TODO: Find better approach to identify current alias.
 
+     * In the case of multiple node identity aliases, the obtainIdentity returns:
+     * - current certificate
+     * - current and previous key-pairs
+     *
+     * TODO: Estimate security impact of using old key without certificate validation.
+     */
+    private fun obtainIdentity(): Pair<PartyAndCertificate, Set<KeyPair>> {
         var signingCertificateStore = configuration.signingCertificateStore.get()
+        val aliases = signingCertificateStore.aliases().filter { it.startsWith(NODE_IDENTITY_KEY_ALIAS) }.sortedBy { it }
+        val legalIdentityPrivateKeyAlias = aliases.lastOrNull() ?: NODE_IDENTITY_KEY_ALIAS
+
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
             database.transaction {
@@ -1102,6 +1114,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
         } else {
             checkAliasMismatch(legalIdentityPrivateKeyAlias, signingCertificateStore)
+            if (aliases.size > 1) {
+                aliases.forEach { checkAliasMismatch(it, signingCertificateStore) }
+                log.info("Found multiple aliases for legal identity, using: $legalIdentityPrivateKeyAlias")
+            }
         }
         val x509Cert = signingCertificateStore.query { getCertificate(legalIdentityPrivateKeyAlias) }
 
@@ -1117,7 +1133,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             throw ConfigurationException("The configured legalName '$legalName' doesn't match what's in the key store: $subject")
         }
 
-        return getPartyAndCertificatePlusAliasKeyPair(certificates, legalIdentityPrivateKeyAlias)
+        val certPath = X509Utilities.buildCertPath(certificates)
+        val keyPairs = aliases.map { KeyPair(cryptoService.getPublicKey(it), AliasPrivateKey(it)) }.toSet()
+        return Pair(PartyAndCertificate(certPath), keyPairs)
     }
 
     // Check if a key alias exists only in one of the cryptoService and certSigningStore.
