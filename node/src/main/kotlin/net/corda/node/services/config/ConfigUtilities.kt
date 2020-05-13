@@ -36,6 +36,7 @@ object ConfigHelper {
     private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
 
     private val log = LoggerFactory.getLogger(javaClass)
+    @Suppress("LongParameterList")
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
                    allowMissingConfig: Boolean = false,
@@ -88,7 +89,13 @@ object ConfigHelper {
         return ConfigFactory.parseMap(
                 toProperties()
                 .mapKeys {
-                    var newKey = (it.key as String)
+                    val original = it.key as String
+
+                    if (original == original.toUpperCase()){
+                        return@mapKeys original
+                    }
+
+                    var newKey = original
                                 .replace('_', '.')
                                 .replace(UPPERCASE_PROPERTY_PREFIX, CORDA_PROPERTY_PREFIX)
 
