@@ -30,7 +30,7 @@ pipeline {
                         for (int j = 0; j < entries.length; j++) {
                             def entry = entries[j]
                             echo "${entry.commitId} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
-                            if (entry.msg !=~ regex) {
+                            if (!(entry.msg ==~ regex)) {
                                 sendEmail = true
                             }
                             if(sendEmail) {
