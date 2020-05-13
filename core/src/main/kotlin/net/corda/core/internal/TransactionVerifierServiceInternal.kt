@@ -336,7 +336,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                  * order to harden consensus.
                  */
                 checkMinimumPlatformVersion(
-                        ltx.networkParameters?.minimumPlatformVersion ?: 1,
+                        ltx.networkParameters?.minimumPlatformVersion ?: PlatformVersionSwitches.FIRST_VERSION,
                         PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS,
                         "Signature constraints"
                 )
