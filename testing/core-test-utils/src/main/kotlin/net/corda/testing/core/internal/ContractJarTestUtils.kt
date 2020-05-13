@@ -110,7 +110,7 @@ object ContractJarTestUtils {
         val fileManager = compiler.getStandardFileManager(null, null, null)
         fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(workingDir.toFile()))
 
-        compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
+        compiler.getTask(System.out.writer(), fileManager, null, listOf("-source", "8", "-target", "8"), null, listOf(source)).call()
         val outFile = fileManager.getFileForInput(StandardLocation.CLASS_OUTPUT, packages.joinToString("."), "$className.class")
         return Paths.get(outFile.name)
     }
