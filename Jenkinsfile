@@ -30,11 +30,10 @@ pipeline {
                             def entry = entries[j]
                             echo "${entry.commitId} by ${entry.author} on ${new Date(entry.timestamp)}: ${entry.msg}"
                             if (entry.msg !=~ regex) {
-                                emailext to: entry.author.email,
+                                emailext to: entry.author.getProperty(hudson.tasks.Mailer.UserProperty.class).getAddress(),
                                     subject: 'Incorrect git message format',
                                     mimeType: 'text/html',
                                     body: 'Please adjust your future git commit messages to the following format: CORDA-123 message to follow'
-
                             }
                         }
                     }
