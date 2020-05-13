@@ -34,6 +34,7 @@ pipeline {
                                     subject: 'Incorrect git message format',
                                     mimeType: 'text/html',
                                     body: 'Please adjust your future git commit messages to the following format: CORDA-123 message to follow'
+
                             }
                         }
                     }
