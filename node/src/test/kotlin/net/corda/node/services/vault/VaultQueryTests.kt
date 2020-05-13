@@ -460,11 +460,13 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     fun `query with sort criteria and pagination on large volume of states should complete in time`() {
         val numberOfStates = 1000
         val pageSize = 1000
-        (1..50).forEach{
+
+        for (i in 1..50) {
             database.transaction {
                 vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
             }
         }
+
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
         val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
