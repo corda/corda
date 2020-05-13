@@ -75,7 +75,8 @@ class RpcReconnectTests {
      * This test runs flows in a loop and in the background kills the node or restarts it.
      * Also the RPC connection is made through a proxy that introduces random latencies and is also periodically killed.
      */
-    @Test(timeout=300_000)
+    @Suppress("ComplexMethod")
+    @Test(timeout=420_000)
 	fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`() {
         val nodeRunningTime = { Random().nextInt(12000) + 8000 }
 
