@@ -318,8 +318,8 @@ class SingleThreadedStateMachineManager(
     }
 
     override fun retryFlow(id: StateMachineRunId): Boolean {
-        if (mutex.locked{id in pausedFlows}) return unPauseFlow(id)
         mutex.locked {
+            if (id in pausedFlows) return unPauseFlow(id)
             val currentState = flows[id]?.fiber?.transientState?.value ?: return false
             val status = currentState.checkpoint.status
             if (status == Checkpoint.FlowStatus.HOSPITALIZED) {

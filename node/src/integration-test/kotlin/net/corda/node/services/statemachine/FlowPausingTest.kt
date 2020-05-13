@@ -110,8 +110,7 @@ class FlowPausingTest {
                 session.send(sequenceNumber++)
                 sleep(Duration.ofMillis(10))
             }
-            val success = session.receive<Boolean>().unwrap{data -> data}
-            return success
+            return session.receive<Boolean>().unwrap { data -> data}
         }
     }
 
@@ -141,7 +140,7 @@ class FlowPausingTest {
                 it.executeQuery().use {query ->
                     if (!query.next()) return null
                     val ordinal = query.getInt(1)
-                    return Checkpoint.FlowStatus.values()[ordinal]
+                    Checkpoint.FlowStatus.values()[ordinal]
                 }
             }
         }
