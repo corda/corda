@@ -1,5 +1,6 @@
 package net.corda.core.internal.rules
 
+import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.ContractState
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.warnOnce
@@ -33,7 +34,7 @@ object StateContractValidationEnforcementRule {
                 and consequently unable to determine target platform version.
                 Enforcing state/contract agreement validation by default.
 
-                For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+                For details see: ${CordaVersion.rootDocsSiteLink()}/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace("\n", " "))
             return true
         }

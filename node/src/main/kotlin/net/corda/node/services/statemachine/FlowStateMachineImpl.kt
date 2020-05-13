@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
+import net.corda.common.logging.CordaVersion
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.cordapp.Cordapp
@@ -563,7 +564,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             current = current.superclass
                     ?: return found
                     ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                            "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+                            "${InitiatingFlow::class.java.name}. See ${CordaVersion.rootDocsSiteLink()}/api-flows.html#flowlogic-annotations.")
         }
     }
 

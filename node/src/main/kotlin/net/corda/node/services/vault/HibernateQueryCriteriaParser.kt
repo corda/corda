@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import net.corda.common.logging.CordaVersion
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
@@ -627,7 +628,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 if (message.contains("Not an entity"))
                     throw VaultQueryException("""
                     Please register the entity '${entityStateClass.name}'
-                    See https://docs.corda.net/api-persistence.html#custom-schema-registration for more information""")
+                    See ${CordaVersion.rootDocsSiteLink()}/api-persistence.html#custom-schema-registration for more information""")
             }
             throw VaultQueryException("Parsing error: ${e.message}")
         }

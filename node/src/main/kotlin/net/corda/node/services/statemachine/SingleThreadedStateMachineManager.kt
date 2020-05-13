@@ -7,6 +7,7 @@ import co.paralleluniverse.fibers.instrument.JavaAgent
 import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.common.logging.CordaVersion
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
@@ -340,7 +341,7 @@ class SingleThreadedStateMachineManager(
     private fun checkQuasarJavaAgentPresence() {
         check(JavaAgent.isActive()) {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
-               #See https://docs.corda.net/head/testing.html#running-tests-in-intellij - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
+               #See ${CordaVersion.rootDocsSiteLink()}/testing.html#running-tests-in-intellij - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
         }
     }
 

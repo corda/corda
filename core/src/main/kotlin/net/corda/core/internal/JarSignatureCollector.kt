@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.common.logging.CordaVersion
 import net.corda.core.identity.Party
 import java.security.CodeSigner
 import java.security.PublicKey
@@ -52,7 +53,7 @@ object JarSignatureCollector {
                     """
                     Mismatch between signers ${firstSignerSet.toOrderedPublicKeys()} for file $firstFile
                     and signers ${otherSignerSet.toOrderedPublicKeys()} for file ${otherFile}.
-                    See https://docs.corda.net/api-contract-constraints.html#signature-constraints for details of the
+                    See ${CordaVersion.rootDocsSiteLink()}/api-contract-constraints.html#signature-constraints for details of the
                     constraints applied to attachment signatures.
                     """.trimIndent().replace('\n', ' '))
         }

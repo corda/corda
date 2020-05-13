@@ -79,6 +79,8 @@ dependencies {
 
     compile group: "io.github.classgraph", name: "classgraph", version: class_graph_version
 
+    compile project(":common-logging")
+
     testCompile "org.ow2.asm:asm:$asm_version"
 
     // JDK11: required by Quasar at run-time

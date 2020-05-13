@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
+import net.corda.common.logging.CordaVersion
 import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
@@ -913,7 +914,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
                         "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
-                        "Read more at: https://docs.corda.net/permissioning.html"
+                        "Read more at: ${CordaVersion.rootDocsSiteLink()}/permissioning.html"
             }
         } catch (e: KeyStoreException) {
             throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
@@ -1359,7 +1360,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
                     NodeDatabaseErrors.COULD_NOT_CONNECT,
                     cause = ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
-                    "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
+                    "Could not find the database driver class. Please add it to the 'drivers' folder. See: ${CordaVersion.rootDocsSiteLink()}/corda-configuration-file.html",
                     NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else ->

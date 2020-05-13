@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.common.logging.CordaVersion
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.concurrent.CordaFuture
@@ -266,7 +267,7 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                             State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                             is bundled in TransactionState with ${state.contract}.
 
-                            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+                            For details see: ${CordaVersion.rootDocsSiteLink()}/api-contract-constraints.html#contract-state-agreement
                             """.trimIndent().replace('\n', ' '))
             }
     }

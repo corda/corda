@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.common.logging.CordaVersion
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
@@ -19,4 +20,4 @@ class MissingContractAttachments
 constructor(val states: List<TransactionState<ContractState>>, contractsClassName: String? = null, minimumRequiredContractClassVersion: Version? = null) : FlowException(
         "Cannot find contract attachments for " +
         "${contractsClassName ?: states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}. " +
-        "See https://docs.corda.net/api-contract-constraints.html#debugging")
+        "See ${CordaVersion.rootDocsSiteLink()}/api-contract-constraints.html#debugging")
