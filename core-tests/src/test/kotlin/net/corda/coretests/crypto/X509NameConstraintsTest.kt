@@ -12,7 +12,6 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Test
-import java.security.Security
 import java.security.UnrecoverableKeyException
 import java.security.cert.CertPathValidator
 import java.security.cert.CertPathValidatorException
@@ -95,7 +94,8 @@ class X509NameConstraintsTest {
 
     @Test(timeout=300_000)
     fun `x500 name with correct cn and extra attribute`() {
-        Security.addProvider(BouncyCastleProvider())
+        // Do not use Security.addProvider(BouncyCastleProvider()) to avoid EdDSA signature disruption in other tests.
+        Crypto.findProvider(BouncyCastleProvider.PROVIDER_NAME)
         val acceptableNames = listOf("CN=Bank A TLS, UID=", "O=Bank A")
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 
