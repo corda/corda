@@ -91,6 +91,8 @@ object ConfigHelper {
                 .mapKeys {
                     val original = it.key as String
 
+                    // Reject environment variable that are in all caps 
+		    // since these cannot be properties.
                     if (original == original.toUpperCase()){
                         return@mapKeys original
                     }
