@@ -274,7 +274,7 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `RPC client connection after 2 attempts throws RPCException`(){
         // should be improved to verify the connection invocation attempt counts
         val conf = config.copy(maxReconnectAttempts = 2)
