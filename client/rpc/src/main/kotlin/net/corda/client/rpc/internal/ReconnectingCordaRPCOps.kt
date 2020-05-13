@@ -296,7 +296,7 @@ class ReconnectingCordaRPCOps private constructor(
             do {
                 if (isClosed()) break
                 log.debug { "Attempting to connect." }
-                startCordaRPCClient(nodeHostAndPorts[currentRoundRobinIndex], currentRetryInterval)
+                establishedConnection = startCordaRPCClient(nodeHostAndPorts[currentRoundRobinIndex], currentRetryInterval)
                 retryAllowed = establishedConnection == null && (infiniteRetries || --remainingRetryCount > 0)
                 if (retryAllowed){
                     Thread.sleep(currentRetryInterval.toMillis())
