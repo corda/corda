@@ -33,6 +33,7 @@ pipeline {
                             if (!(entry.msg ==~ regex)) {
                                 sendEmail = true
                             }
+
                             if(sendEmail) {
                                 emailext subject: 'Incorrect git message format',
                                     body: 'Please adjust your future git commit messages to the following format: CORDA-123 message to follow',
