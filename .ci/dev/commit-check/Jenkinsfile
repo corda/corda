@@ -1,4 +1,5 @@
 pipeline {
+    agent any
     stages {
         stage('Check commit messages are in correct format') {
             steps {
