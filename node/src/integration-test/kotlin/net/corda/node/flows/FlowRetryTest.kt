@@ -584,7 +584,7 @@ class FastCompletionFlow : FlowLogic<Boolean>() {
 }
 
 @StartableByRPC
-class LongPausingFlow() : FlowLogic<Unit>() {
+class LongPausingFlow : FlowLogic<Unit>() {
 
     companion object {
         var lock: Semaphore? = null
