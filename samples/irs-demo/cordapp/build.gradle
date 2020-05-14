@@ -60,6 +60,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         }
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -73,8 +75,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10024']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -87,8 +87,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10027']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -101,8 +99,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10030']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Regulator,L=Moscow,C=RU"
@@ -116,8 +112,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         rpcUsers = rpcUsersList
         useTestClock true
         extraConfig = ['h2Settings.address' : 'localhost:10033']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
 
 }
@@ -126,6 +120,8 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', n
     nodeDefaults{
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"

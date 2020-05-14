@@ -25,6 +25,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
         cordapp project(':samples:cordapp-configuration:workflows')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -35,8 +37,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminPort 10004
         }
         extraConfig = ['h2Settings.address' : 'localhost:10005']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -50,8 +50,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminPort 10008
         }
         extraConfig = ['h2Settings.address' : 'localhost:10009']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -65,7 +63,5 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminPort 10012
         }
         extraConfig = ['h2Settings.address' : 'localhost:10013']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
 }

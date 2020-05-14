@@ -81,6 +81,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
         cordapp project(':samples:trader-demo:workflows-trader')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -91,8 +93,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminAddress "localhost:10004"
         }
         extraConfig = ['h2Settings.address' : 'localhost:10014']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -103,8 +103,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminAddress "localhost:10007"
         }
         extraConfig = ['h2Settings.address' : 'localhost:10015']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -115,8 +113,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminAddress "localhost:10010"
         }
         extraConfig = ['h2Settings.address' : 'localhost:10016']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=BankOfCorda,L=New York,C=US"
@@ -127,8 +123,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminAddress "localhost:10013"
         }
         extraConfig = ['h2Settings.address' : 'localhost:10017']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     
     //All other nodes should be using LoggingBuyerFlow as it is a subclass of BuyerFlow

@@ -36,6 +36,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         }
         cordapp project(':samples:network-verifier:contracts')
         cordapp project(':samples:network-verifier:workflows')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -46,8 +48,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminPort 10004
         }
         extraConfig = ['h2Settings.address' : 'localhost:20004']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -59,8 +59,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminPort 10008
         }
         extraConfig = ['h2Settings.address' : 'localhost:0']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -72,7 +70,5 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminPort 10012
         }
         extraConfig = ['h2Settings.address' : 'localhost:0']
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
 }

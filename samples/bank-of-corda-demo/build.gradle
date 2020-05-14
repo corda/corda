@@ -48,6 +48,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     nodeDefaults {
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -58,8 +60,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminAddress "localhost:10004"
         }
         extraConfig = [h2Settings: [address: "localhost:10016"]]
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=BankOfCorda,L=London,C=GB"
@@ -76,8 +76,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp(project(':finance:workflows')) {
             config "issuableCurrencies = [ USD ]"
         }
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
     node {
         name "O=BigCorporation,L=New York,C=US"
@@ -91,8 +89,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         extraConfig = [
                 h2Settings: [address: "localhost:10018"]
         ]
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
     }
 }
 

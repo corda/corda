@@ -90,8 +90,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         cordapp project(':samples:attachment-demo:contracts')
         cordapp project(':samples:attachment-demo:workflows')
-        runSchemaMigration = true
-        allowHibernateToManageAppSchema = true
+        runSchemaMigration.set(true)
+        allowHibernateToManageAppSchema.set(true)
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
