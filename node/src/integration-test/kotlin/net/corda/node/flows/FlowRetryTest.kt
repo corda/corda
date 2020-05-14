@@ -1,12 +1,20 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaRuntimeException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowExternalAsyncOperation
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
@@ -14,6 +22,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.FlowPausingTest
 import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
@@ -57,8 +66,8 @@ class FlowRetryTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
-    @Test(timeout=300_000)
-	fun `flows continue despite errors`() {
+    @Test(timeout = 300_000)
+    fun `flows continue despite errors`() {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
@@ -78,8 +87,8 @@ class FlowRetryTest {
         assertEquals("$numSessions:$numIterations", result)
     }
 
-    @Test(timeout=300_000)
-	fun `async operation deduplication id is stable accross retries`() {
+    @Test(timeout = 300_000)
+    fun `async operation deduplication id is stable accross retries`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<AsyncRetryFlow>()))
         driver(DriverParameters(
                 startNodesInProcess = isQuasarAgentSpecified(),
@@ -93,8 +102,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
+    @Test(timeout = 300_000)
+    fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<RetryFlow>()))
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
@@ -111,8 +120,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
+    @Test(timeout = 300_000)
+    fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<ThrowingFlow>()))
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
@@ -129,8 +138,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
+    @Test(timeout = 300_000)
+    fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -147,8 +156,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Specific exception still detected even if it is nested inside another exception`() {
+    @Test(timeout = 300_000)
+    fun `Specific exception still detected even if it is nested inside another exception`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -165,8 +174,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `General external exceptions are not retried and propagate`() {
+    @Test(timeout = 300_000)
+    fun `General external exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -183,8 +192,8 @@ class FlowRetryTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Permission exceptions are not retried and propagate`() {
+    @Test(timeout = 300_000)
+    fun `Permission exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf())
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
@@ -196,6 +205,91 @@ class FlowRetryTest {
                 }.withMessageStartingWith("User not authorized to perform RPC call")
                 // This stays at -1 since the flow never even got called
                 assertEquals(-1, GeneralExternalFailureFlow.retryCount)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `A hospitalized flow can be retried`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
+                val flow = it.proxy.startFlow(FlowPausingTest::HospitalizeOnFirstRunFlow, Checkpoint.FlowStatus.HOSPITALIZED)
+                val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
+                val status = statusFlow.returnValue.getOrThrow()
+                assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
+                assertEquals(true, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                flow.returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `A flow will only rerun once when retried multiple times`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
+                val flow = it.proxy.startFlow(FlowPausingTest::HospitalizeOnFirstRunFlow, Checkpoint.FlowStatus.HOSPITALIZED)
+                val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
+                val status = statusFlow.returnValue.getOrThrow()
+                assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
+                assertEquals(true, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                for (i in 0..5) {
+                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                }
+                flow.returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `A running flow can not be retried`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
+                val lock = Semaphore(0)
+                LongPausingFlow.lock = lock
+                val flow = it.proxy.startFlow(::LongPausingFlow)
+                lock.acquire()
+                for (i in 0..5) {
+                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                }
+                it.proxy.killFlow(flow.id)
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `A completed flow can not be retried`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
+                val flow = it.proxy.startFlow(::FastCompletionFlow)
+                flow.returnValue.getOrThrow()
+                for (i in 0..5) {
+                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `A failed flow can not be retried`() {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
+                val flow = it.proxy.startFlow(::FlowExceptionFlow)
+                val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
+                val status = statusFlow.returnValue.getOrThrow()
+                assertEquals(Checkpoint.FlowStatus.FAILED, status)
+                for (i in 0..5) {
+                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                }
             }
         }
     }
@@ -469,5 +563,36 @@ class GetCheckpointNumberOfStatusFlow(private val flowStatus: Checkpoint.FlowSta
                 rs.getLong(1)
             }
         }
+    }
+}
+
+@StartableByRPC
+class FlowExceptionFlow : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        throw FlowException("FlowException")
+    }
+}
+
+@StartableByRPC
+class FastCompletionFlow : FlowLogic<Boolean>() {
+    @Suspendable
+    override fun call(): Boolean {
+        sleep(Duration.ofMillis(10))
+        return true
+    }
+}
+
+@StartableByRPC
+class LongPausingFlow() : FlowLogic<Unit>() {
+
+    companion object {
+        var lock: Semaphore? = null
+    }
+
+    @Suspendable
+    override fun call() {
+        lock!!.release()
+        sleep(Duration.ofSeconds(300))
     }
 }

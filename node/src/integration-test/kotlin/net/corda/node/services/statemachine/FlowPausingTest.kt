@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -13,6 +14,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.node.flows.FlowRetryTest
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -37,7 +39,7 @@ class FlowPausingTest {
         val rpcUser = User("demo", "demo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false)) {
             val alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))).getOrThrow()
-            val hospitalizedFlow = alice.rpc.startFlow(FlowRetryTest::HospitalizeOnFirstRunFlow, Checkpoint.FlowStatus.PAUSED)
+            val hospitalizedFlow = alice.rpc.startFlow(::HospitalizeOnFirstRunFlow, Checkpoint.FlowStatus.PAUSED)
             val getStatusFlow = alice.rpc.startFlow(::GetStatusFlow, hospitalizedFlow.id)
             val status = getStatusFlow.returnValue.getOrThrow()
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
@@ -143,6 +145,22 @@ class FlowPausingTest {
                     Checkpoint.FlowStatus.values()[ordinal]
                 }
             }
+        }
+    }
+
+    @StartableByRPC
+    class HospitalizeOnFirstRunFlow(private val statusForSuccess: Checkpoint.FlowStatus) : FlowLogic<Boolean>() {
+        @Suspendable
+        override fun call(): Boolean {
+            val sqlStatement = "select status from node_checkpoints where flow_id = '${stateMachine.id.uuid}'"
+            val result = serviceHub.jdbcSession().prepareStatement(sqlStatement).executeQuery()
+            result.next()
+            val status = Checkpoint.FlowStatus.values()[result.getInt(1)]
+            // The first time the flow is run the flow should end up in the Hospital. After which on a retry the flow should succeed.
+            if (status != statusForSuccess) {
+                throw HospitalizeFlowException("HospitalizeFlowException")
+            }
+            return true
         }
     }
 }
