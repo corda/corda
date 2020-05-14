@@ -265,8 +265,6 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                 logger.warnOnce("""
                             State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                             is bundled in TransactionState with ${state.contract}.
-
-                            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
                             """.trimIndent().replace('\n', ' '))
             }
     }

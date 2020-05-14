@@ -912,8 +912,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
-                        "Read more at: https://docs.corda.net/permissioning.html"
+                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
             }
         } catch (e: KeyStoreException) {
             throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
@@ -1359,7 +1358,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
                     NodeDatabaseErrors.COULD_NOT_CONNECT,
                     cause = ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
-                    "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
+                    "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else ->

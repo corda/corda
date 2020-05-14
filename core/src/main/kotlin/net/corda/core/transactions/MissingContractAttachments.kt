@@ -18,5 +18,4 @@ class MissingContractAttachments
 @JvmOverloads
 constructor(val states: List<TransactionState<ContractState>>, contractsClassName: String? = null, minimumRequiredContractClassVersion: Version? = null) : FlowException(
         "Cannot find contract attachments for " +
-        "${contractsClassName ?: states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}. " +
-        "See https://docs.corda.net/api-contract-constraints.html#debugging")
+        "${contractsClassName ?: states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}.")
