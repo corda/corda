@@ -139,7 +139,8 @@ class DriverDSLImpl(
         val cordappsForAllNodes: Collection<TestCordappInternal>?,
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
-        val environmentVariables : Map<String, String>
+        val environmentVariables : Map<String, String>,
+        val allowHibernateToManageAppSchema: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -663,7 +664,7 @@ class DriverDSLImpl(
         )
 
         val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, config)
+            val nodeAndThreadFuture = startInProcessNode(executorService, config, allowHibernateToManageAppSchema)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -853,7 +854,8 @@ class DriverDSLImpl(
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
-                config: NodeConfig
+                config: NodeConfig,
+                allowHibernateToManageAppSchema: Boolean
         ): CordaFuture<Pair<NodeWithInfo, Thread>> {
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             return executorService.fork {
@@ -864,7 +866,7 @@ class DriverDSLImpl(
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
                 // TODO pass the version in?
-                val node = InProcessNode(config.corda, MOCK_VERSION_INFO)
+                val node = InProcessNode(config.corda, MOCK_VERSION_INFO, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
                 val nodeInfo = node.start()
                 val nodeWithInfo = NodeWithInfo(node, nodeInfo)
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
