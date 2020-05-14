@@ -74,7 +74,7 @@ class ErrorReporterImplTest {
         val error = TEST_ERROR_1
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/en-US]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1 URL: $TEST_URL/en-US]"), logs)
     }
 
     @Test(timeout = 300_00)
@@ -84,7 +84,7 @@ class ErrorReporterImplTest {
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
         val format = DateFormat.getDateInstance(DateFormat.LONG, Locale.forLanguageTag("en-US"))
-        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test-case2, URL: $TEST_URL/en-US]"), logs)
+        assertEquals(listOf("This is the second case with string foo, number 1, date ${format.format(currentDate)} [Code: test-case2 URL: $TEST_URL/en-US]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -92,7 +92,7 @@ class ErrorReporterImplTest {
         val error = TEST_ERROR_1
         val testReporter = createReporterImpl("fr-FR")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/fr-FR]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1 URL: $TEST_URL/fr-FR]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -100,7 +100,7 @@ class ErrorReporterImplTest {
         val error = TEST_ERROR_1
         val testReporter = createReporterImpl("ga-IE")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1, URL: $TEST_URL/ga-IE]"), logs)
+        assertEquals(listOf("Is teachtaireacht earráide é seo [Code: test-case1 URL: $TEST_URL/ga-IE]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -108,7 +108,7 @@ class ErrorReporterImplTest {
         val error = TEST_ERROR_1
         val testReporter = createReporterImpl("es-ES")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is a test message [Code: test-case1, URL: $TEST_URL/es-ES]"), logs)
+        assertEquals(listOf("This is a test message [Code: test-case1 URL: $TEST_URL/es-ES]"), logs)
     }
 
     @Test(timeout = 300_000)
@@ -116,6 +116,6 @@ class ErrorReporterImplTest {
         val error = TEST_ERROR_3
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
-        assertEquals(listOf("This is the third test message [Code: test-case-3, URL: $TEST_URL/en-US]"), logs)
+        assertEquals(listOf("This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US]"), logs)
     }
 }
