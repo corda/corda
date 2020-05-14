@@ -48,8 +48,8 @@ class ResolveTransactionsFlow private constructor(
 
         // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
         // request to node V3 that doesn't know about this protocol.
-        fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= 4
-        val batchMode = counterpartyPlatformVersion >= 6
+        fetchNetParamsFromCounterpart = counterpartyPlatformVersion >= PlatformVersionSwitches.FETCH_MISSING_NETWORK_PARAMETERS
+        val batchMode = counterpartyPlatformVersion >= PlatformVersionSwitches.BATCH_DOWNLOAD_COUNTERPARTY_BACKCHAIN
         logger.debug { "ResolveTransactionsFlow.call(): Otherside Platform Version = '$counterpartyPlatformVersion': Batch mode = $batchMode" }
 
         if (initialTx != null) {

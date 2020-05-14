@@ -1,6 +1,7 @@
 package net.corda.core.internal.rules
 
 import net.corda.core.contracts.ContractState
+import net.corda.core.internal.PlatformVersionSwitches
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.warnOnce
 import org.slf4j.LoggerFactory
@@ -44,6 +45,6 @@ object StateContractValidationEnforcementRule {
             }
         }
 
-        return targetVersion >= 4
+        return targetVersion >= PlatformVersionSwitches.BELONGS_TO_CONTRACT_ENFORCEMENT
     }
 }

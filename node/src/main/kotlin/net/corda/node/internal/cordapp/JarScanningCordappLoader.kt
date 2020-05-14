@@ -241,7 +241,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         "Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.",
                         CordappErrors.INVALID_VERSION_IDENTIFIER,
                         listOf(versionStr, attributeName))
-        if (version < 1) {
+        if (version < PlatformVersionSwitches.FIRST_VERSION) {
             throw CordappInvalidVersionException(
                     "Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.",
                     CordappErrors.INVALID_VERSION_IDENTIFIER,
