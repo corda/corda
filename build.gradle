@@ -670,7 +670,7 @@ buildScan {
 }
 
 ext.generalPurpose  = [
-        numberOfShards: 20,
+        numberOfShards: 10,
         streamOutput: false,
         coresPerFork: 2,
         memoryInGbPerFork: 12,
