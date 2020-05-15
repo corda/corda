@@ -1097,8 +1097,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      */
     private fun obtainIdentity(): Pair<PartyAndCertificate, Set<KeyPair>> {
         var signingCertificateStore = configuration.signingCertificateStore.get()
-        val aliases = signingCertificateStore.aliases().filter { it.startsWith(NODE_IDENTITY_KEY_ALIAS) }.sortedBy { it }
-        val legalIdentityPrivateKeyAlias = aliases.lastOrNull() ?: NODE_IDENTITY_KEY_ALIAS
+        val aliases = signingCertificateStore.aliases()
+                .filter { it.startsWith(NODE_IDENTITY_KEY_ALIAS) }.sortedBy { it }
+                .takeIf { it.isNotEmpty() } ?: listOf(NODE_IDENTITY_KEY_ALIAS)
+        val legalIdentityPrivateKeyAlias = aliases.last()
 
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
@@ -1115,9 +1117,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
         } else {
-            checkAliasMismatch(legalIdentityPrivateKeyAlias, signingCertificateStore)
+            aliases.forEach { checkAliasMismatch(it, signingCertificateStore) }
             if (aliases.size > 1) {
-                aliases.forEach { checkAliasMismatch(it, signingCertificateStore) }
                 log.info("Found multiple aliases for legal identity, using: $legalIdentityPrivateKeyAlias")
             }
         }
