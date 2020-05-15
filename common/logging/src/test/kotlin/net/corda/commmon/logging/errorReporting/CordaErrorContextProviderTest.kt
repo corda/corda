@@ -11,7 +11,8 @@ class CordaErrorContextProviderTest {
     @Test(timeout = 300_000)
     fun `check that correct URL is returned from context provider`() {
         val context = CordaErrorContextProvider()
-        val expectedURL = "https://docs.corda.net/docs/corda-os/${CordaVersion.releaseVersion}/error-codes.html"
+        val version = CordaVersion.releaseVersion.substringBefore("-") // Remove SNAPSHOT if present
+        val expectedURL = "https://docs.corda.net/docs/corda-os/$version/error-codes.html"
         // In this first release, there is only one localisation and the URL structure for future localisations is currently unknown. As
         // a result, the same URL is expected for all locales.
         assertEquals(expectedURL, context.getURL(Locale.getDefault()))

@@ -152,6 +152,7 @@ buildscript {
             "unknown"
         }
     }()
+    ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/$baseVersion"
     repositories {
         mavenLocal()
         mavenCentral()
@@ -309,6 +310,7 @@ allprojects {
             attributes('Corda-Revision': corda_revision)
             attributes('Corda-Vendor': 'Corda Open Source')
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
+            attributes('Corda-Docs-Link': corda_docs_link)
         }
     }
 

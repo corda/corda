@@ -183,7 +183,7 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -193,8 +193,6 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import javax.persistence.PersistenceException
-import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -912,8 +910,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
-                        "Read more at: https://docs.corda.net/permissioning.html"
+                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
             }
         } catch (e: KeyStoreException) {
             throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
@@ -1196,6 +1193,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
          */
         override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
+        @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction(useErrorHandler = false) {
                 session.flush()
@@ -1210,7 +1208,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                 connection.rollback(savepoint)
                             }
                         }
-                    } catch (e: PersistenceException) {
+                    } catch (e: Exception) {
                         if (manager.transaction.rollbackOnly) {
                             connection.rollback(savepoint)
                         }
@@ -1359,7 +1357,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
                     NodeDatabaseErrors.COULD_NOT_CONNECT,
                     cause = ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
-                    "Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html",
+                    "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else ->
