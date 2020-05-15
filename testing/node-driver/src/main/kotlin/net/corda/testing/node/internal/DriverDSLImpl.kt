@@ -92,6 +92,7 @@ import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.h2.util.DoneFuture
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.net.ConnectException
@@ -250,11 +251,12 @@ class DriverDSLImpl(
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
+        val config = createConfig(name, parameters, p2pAddress)
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            createConfigAndInitialSchema(name, parameters, p2pAddress).doOnComplete { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
+            createSchema(config, false).doOnComplete { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
         } else {
-            createConfigAndInitialSchema(name, parameters, p2pAddress)
+            doneFuture(config)
         }
 
         return registrationFuture.flatMap { config ->
@@ -274,11 +276,11 @@ class DriverDSLImpl(
         return startNodeInternal(config, webAddress, localNetworkMap, parameters, bytemanPort)
     }
 
-    private fun createConfigAndInitialSchema(
+    private fun createConfig(
             providedName: CordaX500Name,
             parameters: NodeParameters,
             p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()
-    ) : CordaFuture<NodeConfig> {
+    ): NodeConfig {
         val baseDirectory = baseDirectory(providedName).createDirectories()
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
@@ -307,24 +309,29 @@ class DriverDSLImpl(
                 "rpcSettings.address" to rpcAddress.toString(),
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                 NodeConfiguration::useTestClock.name to useTestClock,
-                NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map {
+                    it.toConfig().root().unwrapped()
+                },
                 NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
                 NodeConfiguration::additionalNodeInfoPollingFrequencyMsec.name to 1000
         ) + czUrlConfig + jmxConfig + parameters.customOverrides
-        val config = NodeConfig(
+        return NodeConfig(
                 ConfigHelper.loadConfig(
                         baseDirectory = baseDirectory,
                         allowMissingConfig = true,
                         configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
                 ).withDJVMConfig(djvmBootstrapSource, djvmCordaSource)
         ).checkAndOverrideForInMemoryDB()
+    }
 
-        if (startNodesInProcess) return doneFuture(config)
+    private fun createSchema(config: NodeConfig, hibernateForAppSchema: Boolean): CordaFuture<NodeConfig> {
+        if (startNodesInProcess || inMemoryDB) return doneFuture(config)
         return startOutOfProcessMiniNode(config,
-                arrayOf(
-                        "run-migration-scripts"
-                )).map{ config }
+                listOfNotNull(
+                        "run-migration-scripts",
+                        if (hibernateForAppSchema) "--allow-hibernate-to-manage-app-schema" else null
+                ).toTypedArray()).map { config }
     }
 
     private fun startNodeRegistration(
@@ -472,7 +479,7 @@ class DriverDSLImpl(
             notarySpecs.map { spec ->
                 val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
                 val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
-                val config = createConfigAndInitialSchema(spec.name, parameters)
+                val config = createConfig(spec.name, parameters)
                 val identity = when (spec.cluster) {
                     null -> {
                         DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(spec.name), spec.name)
@@ -498,7 +505,7 @@ class DriverDSLImpl(
                     }
                     else -> throw UnsupportedOperationException("Cluster spec ${spec.cluster} not supported by Driver")
                 }
-                Pair(config.getOrThrow(),NotaryInfo(identity, spec.validating))
+                Pair(config, NotaryInfo(identity, spec.validating))
             }
         }
     }
@@ -520,7 +527,7 @@ class DriverDSLImpl(
     ): CordaFuture<Pair<NodeConfig,NotaryInfo>> {
         val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
-        return createConfigAndInitialSchema(spec.name, parameters).doOnComplete {config ->
+        return createSchema(createConfig(spec.name, parameters), false).doOnComplete { config ->
             startNodeRegistration(config, rootCert, compatibilityZone.config())}.flatMap { config ->
                 // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
                 // startup or when the node is told to just generate its node info file. We do that here.
@@ -590,7 +597,7 @@ class DriverDSLImpl(
         val clusterAddress = portAllocation.nextHostAndPort()
 
         val firstParams = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(clusterAddress))
-        val firstConfig = createConfigAndInitialSchema(nodeNames[0], firstParams, clusterAddress)
+        val firstConfig = createSchema(createConfig(nodeNames[0], firstParams, clusterAddress), allowHibernateToManageAppSchema)
 
         // Start the first node that will bootstrap the cluster
         val firstNodeFuture = startRegisteredNode(
@@ -603,7 +610,7 @@ class DriverDSLImpl(
         val restNodeFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val params = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(nodeAddress, clusterAddress))
-            val config = createConfigAndInitialSchema(it, params, nodeAddress)
+            val config = createSchema(createConfig(it, params, nodeAddress), allowHibernateToManageAppSchema)
             startRegisteredNode(
                     config.getOrThrow(),
                     localNetworkMap,
@@ -699,6 +706,9 @@ class DriverDSLImpl(
             nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
+            log.info("StartNodeInternal for ${config.corda.myLegalName.organisation} - calling create schema")
+            createSchema(config, allowHibernateToManageAppSchema).getOrThrow()
+            log.info("StartNodeInternal for ${config.corda.myLegalName.organisation} - create schema done")
             val process = startOutOfProcessNode(
                     config,
                     quasarJarPath,
