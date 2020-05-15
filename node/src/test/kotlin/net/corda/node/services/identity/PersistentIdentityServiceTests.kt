@@ -177,13 +177,16 @@ class PersistentIdentityServiceTests {
         assertFalse(identityService.publicKeysForExternalId(extId).iterator().hasNext())
 
         identityService.registerKey(newPair.public, ALICE, null)
+        assertNull(identityService.externalIdForPublicKey(newPair.public))
         assertFalse(identityService.publicKeysForExternalId(extId).iterator().hasNext())
 
         identityService.registerKey(newPair.public, ALICE, extId)
+        assertEquals(extId, identityService.externalIdForPublicKey(newPair.public))
         assertEquals(1, identityService.publicKeysForExternalId(extId).iterator().asSequence().toList().size)
         assertEquals(newPair.public, identityService.publicKeysForExternalId(extId).iterator().next())
 
         identityService.registerKey(newPair.public, ALICE, null)
+        assertEquals(extId, identityService.externalIdForPublicKey(newPair.public))
         assertEquals(1, identityService.publicKeysForExternalId(extId).iterator().asSequence().toList().size)
         assertEquals(newPair.public, identityService.publicKeysForExternalId(extId).iterator().next())
     }
