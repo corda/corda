@@ -23,12 +23,12 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VENDOR
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_LICENCE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VENDOR
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSION
@@ -52,6 +52,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
@@ -83,16 +84,21 @@ import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.driver.*
+import net.corda.testing.driver.DriverDSL
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.JmxPolicy
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.NodeParameters
+import net.corda.testing.driver.NotaryHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.h2.util.DoneFuture
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.net.ConnectException
@@ -276,6 +282,7 @@ class DriverDSLImpl(
         return startNodeInternal(config, webAddress, localNetworkMap, parameters, bytemanPort)
     }
 
+    @Suppress("ComplexMethod")
     private fun createConfig(
             providedName: CordaX500Name,
             parameters: NodeParameters,
