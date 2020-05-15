@@ -223,7 +223,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected val runOnStop = ArrayList<() -> Any?>()
 
-    protected open val runMigrationScripts: Boolean = false
+    protected open val runMigrationScripts: Boolean = configuredDbIsInMemory()
+
+    // if the configured DB is in memory, we will need to run db migrations, as the db does not persist between runs.
+    private fun configuredDbIsInMemory() = configuration.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:mem:")
 
     init {
         (serverThread as? ExecutorService)?.let {

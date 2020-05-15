@@ -259,10 +259,10 @@ class DriverDSLImpl(
             doneFuture(config)
         }
 
-        return registrationFuture.flatMap { config ->
+        return registrationFuture.flatMap { conf ->
             networkMapAvailability.flatMap {networkMap ->
                 // But starting the node proper does require the network map
-                startRegisteredNode(config, networkMap, parameters, bytemanPort)
+                startRegisteredNode(conf, networkMap, parameters, bytemanPort)
             }
         }
     }
