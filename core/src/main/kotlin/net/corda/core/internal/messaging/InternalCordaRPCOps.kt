@@ -16,9 +16,9 @@ interface InternalCordaRPCOps : CordaRPCOps {
     val attachmentTrustInfos: List<AttachmentTrustInfo>
 
     /**
-     * Start a paused flow.
+     * Resume a paused flow.
      *
-     * @return whether the flow was successfully started.
+     * @return whether the flow was successfully resumed.
      */
     fun unPauseFlow(id: StateMachineRunId): Boolean
 }

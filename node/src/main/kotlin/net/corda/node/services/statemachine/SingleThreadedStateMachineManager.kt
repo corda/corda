@@ -153,7 +153,7 @@ class SingleThreadedStateMachineManager(
         val actionExecutor = makeActionExecutor(checkpointSerializationContext)
         fiberDeserializationChecker?.start(checkpointSerializationContext)
         when (startMode) {
-            StateMachineManager.StartMode.ResumeAll -> {}
+            StateMachineManager.StartMode.ExcludingPaused -> {}
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
         }
         this.flowCreator = FlowCreator(

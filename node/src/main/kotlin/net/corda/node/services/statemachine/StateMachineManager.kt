@@ -32,7 +32,7 @@ import java.time.Duration
 interface StateMachineManager {
 
     enum class StartMode {
-        ResumeAll, // Resume all flows except paused flows.
+        ExcludingPaused, // Resume all flows except paused flows.
         Safe // Mark all flows as paused.
     }
 
@@ -41,7 +41,7 @@ interface StateMachineManager {
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ResumeAll) : CordaFuture<Unit>
+    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ExcludingPaused) : CordaFuture<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the

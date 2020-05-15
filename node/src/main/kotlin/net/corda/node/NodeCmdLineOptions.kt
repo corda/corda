@@ -50,7 +50,7 @@ open class SharedNodeCmdLineOptions {
     var devMode: Boolean? = null
 
     @Option(
-            names = ["--safe-mode"],
+            names = ["--pause-all-flows"],
             description = ["Do not run any flows on startup. Sets all flows to paused, which can be unpaused via RPC."]
     )
     var safeMode: Boolean = false

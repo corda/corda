@@ -125,7 +125,7 @@ data class NodeConfigurationImpl(
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
         val quasarExcludePackages: List<String> = emptyList()
-        val smmStartMode : StateMachineManager.StartMode = StateMachineManager.StartMode.ResumeAll
+        val smmStartMode : StateMachineManager.StartMode = StateMachineManager.StartMode.ExcludingPaused
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
