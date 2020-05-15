@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -92,6 +93,18 @@ class InMemoryIdentityServiceTests {
         assertNull(service.wellKnownPartyFromX500Name(identities.first().name))
         identities.forEach { service.verifyAndRegisterIdentity(it) }
         identities.forEach { assertEquals(it.party, service.wellKnownPartyFromX500Name(it.name)) }
+    }
+
+    @Ignore
+    @Test(timeout = 300_000)
+    fun `get identity by external id with registration straight away`() {
+        TODO("publicKeysForExternalId is not implemented")
+    }
+
+    @Ignore
+    @Test(timeout = 300_000)
+    fun `get identity by external id with registration on second call`() {
+        TODO("publicKeysForExternalId is not implemented")
     }
 
     /**
