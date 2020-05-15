@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "Deprecation")
 package net.corda.testing.node.internal
 
 import co.paralleluniverse.fibers.instrument.JavaAgent
@@ -726,7 +726,10 @@ class DriverDSLImpl(
                     parameters.maximumHeapSize,
                     parameters.logLevelOverride,
                     identifier,
-                    environmentVariables
+                    environmentVariables,
+                    extraCmdLineFlag = listOfNotNull(
+                            if (allowHibernateToManageAppSchema) "--allow-hibernate-to-manage-app-schema" else null
+                    ).toTypedArray()
             )
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
