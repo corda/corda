@@ -161,12 +161,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
+    private fun NodeInfo.printWithKey() = "$this, owningKey=${legalIdentities.first().owningKey.toStringShort()}"
+
     override fun addOrUpdateNodes(nodes: List<NodeInfo>) {
         synchronized(_changed) {
             val newNodes = mutableListOf<NodeInfo>()
             val updatedNodes = mutableListOf<Pair<NodeInfo, NodeInfo>>()
             nodes.map { it to getNodesByLegalIdentityKey(it.legalIdentities.first().owningKey).firstOrNull() }
                     .forEach { (node, previousNode) ->
+                        logger.info("Adding node with info: ${node.printWithKey()}")
                         when {
                             previousNode == null -> {
                                 logger.info("No previous node found for ${node.legalIdentities.first().name}")
@@ -178,7 +181,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                 logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
                             }
                             previousNode != node -> {
-                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: $previousNode")
+                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: ${previousNode.printWithKey()}")
                                 // TODO We should be adding any new identities as well
                                 if (verifyIdentities(node)) {
                                     updatedNodes.add(node to previousNode)
@@ -196,6 +199,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             recursivelyUpdateNodes(newNodes.map { nodeInfo -> Pair(nodeInfo, MapChange.Added(nodeInfo)) } +
                     updatedNodes.map { (nodeInfo, previousNodeInfo) -> Pair(nodeInfo, MapChange.Modified(nodeInfo, previousNodeInfo)) })
         }
+        logger.debug { "Done adding nodes with info: $nodes" }
     }
 
     private fun recursivelyUpdateNodes(nodeUpdates: List<Pair<NodeInfo, MapChange>>) {
@@ -229,9 +233,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun addOrUpdateNode(node: NodeInfo) {
-        logger.info("Adding node with info: $node")
         addOrUpdateNodes(listOf(node))
-        logger.debug { "Done adding node with info: $node" }
     }
 
     private fun verifyIdentities(node: NodeInfo): Boolean {
@@ -259,7 +261,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun removeNode(node: NodeInfo) {
-        logger.info("Removing node with info: $node")
+        logger.info("Removing node with info: ${node.printWithKey()}")
         synchronized(_changed) {
             database.transaction {
                 removeInfoDB(session, node)

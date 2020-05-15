@@ -263,7 +263,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun updateBridgesOnNetworkChange(change: NetworkMapCache.MapChange) {
-        log.info("Updating bridges on network map change: ${change.node}")
+        log.info("Updating bridges on network map change: ${change::class.simpleName} ${change.node}")
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return state.locked {
                 node.legalIdentitiesAndCerts.map {
