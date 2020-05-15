@@ -25,7 +25,7 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
         val resource = "$resourceLocation/$ERROR_INFO_RESOURCE"
         val codeMessage = fetchAndFormat(resource, ERROR_CODE_MESSAGE, arrayOf(error.formatCode()))
         val urlMessage = fetchAndFormat(resource, ERROR_CODE_URL, arrayOf(errorContextProvider.getURL(locale)))
-        return "[$codeMessage, $urlMessage]"
+        return "[$codeMessage $urlMessage]"
     }
 
     override fun report(error: ErrorCode<*>, logger: Logger) {

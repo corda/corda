@@ -334,7 +334,6 @@ open class NodeStartup : NodeStartupLogging {
 
         if (!certDirectory.isDirectory()) {
             printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
-            printError("Please see https://docs.corda.net/joining-a-compatibility-zone.html for more information.")
             printError("Node will now shutdown.")
             return false
         }
@@ -350,9 +349,7 @@ open class NodeStartup : NodeStartupLogging {
             //
             // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
             val messages = listOf(
-                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
-                    "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ",
-                    "It will only take a few seconds for you to resolve."
+                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed."
             )
             logger.warn(messages.joinToString(""))
             Emoji.renderIfSupported {

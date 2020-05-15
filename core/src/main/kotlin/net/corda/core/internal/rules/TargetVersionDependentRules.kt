@@ -33,8 +33,6 @@ object StateContractValidationEnforcementRule {
                 Unable to determine JAR location for contract state class ${state::class.java.name},
                 and consequently unable to determine target platform version.
                 Enforcing state/contract agreement validation by default.
-
-                For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace("\n", " "))
             return true
         }
