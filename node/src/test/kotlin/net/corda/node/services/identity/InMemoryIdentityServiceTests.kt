@@ -13,9 +13,9 @@ import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.testing.core.*
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -95,16 +95,38 @@ class InMemoryIdentityServiceTests {
         identities.forEach { assertEquals(it.party, service.wellKnownPartyFromX500Name(it.name)) }
     }
 
-    @Ignore
     @Test(timeout = 300_000)
     fun `get identity by external id with registration straight away`() {
-        TODO("publicKeysForExternalId is not implemented")
+        val service = createService()
+        val newPair = Crypto.generateKeyPair()
+        val extId = UUID.randomUUID()
+        assertNull(service.externalIdForPublicKey(newPair.public))
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+
+        service.registerKey(newPair.public, ALICE, extId)
+        assertEquals(extId, service.externalIdForPublicKey(newPair.public))
+
+        service.registerKey(newPair.public, ALICE, null)
+        assertEquals(extId, service.externalIdForPublicKey(newPair.public))
     }
 
-    @Ignore
     @Test(timeout = 300_000)
     fun `get identity by external id with registration on second call`() {
-        TODO("publicKeysForExternalId is not implemented")
+        val service = createService()
+        val newPair = Crypto.generateKeyPair()
+        val extId = UUID.randomUUID()
+        assertNull(service.externalIdForPublicKey(newPair.public))
+        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        assertNull(service.externalIdForPublicKey(newPair.public))
+
+        service.registerKey(newPair.public, ALICE, null)
+        assertNull(service.externalIdForPublicKey(newPair.public))
+
+        service.registerKey(newPair.public, ALICE, extId)
+        assertEquals(extId, service.externalIdForPublicKey(newPair.public))
+
+        service.registerKey(newPair.public, ALICE, null)
+        assertEquals(extId, service.externalIdForPublicKey(newPair.public))
     }
 
     /**
