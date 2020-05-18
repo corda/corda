@@ -5,6 +5,7 @@ import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.toSet
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -661,7 +662,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `fetch checkpoints to run and paused checkpoints`() {
+    fun `Checkpoints can be fetched from the database by status`() {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
@@ -686,8 +687,13 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            assertEquals(2, checkpointStorage.getCheckpointsToRun().count())
-            assertEquals(1, checkpointStorage.getPausedCheckpoints().count())
+            val runnable = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED)
+            val paused = setOf(Checkpoint.FlowStatus.PAUSED)
+            val dumpable = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.PAUSED, Checkpoint.FlowStatus.HOSPITALIZED)
+
+            assertEquals(runnable, checkpointStorage.getCheckpointsToRun().map { it.second.status }.toSet())
+            assertEquals(paused, checkpointStorage.getPausedCheckpoints().map { it.second.status }.toSet())
+            assertEquals(dumpable, checkpointStorage.getDumpableCheckpoints().map { it.second.status }.toSet())
         }
     }
 

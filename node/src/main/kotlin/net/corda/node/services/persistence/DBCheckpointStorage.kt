@@ -61,6 +61,8 @@ class DBCheckpointStorage(
 
         private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.PAUSED, FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
 
+        private val DUMPABLE_CHECKPOINTS = listOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED, FlowStatus.PAUSED)
+
         /**
          * This needs to run before Hibernate is initialised.
          *
@@ -326,6 +328,18 @@ class DBCheckpointStorage(
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
             .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
+        return session.createQuery(criteriaQuery).stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
+    }
+
+    override fun getDumpableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
+        criteriaQuery.select(root)
+                .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(DUMPABLE_CHECKPOINTS)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
