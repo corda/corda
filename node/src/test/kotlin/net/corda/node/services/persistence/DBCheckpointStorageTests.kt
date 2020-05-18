@@ -687,13 +687,13 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            val runnable = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED)
-            val paused = setOf(Checkpoint.FlowStatus.PAUSED)
-            val dumpable = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.PAUSED, Checkpoint.FlowStatus.HOSPITALIZED)
+            val toRunStatus = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED)
+            val pausedStatus = setOf(Checkpoint.FlowStatus.PAUSED)
+            val dumpableStatus = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.PAUSED, Checkpoint.FlowStatus.HOSPITALIZED)
 
-            assertEquals(runnable, checkpointStorage.getCheckpointsToRun().map { it.second.status }.toSet())
-            assertEquals(paused, checkpointStorage.getPausedCheckpoints().map { it.second.status }.toSet())
-            assertEquals(dumpable, checkpointStorage.getDumpableCheckpoints().map { it.second.status }.toSet())
+            assertEquals(toRunStatus, checkpointStorage.getCheckpointsToRun().map { it.second.status }.toSet())
+            assertEquals(pausedStatus, checkpointStorage.getPausedCheckpoints().map { it.second.status }.toSet())
+            assertEquals(dumpableStatus, checkpointStorage.getDumpableCheckpoints().map { it.second.status }.toSet())
         }
     }
 
