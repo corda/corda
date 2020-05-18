@@ -49,7 +49,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `a killed flow will end when it reaches the next suspension point`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurderedWhenItTriesToSuspend)
@@ -67,7 +67,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties when it reaches the next suspension point`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
@@ -98,7 +98,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `killing a flow that is sleeping ends the flow immediately`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurdered)
@@ -119,7 +119,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `killing a flow suspended in send + receive + sendAndReceive ends the flow immediately`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = false, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val bobParty = bob.nodeInfo.singleIdentity()
@@ -154,7 +154,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `killing a flow suspended in waitForLedgerCommit ends the flow immediately`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurderedTryingToWaitForATransaction)

@@ -17,7 +17,7 @@ import java.io.File
 class ErrorCodeLoggingTests {
     @Test(timeout=300_000)
 	fun `log entries with a throwable and ERROR or WARN get an error code appended`() {
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
             val node = startNode(startInSameProcess = false).getOrThrow()
             node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
@@ -38,7 +38,7 @@ class ErrorCodeLoggingTests {
     // before the initLogging() call is made
     @Test(timeout=300_000)
 	fun `When logging is set to error level, there are no other levels logged after node startup`() {
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
             val node = startNode(startInSameProcess = false, logLevelOverride = "ERROR").getOrThrow()
             val logFile = node.logFile()
             val lengthAfterStart = logFile.length()

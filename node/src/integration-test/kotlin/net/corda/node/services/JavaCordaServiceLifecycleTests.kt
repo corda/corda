@@ -20,7 +20,7 @@ class JavaCordaServiceLifecycleTests {
     @Test(timeout=300_000)
 	fun `corda service receives events`() {
         eventsCaptured.clear()
-        val result = driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        val result = driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
             val node = startNode(providedName = ALICE_NAME).getOrThrow()
             node.rpc.startFlow(::JavaComputeTextLengthThroughCordaService, TEST_PHRASE).returnValue.getOrThrow()
         }

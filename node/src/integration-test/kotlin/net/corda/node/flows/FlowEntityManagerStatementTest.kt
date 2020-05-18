@@ -22,7 +22,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
     fun `data can be saved by a sql statement using entity manager`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
             alice.rpc.startFlow(::EntityManagerSqlFlow).returnValue.getOrThrow(20.seconds)
@@ -34,7 +34,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement should save no data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
                 flow = ::EntityManagerErrorFromSqlFlow,
@@ -53,7 +53,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement that is caught inside an entity manager block saves none of the data inside of it`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             // 1 entity saved from the first entity manager block that does not get rolled back
             // even if there is no intermediate commit to the database
@@ -74,7 +74,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement that is caught outside an entity manager block saves none of the data inside of it`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             // 1 entity saved from the first entity manager block that does not get rolled back
             // even if there is no intermediate commit to the database
@@ -95,7 +95,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should not save the extra data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -115,7 +115,7 @@ class FlowEntityManagerStatementTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation caused by a sql statement that is caught inside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(

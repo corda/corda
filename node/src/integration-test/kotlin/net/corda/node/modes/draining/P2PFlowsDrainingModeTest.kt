@@ -52,7 +52,7 @@ class P2PFlowsDrainingModeTest {
 
     @Test(timeout=300_000)
 	fun `flows draining mode suspends consumption of initial session messages`() {
-        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
             val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
             val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
@@ -83,7 +83,7 @@ class P2PFlowsDrainingModeTest {
     @Test(timeout=300_000)
 	fun `terminate node waiting for pending flows`() {
 
-        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
@@ -107,7 +107,7 @@ class P2PFlowsDrainingModeTest {
     @Test(timeout=300_000)
 	fun `terminate resets persistent draining mode property when waiting for pending flows`() {
 
-        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             var successful = false
@@ -131,7 +131,7 @@ class P2PFlowsDrainingModeTest {
     @Test(timeout=300_000)
 	fun `disabling draining mode cancels draining shutdown`() {
 
-        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
