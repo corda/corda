@@ -65,7 +65,7 @@ import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.apache.commons.lang3.SystemUtils
-import org.h2.jdbc.JdbcSQLNonTransientConnectionException
+import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
@@ -418,7 +418,7 @@ open class Node(configuration: NodeConfiguration,
                 runOnStop += server::stop
                 val url = try {
                     server.start().url
-                } catch (e: JdbcSQLNonTransientConnectionException) {
+                } catch (e: JdbcSQLException) {
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {
