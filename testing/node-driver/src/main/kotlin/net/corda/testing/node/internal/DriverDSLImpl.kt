@@ -604,7 +604,7 @@ class DriverDSLImpl(
         val clusterAddress = portAllocation.nextHostAndPort()
 
         val firstParams = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(clusterAddress))
-        val firstConfig = createSchema(createConfig(nodeNames[0], firstParams, clusterAddress), allowHibernateToManageAppSchema)
+        val firstConfig = createSchema(createConfig(nodeNames[0], firstParams), allowHibernateToManageAppSchema)
 
         // Start the first node that will bootstrap the cluster
         val firstNodeFuture = startRegisteredNode(
@@ -617,7 +617,7 @@ class DriverDSLImpl(
         val restNodeFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val params = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(nodeAddress, clusterAddress))
-            val config = createSchema(createConfig(it, params, nodeAddress), allowHibernateToManageAppSchema)
+            val config = createSchema(createConfig(it, params), allowHibernateToManageAppSchema)
             startRegisteredNode(
                     config.getOrThrow(),
                     localNetworkMap,
