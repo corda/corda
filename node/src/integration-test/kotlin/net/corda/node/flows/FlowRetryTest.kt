@@ -14,7 +14,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
-import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
@@ -219,7 +218,7 @@ class FlowRetryTest {
                 val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
-                assertEquals(true, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                assertEquals(true, it.proxy.retryFlow(flow.id))
                 flow.returnValue.getOrThrow()
             }
         }
@@ -235,9 +234,9 @@ class FlowRetryTest {
                 val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
-                assertEquals(true, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                assertEquals(true, it.proxy.retryFlow(flow.id))
                 for (i in 0..5) {
-                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                    assertEquals(false, it.proxy.retryFlow(flow.id))
                 }
                 flow.returnValue.getOrThrow()
             }
@@ -255,7 +254,7 @@ class FlowRetryTest {
                 val flow = it.proxy.startFlow(::LongPausingFlow)
                 lock.acquire()
                 for (i in 0..5) {
-                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                    assertEquals(false, it.proxy.retryFlow(flow.id))
                 }
                 it.proxy.killFlow(flow.id)
             }
@@ -271,7 +270,7 @@ class FlowRetryTest {
                 val flow = it.proxy.startFlow(::FastCompletionFlow)
                 flow.returnValue.getOrThrow()
                 for (i in 0..5) {
-                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                    assertEquals(false, it.proxy.retryFlow(flow.id))
                 }
             }
         }
@@ -288,7 +287,7 @@ class FlowRetryTest {
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.FAILED, status)
                 for (i in 0..5) {
-                    assertEquals(false, (it.proxy as InternalCordaRPCOps).retryFlow(flow.id))
+                    assertEquals(false, it.proxy.retryFlow(flow.id))
                 }
             }
         }

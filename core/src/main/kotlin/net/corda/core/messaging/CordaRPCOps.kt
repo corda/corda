@@ -272,6 +272,13 @@ interface CordaRPCOps : RPCOps {
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
     /**
+     * Retry a flow or start a paused flow.
+     *
+     * @return whether the flow was successfully started or retried.
+     */
+    fun retryFlow(id: StateMachineRunId): Boolean
+
+    /**
      * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
      *
      * @return whether the flow existed and was killed.

@@ -47,7 +47,7 @@ class FlowPausingTest {
                     providedName = ALICE_NAME,
                     rpcUsers = listOf(rpcUser),
                     customOverrides = mapOf("smmStartMode" to "Safe"))).getOrThrow()
-            assertEquals(true, (restartedAlice.rpc as InternalCordaRPCOps).retryFlow(hospitalizedFlow.id))
+            assertEquals(true, restartedAlice.rpc.retryFlow(hospitalizedFlow.id))
             val finalStatusFlow = restartedAlice.rpc.startFlow(::GetStatusFlow, hospitalizedFlow.id)
             //The final checkpoint gets removed when the flow completes so lets check this is gone.
             assertEquals(null, finalStatusFlow.returnValue.getOrThrow())
@@ -80,7 +80,7 @@ class FlowPausingTest {
             Thread.sleep(TOTAL_MESSAGES * SLEEP_BETWEEN_MESSAGES_MS)
             //ALICE should not have finished yet as the HeartbeatResponderFlow should not have sent the final message back (as it is paused).
             assertEquals(false, aliceFlow.returnValue.isDone)
-            assertEquals(true, (restartedBob.rpc as InternalCordaRPCOps).retryFlow(initiatedFlowId!!))
+            assertEquals(true, restartedBob.rpc.retryFlow(initiatedFlowId!!))
 
             assertEquals(true, aliceFlow.returnValue.getOrThrow())
             alice.stop()
