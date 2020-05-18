@@ -17,7 +17,7 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `starting a flow inside of a flow that starts a future will succeed`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowThatStartsAnotherFlowInAnExternalOperation, bob.nodeInfo.singleIdentity())
@@ -28,7 +28,7 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `multiple flows can be started and their futures joined from inside a flow`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::ForkJoinFlows, bob.nodeInfo.singleIdentity())

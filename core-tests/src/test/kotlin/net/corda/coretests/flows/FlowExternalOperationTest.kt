@@ -28,7 +28,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithExternalOperation, bob.nodeInfo.singleIdentity())
@@ -39,7 +39,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation that checks deduplicationId is not rerun when flow is retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
@@ -54,7 +54,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation propagates exception to calling flow`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
@@ -70,7 +70,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation exception can be caught in flow`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithExternalOperationThatThrowsExceptionAndCaughtInFlow, bob.nodeInfo.singleIdentity())
@@ -81,7 +81,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation with exception that hospital keeps for observation does not fail`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -97,7 +97,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation with exception that hospital discharges is retried and runs the external operation again`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -113,7 +113,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that passes serviceHub into process can be retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -128,7 +128,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {
@@ -146,7 +146,8 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
         driver(
             DriverParameters(
                 cordappsForAllNodes = cordappsForPackages(DummyState::class.packageName),
-                startNodesInProcess = true
+                startNodesInProcess = true,
+                allowHibernateToManageAppSchema = true
             )
         ) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
@@ -158,7 +159,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `data can be persisted to node database via entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaEntityManager)
                 .returnValue.getOrThrow(1.minutes)
@@ -168,7 +169,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `data can be persisted to node database via jdbc session`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaJdbcSession)
                 .returnValue.getOrThrow(1.minutes)
@@ -178,7 +179,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `data can be persisted to node database via servicehub database transaction`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsViaDatabaseTransaction)
                 .returnValue.getOrThrow(1.minutes)
@@ -188,7 +189,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `data can be persisted to node database in external operation and read from another process once finished`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val success = alice.rpc.startFlow(::FlowWithExternalOperationThatPersistsToDatabaseAndReadsFromExternalOperation)
                 .returnValue.getOrThrow(1.minutes)
@@ -198,7 +199,7 @@ class FlowExternalOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external operation can be retried when an error occurs inside of database transaction`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val success = alice.rpc.startFlow(
