@@ -148,7 +148,7 @@ class DriverDSLImpl(
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
         val environmentVariables : Map<String, String>,
-        val allowHibernateToManageAppSchema: Boolean = true
+        val allowHibernateToManageAppSchema: Boolean = false
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -1272,7 +1272,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                 cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
                 djvmBootstrapSource = defaultParameters.djvmBootstrapSource,
                 djvmCordaSource = defaultParameters.djvmCordaSource,
-                environmentVariables = defaultParameters.environmentVariables
+                environmentVariables = defaultParameters.environmentVariables,
+                allowHibernateToManageAppSchema = defaultParameters.allowHibernateToManageAppSchema
             )
         )
         val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1370,29 +1371,31 @@ fun <A> internalDriver(
         djvmBootstrapSource: Path? = null,
         djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
+        allowHibernateToManageAppSchema: Boolean = false,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
             driverDsl = DriverDSLImpl(
-                portAllocation = portAllocation,
-                debugPortAllocation = debugPortAllocation,
-                systemProperties = systemProperties,
-                driverDirectory = driverDirectory.toAbsolutePath(),
-                useTestClock = useTestClock,
-                isDebug = isDebug,
-                startNodesInProcess = startNodesInProcess,
-                waitForAllNodesToFinish = waitForAllNodesToFinish,
-                extraCordappPackagesToScan = extraCordappPackagesToScan,
-                notarySpecs = notarySpecs,
-                jmxPolicy = jmxPolicy,
-                compatibilityZone = compatibilityZone,
-                networkParameters = networkParameters,
-                notaryCustomOverrides = notaryCustomOverrides,
-                inMemoryDB = inMemoryDB,
-                cordappsForAllNodes = cordappsForAllNodes,
-                djvmBootstrapSource = djvmBootstrapSource,
-                djvmCordaSource = djvmCordaSource,
-                environmentVariables = environmentVariables
+                    portAllocation = portAllocation,
+                    debugPortAllocation = debugPortAllocation,
+                    systemProperties = systemProperties,
+                    driverDirectory = driverDirectory.toAbsolutePath(),
+                    useTestClock = useTestClock,
+                    isDebug = isDebug,
+                    startNodesInProcess = startNodesInProcess,
+                    waitForAllNodesToFinish = waitForAllNodesToFinish,
+                    extraCordappPackagesToScan = extraCordappPackagesToScan,
+                    notarySpecs = notarySpecs,
+                    jmxPolicy = jmxPolicy,
+                    compatibilityZone = compatibilityZone,
+                    networkParameters = networkParameters,
+                    notaryCustomOverrides = notaryCustomOverrides,
+                    inMemoryDB = inMemoryDB,
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    djvmBootstrapSource = djvmBootstrapSource,
+                    djvmCordaSource = djvmCordaSource,
+                    environmentVariables = environmentVariables,
+                    allowHibernateToManageAppSchema = allowHibernateToManageAppSchema
             ),
             coerce = { it },
             dsl = dsl
