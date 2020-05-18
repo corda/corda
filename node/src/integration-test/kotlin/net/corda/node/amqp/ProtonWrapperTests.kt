@@ -40,6 +40,8 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
@@ -47,13 +49,18 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ProtonWrapperTests {
+@RunWith(Parameterized::class)
+class ProtonWrapperTests(@Suppress("unused") private val iterNo: Int) {
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    companion object {
+    private companion object {
         private val log = contextLogger()
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "iterationNo = {0}")
+        fun iterations() = (1..50).toList().map { arrayOf(it) }.toTypedArray()
     }
 
     private val portAllocation = incrementalPortAllocation()
@@ -333,64 +340,61 @@ class ProtonWrapperTests {
         server.stop()
     }
 
-    @Test(timeout=3_000_000)
+    @Test(timeout=300_000)
 	fun `shared AMQPClient threadpool tests`() {
-        repeat(100) { iterNo ->
-            log.info("Iteration #$iterNo")
-            val amqpServer = createServer(serverPort)
-            amqpServer.use {
-                val connectionEvents = amqpServer.onConnection.toBlocking().iterator
-                amqpServer.start()
-                val sharedThreads = NioEventLoopGroup()
-                val amqpClient1 = createSharedThreadsClient(sharedThreads, 0)
-                val amqpClient2 = createSharedThreadsClient(sharedThreads, 1)
-                amqpClient1.start()
-                val connection1 = connectionEvents.next()
-                assertEquals(true, connection1.connected)
-                val connection1ID = CordaX500Name.build(connection1.remoteCert!!.subjectX500Principal)
-                assertEquals("client 0", connection1ID.organisationUnit)
-                val source1 = connection1.remoteAddress
-                val client2Connected = amqpClient2.onConnection.toFuture()
-                amqpClient2.start()
-                val connection2 = connectionEvents.next()
-                assertEquals(true, connection2.connected)
-                val connection2ID = CordaX500Name.build(connection2.remoteCert!!.subjectX500Principal)
-                assertEquals("client 1", connection2ID.organisationUnit)
-                val source2 = connection2.remoteAddress
+        val amqpServer = createServer(serverPort)
+        amqpServer.use {
+            val connectionEvents = amqpServer.onConnection.toBlocking().iterator
+            amqpServer.start()
+            val sharedThreads = NioEventLoopGroup()
+            val amqpClient1 = createSharedThreadsClient(sharedThreads, 0)
+            val amqpClient2 = createSharedThreadsClient(sharedThreads, 1)
+            amqpClient1.start()
+            val connection1 = connectionEvents.next()
+            assertEquals(true, connection1.connected)
+            val connection1ID = CordaX500Name.build(connection1.remoteCert!!.subjectX500Principal)
+            assertEquals("client 0", connection1ID.organisationUnit)
+            val source1 = connection1.remoteAddress
+            val client2Connected = amqpClient2.onConnection.toFuture()
+            amqpClient2.start()
+            val connection2 = connectionEvents.next()
+            assertEquals(true, connection2.connected)
+            val connection2ID = CordaX500Name.build(connection2.remoteCert!!.subjectX500Principal)
+            assertEquals("client 1", connection2ID.organisationUnit)
+            val source2 = connection2.remoteAddress
 
-                log.info("Stopping one shouldn't disconnect the other")
-                amqpClient1.stop()
-                val connection3 = connectionEvents.next()
-                assertEquals(false, connection3.connected)
-                assertEquals(source1, connection3.remoteAddress)
-                assertEquals(false, amqpClient1.connected)
-                client2Connected.get(60, TimeUnit.SECONDS)
-                assertEquals(true, amqpClient2.connected)
+            log.info("Stopping one shouldn't disconnect the other")
+            amqpClient1.stop()
+            val connection3 = connectionEvents.next()
+            assertEquals(false, connection3.connected)
+            assertEquals(source1, connection3.remoteAddress)
+            assertEquals(false, amqpClient1.connected)
+            client2Connected.get(60, TimeUnit.SECONDS)
+            assertEquals(true, amqpClient2.connected)
 
-                log.info("Now shutdown both")
-                amqpClient2.stop()
-                val connection4 = connectionEvents.next()
-                assertEquals(false, connection4.connected)
-                assertEquals(source2, connection4.remoteAddress)
-                assertEquals(false, amqpClient1.connected)
-                assertEquals(false, amqpClient2.connected)
+            log.info("Now shutdown both")
+            amqpClient2.stop()
+            val connection4 = connectionEvents.next()
+            assertEquals(false, connection4.connected)
+            assertEquals(source2, connection4.remoteAddress)
+            assertEquals(false, amqpClient1.connected)
+            assertEquals(false, amqpClient2.connected)
 
-                log.info("Now restarting one should work")
-                val client1Connected = amqpClient1.onConnection.toFuture()
-                amqpClient1.start()
-                val connection5 = connectionEvents.next()
-                assertEquals(true, connection5.connected)
-                val connection5ID = CordaX500Name.build(connection5.remoteCert!!.subjectX500Principal)
-                assertEquals("client 0", connection5ID.organisationUnit)
-                client1Connected.get(60, TimeUnit.SECONDS)
-                assertEquals(true, amqpClient1.connected)
-                assertEquals(false, amqpClient2.connected)
+            log.info("Now restarting one should work")
+            val client1Connected = amqpClient1.onConnection.toFuture()
+            amqpClient1.start()
+            val connection5 = connectionEvents.next()
+            assertEquals(true, connection5.connected)
+            val connection5ID = CordaX500Name.build(connection5.remoteCert!!.subjectX500Principal)
+            assertEquals("client 0", connection5ID.organisationUnit)
+            client1Connected.get(60, TimeUnit.SECONDS)
+            assertEquals(true, amqpClient1.connected)
+            assertEquals(false, amqpClient2.connected)
 
-                log.info("Cleanup")
-                amqpClient1.stop()
-                sharedThreads.shutdownGracefully()
-                sharedThreads.terminationFuture().sync()
-            }
+            log.info("Cleanup")
+            amqpClient1.stop()
+            sharedThreads.shutdownGracefully()
+            sharedThreads.terminationFuture().sync()
         }
     }
 
