@@ -10,7 +10,7 @@ import org.junit.Test
 import kotlin.test.assertFailsWith
 
 class DbSchemaInitialisationTest {
-    @Test
+    @Test(timeout = 300_000)
     fun `database initialisation not allowed in config`() {
         driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(), cordappsForAllNodes = emptyList())) {
             assertFailsWith(ConfigurationException::class) {
