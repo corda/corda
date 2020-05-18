@@ -90,6 +90,11 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
+        private val DUMPABLE_CHECKPOINTS = setOf(
+            Checkpoint.FlowStatus.RUNNABLE,
+            Checkpoint.FlowStatus.HOSPITALIZED,
+            Checkpoint.FlowStatus.PAUSED
+        )
     }
 
     override val priority: Int = SERVICE_PRIORITY_NORMAL
@@ -141,7 +146,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
-                    checkpointStorage.getDumpableCheckpoints().use { stream ->
+                    checkpointStorage.getCheckpoints(DUMPABLE_CHECKPOINTS).use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
 

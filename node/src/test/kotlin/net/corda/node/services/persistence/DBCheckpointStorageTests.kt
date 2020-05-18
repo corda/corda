@@ -48,7 +48,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.checkpoints(): List<Checkpoint.Serialized> {
-    return getAllCheckpoints().use {
+    return getCheckpoints().use {
         it.map { it.second }.toList()
     }
 }
@@ -687,13 +687,15 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            val toRunStatus = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED)
-            val pausedStatus = setOf(Checkpoint.FlowStatus.PAUSED)
-            val dumpableStatus = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.PAUSED, Checkpoint.FlowStatus.HOSPITALIZED)
+            val toRunStatuses = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.HOSPITALIZED)
+            val pausedStatuses = setOf(Checkpoint.FlowStatus.PAUSED)
+            val customStatuses = setOf(Checkpoint.FlowStatus.RUNNABLE, Checkpoint.FlowStatus.KILLED)
+            val customStatuses1 = setOf(Checkpoint.FlowStatus.PAUSED, Checkpoint.FlowStatus.HOSPITALIZED, Checkpoint.FlowStatus.FAILED)
 
-            assertEquals(toRunStatus, checkpointStorage.getCheckpointsToRun().map { it.second.status }.toSet())
-            assertEquals(pausedStatus, checkpointStorage.getPausedCheckpoints().map { it.second.status }.toSet())
-            assertEquals(dumpableStatus, checkpointStorage.getDumpableCheckpoints().map { it.second.status }.toSet())
+            assertEquals(toRunStatuses, checkpointStorage.getCheckpointsToRun().map { it.second.status }.toSet())
+            assertEquals(pausedStatuses, checkpointStorage.getPausedCheckpoints().map { it.second.status }.toSet())
+            assertEquals(customStatuses, checkpointStorage.getCheckpoints(customStatuses).map { it.second.status }.toSet())
+            assertEquals(customStatuses1, checkpointStorage.getCheckpoints(customStatuses1).map { it.second.status }.toSet())
         }
     }
 

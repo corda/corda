@@ -59,9 +59,7 @@ class DBCheckpointStorage(
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
 
-        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.PAUSED, FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
-
-        private val DUMPABLE_CHECKPOINTS = listOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED, FlowStatus.PAUSED)
+        private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -285,9 +283,9 @@ class DBCheckpointStorage(
 
     override fun markAllPaused() {
         val session = currentDBSession()
-        val notRunnableOrdinals = NOT_RUNNABLE_CHECKPOINTS.map{ "${it.ordinal}"}.joinToString { it }
+        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map{ "${it.ordinal}"}.joinToString { it }
         val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
-                "where status not in ($notRunnableOrdinals)"
+                "where status in ($runnableOrdinals)"
         val query = session.createNativeQuery(sqlQuery)
         query.executeUpdate()
     }
@@ -311,38 +309,20 @@ class DBCheckpointStorage(
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
 
-    override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+    override fun getCheckpoints(statuses: Collection<FlowStatus>): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
+                .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
 
     override fun getCheckpointsToRun(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-            .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
-    }
-
-    override fun getDumpableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-                .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(DUMPABLE_CHECKPOINTS)))
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
+       return getCheckpoints(RUNNABLE_CHECKPOINTS)
     }
 
     @VisibleForTesting
@@ -358,22 +338,6 @@ class DBCheckpointStorage(
                 checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
         return query.resultList.stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
-    }
-
-    override fun getHospitalizedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        return getAllCheckpointsWithStatus(FlowStatus.HOSPITALIZED)
-    }
-
-    private fun getAllCheckpointsWithStatus(flowStatus: FlowStatus): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-                .where(criteriaBuilder.equal(root.get<FlowStatus>(DBFlowCheckpoint::status.name), flowStatus))
-        return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
