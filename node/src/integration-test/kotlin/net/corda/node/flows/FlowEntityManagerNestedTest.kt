@@ -21,7 +21,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
     fun `entity manager inside an entity manager saves all data`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
@@ -34,7 +34,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager inside an entity manager that throws an error does not save any data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
@@ -54,7 +54,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager that saves an entity with an entity manager inside it that throws an error after saving the entity does not save any data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
@@ -74,7 +74,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it around the entity manager after saving the entity saves the data from the external entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -94,7 +94,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it inside the entity manager after saving the entity saves the data from the external entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -114,7 +114,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager that saves an entity with an entity manager inside it that throws an error and catching it around the entity manager before saving the entity saves the data from the external entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -134,7 +134,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager with an entity manager inside it saves an entity, outer throws and catches the error outside itself after saving the entity does not save the data from the internal entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -154,7 +154,7 @@ class FlowEntityManagerNestedTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `entity manager with an entity manager inside it saves an entity, outer throws and catches the error inside itself after saving the entity does not save the data from the internal entity manager`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
