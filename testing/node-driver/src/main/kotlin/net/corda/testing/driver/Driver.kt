@@ -426,6 +426,7 @@ data class DriverParameters(
     fun withDjvmBootstrapSource(djvmBootstrapSource: Path?): DriverParameters = copy(djvmBootstrapSource = djvmBootstrapSource)
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
     fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
+    fun withAllowHibernateToManageAppSchema(value: Boolean): DriverParameters = copy(allowHibernateToManageAppSchema = value)
 
     fun copy(
             isDebug: Boolean,

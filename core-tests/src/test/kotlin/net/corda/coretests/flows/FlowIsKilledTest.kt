@@ -43,7 +43,7 @@ class FlowIsKilledTest {
 
     @Test(timeout = 300_000)
     fun `manually handle the isKilled check`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatWantsToDie)
@@ -62,7 +62,7 @@ class FlowIsKilledTest {
 
     @Test(timeout = 300_000)
     fun `manually handled killed flows propagate error to counter parties`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
@@ -92,7 +92,7 @@ class FlowIsKilledTest {
 
     @Test(timeout = 300_000)
     fun `a manually killed initiated flow will propagate the killed error to the initiator and its counter parties`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val handle = alice.rpc.startFlow(
@@ -122,7 +122,7 @@ class FlowIsKilledTest {
 
     @Test(timeout = 300_000)
     fun `manually handle killed flows using checkForIsNotKilled`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatChecksIfItWantsToDie)
@@ -141,7 +141,7 @@ class FlowIsKilledTest {
 
     @Test(timeout = 300_000)
     fun `manually handle killed flows using checkForIsNotKilled with lazy message`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatChecksIfItWantsToDieAndLeavesANote)

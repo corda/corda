@@ -34,7 +34,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(::SleepyFlow).returnValue.getOrThrow(1.minutes)
             val difference = Duration.between(start, finish)
@@ -45,7 +45,7 @@ class FlowSleepTest {
 
     @Test(timeout = 300_000)
     fun `flow can sleep multiple times`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val (start, middle, finish) = alice.rpc.startFlow(::AnotherSleepyFlow).returnValue.getOrThrow(1.minutes)
             val differenceBetweenStartAndMiddle = Duration.between(start, middle)
@@ -60,7 +60,7 @@ class FlowSleepTest {
     @Test(timeout = 300_000)
     fun `flow can sleep and perform other suspending functions`() {
         // ensures that events received while the flow is sleeping are not processed
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val (start, finish) = alice.rpc.startFlow(
