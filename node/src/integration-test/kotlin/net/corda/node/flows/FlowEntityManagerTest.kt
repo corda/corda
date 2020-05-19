@@ -371,7 +371,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerSaveAndThrowNonDatabaseErrorFlow)
@@ -388,7 +388,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerSaveFlushAndThrowNonDatabaseErrorFlow)
@@ -404,7 +404,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(

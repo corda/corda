@@ -175,7 +175,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `killing a flow suspended in await ends the flow immediately`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(::AFlowThatGetsMurderedTryingToAwaitAFuture)
@@ -196,7 +196,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties if it was suspended`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
@@ -229,7 +229,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `a killed initiated flow will propagate the killed error to the initiator and its counter parties`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
@@ -262,7 +262,7 @@ class KillFlowTest {
 
     @Test(timeout = 300_000)
     fun `killing a flow releases soft lock`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
             val alice = startNode(
                 providedName = ALICE_NAME,
                 defaultParameters = NodeParameters(additionalCordapps = FINANCE_CORDAPPS)
