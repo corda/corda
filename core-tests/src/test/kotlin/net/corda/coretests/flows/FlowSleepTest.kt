@@ -17,20 +17,12 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.core.config.Configurator
-import org.junit.Before
 import org.junit.Test
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertTrue
 
 class FlowSleepTest {
-
-    @Before
-    fun setup() {
-        Configurator.setLevel("net.corda.node.services.statemachine", Level.DEBUG)
-    }
 
     @Test(timeout = 300_000)
     fun `flow can sleep`() {
