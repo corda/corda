@@ -250,6 +250,26 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test(timeout=300_000)
+    fun `returns zero states when exact participants list is empty`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP))
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP))
+
+            val criteria = VaultQueryCriteria(exactParticipants = emptyList())
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(0)
+
+            val criteriaWithOneExactParticipant = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP))
+            val resultsWithOneExactParticipant = vaultService.queryBy<ContractState>(criteriaWithOneExactParticipant)
+            assertThat(resultsWithOneExactParticipant.states).hasSize(1)
+
+            val criteriaWithMoreExactParticipants = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP, BIG_CORP))
+            val resultsWithMoreExactParticipants = vaultService.queryBy<ContractState>(criteriaWithMoreExactParticipants)
+            assertThat(resultsWithMoreExactParticipants.states).hasSize(1)
+
+
+            @Test(timeout=300_000)
 	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
