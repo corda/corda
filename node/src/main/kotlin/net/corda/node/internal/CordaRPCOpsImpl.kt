@@ -162,7 +162,7 @@ internal class CordaRPCOpsImpl(
         }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
-        return smm.allStateMachines.map { stateMachineInfoFromFlowLogic(it) }
+        return smm.allStateMachines.map { it.toStateMachineInfo() }
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean = if (smm.killFlow(id)) true else smm.flowHospital.dropSessionInit(id)
@@ -171,7 +171,7 @@ internal class CordaRPCOpsImpl(
 
         val (allStateMachines, changes) = smm.track()
         return DataFeed(
-                allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
+                allStateMachines.map { it.toStateMachineInfo() },
                 changes.map { stateMachineUpdateFromStateMachineChange(it) }
         )
     }
@@ -421,19 +421,19 @@ internal class CordaRPCOpsImpl(
         services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
     }
 
-    private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
+    private fun FlowLogic<*>.toStateMachineInfo(): StateMachineInfo{
         return StateMachineInfo(
-                flowLogic.runId,
-                flowLogic.javaClass.name,
-                flowLogic.stateMachine.context.toFlowInitiator(),
-                flowLogic.track(),
-                flowLogic.stateMachine.context
+                this.runId,
+                this.javaClass.name,
+                this.stateMachine.context.toFlowInitiator(),
+                this.track(),
+                this.stateMachine.context
         )
     }
 
     private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
         return when (change) {
-            is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
+            is StateMachineManager.Change.Add -> StateMachineUpdate.Added(change.logic.toStateMachineInfo())
             is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
         }
     }
