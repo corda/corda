@@ -249,7 +249,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test(timeout=300_000)
+    @Test
     fun `returns zero states when exact participants list is empty`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
@@ -267,9 +267,10 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val criteriaWithMoreExactParticipants = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP, BIG_CORP))
             val resultsWithMoreExactParticipants = vaultService.queryBy<ContractState>(criteriaWithMoreExactParticipants)
             assertThat(resultsWithMoreExactParticipants.states).hasSize(1)
+        }
+    }
 
-
-            @Test(timeout=300_000)
+    @Test(timeout=300_000)
 	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
