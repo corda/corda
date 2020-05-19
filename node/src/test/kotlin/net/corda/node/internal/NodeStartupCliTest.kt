@@ -32,6 +32,7 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.verbose).isEqualTo(false)
         Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.INFO)
         Assertions.assertThat(startup.cmdLineOptions.noLocalShell).isEqualTo(false)
+        Assertions.assertThat(startup.cmdLineOptions.safeMode).isEqualTo(false)
         Assertions.assertThat(startup.cmdLineOptions.sshdServer).isEqualTo(false)
         Assertions.assertThat(startup.cmdLineOptions.justGenerateNodeInfo).isEqualTo(false)
         Assertions.assertThat(startup.cmdLineOptions.justGenerateRpcSslCerts).isEqualTo(false)

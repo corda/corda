@@ -682,14 +682,14 @@ class FlowFrameworkTests {
             if (firstExecution) {
                 throw HospitalizeFlowException()
             } else {
-                dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatusBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
 
                 futureFiber.complete(flowFiber)
             }
         }
         SuspendingFlow.hookAfterCheckpoint = {
-            dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single()
+            dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getCheckpointsToRun().toList().single()
                     .second.status
         }
 
@@ -701,7 +701,7 @@ class FlowFrameworkTests {
         val inMemoryHospitalizedCheckpointStatus = aliceNode.internals.smm.snapshot().first().transientState?.value?.checkpoint?.status
         assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, inMemoryHospitalizedCheckpointStatus)
         aliceNode.database.transaction {
-            val checkpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
         }
         // restart Node - flow will be loaded from checkpoint
@@ -729,7 +729,7 @@ class FlowFrameworkTests {
             if (firstExecution) {
                 throw HospitalizeFlowException()
             } else {
-                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatus = flowFiber.transientState!!.value.checkpoint.status
 
                 futureFiber.complete(flowFiber)
@@ -742,7 +742,7 @@ class FlowFrameworkTests {
         // flow is in hospital
         assertTrue(flowState is FlowState.Started)
         aliceNode.database.transaction {
-            val checkpoint = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
         }
         // restart Node - flow will be loaded from checkpoint
@@ -812,7 +812,7 @@ class FlowFrameworkTests {
                 throw SQLTransientConnectionException("connection is not available")
             } else {
                 val flowFiber = this as? FlowStateMachineImpl<*>
-                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
+                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
                 inMemoryCheckpointStatus = flowFiber!!.transientState!!.value.checkpoint.status
                 persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowFiber.id)!!.exceptionDetails
             }

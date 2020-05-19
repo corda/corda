@@ -59,7 +59,7 @@ class DBCheckpointStorage(
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
 
-        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
+        private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -281,6 +281,15 @@ class DBCheckpointStorage(
         currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
     }
 
+    override fun markAllPaused() {
+        val session = currentDBSession()
+        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map{ "${it.ordinal}"}.joinToString { it }
+        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
+                "where status in ($runnableOrdinals)"
+        val query = session.createNativeQuery(sqlQuery)
+        query.executeUpdate()
+    }
+
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         // This will be changed after performance tuning
         return currentDBSession().let { session ->
@@ -300,31 +309,37 @@ class DBCheckpointStorage(
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
 
-    override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
-    }
-
-    override fun getRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+    override fun getCheckpoints(statuses: Collection<FlowStatus>): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
-            .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
+                .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
 
+    override fun getCheckpointsToRun(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+       return getCheckpoints(RUNNABLE_CHECKPOINTS)
+    }
+
     @VisibleForTesting
     internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
+    }
+
+    override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
+                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible) from ${DBFlowCheckpoint::class.java.name}
+                checkpoint join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id where
+                checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
+        val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
+        return query.resultList.stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
     }
 
     private fun createDBCheckpoint(
@@ -540,6 +555,29 @@ class DBCheckpointStorage(
             flowIoRequest = ioRequestType,
             compatible = compatible
         )
+    }
+
+    private class DBPausedFields(
+            val id: String,
+            val checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+            val status: FlowStatus,
+            val progressStep: String?,
+            val ioRequestType: String?,
+            val compatible: Boolean
+    ) {
+        fun toSerializedCheckpoint(): Checkpoint.Serialized {
+            return Checkpoint.Serialized(
+                    serializedCheckpointState = SerializedBytes(checkpoint),
+                    serializedFlowState = null,
+                    // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
+                    errorState = ErrorState.Clean,
+                    result = null,
+                    status = status,
+                    progressStep = progressStep,
+                    flowIoRequest = ioRequestType,
+                    compatible = compatible
+            )
+        }
     }
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
