@@ -40,8 +40,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
@@ -49,18 +47,13 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@RunWith(Parameterized::class)
-class ProtonWrapperTests(@Suppress("unused") private val iterNo: Int) {
+class ProtonWrapperTests {
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private companion object {
+    companion object {
         private val log = contextLogger()
-
-        @JvmStatic
-        @Parameterized.Parameters(name = "iterationNo = {0}")
-        fun iterations() = (1..50).toList().map { arrayOf(it) }.toTypedArray()
     }
 
     private val portAllocation = incrementalPortAllocation()
