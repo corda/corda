@@ -1,6 +1,5 @@
 package net.corda.core.internal.messaging
 
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.AttachmentTrustInfo
 import net.corda.core.messaging.CordaRPCOps
 
