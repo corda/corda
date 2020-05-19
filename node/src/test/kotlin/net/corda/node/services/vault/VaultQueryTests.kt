@@ -249,7 +249,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `returns zero states when exact participants list is empty`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
