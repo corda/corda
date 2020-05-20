@@ -4,7 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.componentHash
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.hashAs
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.serialization.*
@@ -46,7 +46,7 @@ fun combinedHash(components: Iterable<SecureHash>): SecureHash {
     components.forEach {
         stream.write(it.bytes)
     }
-    return stream.toByteArray().sha256()
+    return stream.toByteArray().hashAs(components.first().algorithm)
 }
 
 /**

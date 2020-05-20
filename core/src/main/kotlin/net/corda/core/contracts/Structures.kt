@@ -153,6 +153,9 @@ interface SchedulableState : ContractState {
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
 
+/** Returns the hash of the serialised contents of this state (not cached!) */
+fun ContractState.hash(algorithm: String): SecureHash = SecureHash.hashAs(algorithm, serialize().bytes)
+
 /**
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
  * transaction defined the state and where in that transaction it was.

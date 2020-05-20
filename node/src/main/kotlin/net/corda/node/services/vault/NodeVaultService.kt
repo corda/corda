@@ -715,7 +715,7 @@ class NodeVaultService(
                             if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
                                 return@forEachIndexed
                             val vaultState = result[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId), vaultState.stateRef!!.index)
+                            val stateRef = StateRef(SecureHash.create(vaultState.stateRef!!.txId), vaultState.stateRef!!.index)
                             stateRefs.add(stateRef)
                             statesMeta.add(Vault.StateMetadata(stateRef,
                                     vaultState.contractStateClassName,

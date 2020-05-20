@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -14,6 +15,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
@@ -48,7 +50,10 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt, val hashAlgorithm: String) : TraversableTransaction(componentGroups) {
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SHA2_256)
+
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
@@ -280,8 +285,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val listOfLeaves = mutableListOf<SecureHash>()
         // Even if empty and not used, we should at least send oneHashes for each known
         // or received but unknown (thus, bigger than known ordinal) component groups.
+        val allOnesHash = SecureHash.allOnesHashFor(hashAlgorithm)
         for (i in 0..componentGroups.map { it.groupIndex }.max()!!) {
-            val root = groupsMerkleRoots[i] ?: SecureHash.allOnesHash
+            val root = groupsMerkleRoots[i] ?: allOnesHash
             listOfLeaves.add(root)
         }
         listOfLeaves
@@ -309,7 +315,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(internalIt, privacySalt, it.groupIndex, internalIndex) }) }.toMap()
+        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) }) }.toMap()
     }
 
     /**
