@@ -103,13 +103,8 @@ class BasicHSMKeyManagementService(
         database.transaction {
             keysMap[keyPair.public] = keyPair.private
             // Register the key to our identity.
-            val ourIdentity = identityService.wellKnownPartyFromX500Name(identityService.ourNames.first())
-                    ?: throw IllegalStateException("Could not lookup node Identity.")
             // No checks performed here as entries for the new key couldn't have existed before in the maps.
-            identityService.registerKeyToParty(keyPair.public, ourIdentity)
-            if (externalId != null) {
-                identityService.registerKeyToExternalId(keyPair.public, externalId)
-            }
+            identityService.registerKeyToParty(keyPair.public, externalId = externalId)
         }
         return keyPair.public
     }

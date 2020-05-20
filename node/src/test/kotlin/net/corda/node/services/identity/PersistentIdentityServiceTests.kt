@@ -64,7 +64,7 @@ class PersistentIdentityServiceTests {
                 identityService::wellKnownPartyFromAnonymous
         )
         identityService.database = database
-        identityService.ourNames = setOf(ALICE_NAME)
+        identityService.ourParty = alice.party
         identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
     }
 
@@ -105,30 +105,11 @@ class PersistentIdentityServiceTests {
     }
 
     @Test(timeout=300_000)
-	fun `stripping others when none registered strips`() {
-        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
-    }
-
-    @Test(timeout=300_000)
-	fun `stripping others when only us registered strips`() {
-        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
-    }
-
-    @Test(timeout=300_000)
-	fun `stripping others when us and others registered does not strip us`() {
-        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
-        val stripped = identityService.stripNotOurKeys(listOf(ALICE_PUBKEY, BOB_PUBKEY))
-        assertEquals(stripped.single(), ALICE_PUBKEY)
-    }
-
-    @Test(timeout=300_000)
 	fun `get identity by substring match`() {
-        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
+        identityService.verifyAndRegisterNodeInfoIdentity(ALICE_IDENTITY)
+        identityService.verifyAndRegisterNodeInfoIdentity(BOB_IDENTITY)
         val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
-        identityService.verifyAndRegisterIdentity(alicente)
+        identityService.verifyAndRegisterNodeInfoIdentity(alicente)
         assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
         assertEquals(setOf(ALICE), identityService.partiesFromName("Alice Corp", true))
         assertEquals(setOf(BOB), identityService.partiesFromName("Bob Plc", true))
@@ -140,7 +121,7 @@ class PersistentIdentityServiceTests {
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
         identities.forEach {
-            identityService.verifyAndRegisterIdentity(it)
+            identityService.verifyAndRegisterNodeInfoIdentity(it)
         }
         identities.forEach {
             assertEquals(it.party, identityService.wellKnownPartyFromX500Name(it.name))
@@ -221,8 +202,8 @@ class PersistentIdentityServiceTests {
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
         // Register well known identities
-        identityService.verifyAndRegisterIdentity(alice)
-        identityService.verifyAndRegisterIdentity(bob)
+        identityService.verifyAndRegisterNodeInfoIdentity(alice)
+        identityService.verifyAndRegisterNodeInfoIdentity(bob)
         // Register an anonymous identities
         identityService.verifyAndRegisterIdentity(anonymousAlice)
         identityService.verifyAndRegisterIdentity(anonymousBob)
@@ -267,7 +248,7 @@ class PersistentIdentityServiceTests {
     @Test(timeout=300_000)
 	fun `resolve key to party for key without certificate`() {
         // Register Alice's PartyAndCert as if it was done so via the network map cache.
-        identityService.verifyAndRegisterIdentity(alice.identity)
+        identityService.verifyAndRegisterNodeInfoIdentity(alice.identity)
         // Use a key which is not tied to a cert.
         val publicKey = Crypto.generateKeyPair().public
         // Register the PublicKey to Alice's CordaX500Name.
@@ -277,7 +258,7 @@ class PersistentIdentityServiceTests {
 
     @Test(timeout=300_000)
 	fun `register incorrect party to public key `(){
-        database.transaction { identityService.verifyAndRegisterIdentity(ALICE_IDENTITY) }
+        database.transaction { identityService.verifyAndRegisterNodeInfoIdentity(ALICE_IDENTITY) }
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         identityService.registerKey(anonymousAlice.owningKey, alice.party)
         // Should have no side effect but logs a warning that we tried to overwrite an existing mapping.

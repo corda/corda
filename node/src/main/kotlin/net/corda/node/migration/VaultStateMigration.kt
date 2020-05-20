@@ -27,6 +27,7 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.hibernate.Session
 import org.hibernate.query.Query
+import java.security.PublicKey
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ForkJoinTask
 import java.util.concurrent.RecursiveAction
@@ -68,6 +69,13 @@ class VaultStateMigration : CordaMigration() {
         return StateAndRef(state, stateRef)
     }
 
+    // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity
+    // activity. Concentrating activity on the identity cache works better than spreading checking across identity and key management,
+    // because we cache misses too.
+    private fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return keys.filter { (@Suppress("DEPRECATION") identityService.certificateFromKey(it))?.name == ourName }
+    }
+
     override fun execute(database: Database?) {
         logger.info("Migrating vault state data to V4 tables")
         if (database == null) {
@@ -91,7 +99,7 @@ class VaultStateMigration : CordaMigration() {
 
                     // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
                     // state parties.
-                    val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
+                    val myKeys = stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
                         participant.owningKey
                     }).toSet()
                     if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {

@@ -46,6 +46,11 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _servicesForResolution: MigrationServicesForResolution
 
+    val ourName: CordaX500Name
+        get() = _ourName
+
+    private lateinit var _ourName: CordaX500Name
+
     /**
      * Initialise a subset of node services so that data from these can be used to perform migrations.
      *
@@ -62,10 +67,9 @@ abstract class CordaMigration : CustomTaskChange {
         _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
         cordaDB.start(dataSource)
         identityService.database = cordaDB
-        val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
+        _ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
         cordaDB.transaction {
-            identityService.ourNames = setOf(ourName)
              val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))
              val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
             _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
