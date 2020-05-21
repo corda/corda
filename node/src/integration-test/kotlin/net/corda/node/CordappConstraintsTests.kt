@@ -50,8 +50,7 @@ class CordappConstraintsTests {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 cordappsForAllNodes = emptyList(),
-                inMemoryDB = false,
-                allowHibernateToManageAppSchema = true
+                inMemoryDB = false
         )) {
             val alice = startNode(NodeParameters(
                     additionalCordapps = listOf(SIGNED_FINANCE_CORDAPP),
@@ -78,8 +77,7 @@ class CordappConstraintsTests {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 cordappsForAllNodes = emptyList(),
-                inMemoryDB = false,
-                allowHibernateToManageAppSchema = true
+                inMemoryDB = false
         )) {
             println("Starting the node using unsigned contract jar ...")
             val alice = startNode(NodeParameters(
@@ -136,8 +134,7 @@ class CordappConstraintsTests {
         driver(DriverParameters(
                 cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false,
-                allowHibernateToManageAppSchema = true
+                inMemoryDB = false
         )) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
@@ -197,8 +194,7 @@ class CordappConstraintsTests {
         driver(DriverParameters(
                 cordappsForAllNodes = listOf(SIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false,
-                allowHibernateToManageAppSchema = true
+                inMemoryDB = false
         )) {
             val (alice, bob) = listOf(
                     startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(user))),
@@ -264,8 +260,7 @@ class CordappConstraintsTests {
                 cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false,
-                allowHibernateToManageAppSchema = true
+                inMemoryDB = false
         )) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),

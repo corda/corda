@@ -286,8 +286,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             args.version,
             mockFlowManager,
             args.network.getServerThread(args.id),
-            args.network.busyLatch,
-            allowHibernateToManageAppSchema = true
+            args.network.busyLatch
     ) {
         companion object {
             private val staticLog = contextLogger()

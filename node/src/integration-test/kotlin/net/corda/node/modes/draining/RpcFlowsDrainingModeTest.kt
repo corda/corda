@@ -23,7 +23,7 @@ class RpcFlowsDrainingModeTest {
 
     @Test(timeout=300_000)
 	fun `flows draining mode rejects start flows commands through rpc`() {
-        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
             startNode(rpcUsers = users).getOrThrow().rpc.apply {
                 setFlowsDrainingModeEnabled(true)
 

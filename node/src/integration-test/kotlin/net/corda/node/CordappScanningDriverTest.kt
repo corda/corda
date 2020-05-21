@@ -23,7 +23,7 @@ class CordappScanningDriverTest {
 	fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList(), allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
                     startNode(providedName = BOB_NAME)).transpose().getOrThrow()

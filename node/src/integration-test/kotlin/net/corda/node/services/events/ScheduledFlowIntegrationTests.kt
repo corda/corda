@@ -100,8 +100,7 @@ class ScheduledFlowIntegrationTests {
 	fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage"), enclosedCordapp()),
-                allowHibernateToManageAppSchema = true
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage"), enclosedCordapp())
         )) {
             val N = 23
             val rpcUser = User("admin", "admin", setOf("ALL"))

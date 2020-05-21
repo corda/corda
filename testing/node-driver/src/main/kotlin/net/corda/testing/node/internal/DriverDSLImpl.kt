@@ -148,7 +148,7 @@ class DriverDSLImpl(
         val djvmBootstrapSource: Path?,
         val djvmCordaSource: List<Path>,
         val environmentVariables : Map<String, String>,
-        val allowHibernateToManageAppSchema: Boolean = false
+        val allowHibernateToManageAppSchema: Boolean = true
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -1371,7 +1371,7 @@ fun <A> internalDriver(
         djvmBootstrapSource: Path? = null,
         djvmCordaSource: List<Path> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
-        allowHibernateToManageAppSchema: Boolean = false,
+        allowHibernateToManageAppSchema: Boolean = true,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(

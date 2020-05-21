@@ -55,8 +55,7 @@ class FlowsDrainingModeContentionTest {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 portAllocation = portAllocation,
-                extraCordappPackagesToScan = listOf(MessageState::class.packageName),
-                allowHibernateToManageAppSchema = true
+                extraCordappPackagesToScan = listOf(MessageState::class.packageName)
         )) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()

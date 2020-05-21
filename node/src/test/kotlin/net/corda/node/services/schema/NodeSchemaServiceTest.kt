@@ -65,7 +65,7 @@ class NodeSchemaServiceTest {
      */
     @Test(timeout=300_000)
 	fun `auto scanning of custom schemas for testing with Driver`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
@@ -75,7 +75,7 @@ class NodeSchemaServiceTest {
     @Test(timeout=300_000)
 	fun `custom schemas are loaded eagerly`() {
         val expected = setOf("PARENTS", "CHILDREN")
-        val tables = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = true)) {
+        val tables = driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             (defaultNotaryNode.getOrThrow() as InProcessImpl).database.transaction {
                 session.createNativeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES").list()
             }
@@ -98,7 +98,7 @@ class NodeSchemaServiceTest {
 
     @Test(timeout=300_000)
 	fun `check node runs inclusive of notary node schema set using driverDSL`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val notary = defaultNotaryNode.getOrThrow()
             val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
             // check against NodeCore Schema

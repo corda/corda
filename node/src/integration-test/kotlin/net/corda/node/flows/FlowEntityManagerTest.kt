@@ -54,7 +54,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerSaveEntitiesWithoutAFlushFlow)
@@ -69,7 +69,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
     fun `entities can be saved using entity manager with a flush`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
@@ -85,7 +85,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
     fun `entities saved inside an entity manager are only committed when a flow suspends`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
@@ -110,7 +110,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation without a flush breaks`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
@@ -130,7 +130,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation with a flush breaks`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
@@ -150,7 +150,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation with a flush that is caught inside an entity manager block saves none of the data inside of it`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             // 1 entity saved from the first entity manager block that does not get rolled back
@@ -172,7 +172,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation with a flush that is caught outside the entity manager block saves none of the data inside of it`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             // 1 entity saved from the first entity manager block that does not get rolled back
@@ -198,7 +198,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++dischargeCounter }
         val lock = Semaphore(0)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ -> lock.release() }
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerErrorInsideASingleEntityManagerFlow)
@@ -212,7 +212,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation on a single entity when saving multiple entities throws an exception and does not save any data within the entity manager block`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowFailureAndAssertCreatedEntities(
@@ -232,7 +232,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation on a single entity when saving multiple entities and catching the error does not save any data within the entity manager block`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             // 1 entity saved from the first entity manager block that does not get rolled back
@@ -254,7 +254,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -274,7 +274,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught inside an entity manager and more data is saved afterwards inside the same entity manager should not save the extra data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -294,7 +294,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
 
     @Test(timeout = 300_000)
     fun `constraint violation that is caught outside an entity manager and more data is saved afterwards inside a new entity manager should save the extra data`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(
@@ -316,7 +316,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
     fun `constraint violation that is caught inside an entity manager should allow a flow to continue processing as normal`() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
@@ -338,7 +338,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         MyService.insertionType = MyService.InsertionType.ENTITY_MANAGER
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
@@ -355,7 +355,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         MyService.insertionType = MyService.InsertionType.CONNECTION
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
-        driver(DriverParameters(startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
 
@@ -371,7 +371,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerSaveAndThrowNonDatabaseErrorFlow)
@@ -388,7 +388,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.startFlow(::EntityManagerSaveFlushAndThrowNonDatabaseErrorFlow)
@@ -404,7 +404,7 @@ class FlowEntityManagerTest : AbstractFlowEntityManagerTest() {
         var counter = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> ++counter }
 
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
 
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.expectFlowSuccessAndAssertCreatedEntities(

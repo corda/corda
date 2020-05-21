@@ -63,8 +63,7 @@ class FlowRetryTest {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
         val result: Any? = driver(DriverParameters(
                 startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                allowHibernateToManageAppSchema = true
+                notarySpecs = emptyList()
         )) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -83,8 +82,7 @@ class FlowRetryTest {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<AsyncRetryFlow>()))
         driver(DriverParameters(
                 startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList(),
-                allowHibernateToManageAppSchema = true
+                notarySpecs = emptyList()
         )) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
@@ -100,8 +98,7 @@ class FlowRetryTest {
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
                     startNodesInProcess = isQuasarAgentSpecified(),
-                    notarySpecs = emptyList(),
-                    allowHibernateToManageAppSchema = true
+                    notarySpecs = emptyList()
             )) {
                 val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
@@ -119,8 +116,7 @@ class FlowRetryTest {
         assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
             driver(DriverParameters(
                     startNodesInProcess = isQuasarAgentSpecified(),
-                    notarySpecs = emptyList(),
-                    allowHibernateToManageAppSchema = true
+                    notarySpecs = emptyList()
             )) {
                 val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
@@ -135,8 +131,7 @@ class FlowRetryTest {
     @Test(timeout=300_000)
 	fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
-                allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -155,8 +150,7 @@ class FlowRetryTest {
     @Test(timeout=300_000)
 	fun `Specific exception still detected even if it is nested inside another exception`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
-                allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -175,8 +169,7 @@ class FlowRetryTest {
     @Test(timeout=300_000)
 	fun `General external exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
-                allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -195,8 +188,7 @@ class FlowRetryTest {
     @Test(timeout=300_000)
 	fun `Permission exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf())
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
-                allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 

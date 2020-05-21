@@ -265,7 +265,7 @@ data class DriverParameters(
         val djvmBootstrapSource: Path? = null,
         val djvmCordaSource: List<Path> = emptyList(),
         val environmentVariables : Map<String, String> = emptyMap(),
-        val allowHibernateToManageAppSchema: Boolean = false
+        val allowHibernateToManageAppSchema: Boolean = true
 ) {
     constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
 

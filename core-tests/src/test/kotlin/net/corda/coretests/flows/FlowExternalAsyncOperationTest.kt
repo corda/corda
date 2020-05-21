@@ -23,7 +23,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowWithExternalAsyncOperation, bob.nodeInfo.singleIdentity())
@@ -34,7 +34,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that checks deduplicationId is not rerun when flow is retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DuplicatedProcessException> {
@@ -49,7 +49,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation propagates exception to calling flow`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<MyCordaException> {
@@ -65,7 +65,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation exception can be caught in flow`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             val result = alice.rpc.startFlow(
@@ -79,7 +79,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation with exception that hospital keeps for observation does not fail`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -95,7 +95,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation with exception that hospital discharges is retried and runs the future again`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -111,7 +111,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that throws exception rather than completing future exceptionally fails with internal exception`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<StateTransitionException> {
@@ -124,7 +124,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that passes serviceHub into process can be retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             blockUntilFlowKeptInForObservation {
@@ -139,7 +139,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             assertFailsWith<DirectlyAccessedServiceHubException> {
@@ -154,7 +154,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
     @Test(timeout = 300_000)
     fun `starting multiple futures and joining on their results`() {
-        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true, allowHibernateToManageAppSchema = true)) {
+        driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             val bob = startNode(providedName = BOB_NAME).getOrThrow()
             alice.rpc.startFlow(::FlowThatStartsMultipleFuturesAndJoins, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow(1.minutes)
