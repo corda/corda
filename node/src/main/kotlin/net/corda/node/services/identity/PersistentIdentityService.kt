@@ -369,8 +369,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return database.transaction {
             log.info("Linking: ${publicKey.hash} to ${party.name}")
             keyToParty[publicKey] = party
-            if (externalId != null || party == ourParty) {
-                // UnmappedIdentity for our party is used for metering
+            if (externalId != null) {
+                /** TODO: Don't set UnmappedIdentity, check impact for metering. Otherwise, add "party == ourParty" condition. */
                 _pkToIdCache[publicKey] = KeyOwningIdentity.fromUUID(externalId)
             }
         }
