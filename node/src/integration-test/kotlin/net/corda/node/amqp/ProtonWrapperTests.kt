@@ -9,6 +9,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -51,7 +52,11 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = incrementalPortAllocation() // use 15000 to move us out of harms way
+    companion object {
+        private val log = contextLogger()
+    }
+
+    private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()
@@ -350,7 +355,8 @@ class ProtonWrapperTests {
             val connection2ID = CordaX500Name.build(connection2.remoteCert!!.subjectX500Principal)
             assertEquals("client 1", connection2ID.organisationUnit)
             val source2 = connection2.remoteAddress
-            // Stopping one shouldn't disconnect the other
+
+            log.info("Stopping one shouldn't disconnect the other")
             amqpClient1.stop()
             val connection3 = connectionEvents.next()
             assertEquals(false, connection3.connected)
@@ -358,14 +364,16 @@ class ProtonWrapperTests {
             assertEquals(false, amqpClient1.connected)
             client2Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient2.connected)
-            // Now shutdown both
+
+            log.info("Now shutdown both")
             amqpClient2.stop()
             val connection4 = connectionEvents.next()
             assertEquals(false, connection4.connected)
             assertEquals(source2, connection4.remoteAddress)
             assertEquals(false, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
-            // Now restarting one should work
+
+            log.info("Now restarting one should work")
             val client1Connected = amqpClient1.onConnection.toFuture()
             amqpClient1.start()
             val connection5 = connectionEvents.next()
@@ -375,7 +383,8 @@ class ProtonWrapperTests {
             client1Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
-            // Cleanup
+
+            log.info("Cleanup")
             amqpClient1.stop()
             sharedThreads.shutdownGracefully()
             sharedThreads.terminationFuture().sync()
