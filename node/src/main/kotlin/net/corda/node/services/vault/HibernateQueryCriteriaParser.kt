@@ -761,8 +761,14 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 val existingParticipants = ((((commonPredicates[predicateID]) as CompoundPredicate).expressions[0]) as InPredicate<*>)
                         .values.map { participant -> (participant as LiteralExpression<*>).literal }
                 log.warn("Adding new participants: $participants to existing participants: $existingParticipants")
-                commonPredicates.replace(predicateID, criteriaBuilder.and(
-                        getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("x500Name").`in`(existingParticipants + participants)))
+                commonPredicates.replace(
+                        predicateID,
+                        checkIfListIsEmpty(
+                                args = existingParticipants + participants,
+                                criteriaBuilder = criteriaBuilder,
+                                predicate = criteriaBuilder.and(getPersistentPartyRoot().get<VaultSchemaV1.PersistentParty>("x500Name").`in`(existingParticipants + participants))
+                        )
+                )
             }
             else {
                 // Get the persistent party entity.
@@ -791,12 +797,18 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             val subQueryNotExists = criteriaQuery.subquery(Tuple::class.java)
             val subRoot = subQueryNotExists.from(VaultSchemaV1.PersistentParty::class.java)
             subQueryNotExists.select(subRoot.get("x500Name"))
-            subQueryNotExists.where(criteriaBuilder.and(
-                    criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
-                            subRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
-                    criteriaBuilder.not(subRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(exactParticipants)))
-            val subQueryNotExistsPredicate = criteriaBuilder.and(criteriaBuilder.not(criteriaBuilder.exists(subQueryNotExists)))
-            constraintPredicates.add(subQueryNotExistsPredicate)
+
+            //if the list of exact participants is empty, we return nothing with 1=0
+            if (exactParticipants.isEmpty()) {
+                constraintPredicates.add(criteriaBuilder.and(criteriaBuilder.equal(criteriaBuilder.literal(1), 0)))
+            } else {
+                subQueryNotExists.where(criteriaBuilder.and(
+                        criteriaBuilder.equal(vaultStates.get<VaultSchemaV1.VaultStates>("stateRef"),
+                                subRoot.get<VaultSchemaV1.PersistentParty>("compositeKey").get<PersistentStateRef>("stateRef"))),
+                        criteriaBuilder.not(subRoot.get<VaultSchemaV1.PersistentParty>("x500Name").`in`(exactParticipants)))
+                val subQueryNotExistsPredicate = criteriaBuilder.and(criteriaBuilder.not(criteriaBuilder.exists(subQueryNotExists)))
+                constraintPredicates.add(subQueryNotExistsPredicate)
+            }
 
             // join with transactions for each matching participant (only required where more than one)
             if (exactParticipants.size > 1)
