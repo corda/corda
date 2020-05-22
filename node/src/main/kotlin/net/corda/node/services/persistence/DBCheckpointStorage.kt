@@ -28,14 +28,10 @@ import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
-import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.FetchType
-import javax.persistence.GeneratedValue
-import javax.persistence.GenerationType
 import javax.persistence.Id
-import javax.persistence.JoinColumn
 import javax.persistence.OneToOne
 import javax.persistence.PrimaryKeyJoinColumn
 
@@ -289,7 +285,7 @@ class DBCheckpointStorage(
             now
         )
 
-        val metadata = createMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint)
 
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         val dbFlowCheckpoint = DBFlowCheckpoint(
@@ -337,7 +333,7 @@ class DBCheckpointStorage(
         //val result = updateDBFlowResult(entity, checkpoint, now)
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
-        val metadata = createMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint)
 
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
@@ -427,7 +423,7 @@ class DBCheckpointStorage(
         }
     }
 
-    private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
