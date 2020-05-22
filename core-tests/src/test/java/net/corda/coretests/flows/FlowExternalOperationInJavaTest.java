@@ -28,7 +28,7 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
 
     @Test
     public void awaitFlowExternalOperationInJava() {
-        driver(new DriverParameters().withStartNodesInProcess(true).withAllowHibernateToManageAppSchema(true), driver -> {
+        driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
                     Duration.of(1, ChronoUnit.MINUTES)
@@ -46,7 +46,7 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
 
     @Test
     public void awaitFlowExternalAsyncOperationInJava() {
-        driver(new DriverParameters().withStartNodesInProcess(true).withAllowHibernateToManageAppSchema(true), driver -> {
+        driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
                     Duration.of(1, ChronoUnit.MINUTES)
@@ -64,7 +64,7 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
 
     @Test
     public void awaitFlowExternalOperationInJavaCanBeRetried() {
-        driver(new DriverParameters().withStartNodesInProcess(true).withAllowHibernateToManageAppSchema(true), driver -> {
+        driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
             NodeHandle alice = KotlinUtilsKt.getOrThrow(
                     driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
                     Duration.of(1, ChronoUnit.MINUTES)
