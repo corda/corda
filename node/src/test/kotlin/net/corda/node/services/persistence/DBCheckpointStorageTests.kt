@@ -181,6 +181,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `removing a checkpoint deletes from all checkpoint tables`() {
         val exception = IllegalStateException("I am a naughty exception")
@@ -224,6 +225,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `removing a checkpoint when there is no result does not fail`() {
         val exception = IllegalStateException("I am a naughty exception")
@@ -538,6 +540,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `update checkpoint with error information creates a new error database record`() {
         val exception = IllegalStateException("I am a naughty exception")
@@ -560,6 +563,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `update checkpoint with new error information updates the existing error database record`() {
         val illegalStateException = IllegalStateException("I am a naughty exception")
@@ -699,6 +703,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `-not greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets persisted as a whole`() {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
@@ -731,6 +736,7 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Ignore
     @Test(timeout = 300_000)
     fun `-greater than DBCheckpointStorage_MAX_STACKTRACE_LENGTH- stackTrace gets truncated to MAX_LENGTH_VARCHAR, and persisted`() {
         val smallerDummyStackTrace = ArrayList<StackTraceElement>()
