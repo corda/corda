@@ -14,7 +14,8 @@ interface CordaSessionFactoryFactory {
             databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
-            attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory
+            attributeConverters: Collection<AttributeConverter<*, *>>,
+            allowHibernateToMananageAppSchema: Boolean): SessionFactory
     fun getExtraConfiguration(key: String): Any?
     fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata
 }

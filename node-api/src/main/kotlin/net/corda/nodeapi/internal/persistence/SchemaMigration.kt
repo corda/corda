@@ -25,7 +25,6 @@ import kotlin.concurrent.withLock
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
-        private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
         // This parameter is used by the vault state migration to establish what the node's legal identity is when setting up
@@ -51,28 +50,17 @@ class SchemaMigration(
     private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
     /**
-     * Main entry point to the schema migration.
-     * Called during node startup.
-     */
-    fun nodeStartup(existingCheckpoints: Boolean) {
-        when {
-            databaseConfig.initialiseSchema -> {
-                migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
-                runMigration(existingCheckpoints)
-            }
-            else -> checkState()
-        }
-    }
-
-    /**
      * Will run the Liquibase migration on the actual database.
      */
-    private fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, check = false, existingCheckpoints = existingCheckpoints)
+    fun runMigration(existingCheckpoints: Boolean) {
+        migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
+        doRunMigration(run = true, check = false, existingCheckpoints = existingCheckpoints)
+    }
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    private fun checkState() = doRunMigration(run = false, check = true)
+    fun checkState() = doRunMigration(run = false, check = true)
 
     /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
@@ -269,6 +257,6 @@ class CheckpointsException : DatabaseMigrationException("Attempting to update th
 
 class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") private val reason: String) : DatabaseMigrationException(errorMessageFor(reason)) {
     internal companion object {
-        fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run the node with configuration option database.initialiseSchema=true. Reason: $reason"
+        fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run schema migration scripts (node with sub-command run-migration-scripts). Reason: $reason"
     }
 }

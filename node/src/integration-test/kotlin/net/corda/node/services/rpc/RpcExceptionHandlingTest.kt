@@ -57,7 +57,7 @@ class RpcExceptionHandlingTest {
             }
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
@@ -76,7 +76,7 @@ class RpcExceptionHandlingTest {
             rpc.startFlow(::FlowExceptionFlow, expectedMessage, expectedErrorId).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
             val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
@@ -108,7 +108,7 @@ class RpcExceptionHandlingTest {
             nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow()
         }
 
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()), allowHibernateToManageAppSchema = false)) {
 
             assertThatThrownBy { scenario(ALICE_NAME, BOB_NAME,true) }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 

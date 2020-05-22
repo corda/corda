@@ -163,6 +163,7 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
 /**
  * Convenience method for configuring a database for some tests.
  */
+@Suppress("LongParameterList")
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -170,9 +171,19 @@ fun configureDatabase(hikariProperties: Properties,
                       schemaService: SchemaService = NodeSchemaService(),
                       internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
-                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas, ourName = ourName)
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name,
+                      runMigrationScripts: Boolean = true,
+                      allowHibernateToManageAppSchema: Boolean = true): CordaPersistence {
+    val persistence = createCordaPersistence(
+            databaseConfig,
+            wellKnownPartyFromX500Name,
+            wellKnownPartyFromAnonymous,
+            schemaService,
+            hikariProperties,
+            cacheFactory,
+            null,
+            allowHibernateToManageAppSchema)
+    persistence.startHikariPool(hikariProperties, internalSchemas, ourName = ourName, runMigrationScripts = runMigrationScripts)
     return persistence
 }
 

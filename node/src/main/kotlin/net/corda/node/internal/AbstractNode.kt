@@ -210,7 +210,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
                                djvmBootstrapSource: ApiSource = EmptyApi,
-                               djvmCordaSource: UserSource? = null) : SingletonSerializeAsToken() {
+                               djvmCordaSource: UserSource? = null,
+                               protected val allowHibernateToManageAppSchema: Boolean = false) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -221,6 +222,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val monitoringService = MonitoringService(metricRegistry).tokenize()
 
     protected val runOnStop = ArrayList<() -> Any?>()
+
+    protected open val runMigrationScripts: Boolean = configuredDbIsInMemory()
+
+    // if the configured DB is in memory, we will need to run db migrations, as the db does not persist between runs.
+    private fun configuredDbIsInMemory() = configuration.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:mem:")
 
     init {
         (serverThread as? ExecutorService)?.let {
@@ -233,6 +239,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         quasarExcludePackages(configuration)
+
+        if (allowHibernateToManageAppSchema && !configuration.devMode) {
+            throw ConfigurationException("Hibernate can only be used to manage app schema in development while using dev mode. " +
+                    "Please remove the --allow-hibernate-to-manage-app-schema command line flag and provide schema migration scripts for your CorDapps."
+            )
+        }
     }
 
     private val notaryLoader = configuration.notary?.let {
@@ -248,7 +260,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory,
-            cordappLoader.appClassLoader)
+            cordappLoader.appClassLoader,
+            allowHibernateToManageAppSchema)
 
     private val transactionSupport = CordaTransactionSupportImpl(database)
 
@@ -456,6 +469,33 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         database.use {
             networkMapCache.clearNetworkMapCache()
         }
+    }
+
+    open fun runDatabaseMigrationScripts() {
+        check(started == null) { "Node has already been started" }
+        Node.printBasicNodeInfo("Running database schema migration scripts ...")
+        val props = configuration.dataSourceProperties
+        if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = true)
+        // Now log the vendor string as this will also cause a connection to be tested eagerly.
+        logVendorString(database, log)
+        if (allowHibernateToManageAppSchema) {
+            Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
+            val trustRoot = initKeyStores()
+            networkMapClient?.start(trustRoot)
+            val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+            log.info("Loaded network parameters: $netParams")
+            check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
+                "Node's platform version is lower than network's required minimumPlatformVersion"
+            }
+            networkMapCache.start(netParams.notaries)
+
+            database.transaction {
+                networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+                cordappProvider.start()
+            }
+        }
+        Node.printBasicNodeInfo("Database migration done.")
     }
 
     open fun start(): S {
@@ -946,7 +986,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = runMigrationScripts)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1313,13 +1353,15 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
+@Suppress("LongParameterList")
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
                            hikariProperties: Properties,
                            cacheFactory: NamedCacheFactory,
-                           customClassLoader: ClassLoader?): CordaPersistence {
+                           customClassLoader: ClassLoader?,
+                           allowHibernateToManageAppSchema: Boolean = false): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -1330,25 +1372,38 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-        databaseConfig,
-        schemaService.schemas,
-        jdbcUrl,
-        cacheFactory,
-        attributeConverters, customClassLoader,
-        errorHandler = { e ->
-            // "corrupting" a DatabaseTransaction only inside a flow state machine execution
-            FlowStateMachineImpl.currentStateMachine()?.let {
-                // register only the very first exception thrown throughout a chain of logical transactions
-                setException(e)
-            }
-        })
+            databaseConfig,
+            schemaService.schemas,
+            jdbcUrl,
+            cacheFactory,
+            attributeConverters, customClassLoader,
+            errorHandler = { e ->
+                // "corrupting" a DatabaseTransaction only inside a flow state machine execution
+                FlowStateMachineImpl.currentStateMachine()?.let {
+                    // register only the very first exception thrown throughout a chain of logical transactions
+                    setException(e)
+                }
+            },
+            allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
+@Suppress("LongParameterList", "ComplexMethod", "ThrowsCount")
+fun CordaPersistence.startHikariPool(
+        hikariProperties: Properties,
+        schemas: Set<MappedSchema>,
+        metricRegistry: MetricRegistry? = null,
+        cordappLoader: CordappLoader? = null,
+        currentDir: Path? = null,
+        ourName: CordaX500Name,
+        runMigrationScripts: Boolean = false) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        val schemaMigration = SchemaMigration(schemas, dataSource, cordappLoader, currentDir, ourName)
+        if (runMigrationScripts) {
+            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        } else {
+            schemaMigration.checkState()
+        }
         start(dataSource)
     } catch (ex: Exception) {
         when {

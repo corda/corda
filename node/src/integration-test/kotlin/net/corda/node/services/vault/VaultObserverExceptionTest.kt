@@ -443,11 +443,11 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(
-                                    findCordapp("com.r3.dbfailure.contracts"),
-                                    findCordapp("com.r3.dbfailure.workflows"),
-                                    findCordapp("com.r3.dbfailure.schemas")
-                                ),inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")
+                ), inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -532,12 +532,12 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(
-                                    findCordapp("com.r3.dbfailure.contracts"),
-                                    findCordapp("com.r3.dbfailure.workflows"),
-                                    findCordapp("com.r3.dbfailure.schemas")
-                                ),
-                                inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")
+                ),
+                inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -609,12 +609,12 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(
-                                    findCordapp("com.r3.dbfailure.contracts"),
-                                    findCordapp("com.r3.dbfailure.workflows"),
-                                    findCordapp("com.r3.dbfailure.schemas")
-                                ),
-                                inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")
+                ),
+                inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -684,12 +684,12 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-                                cordappsForAllNodes = listOf(
-                                    findCordapp("com.r3.dbfailure.contracts"),
-                                    findCordapp("com.r3.dbfailure.workflows"),
-                                    findCordapp("com.r3.dbfailure.schemas")
-                                ),
-                                inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")
+                ),
+                inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -741,12 +741,12 @@ class VaultObserverExceptionTest {
     fun `Accessing NodeVaultService rawUpdates from a flow is not allowed` () {
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-            cordappsForAllNodes = listOf(
-                findCordapp("com.r3.dbfailure.contracts"),
-                findCordapp("com.r3.dbfailure.workflows"),
-                findCordapp("com.r3.dbfailure.schemas")
-            ),
-            inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")
+                ),
+                inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
@@ -771,12 +771,12 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-            cordappsForAllNodes = listOf(
-                findCordapp("com.r3.dbfailure.contracts"),
-                findCordapp("com.r3.dbfailure.workflows"),
-                findCordapp("com.r3.transactionfailure.workflows"),
-                findCordapp("com.r3.dbfailure.schemas")),
-            inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.transactionfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")),
+                inMemoryDB = false)
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
@@ -802,12 +802,12 @@ class VaultObserverExceptionTest {
 
         val user = User("user", "foo", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true,
-            cordappsForAllNodes = listOf(
-                findCordapp("com.r3.dbfailure.contracts"),
-                findCordapp("com.r3.dbfailure.workflows"),
-                findCordapp("com.r3.transactionfailure.workflows"),
-                findCordapp("com.r3.dbfailure.schemas")),
-            inMemoryDB = false)
+                cordappsForAllNodes = listOf(
+                        findCordapp("com.r3.dbfailure.contracts"),
+                        findCordapp("com.r3.dbfailure.workflows"),
+                        findCordapp("com.r3.transactionfailure.workflows"),
+                        findCordapp("com.r3.dbfailure.schemas")),
+                inMemoryDB = false)
         ) {
             // Subscribing with custom SafeSubscriber; the custom SafeSubscriber will not get replaced by a ResilientSubscriber
             // meaning that it will behave as a SafeSubscriber; it will get unsubscribed upon throwing an error.

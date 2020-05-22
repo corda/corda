@@ -2,12 +2,11 @@ package net.corda.nodeapitests.internal.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.MissingMigrationException
-import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.nodeapi.internal.persistence.MissingMigrationException
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
@@ -41,8 +40,7 @@ class MissingSchemaMigrationTest {
     }
 
     private fun createSchemaMigration(schemasToMigrate: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): SchemaMigration {
-        val databaseConfig = DatabaseConfig()
-        return SchemaMigration(schemasToMigrate, dataSource, databaseConfig, null, null,
+        return SchemaMigration(schemasToMigrate, dataSource, null, null,
                 TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }
 
@@ -50,7 +48,7 @@ class MissingSchemaMigrationTest {
 	fun `test that an error is thrown when forceThrowOnMissingMigration is set and a mapped schema is missing a migration`() {
         assertThatThrownBy {
             createSchemaMigration(setOf(GoodSchema), true)
-                .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }.isInstanceOf(MissingMigrationException::class.java)
     }
 
@@ -58,7 +56,7 @@ class MissingSchemaMigrationTest {
 	fun `test that an error is not thrown when forceThrowOnMissingMigration is not set and a mapped schema is missing a migration`() {
         assertDoesNotThrow {
             createSchemaMigration(setOf(GoodSchema), false)
-                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }
     }
 
@@ -67,7 +65,7 @@ class MissingSchemaMigrationTest {
         assertDoesNotThrow("This test failure indicates " +
                 "a new table has been added to the node without the appropriate migration scripts being present") {
             createSchemaMigration(NodeSchemaService().internalSchemas(), false)
-                    .nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         }
     }
 

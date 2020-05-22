@@ -23,7 +23,8 @@ class HibernateConfiguration(
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
         jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
-        val customClassLoader: ClassLoader? = null
+        val customClassLoader: ClassLoader? = null,
+        val allowHibernateToManageAppSchema: Boolean = false
 ) {
     companion object {
         private val logger = contextLogger()
@@ -64,7 +65,7 @@ class HibernateConfiguration(
     fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
-        val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(databaseConfig, schemas, customClassLoader, attributeConverters)
+        val sessionFactory = sessionFactoryFactory.makeSessionFactoryForSchemas(databaseConfig, schemas, customClassLoader, attributeConverters, allowHibernateToManageAppSchema)
 
         // export Hibernate JMX statistics
         if (databaseConfig.exportHibernateJMXStatistics)
