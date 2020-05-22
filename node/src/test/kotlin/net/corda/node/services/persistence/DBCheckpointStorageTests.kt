@@ -867,7 +867,6 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             val dbFlowCheckpoint= checkpointStorage.getDBCheckpoint(id)
             assert(dbFlowCheckpoint!!.blob != null)
         }
