@@ -285,8 +285,7 @@ class DBCheckpointStorageTests {
             // The result not stored yet
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(2, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
 
@@ -305,8 +304,7 @@ class DBCheckpointStorageTests {
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
-            // The saving of checkpoint blobs needs to be fixed
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
     }
