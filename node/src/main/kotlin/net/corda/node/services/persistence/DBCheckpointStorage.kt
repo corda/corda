@@ -272,20 +272,24 @@ class DBCheckpointStorage(
     }
 
     // TODO: addCheckpoint and createDBCheckpoint should be merged
-    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>,
-                               serializedCheckpointState: SerializedBytes<CheckpointState>) {
+    override fun addCheckpoint(
+        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
         createDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
     }
 
     // TODO: updateCheckpoint and updateDBCheckpoint should be merged
-    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
-                                  serializedCheckpointState: SerializedBytes<CheckpointState>) {
+    override fun updateCheckpoint(
+        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
         updateDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
     }
 
     override fun markAllPaused() {
         val session = currentDBSession()
-        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map{ "${it.ordinal}"}.joinToString { it }
+        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map { "${it.ordinal}" }.joinToString { it }
         val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
                 "where status in ($runnableOrdinals)"
         val query = session.createNativeQuery(sqlQuery)
@@ -304,7 +308,7 @@ class DBCheckpointStorage(
         return deletedRows == 3
     }
 
-    private fun <T> deleteRow(clazz: Class<T>, pk:String, value: String): Int {
+    private fun <T> deleteRow(clazz: Class<T>, pk: String, value: String): Int {
         val session = currentDBSession()
         val criteriaBuilder = session.criteriaBuilder
         val delete = criteriaBuilder.createCriteriaDelete(clazz)
@@ -323,14 +327,14 @@ class DBCheckpointStorage(
         val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
         val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
         criteriaQuery.select(root)
-                .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
+            .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.flowId)) to it.toSerializedCheckpoint()
         }
     }
 
     override fun getCheckpointsToRun(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-       return getCheckpoints(RUNNABLE_CHECKPOINTS)
+        return getCheckpoints(RUNNABLE_CHECKPOINTS)
     }
 
     @VisibleForTesting
@@ -362,26 +366,26 @@ class DBCheckpointStorage(
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
         val blob = createDBCheckpointBlob(
-                flowId,
-                serializedCheckpointState,
-                serializedFlowState,
-                now
+            flowId,
+            serializedCheckpointState,
+            serializedFlowState,
+            now
         )
 
         val metadata = createMetadata(flowId, checkpoint)
 
         // Most fields are null as they cannot have been set when creating the initial checkpoint
-        val dbFlowCheckpoint =  DBFlowCheckpoint(
-                flowId = flowId,
-                blob = blob,
-                result = null,
-                exceptionDetails = null,
-                flowMetadata = metadata,
-                status = checkpoint.status,
-                compatible = checkpoint.compatible,
-                progressStep = null,
-                ioRequestType = null,
-                checkpointInstant = now
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
+            blob = blob,
+            result = null,
+            exceptionDetails = null,
+            flowMetadata = metadata,
+            status = checkpoint.status,
+            compatible = checkpoint.compatible,
+            progressStep = null,
+            ioRequestType = null,
+            checkpointInstant = now
         )
 
         currentDBSession().save(dbFlowCheckpoint)
@@ -412,10 +416,10 @@ class DBCheckpointStorage(
     }
 
     private fun updateDBCheckpoint(
-            id: StateMachineRunId,
-            checkpoint: Checkpoint,
-            serializedFlowState: SerializedBytes<FlowState>?,
-            serializedCheckpointState: SerializedBytes<CheckpointState>
+        id: StateMachineRunId,
+        checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>?,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
         val now = clock.instant()
         val flowId = id.uuid.toString()
@@ -429,10 +433,10 @@ class DBCheckpointStorage(
         } else {
             checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
             createDBCheckpointBlob(
-                    flowId,
-                    serializedCheckpointState,
-                    serializedFlowState,
-                    now
+                flowId,
+                serializedCheckpointState,
+                serializedFlowState,
+                now
             )
         }
 
@@ -442,17 +446,17 @@ class DBCheckpointStorage(
 
         val metadata = createMetadata(flowId, checkpoint)
 
-        val dbFlowCheckpoint =  DBFlowCheckpoint(
-                flowId = flowId,
-                blob = blob,
-                result = null,
-                exceptionDetails = exceptionDetails,
-                flowMetadata = metadata,
-                status = checkpoint.status,
-                compatible = checkpoint.compatible,
-                progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
-                ioRequestType = checkpoint.flowIoRequest,
-                checkpointInstant = now
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
+            blob = blob,
+            result = null,
+            exceptionDetails = exceptionDetails,
+            flowMetadata = metadata,
+            status = checkpoint.status,
+            compatible = checkpoint.compatible,
+            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
+            ioRequestType = checkpoint.flowIoRequest,
+            checkpointInstant = now
         )
 
         currentDBSession().update(dbFlowCheckpoint)
@@ -590,24 +594,24 @@ class DBCheckpointStorage(
     }
 
     private class DBPausedFields(
-            val id: String,
-            val checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
-            val status: FlowStatus,
-            val progressStep: String?,
-            val ioRequestType: String?,
-            val compatible: Boolean
+        val id: String,
+        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+        val status: FlowStatus,
+        val progressStep: String?,
+        val ioRequestType: String?,
+        val compatible: Boolean
     ) {
         fun toSerializedCheckpoint(): Checkpoint.Serialized {
             return Checkpoint.Serialized(
-                    serializedCheckpointState = SerializedBytes(checkpoint),
-                    serializedFlowState = null,
-                    // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
-                    errorState = ErrorState.Clean,
-                    result = null,
-                    status = status,
-                    progressStep = progressStep,
-                    flowIoRequest = ioRequestType,
-                    compatible = compatible
+                serializedCheckpointState = SerializedBytes(checkpoint),
+                serializedFlowState = null,
+                // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
+                errorState = ErrorState.Clean,
+                result = null,
+                status = status,
+                progressStep = progressStep,
+                flowIoRequest = ioRequestType,
+                compatible = compatible
             )
         }
     }
