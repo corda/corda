@@ -320,6 +320,6 @@ publish {
 }
 
 test {
-    maxHeapSize = "1g"
+    maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
