@@ -273,8 +273,8 @@ class DBCheckpointStorage(
         serializedFlowState: SerializedBytes<FlowState>,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
-        val flowId = id.uuid.toString()
         val now = clock.instant()
+        val flowId = id.uuid.toString()
 
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
