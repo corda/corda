@@ -853,7 +853,7 @@ class DBCheckpointStorageTests {
     }
 
     @Test(timeout = 300_000)
-    fun `updateCheckpoint leaves checkpoint blob unchanged when flow fails or gets hospitalized`() {
+    fun `updateCheckpoint setting DBFlowCheckpoint_blob to null whenever flow fails or gets hospitalized doesn't break ORM relationship`() {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
