@@ -40,7 +40,7 @@ import javax.security.auth.x500.X500Principal
  * needed.
  */
 open class NetworkRegistrationHelper(
-        config: NodeRegistrationConfiguration,
+        private val config: NodeRegistrationConfiguration,
         private val certService: NetworkRegistrationService,
         private val networkRootTrustStorePath: Path,
         networkRootTrustStorePassword: String,
@@ -63,6 +63,7 @@ open class NetworkRegistrationHelper(
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
     protected val rootCert: X509Certificate
+    private val notaryServiceConfig: NotaryServiceConfig? = config.notaryServiceConfig
 
     init {
         require(networkRootTrustStorePath.exists()) {
@@ -95,6 +96,8 @@ open class NetworkRegistrationHelper(
             return
         }
 
+        notaryServiceConfig?.let { validateAndRegisterNotaryService(certStore, it) }
+
         val tlsCrlIssuerCert = getTlsCrlIssuerCert()
 
         // We use SELF_SIGNED_PRIVATE_KEY as progress indicator so we just store a dummy key and cert.
@@ -116,6 +119,33 @@ open class NetworkRegistrationHelper(
         onSuccess(nodeCaPublicKey, cryptoService.getSigner(nodeCaKeyAlias), nodeCaCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
+    }
+
+    /**
+     * This method is only executed if the node is configured to be a notary. It checks for existence of a notary service identity,
+     * generating a new one if none is found. This is separate from the node identity and is used to sign notarisation requests.
+     *
+     * As the notary identity needs to be a valid identity on the network it must obtain a certificate via submitting a CSR to
+     * the Identity Manager, similar to how a standard node obtains its certificate.
+     */
+    private fun validateAndRegisterNotaryService(certStore: CertificateStore, it: NotaryServiceConfig) {
+        if (certStore.contains(it.notaryServiceKeyAlias) && !cryptoService.containsKey(it.notaryServiceKeyAlias)) {
+            throw CertificateRequestException("Notary service identity certificate exists but key pair missing.")
+        }
+
+        if (!certStore.contains(it.notaryServiceKeyAlias)) {
+            logProgress("Generating notary service identity for ${it.notaryServiceLegalName}...")
+            val notaryRegistrationConfig = NodeRegistrationConfiguration(config.p2pSslOptions, it.notaryServiceLegalName,
+                    config.tlsCertCrlIssuer, config.tlsCertCrlDistPoint, config.certificatesDirectory,
+                    config.emailAddress, config.cryptoService, config.certificateStore)
+            NetworkRegistrationHelper(
+                    notaryRegistrationConfig,
+                    certService,
+                    networkRootTrustStorePath,
+                    "trustpass", // TODO: pass this in somehow
+                    it.notaryServiceKeyAlias,
+                    CertRole.SERVICE_IDENTITY).generateKeysAndRegister()
+        }
     }
 
     private fun loadOrGenerateKeyPair(): PublicKey {
@@ -277,7 +307,8 @@ class NodeRegistrationConfiguration(
         val certificatesDirectory: Path,
         val emailAddress: String,
         val cryptoService: CryptoService,
-        val certificateStore: CertificateStore) {
+        val certificateStore: CertificateStore,
+        val notaryServiceConfig: NotaryServiceConfig? = null) {
 
     constructor(config: NodeConfiguration) : this(
             p2pSslOptions = config.p2pSslOptions,
@@ -287,9 +318,27 @@ class NodeRegistrationConfiguration(
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
             cryptoService = BCCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
-            certificateStore = config.signingCertificateStore.get(true)
+            certificateStore = config.signingCertificateStore.get(true),
+            notaryServiceConfig = config.notary?.let {
+                // Validation is only here and not in the main configuration file. This is because we want to keep backwards compatibility
+                // and allow drop in replacements for older versions of running notaries. In this case they will be using the legacy mode
+                // that signs notarisation requests using the nodes legal identity key. Having the validation logic here prevents any new
+                // notaries from registering using the old identity structure whilst still maintaining backwards compatibility.
+                requireNotNull(it.serviceLegalName) {
+                    "The notary service legal name must be provided"
+                }
+                require(it.serviceLegalName != config.myLegalName) {
+                    "The notary service legal name must be different from the node legal name"
+                }
+                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName!!)
+            }
     )
 }
+
+data class NotaryServiceConfig(
+        val notaryServiceKeyAlias: String,
+        val notaryServiceLegalName: CordaX500Name
+)
 
 class NodeRegistrationException(
         message: String?,
