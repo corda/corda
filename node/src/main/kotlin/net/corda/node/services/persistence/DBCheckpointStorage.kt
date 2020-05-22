@@ -271,20 +271,93 @@ class DBCheckpointStorage(
         }
     }
 
-    // TODO: addCheckpoint and createDBCheckpoint should be merged
     override fun addCheckpoint(
-        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>,
+        id: StateMachineRunId,
+        checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
-        createDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
+        val flowId = id.uuid.toString()
+        val now = clock.instant()
+
+        checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+
+        val blob = createDBCheckpointBlob(
+            flowId,
+            serializedCheckpointState,
+            serializedFlowState,
+            now
+        )
+
+        val metadata = createMetadata(flowId, checkpoint)
+
+        // Most fields are null as they cannot have been set when creating the initial checkpoint
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
+            blob = blob,
+            result = null,
+            exceptionDetails = null,
+            flowMetadata = metadata,
+            status = checkpoint.status,
+            compatible = checkpoint.compatible,
+            progressStep = null,
+            ioRequestType = null,
+            checkpointInstant = now
+        )
+
+        currentDBSession().save(dbFlowCheckpoint)
+        currentDBSession().save(blob)
+        currentDBSession().save(metadata)
     }
 
-    // TODO: updateCheckpoint and updateDBCheckpoint should be merged
     override fun updateCheckpoint(
         id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
-        updateDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
+        val now = clock.instant()
+        val flowId = id.uuid.toString()
+
+        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
+        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            // TODO: must change the following. It should not impact performance run as flows there never error
+            // Load the previous entity from the hibernate cache so the meta data join does not get updated
+            val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
+            entity.blob
+        } else {
+            checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+            createDBCheckpointBlob(
+                flowId,
+                serializedCheckpointState,
+                serializedFlowState,
+                now
+            )
+        }
+
+        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
+        //val result = updateDBFlowResult(entity, checkpoint, now)
+        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
+
+        val metadata = createMetadata(flowId, checkpoint)
+
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
+            blob = blob,
+            result = null,
+            exceptionDetails = exceptionDetails,
+            flowMetadata = metadata,
+            status = checkpoint.status,
+            compatible = checkpoint.compatible,
+            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
+            ioRequestType = checkpoint.flowIoRequest,
+            checkpointInstant = now
+        )
+
+        currentDBSession().update(dbFlowCheckpoint)
+        currentDBSession().update(blob)
+        if (checkpoint.isFinished()) {
+            metadata.finishInstant = now
+            currentDBSession().update(metadata)
+        }
     }
 
     override fun markAllPaused() {
@@ -354,45 +427,6 @@ class DBCheckpointStorage(
         }
     }
 
-    private fun createDBCheckpoint(
-        id: StateMachineRunId,
-        checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>,
-        serializedCheckpointState: SerializedBytes<CheckpointState>
-    ) {
-        val flowId = id.uuid.toString()
-        val now = clock.instant()
-
-        checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
-
-        val blob = createDBCheckpointBlob(
-            flowId,
-            serializedCheckpointState,
-            serializedFlowState,
-            now
-        )
-
-        val metadata = createMetadata(flowId, checkpoint)
-
-        // Most fields are null as they cannot have been set when creating the initial checkpoint
-        val dbFlowCheckpoint = DBFlowCheckpoint(
-            flowId = flowId,
-            blob = blob,
-            result = null,
-            exceptionDetails = null,
-            flowMetadata = metadata,
-            status = checkpoint.status,
-            compatible = checkpoint.compatible,
-            progressStep = null,
-            ioRequestType = null,
-            checkpointInstant = now
-        )
-
-        currentDBSession().save(dbFlowCheckpoint)
-        currentDBSession().save(blob)
-        currentDBSession().save(metadata)
-    }
-
     private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
@@ -413,58 +447,6 @@ class DBCheckpointStorage(
             startInstant = clock.instant(),
             finishInstant = null
         )
-    }
-
-    private fun updateDBCheckpoint(
-        id: StateMachineRunId,
-        checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>?,
-        serializedCheckpointState: SerializedBytes<CheckpointState>
-    ) {
-        val now = clock.instant()
-        val flowId = id.uuid.toString()
-
-        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
-        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
-            // TODO: must change the following. It should not impact performance run as flows there never error
-            // Load the previous entity from the hibernate cache so the meta data join does not get updated
-            val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
-            entity.blob
-        } else {
-            checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
-            createDBCheckpointBlob(
-                flowId,
-                serializedCheckpointState,
-                serializedFlowState,
-                now
-            )
-        }
-
-        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
-        //val result = updateDBFlowResult(entity, checkpoint, now)
-        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
-
-        val metadata = createMetadata(flowId, checkpoint)
-
-        val dbFlowCheckpoint = DBFlowCheckpoint(
-            flowId = flowId,
-            blob = blob,
-            result = null,
-            exceptionDetails = exceptionDetails,
-            flowMetadata = metadata,
-            status = checkpoint.status,
-            compatible = checkpoint.compatible,
-            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
-            ioRequestType = checkpoint.flowIoRequest,
-            checkpointInstant = now
-        )
-
-        currentDBSession().update(dbFlowCheckpoint)
-        currentDBSession().update(blob)
-        if (checkpoint.isFinished()) {
-            metadata.finishInstant = now
-            currentDBSession().update(metadata)
-        }
     }
 
     private fun createDBCheckpointBlob(
