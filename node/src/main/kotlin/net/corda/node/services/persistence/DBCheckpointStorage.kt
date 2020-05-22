@@ -362,7 +362,8 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
-    // TODO: DBFlowResult and DBFlowException to be integrated with rest of schema
+    // DBFlowResult and DBFlowException to be integrated with rest of schema
+    @Suppress("MagicNumber")
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         var deletedRows = 0
         val flowId = id.uuid.toString()
@@ -500,8 +501,8 @@ class DBCheckpointStorage(
      * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
      * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
      */
-    // TODO: bring back the following method
-    // TODO: add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
+    // DBFlowException to be integrated with rest of schema
+    // Add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
     private fun updateDBFlowException(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowException? {
         val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(flowId, it, now) }
 //        if (checkpoint.dbExoSkeleton.dbFlowExceptionId != null) {
