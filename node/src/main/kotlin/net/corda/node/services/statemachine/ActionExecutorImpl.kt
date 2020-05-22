@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Reservoir
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -92,13 +93,14 @@ class ActionExecutorImpl(
             FlowState.Completed -> null
             else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
+        val serializedCheckpointState: SerializedBytes<CheckpointState> = checkpoint.checkpointState.checkpointSerialize(checkpointSerializationContext)
         if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
+            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
             if (flowState is FlowState.Completed) {
                 throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
             }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
         }
     }
 

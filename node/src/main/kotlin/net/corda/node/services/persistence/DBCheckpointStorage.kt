@@ -37,6 +37,7 @@ import javax.persistence.GenerationType
 import javax.persistence.Id
 import javax.persistence.JoinColumn
 import javax.persistence.OneToOne
+import javax.persistence.PrimaryKeyJoinColumn
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -94,22 +95,22 @@ class DBCheckpointStorage(
     class DBFlowCheckpoint(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
-        var id: String,
+        var flowId: String,
 
-        @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-        @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
+        @OneToOne(fetch = FetchType.LAZY, optional = true)
+        @PrimaryKeyJoinColumn
         var blob: DBFlowCheckpointBlob,
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
-        @JoinColumn(name = "result_id", referencedColumnName = "id")
+        @PrimaryKeyJoinColumn
         var result: DBFlowResult?,
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
-        @JoinColumn(name = "error_id", referencedColumnName = "id")
+        @PrimaryKeyJoinColumn
         var exceptionDetails: DBFlowException?,
 
         @OneToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
+        @PrimaryKeyJoinColumn
         var flowMetadata: DBFlowMetadata,
 
         @Column(name = "status", nullable = false)
@@ -132,9 +133,8 @@ class DBCheckpointStorage(
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoint_blobs")
     class DBFlowCheckpointBlob(
         @Id
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        @Column(name = "id", nullable = false)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flowId: String,
 
         @Type(type = "corda-blob")
         @Column(name = "checkpoint_value", nullable = false)
@@ -144,6 +144,7 @@ class DBCheckpointStorage(
         @Column(name = "flow_state")
         var flowStack: ByteArray?,
 
+        @Type(type = "corda-wrapper-binary")
         @Column(name = "hmac")
         var hmac: ByteArray,
 
@@ -155,9 +156,8 @@ class DBCheckpointStorage(
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
     class DBFlowResult(
         @Id
-        @Column(name = "id", nullable = false)
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flow_id: String,
 
         @Type(type = "corda-blob")
         @Column(name = "result_value", nullable = false)
@@ -171,9 +171,8 @@ class DBCheckpointStorage(
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
     class DBFlowException(
         @Id
-        @Column(name = "id", nullable = false)
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flow_id: String,
 
         @Column(name = "type", nullable = false)
         var type: String,
@@ -195,9 +194,8 @@ class DBCheckpointStorage(
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
     class DBFlowMetadata(
-
         @Id
-        @Column(name = "flow_id", nullable = false)
+        @Column(name = "flow_id", length = 64, nullable = false)
         var flowId: String,
 
         @Column(name = "invocation_id", nullable = false)
@@ -273,12 +271,16 @@ class DBCheckpointStorage(
         }
     }
 
-    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
-        currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedFlowState))
+    // TODO: addCheckpoint and createDBCheckpoint should be merged
+    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>,
+                               serializedCheckpointState: SerializedBytes<CheckpointState>) {
+        createDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
     }
 
-    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?) {
-        currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
+    // TODO: updateCheckpoint and updateDBCheckpoint should be merged
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
+                                  serializedCheckpointState: SerializedBytes<CheckpointState>) {
+        updateDBCheckpoint(id, checkpoint, serializedFlowState, serializedCheckpointState)
     }
 
     override fun markAllPaused() {
@@ -290,19 +292,25 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
+    // TODO: DBFlowResult and DBFlowException to be integrated with rest of schema
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
-        // This will be changed after performance tuning
-        return currentDBSession().let { session ->
-            session.find(DBFlowCheckpoint::class.java, id.uuid.toString())?.run {
-                result?.let { session.delete(result) }
-                exceptionDetails?.let { session.delete(exceptionDetails) }
-                session.delete(blob)
-                session.delete(this)
-                // The metadata foreign key might be the wrong way around
-                session.delete(flowMetadata)
-                true
-            }
-        } ?: false
+        var deletedRows = 0
+        val flowId = id.uuid.toString()
+        deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
+//        resultId?.let { deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, it.toString()) }
+//        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
+        return deletedRows == 3
+    }
+
+    private fun <T> deleteRow(clazz: Class<T>, pk:String, value: String): Int {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val delete = criteriaBuilder.createCriteriaDelete(clazz)
+        val root = delete.from(clazz)
+        delete.where(criteriaBuilder.equal(root.get<String>(pk), value))
+        return session.createQuery(delete).executeUpdate()
     }
 
     override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
@@ -317,7 +325,7 @@ class DBCheckpointStorage(
         criteriaQuery.select(root)
                 .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
         return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+            StateMachineRunId(UUID.fromString(it.flowId)) to it.toSerializedCheckpoint()
         }
     }
 
@@ -345,30 +353,40 @@ class DBCheckpointStorage(
     private fun createDBCheckpoint(
         id: StateMachineRunId,
         checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>
-    ): DBFlowCheckpoint {
+        serializedFlowState: SerializedBytes<FlowState>,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
         val flowId = id.uuid.toString()
         val now = clock.instant()
 
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
-        val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+        val blob = createDBCheckpointBlob(
+                flowId,
+                serializedCheckpointState,
+                serializedFlowState,
+                now
+        )
 
         val metadata = createMetadata(flowId, checkpoint)
+
         // Most fields are null as they cannot have been set when creating the initial checkpoint
-        return DBFlowCheckpoint(
-            id = flowId,
-            blob = blob,
-            result = null,
-            exceptionDetails = null,
-            flowMetadata = metadata,
-            status = checkpoint.status,
-            compatible = checkpoint.compatible,
-            progressStep = null,
-            ioRequestType = null,
-            checkpointInstant = now
+        val dbFlowCheckpoint =  DBFlowCheckpoint(
+                flowId = flowId,
+                blob = blob,
+                result = null,
+                exceptionDetails = null,
+                flowMetadata = metadata,
+                status = checkpoint.status,
+                compatible = checkpoint.compatible,
+                progressStep = null,
+                ioRequestType = null,
+                checkpointInstant = now
         )
+
+        currentDBSession().save(dbFlowCheckpoint)
+        currentDBSession().save(blob)
+        currentDBSession().save(metadata)
     }
 
     private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
@@ -390,63 +408,69 @@ class DBCheckpointStorage(
             invocationInstant = context.trace.invocationId.timestamp,
             startInstant = clock.instant(),
             finishInstant = null
-        ).apply {
-            currentDBSession().save(this)
-        }
+        )
     }
 
     private fun updateDBCheckpoint(
-        id: StateMachineRunId,
-        checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>?
-    ): DBFlowCheckpoint {
-        val flowId = id.uuid.toString()
+            id: StateMachineRunId,
+            checkpoint: Checkpoint,
+            serializedFlowState: SerializedBytes<FlowState>?,
+            serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
         val now = clock.instant()
-
-        // Load the previous entity from the hibernate cache so the meta data join does not get updated
-        val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
+        val flowId = id.uuid.toString()
 
         // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
         val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            // TODO: must change the following. It should not impact performance run as flows there never error
+            // Load the previous entity from the hibernate cache so the meta data join does not get updated
+            val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
             entity.blob
         } else {
-            val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
             checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
-            createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+            createDBCheckpointBlob(
+                    flowId,
+                    serializedCheckpointState,
+                    serializedFlowState,
+                    now
+            )
         }
 
         //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
         //val result = updateDBFlowResult(entity, checkpoint, now)
-        val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
+        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
-        val metadata = entity.flowMetadata.apply {
-            if (checkpoint.isFinished() && finishInstant == null) {
-                finishInstant = now
-                currentDBSession().update(this)
-            }
-        }
+        val metadata = createMetadata(flowId, checkpoint)
 
-        return entity.apply {
-            this.blob = blob
-            //Set the result to null for now.
-            this.result = null
-            this.exceptionDetails = exceptionDetails
-            // Do not update the meta data relationship on updates
-            this.flowMetadata = metadata
-            this.status = checkpoint.status
-            this.compatible = checkpoint.compatible
-            this.progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH)
-            this.ioRequestType = checkpoint.flowIoRequest
-            this.checkpointInstant = now
+        val dbFlowCheckpoint =  DBFlowCheckpoint(
+                flowId = flowId,
+                blob = blob,
+                result = null,
+                exceptionDetails = exceptionDetails,
+                flowMetadata = metadata,
+                status = checkpoint.status,
+                compatible = checkpoint.compatible,
+                progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
+                ioRequestType = checkpoint.flowIoRequest,
+                checkpointInstant = now
+        )
+
+        currentDBSession().update(dbFlowCheckpoint)
+        currentDBSession().update(blob)
+        if (checkpoint.isFinished()) {
+            metadata.finishInstant = now
+            currentDBSession().update(metadata)
         }
     }
 
     private fun createDBCheckpointBlob(
+        flowId: String,
         serializedCheckpointState: SerializedBytes<CheckpointState>,
         serializedFlowState: SerializedBytes<FlowState>?,
         now: Instant
     ): DBFlowCheckpointBlob {
         return DBFlowCheckpointBlob(
+            flowId = flowId,
             checkpoint = serializedCheckpointState.bytes,
             flowStack = serializedFlowState?.bytes,
             hmac = ByteArray(HMAC_SIZE_BYTES),
@@ -464,11 +488,11 @@ class DBCheckpointStorage(
      * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
      * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
      */
-    private fun updateDBFlowResult(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
-        val result = checkpoint.result?.let { createDBFlowResult(it, now) }
+    private fun updateDBFlowResult(flowId: String, entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
+        val result = checkpoint.result?.let { createDBFlowResult(flowId, it, now) }
         if (entity.result != null) {
             if (result != null) {
-                result.id = entity.result!!.id
+                result.flow_id = entity.result!!.flow_id
                 currentDBSession().update(result)
             } else {
                 currentDBSession().delete(entity.result)
@@ -479,8 +503,9 @@ class DBCheckpointStorage(
         return result
     }
 
-    private fun createDBFlowResult(result: Any, now: Instant): DBFlowResult {
+    private fun createDBFlowResult(flowId: String, result: Any, now: Instant): DBFlowResult {
         return DBFlowResult(
+            flow_id = flowId,
             value = result.storageSerialize().bytes,
             persistedInstant = now
         )
@@ -496,24 +521,31 @@ class DBCheckpointStorage(
      * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
      * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
      */
-    private fun updateDBFlowException(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowException? {
-        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(it, now) }
-        if (entity.exceptionDetails != null) {
-            if (exceptionDetails != null) {
-                exceptionDetails.id = entity.exceptionDetails!!.id
-                currentDBSession().update(exceptionDetails)
-            } else {
-                currentDBSession().delete(entity.exceptionDetails)
-            }
-        } else if (exceptionDetails != null) {
-            currentDBSession().save(exceptionDetails)
-        }
+    // TODO: bring back the following method
+    // TODO: add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
+    private fun updateDBFlowException(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowException? {
+        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(flowId, it, now) }
+//        if (checkpoint.dbExoSkeleton.dbFlowExceptionId != null) {
+//            if (exceptionDetails != null) {
+//                exceptionDetails.flow_id = checkpoint.dbExoSkeleton.dbFlowExceptionId!!
+//                currentDBSession().update(exceptionDetails)
+//            } else {
+//                val session = currentDBSession()
+//                val entity = session.get(DBFlowException::class.java, checkpoint.dbExoSkeleton.dbFlowExceptionId)
+//                session.delete(entity)
+//                return null
+//            }
+//        } else if (exceptionDetails != null) {
+//            currentDBSession().save(exceptionDetails)
+//            checkpoint.dbExoSkeleton.dbFlowExceptionId = exceptionDetails.flow_id
+//        }
         return exceptionDetails
     }
 
-    private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
+    private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
+                flow_id = flowId,
                 type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
                 message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
                 stackTrace = it.stackTraceToString(),

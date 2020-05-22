@@ -10,16 +10,7 @@
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="checkpoint_blob_id" type="BIGINT">
-                <constraints nullable="true"/>
-            </column>
-            <column name="result_id" type="BIGINT">
-                <constraints nullable="true"/>
-            </column>
-            <column name="error_id" type="BIGINT">
-                <constraints nullable="true"/>
-            </column>
-            <column name="status" type="TINYINT">
+            <column name="status" type="INTEGER">
                 <constraints nullable="false"/>
             </column>
             <column name="compatible" type="BOOLEAN">
@@ -40,7 +31,7 @@
 
     <changeSet author="R3.Corda" id="add_new_checkpoint_blob_table" dbms="!postgresql">
         <createTable tableName="node_checkpoint_blobs">
-            <column name="id" type="BIGINT">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="checkpoint_value" type="blob">
@@ -52,7 +43,7 @@
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="hmac" type="NVARCHAR(32)">
+            <column name="hmac" type="VARBINARY(32)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
@@ -61,7 +52,7 @@
 
     <changeSet author="R3.Corda" id="add_new_flow_result_table" dbms="!postgresql">
         <createTable tableName="node_flow_results">
-            <column name="id" type="BIGINT">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="result_value" type="blob">
@@ -75,10 +66,10 @@
 
     <changeSet author="R3.Corda" id="add_new_flow_exceptions_table" dbms="!postgresql">
         <createTable tableName="node_flow_exceptions">
-            <column name="id" type="BIGINT">
+            <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="NVARCHAR(256)">
+            <column name="type" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="exception_message" type="NVARCHAR(4000)">
@@ -110,7 +101,7 @@
             <column name="flow_identifier" type="NVARCHAR(512)">
                 <constraints nullable="true"/>
             </column>
-            <column name="started_type" type="TINYINT">
+            <column name="started_type" type="INTEGER">
                 <constraints nullable="false"/>
             </column>
             <column name="flow_parameters" type="blob">
@@ -119,7 +110,7 @@
             <column name="cordapp_name" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
-            <column name="platform_version" type="TINYINT">
+            <column name="platform_version" type="INTEGER">
                 <constraints nullable="false"/>
             </column>
             <column name="started_by" type="NVARCHAR(128)">
