@@ -95,7 +95,7 @@ class DBCheckpointStorage(
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
         @PrimaryKeyJoinColumn
-        var blob: DBFlowCheckpointBlob,
+        var blob: DBFlowCheckpointBlob?,
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
         @PrimaryKeyJoinColumn
@@ -315,10 +315,7 @@ class DBCheckpointStorage(
 
         // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
         val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
-            // TODO: must change the following. It should not impact performance run as flows there never error
-            // Load the previous entity from the hibernate cache so the meta data join does not get updated
-            val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
-            entity.blob
+            null
         } else {
             checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
             createDBCheckpointBlob(
@@ -349,7 +346,7 @@ class DBCheckpointStorage(
         )
 
         currentDBSession().update(dbFlowCheckpoint)
-        currentDBSession().update(blob)
+        blob?.let { currentDBSession().update(it) }
         if (checkpoint.isFinished()) {
             metadata.finishInstant = now
             currentDBSession().update(metadata)
@@ -556,9 +553,9 @@ class DBCheckpointStorage(
     }
 
     private fun DBFlowCheckpoint.toSerializedCheckpoint(): Checkpoint.Serialized {
-        val serialisedFlowState = blob.flowStack?.let { SerializedBytes<FlowState>(it) }
+        val serialisedFlowState = blob!!.flowStack?.let { SerializedBytes<FlowState>(it) }
         return Checkpoint.Serialized(
-            serializedCheckpointState = SerializedBytes(blob.checkpoint),
+            serializedCheckpointState = SerializedBytes(blob!!.checkpoint),
             serializedFlowState = serialisedFlowState,
             // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
             errorState = ErrorState.Clean,

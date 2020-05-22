@@ -852,6 +852,27 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `updateCheckpoint leaves checkpoint blob unchanged when flow fails or gets hospitalized`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+
+        database.transaction {
+            val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED) // the exact same behaviour applies for 'HOSPITALIZED' as well
+            checkpointStorage.updateCheckpoint(id, paused.checkpoint, serializedFlowState, paused.checkpoint.serializeCheckpointState())
+        }
+
+        database.transaction {
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            val dbFlowCheckpoint= checkpointStorage.getDBCheckpoint(id)
+            assert(dbFlowCheckpoint!!.blob != null)
+        }
+    }
+
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
 
     private fun changeStatus(oldCheckpoint: Checkpoint, status: Checkpoint.FlowStatus): IdAndCheckpoint {
