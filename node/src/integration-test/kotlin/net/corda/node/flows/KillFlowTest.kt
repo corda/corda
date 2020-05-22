@@ -34,10 +34,7 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.core.config.Configurator
 import org.assertj.core.api.Assertions
-import org.junit.Before
 import org.junit.Test
 import java.time.Duration
 import java.util.concurrent.Semaphore
@@ -49,11 +46,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KillFlowTest {
-
-    @Before
-    fun setup() {
-        Configurator.setLevel("net.corda.node.services.statemachine", Level.DEBUG)
-    }
 
     @Test(timeout = 300_000)
     fun `a killed flow will end when it reaches the next suspension point`() {

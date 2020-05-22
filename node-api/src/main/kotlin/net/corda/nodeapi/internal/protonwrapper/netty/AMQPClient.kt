@@ -113,7 +113,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         override fun operationComplete(future: ChannelFuture) {
             amqpActive = false
             if (!future.isSuccess) {
-                log.info("Failed to connect to $currentTarget")
+                log.info("Failed to connect to $currentTarget", future.cause())
 
                 if (started) {
                     workerGroup?.schedule({
