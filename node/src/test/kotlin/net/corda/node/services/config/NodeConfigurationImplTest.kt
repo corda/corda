@@ -21,6 +21,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
@@ -202,7 +203,7 @@ class NodeConfigurationImplTest {
     }
 
     @Test(timeout=300_000)
-	fun `relative path correctly parsed`() {
+	fun `absolute base directory leads to correct cordapp directories`() {
         val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
         // Override base directory to have predictable experience on diff OSes
@@ -217,6 +218,62 @@ class NodeConfigurationImplTest {
 
         val baseDirPath = tempFolder.root.toPath()
         assertEquals(listOf(baseDirPath / "./myCorDapps1", baseDirPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
+    }
+
+    @Test(timeout=300_000)
+    fun `absolute base directory leads to correct default cordapp directory`() {
+        val rawConfig = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to tempFolder.root.canonicalPath)
+                .withFallback(rawConfig)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertThat(nodeConfiguration.isValid).isTrue()
+
+        val baseDirPath = tempFolder.root.toPath()
+        assertEquals(listOf(baseDirPath / "cordapps"), nodeConfiguration.value().cordappDirectories)
+    }
+
+    @Test(timeout=300_000)
+    fun `relative base dir leads to correct cordapp directories`() {
+        val rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
+        val fullPath = File(".").resolve(path).toString()
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to fullPath)
+                .withFallback(rawConfig)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertThat(nodeConfiguration.isValid).isTrue()
+
+        assertEquals(listOf(fullPath / "./myCorDapps1", fullPath / "./myCorDapps2"), nodeConfiguration.value().cordappDirectories)
+    }
+
+    @Test(timeout=300_000)
+    fun `relative base dir leads to correct default cordapp directory`() {
+        val rawConfig = ConfigFactory.parseResources("working-config-no-cordapps.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+
+        val path = tempFolder.root.relativeTo(tempFolder.root.parentFile).toString()
+        val fullPath = File(".").resolve(path).toString()
+        // Override base directory to have predictable experience on diff OSes
+        val finalConfig = configOf(
+                // Add substitution values here
+                "baseDirectory" to fullPath)
+                .withFallback(rawConfig)
+                .resolve()
+
+        val nodeConfiguration = finalConfig.parseAsNodeConfiguration()
+        assertThat(nodeConfiguration.isValid).isTrue()
+
+        assertEquals(listOf(fullPath / "cordapps"), nodeConfiguration.value().cordappDirectories)
     }
 
     @Test(timeout=300_000)
