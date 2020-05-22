@@ -716,9 +716,11 @@ class DBCheckpointStorageTests {
         assertTrue(smallerStackTraceSize < DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            val serializedFlowState = checkpoint.serializeFlowState()
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(smallerStackTraceException), serializedFlowState, checkpoint.serializeCheckpointState())
         }
         database.transaction {
@@ -755,9 +757,11 @@ class DBCheckpointStorageTests {
         assertTrue(biggerStackTraceSize > DBCheckpointStorage.MAX_STACKTRACE_LENGTH)
 
         val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            val serializedFlowState = checkpoint.serializeFlowState()
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(biggerStackTraceException), serializedFlowState, checkpoint.serializeCheckpointState())
         }
         database.transaction {
