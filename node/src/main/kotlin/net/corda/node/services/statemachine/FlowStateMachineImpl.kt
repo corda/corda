@@ -303,7 +303,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if(t.isUnrecoverable()) {
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
             }
-            logger.info("Flow raised an error: ${t.message}. Sending it to flow hospital to be triaged.")
+            logFlowError(t)
             Try.Failure<R>(t)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
@@ -340,6 +340,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
         )
+    }
+
+    private fun logFlowError(throwable: Throwable) {
+        if (contextTransactionOrNull != null) {
+            logger.info("Flow raised an error: ${throwable.message}. Sending it to flow hospital to be triaged.")
+        } else {
+            logger.error("Flow raised an error: ${throwable.message}. The flow's database transaction is missing.", throwable)
+        }
     }
 
     @Suspendable
