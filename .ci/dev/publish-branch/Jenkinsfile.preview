@@ -1,3 +1,4 @@
+#!groovy
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -15,7 +16,10 @@ pipeline {
     }
 
     environment {
+        // Replace / with :: as links from Jenkins to Artifactory are broken if we use slashes
+        // in the name
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Preview to Artifactory"
+                .replaceAll("/", " :: ")
     }
 
     stages {
@@ -59,4 +63,3 @@ pipeline {
         }
     }
 }
-
