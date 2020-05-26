@@ -69,7 +69,7 @@
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="VARCHAR(255)">
+            <column name="type" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="exception_message" type="NVARCHAR(4000)">
