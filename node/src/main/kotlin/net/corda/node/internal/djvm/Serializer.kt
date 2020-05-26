@@ -31,7 +31,7 @@ class Serializer(
      * [net.corda.node.djvm.LtxFactory] to be transformed finally to
      * a list of [net.corda.core.contracts.StateAndRef] objects,
      */
-    fun deserialize(stateRefs: List<SerializedStateAndRef>): Array<Array<Any?>> {
+    fun deserialize(stateRefs: List<SerializedStateAndRef>): Array<Array<out Any?>> {
         return stateRefs.map {
             arrayOf(deserialize(it.serializedState), deserialize(it.ref.serialize()))
         }.toTypedArray()
