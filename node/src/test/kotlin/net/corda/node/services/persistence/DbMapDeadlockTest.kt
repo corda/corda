@@ -92,7 +92,7 @@ class DbMapDeadlockTest {
         val cacheFactory = TestingNamedCacheFactory()
         val dbConfig = DatabaseConfig()
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
-        createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
+        createCordaPersistence(dbConfig, { null }, { null }, schemaService, cacheFactory, null).apply {
             startHikariPool(hikariProperties, schemaService.schemas, ourName = TestIdentity(ALICE_NAME, 70).name, runMigrationScripts = true)
         }.use { persistence ->
 

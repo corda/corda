@@ -14,6 +14,7 @@ import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
+import org.hibernate.internal.util.config.ConfigurationException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.MaterializedBlobType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
@@ -27,20 +28,27 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
-        val hbm2dll: String =
-                if (allowHibernateToManageAppSchema) {
-                    "update"
-                } else  {
-                    "validate"
-                }
+        if (allowHibernateToManageAppSchema){
+            throw ConfigurationException("hibernate to manage app schema is only allowed in H2 databases")
+        }
+
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
+       val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("javax.persistence.validation.mode", "none")
                 .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
-                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+                .setProperty("hibernate.hbm2ddl.auto", "validate")
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
+
+        databaseConfig.schema?.apply {
+            config.setProperty("hibernate.default_schema", this)
+        }
+        databaseConfig.hibernateDialect?.apply {
+            config.setProperty("hibernate.dialect", this)
+        }
+
+        return config
     }
 
     override fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {

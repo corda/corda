@@ -25,10 +25,15 @@ class DatabaseTransaction(
 ) {
     val id: UUID = UUID.randomUUID()
 
+    private var _connectionCreated = false
+    val connectionCreated get() = _connectionCreated
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
         database.dataSource.connection.apply {
-            autoCommit = false
-            transactionIsolation = isolation
+            _connectionCreated = true
+            // only set the transaction isolation level if it's actually changed - setting isn't free.
+            if (transactionIsolation != isolation) {
+                transactionIsolation = isolation
+            }
         }
     }
 
@@ -83,7 +88,9 @@ class DatabaseTransaction(
             }
             hibernateTransaction.commit()
         }
-        connection.commit()
+        if (_connectionCreated) {
+            connection.commit()
+        }
         committed = true
     }
 
@@ -91,7 +98,7 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.clear()
         }
-        if (!connection.isClosed) {
+        if (_connectionCreated && !connection.isClosed) {
             connection.rollback()
         }
         clearException()
@@ -101,7 +108,8 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-        if (database.closeConnection) {
+
+        if (_connectionCreated && database.closeConnection) {
             connection.close()
         }
         clearException()

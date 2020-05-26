@@ -160,9 +160,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
 import net.corda.nodeapi.internal.persistence.RestrictedConnection
 import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
@@ -193,6 +192,31 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import kotlin.collections.ArrayList
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.drop
+import kotlin.collections.emptyList
+import kotlin.collections.filterNotNull
+import kotlin.collections.first
+import kotlin.collections.flatMap
+import kotlin.collections.fold
+import kotlin.collections.forEach
+import kotlin.collections.groupBy
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.plusAssign
+import kotlin.collections.reversed
+import kotlin.collections.setOf
+import kotlin.collections.single
+import kotlin.collections.toSet
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -258,7 +282,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            configuration.dataSourceProperties,
             cacheFactory,
             cordappLoader.appClassLoader,
             allowHibernateToManageAppSchema)
@@ -1358,7 +1381,6 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
-                           hikariProperties: Properties,
                            cacheFactory: NamedCacheFactory,
                            customClassLoader: ClassLoader?,
                            allowHibernateToManageAppSchema: Boolean = false): CordaPersistence {
@@ -1370,11 +1392,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
 
-    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
             databaseConfig,
             schemaService.schemas,
-            jdbcUrl,
             cacheFactory,
             attributeConverters, customClassLoader,
             errorHandler = { e ->
@@ -1404,7 +1424,8 @@ fun CordaPersistence.startHikariPool(
         } else {
             schemaMigration.checkState()
         }
-        start(dataSource)
+        val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
+        start(dataSource, jdbcUrl)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
@@ -1414,7 +1435,7 @@ fun CordaPersistence.startHikariPool(
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
                     "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
-            ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
+            ex is DatabaseMigrationException -> throw ex
             else ->
                 throw CouldNotCreateDataSourceException(
                         "Could not create the DataSource: ${ex.message}",

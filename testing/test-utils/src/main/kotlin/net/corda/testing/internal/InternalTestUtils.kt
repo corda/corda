@@ -179,7 +179,6 @@ fun configureDatabase(hikariProperties: Properties,
             wellKnownPartyFromX500Name,
             wellKnownPartyFromAnonymous,
             schemaService,
-            hikariProperties,
             cacheFactory,
             null,
             allowHibernateToManageAppSchema)

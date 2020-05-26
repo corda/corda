@@ -33,12 +33,16 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
+        val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
-        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
+        val hibernateDialect: String? = null,
+        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize,
+        val vaultUpdateBatchSize: Int? = Defaults.vaultUpdateBatchSize
 ) {
     object Defaults {
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
+        val vaultUpdateBatchSize = null
     }
 }
 
@@ -90,7 +94,6 @@ val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 class CordaPersistence(
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
-        val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
@@ -106,12 +109,11 @@ class CordaPersistence(
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
+                HibernateConfiguration(schemas, databaseConfig, attributeConverters, _jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
+            } catch (e: SchemaManagementException) {
+                throw HibernateSchemaChangeException(e)
             } catch (e: Exception) {
-                when (e) {
-                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)
-                    else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
-                }
+                throw HibernateConfigException(e)
             }
         }
     }
@@ -123,8 +125,13 @@ class CordaPersistence(
     private var _dataSource: DataSource? = null
     val dataSource: DataSource get() = checkNotNull(_dataSource) { "CordaPersistence not started" }
 
-    fun start(dataSource: DataSource) {
+    private lateinit var _jdbcUrl: String
+    val jdbcUrl: String get() = _jdbcUrl
+
+    // TODO OS version does not have a jdbcUrl parameter. This divergence needs to be fixed.
+    fun start(dataSource: DataSource, jdbcUrl: String) {
         _dataSource = dataSource
+        this._jdbcUrl = jdbcUrl
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
         // database transaction open.  The [transaction] helper above handles this in a finally clause for you
@@ -420,6 +427,9 @@ class CouldNotCreateDataSourceException(override val message: String?,
                                         override val parameters: List<Any> = listOf(),
                                         override val cause: Throwable? = null) : ErrorCode<NodeDatabaseErrors>, Exception()
 
-class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
+// The reasons/remedies are added in the specific context where the exception is caught
+class HibernateSchemaChangeException(throwable: Throwable):
+        Exception("Incompatible database schema version detected. Reason: ${throwable.message}", throwable)
 
-class HibernateConfigException(override val message: String?, override val cause: Throwable? = null): Exception()
+class HibernateConfigException(throwable: Throwable):
+        Exception("Could not create Hibernate configuration. Reason: ${throwable.message}", throwable)
