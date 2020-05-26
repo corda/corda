@@ -756,7 +756,7 @@ class FlowFrameworkTests {
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
     }
 
-    // T_O_D_O: DBFlowException is currently not integrated; unignore this test once it is
+    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
     @Ignore
     @Test(timeout=300_000)
     fun `Checkpoint is updated in DB with FAILED status and the error when flow fails`() {
@@ -781,7 +781,7 @@ class FlowFrameworkTests {
         }
     }
 
-    // T_O_D_O: DBFlowException is currently not integrated; unignore this test once it is
+    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
     @Ignore
     @Test(timeout=300_000)
     fun `Checkpoint is updated in DB with HOSPITALIZED status and the error when flow is kept for overnight observation` () {
