@@ -45,6 +45,7 @@ interface KeyManagementService {
      * @param identity identity to generate a key and certificate for. Must be an identity this node has CA privileges for.
      * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
      * @return X.509 certificate and path to the trust root.
+     * TODO: deprecate
      */
     @Suspendable
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate
@@ -57,6 +58,7 @@ interface KeyManagementService {
      * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
      * @param externalId ID to associate the newly created [PublicKey] with.
      * @return X.509 certificate and path to the trust root.
+     * TODO: deprecate
      */
     @Suspendable
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate

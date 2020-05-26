@@ -26,6 +26,7 @@ import java.time.Duration
  * @param issuer issuer to generate a key and certificate for. Must be an identity this node has the private key for.
  * @param issuerSigner a content signer for the issuer.
  * @return X.509 certificate and path to the trust root.
+ * TODO: deprecate
  */
 fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
@@ -46,7 +47,7 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertPath = X509Utilities.buildCertPath(ourCertificate, issuer.certPath.x509Certificates)
     val anonymisedIdentity = PartyAndCertificate(ourCertPath)
     if (identityService is IdentityServiceInternal) {
-        identityService.verifyAndRegisterNewRandomIdentity(anonymisedIdentity)
+        identityService.justVerifyAndRegisterIdentity(anonymisedIdentity, true)
     } else {
         identityService.verifyAndRegisterIdentity(anonymisedIdentity)
     }

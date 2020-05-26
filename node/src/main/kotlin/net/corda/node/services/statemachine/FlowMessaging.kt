@@ -68,16 +68,15 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {
-        val party = if (destination is Party) {
-            log.trace { "Sending message $deduplicationId $message to $destination" }
-            destination
+        // Identity service query is required even for well-known parties due to certificate rotation.
+        // We assume that the destination type has already been checked by initiateFlow.
+        val party = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AnonymousParty)) {
+            "We do not know who $destination belongs to"
+        }
+        if (destination == party) {
+            log.trace { "Sending message $deduplicationId $message to $party" }
         } else {
-            // We assume that the destination type has already been checked by initiateFlow
-            val wellKnown = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AnonymousParty)) {
-                "We do not know who $destination belongs to"
-            }
-            log.trace { "Sending message $deduplicationId $message to $wellKnown on behalf of $destination" }
-            wellKnown
+            log.trace { "Sending message $deduplicationId $message to $party on behalf of $destination" }
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
         val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about $party" }

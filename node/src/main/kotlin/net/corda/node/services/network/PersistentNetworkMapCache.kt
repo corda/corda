@@ -13,6 +13,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -21,7 +22,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
-import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -41,7 +41,7 @@ import javax.persistence.PersistenceException
 @Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityServiceInternal) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -252,7 +252,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         // First verify all the node's identities are valid before registering any of them
         return if (verifyIdentities(node)) {
             for (identity in node.legalIdentitiesAndCerts) {
-                identityService.verifyAndRegisterNodeInfoIdentity(identity)
+                identityService.verifyAndRegisterIdentity(identity)
             }
             true
         } else {
@@ -274,15 +274,22 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     override val allNodes: List<NodeInfo>
         get() {
             return database.transaction {
-                getAllNodeInfos(session).map { it.toNodeInfo() }
+                selectAll<NodeInfoSchemaV1.PersistentNodeInfo>(session).map { it.toNodeInfo() }
             }
         }
 
-    private fun getAllNodeInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
-        val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
-        criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
+    private inline fun <reified T> selectAll(session: Session): List<T> {
+        val criteria = session.criteriaBuilder.createQuery(T::class.java)
+        criteria.select(criteria.from(T::class.java))
         return session.createQuery(criteria).resultList
     }
+
+    override val allIdentities: List<PartyAndCertificate>
+        get() {
+            return database.transaction {
+                selectAll<NodeInfoSchemaV1.DBPartyAndCertificate>(session).map { it.toLegalIdentityAndCert() }
+            }
+        }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
         // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
@@ -388,7 +395,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         logger.info("Clearing Network Map Cache entries")
         invalidateCaches()
         database.transaction {
-            val result = getAllNodeInfos(session)
+            val result = selectAll<NodeInfoSchemaV1.PersistentNodeInfo>(session)
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }

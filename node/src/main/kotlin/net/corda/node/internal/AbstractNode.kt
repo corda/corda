@@ -432,7 +432,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startDatabase()
         val (identity, identityKeyPairs) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), pkToIdCache = pkToIdCache)
+        identityService.start(
+                trustRoot,
+                listOf(identity.certificate, nodeCa),
+                pkToIdCache = pkToIdCache,
+                wellKnownPartyFromX500Name = networkMapCache::getPeerByLegalName,
+                getAllIdentities = networkMapCache::allIdentities)
         return database.use {
             it.transaction {
                 val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPairs, publish = false)
@@ -562,7 +567,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
+        identityService.start(
+                trustRoot,
+                listOf(identity.certificate, nodeCa),
+                netParams.notaries.map { it.identity },
+                pkToIdCache,
+                networkMapCache::getPeerByLegalName,
+                networkMapCache::allIdentities)
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPairs, publish = true)
@@ -1103,16 +1114,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val legalIdentityPrivateKeyAlias = aliases.last()
 
         if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
+            /** TODO: do we need DB check here ? */
             // Directly use the X500 name to public key map, as the identity service requires the node identity to start correctly.
-            database.transaction {
-                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
-                require(configuration.myLegalName !in x500Map) {
-                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
-                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
-                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
-                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
-                }
-            }
+//            database.transaction {
+//                val x500Map = PersistentIdentityService.createX500ToKeyMap(cacheFactory)
+//                require(configuration.myLegalName !in x500Map) {
+//                    // There is already a party in the identity store for this node, but the key has been lost. If this node starts up, it will
+//                    // publish it's new key to the network map, which Corda cannot currently handle. To prevent this, stop the node from starting.
+//                    "Private key for the node legal identity not found (alias $legalIdentityPrivateKeyAlias) but the corresponding public key" +
+//                            " for it exists in the database. This suggests the identity for this node has been lost. Shutting down to prevent network map issues."
+//                }
+//            }
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
             createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
             signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
