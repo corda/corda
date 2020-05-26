@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
@@ -70,7 +71,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {
         // Identity service query is required even for well-known parties due to certificate rotation.
         // We assume that the destination type has already been checked by initiateFlow.
-        val party = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AnonymousParty)) {
+        val party = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)) {
             "We do not know who $destination belongs to"
         }
         if (destination == party) {
