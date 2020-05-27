@@ -1274,6 +1274,7 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         // just lock and release with our flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        // assert softLockedStates size
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid, lockSetFlowId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
 
@@ -1281,6 +1282,7 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         val randomUUID = UUID.randomUUID()
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        // assert softLockedStates size
         serviceHub.vaultService.softLockRelease(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
 
@@ -1288,12 +1290,15 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-        serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
-        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-
+        // assert softLockedStates size
+        // the following if-block is intentionally put in the following order. We need to assert that while states are locked under the flowId,
+        // and under random Ids, when unlocking with random Id it will not make use of [flowStateMachineImpl.softLockedStates]
         if (releaseRandomId) {
             serviceHub.vaultService.softLockRelease(randomUUID)
         }
+        serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
+        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+
         return true
     }
 }
