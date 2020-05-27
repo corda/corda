@@ -108,7 +108,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -123,14 +123,14 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
         val newCheckpoint = checkpoint.copy(
             flowState = FlowState.Completed,
             status = Checkpoint.FlowStatus.COMPLETED
         )
         database.transaction {
-            checkpointStorage.updateCheckpoint(id, newCheckpoint, null)
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, null, serializeCheckpointState(newCheckpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -163,7 +163,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -200,5 +200,9 @@ class CheckpointDumperImplTest {
 
     private fun serializeFlowState(checkpoint: Checkpoint): SerializedBytes<FlowState> {
         return checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+    }
+
+    private fun serializeCheckpointState(checkpoint: Checkpoint): SerializedBytes<CheckpointState> {
+        return checkpoint.checkpointState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }

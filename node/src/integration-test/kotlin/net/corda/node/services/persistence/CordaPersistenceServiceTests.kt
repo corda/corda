@@ -65,8 +65,9 @@ class CordaPersistenceServiceTests {
                     val flowId = it.toString()
                     session.save(
                         DBCheckpointStorage.DBFlowCheckpoint(
-                            id = flowId,
+                            flowId = flowId,
                             blob = DBCheckpointStorage.DBFlowCheckpointBlob(
+                                flowId = flowId,
                                 checkpoint = ByteArray(8192),
                                 flowStack = ByteArray(8192),
                                 hmac = ByteArray(16),

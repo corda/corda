@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Reservoir
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -90,15 +91,18 @@ class ActionExecutorImpl(
         val flowState = checkpoint.flowState
         val serializedFlowState = when(flowState) {
             FlowState.Completed -> null
+            // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the flowState as it will not get saved in the DB
             else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
+        // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the serializedCheckpointState as it will not get saved in the DB
+        val serializedCheckpointState: SerializedBytes<CheckpointState> = checkpoint.checkpointState.checkpointSerialize(checkpointSerializationContext)
         if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
+            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
             if (flowState is FlowState.Completed) {
                 throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
             }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
         }
     }
 

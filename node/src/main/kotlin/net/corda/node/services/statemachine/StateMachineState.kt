@@ -176,7 +176,7 @@ data class Checkpoint(
                 else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
             }
             return Checkpoint(
-                checkpointState = serializedCheckpointState.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
+                checkpointState = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext),
                 flowState = flowState,
                 errorState = errorState,
                 result = result?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
