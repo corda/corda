@@ -1316,6 +1316,8 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
         // the following if-block is intentionally put in the following order. We need to assure that while states are locked with the flowId,
         // and with random Ids, when unlocking with random Id it will not make use of [flowStateMachineImpl.softLockedStates]
+        // i.e. a. it will successfully remove these states (otherwise it would not, because it would include in the sql IN clause states that are not under this random Id)
+        //      b. it will leave [flowStateMachineImpl.softLockedStates] untouched (it will not remove any states in there since they do not belong to the random Id)
         if (releaseRandomId) {
             serviceHub.vaultService.softLockRelease(randomUUID)
         }
