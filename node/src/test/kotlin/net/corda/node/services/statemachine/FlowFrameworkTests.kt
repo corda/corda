@@ -7,6 +7,7 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.Destination
@@ -28,7 +29,10 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -39,7 +43,10 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
+import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
@@ -49,13 +56,18 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
@@ -80,7 +92,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.ArrayList
+import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.reflect.KClass
@@ -90,6 +102,8 @@ import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
     companion object {
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+
         init {
             LogHelper.setLevel("+net.corda.flow")
         }
@@ -118,7 +132,7 @@ class FlowFrameworkTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
+            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP),
             servicePeerAllocationStrategy = RoundRobin()
         )
 
@@ -831,6 +845,37 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
+    @Test
+    fun `flow correctly locks unlocks states - at the end keep locked states reserved by random id`() {
+        val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
+        val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, false)).resultFuture.getOrThrow(30.seconds)
+        assertTrue(completedSuccessfully)
+        assertEquals(5, SoftLocksFLow.queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
+    }
+
+    @Test
+    fun `flow correctly locks unlocks states - at the end release states reserved by random id`() {
+        val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
+        val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, true)).resultFuture.getOrThrow(30.seconds)
+        assertTrue(completedSuccessfully)
+        assertEquals(10, SoftLocksFLow.queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
+    }
+
+    private fun fillVault(node: TestStartedNode, thisManyStates: Int): Vault<Cash.State>? {
+        val bankNode = mockNet.createPartyNode(BOC_NAME)
+        val bank = bankNode.info.singleIdentity()
+        val cashIssuer = bank.ref(1)
+        return node.database.transaction {
+            VaultFiller(node.services, dummyNotary, notaryIdentity, ::Random).fillWithSomeTestCash(
+                100.DOLLARS,
+                bankNode.services,
+                thisManyStates,
+                thisManyStates,
+                cashIssuer
+            )
+        }
+    }
+
     private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
         val criteria = session.criteriaBuilder.createQuery(T::class.java)
         criteria.select(criteria.from(T::class.java))
@@ -1203,5 +1248,52 @@ internal class SuspendingFlow : FlowLogic<Unit>() {
         stateMachine.hookBeforeCheckpoint()
         sleep(1.seconds) // flow checkpoints => checkpoint is in DB
         stateMachine.hookAfterCheckpoint()
+    }
+}
+
+internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.State>>,
+                             private val releaseRandomId: Boolean = true) : FlowLogic<Boolean>() {
+
+    companion object {
+        fun queryStates(softLockingType: QueryCriteria.SoftLockingType, vaultService: VaultService) =
+            vaultService.queryBy<Cash.State>(
+                QueryCriteria.VaultQueryCriteria(
+                    softLockingCondition = QueryCriteria.SoftLockingCondition(
+                        softLockingType
+                    )
+                )
+            ).states
+    }
+
+    @Suspendable
+    override fun call(): Boolean {
+        val unlockedStatesSize = unlockedStates.size
+        val lockSetFlowId = unlockedStates.subList(0, unlockedStatesSize / 2).map { it.ref }.toNonEmptySet()
+        val lockSetRandomId = unlockedStates.subList(unlockedStatesSize / 2, unlockedStatesSize).map { it.ref }.toNonEmptySet()
+
+        // just lock and release with our flow Id
+        serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
+        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        serviceHub.vaultService.softLockRelease(stateMachine.id.uuid, lockSetFlowId)
+        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+
+        // just lock and release with a random Id
+        val randomUUID = UUID.randomUUID()
+        serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
+        assertEquals(lockSetFlowId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        serviceHub.vaultService.softLockRelease(randomUUID, lockSetRandomId)
+        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+
+        // now lock with our flow Id, lock with other Id and then unlock passing in only our Id
+        serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
+        serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
+        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
+        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+
+        if (releaseRandomId) {
+            serviceHub.vaultService.softLockRelease(randomUUID)
+        }
+        return true
     }
 }
