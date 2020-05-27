@@ -852,7 +852,7 @@ class FlowFrameworkTests {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, false)).resultFuture.getOrThrow(30.seconds)
         assertTrue(completedSuccessfully)
-        assertEquals(5, SoftLocksFLow.queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
+        assertEquals(5, SoftLocksFLow.queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
     }
 
     @Test
@@ -860,7 +860,7 @@ class FlowFrameworkTests {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, true)).resultFuture.getOrThrow(30.seconds)
         assertTrue(completedSuccessfully)
-        assertEquals(10, SoftLocksFLow.queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
+        assertEquals(10, SoftLocksFLow.queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
     }
 
     @Test
@@ -1271,7 +1271,7 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
                              private val releaseRandomId: Boolean = true) : FlowLogic<Boolean>() {
 
     companion object {
-        fun queryStates(softLockingType: QueryCriteria.SoftLockingType, vaultService: VaultService) =
+        fun queryCashStates(softLockingType: QueryCriteria.SoftLockingType, vaultService: VaultService) =
             vaultService.queryBy<Cash.State>(
                 QueryCriteria.VaultQueryCriteria(
                     softLockingCondition = QueryCriteria.SoftLockingCondition(
@@ -1289,23 +1289,23 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
 
         // just lock and release with our flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
-        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
         // assert softLockedStates size
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid, lockSetFlowId)
-        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
 
         // just lock and release with a random Id
         val randomUUID = UUID.randomUUID()
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
-        assertEquals(lockSetFlowId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(lockSetFlowId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
         // assert softLockedStates size
         serviceHub.vaultService.softLockRelease(randomUUID, lockSetRandomId)
-        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
 
         // lock with our flow Id, lock with random Id and then unlock passing in only flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
-        assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
         // assert softLockedStates size
         // the following if-block is intentionally put in the following order. We need to assert that while states are locked under the flowId,
         // and under random Ids, when unlocking with random Id it will not make use of [flowStateMachineImpl.softLockedStates]
