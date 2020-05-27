@@ -552,11 +552,12 @@ class NodeVaultService(
         // would use lock_id_idx(lock_id, state_status) to search and update entries in vault_states table. However, all rest of the queries would follow the
         // opposite direction meaning they would use PK's index(output_index, transaction_id) but they could also update the lock_id and therefore the lock_id_idx as well.
         // That was causing a circular locking among the different transactions within the database.
-        val softLockedStates = FlowStateMachineImpl.currentStateMachine()?.softLockedStates
+        val flowStateMachineImpl = FlowStateMachineImpl.currentStateMachine()
         val stateRefsToBeReleased =
-            stateRefs ?: softLockedStates?.let {
-                if (it.isNotEmpty()) {
-                    NonEmptySet.copyOf(it)
+            stateRefs ?: flowStateMachineImpl?.let {
+                // We only hold states under our flowId. For all other lockId fall back to old query mechanism, i.e. stateRefsToBeReleased = null
+                if (lockId == it.id.uuid && it.softLockedStates.isNotEmpty()) {
+                    NonEmptySet.copyOf(it.softLockedStates)
                 } else {
                     null
                 }
@@ -577,7 +578,11 @@ class NodeVaultService(
                     update.where(*commonPredicates, stateRefsPredicate)
                 }
                 if (updatedRows > 0) {
-                    softLockedStates?.removeAll(stateRefsToBeReleased)
+                    flowStateMachineImpl?.let {
+                        if (lockId == it.id.uuid) {
+                            it.softLockedStates.removeAll(stateRefsToBeReleased)
+                        }
+                    }
                     log.trace { "Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefsToBeReleased" }
                 }
             } catch (e: Exception) {
