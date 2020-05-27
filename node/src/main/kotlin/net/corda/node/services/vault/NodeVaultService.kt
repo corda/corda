@@ -507,7 +507,17 @@ class NodeVaultService(
             }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {
                 log.trace { "Reserving soft lock states for $lockId: $stateRefs" }
-                FlowStateMachineImpl.currentStateMachine()?.softLockedStates?.addAll(stateRefs)
+                FlowStateMachineImpl.currentStateMachine()?.let {
+                    if (!it.softLockedStatesDeactivated) {
+                        if (lockId != it.id.uuid) {
+                            // Attempt to lock with an id which is not our flow id. Deactivate [flowStateMachineImpl.softLockedStates] as we will fall back to the old
+                            // query mechanism, i.e. we will not use the [flowStateMachineImpl.softLockedStates] in softLockRelease query.
+                            it.softLockedStatesDeactivated = true
+                        } else {
+                            FlowStateMachineImpl.currentStateMachine()?.softLockedStates?.addAll(stateRefs)
+                        }
+                    }
+                }
             } else {
                 // revert partial soft locks
                 val revertUpdatedRows = execute { update, commonPredicates ->
