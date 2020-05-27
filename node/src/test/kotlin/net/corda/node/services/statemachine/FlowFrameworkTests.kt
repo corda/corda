@@ -6,6 +6,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
@@ -50,6 +51,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
+import net.corda.node.services.vault.NodeVaultServiceTest
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
@@ -846,7 +848,7 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `flow correctly locks unlocks states - at the end keep locked states reserved by random id`() {
+    fun `flow correctly soft locks and unlocks states - at the end keeps locked states reserved by random id`() {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, false)).resultFuture.getOrThrow(30.seconds)
         assertTrue(completedSuccessfully)
@@ -854,11 +856,25 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `flow correctly locks unlocks states - at the end release states reserved by random id`() {
+    fun `flow correctly soft locks and unlocks states - at the end releases states reserved by random id`() {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocksFLow(vaultStates, true)).resultFuture.getOrThrow(30.seconds)
         assertTrue(completedSuccessfully)
         assertEquals(10, SoftLocksFLow.queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
+    }
+
+    @Test
+    fun `flow soft locks fungible state upon creation`() {
+        var lockedStates = 0
+        SoftLocksCreateFungibleStateFLow.hook = { vaultService ->
+            lockedStates = vaultService.queryBy<NodeVaultServiceTest.FungibleFoo>(
+                QueryCriteria.VaultQueryCriteria(
+                    softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.LOCKED_ONLY)
+                )
+            ).states.size
+        }
+        aliceNode.services.startFlow(SoftLocksCreateFungibleStateFLow()).resultFuture.getOrThrow(30.seconds)
+        assertEquals(1, lockedStates)
     }
 
     private fun fillVault(node: TestStartedNode, thisManyStates: Int): Vault<Cash.State>? {
@@ -1298,5 +1314,26 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         }
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
         return true
+    }
+}
+
+internal class SoftLocksCreateFungibleStateFLow: FlowLogic<Unit>() {
+
+    companion object {
+        var hook: ((VaultService)-> Unit)? = null
+    }
+
+    @Suspendable
+    override fun call() {
+        val issuer = serviceHub.myInfo.legalIdentities.first()
+        val notary = serviceHub.networkMapCache.notaryIdentities[0]
+        val fungibleState = NodeVaultServiceTest.FungibleFoo(100.DOLLARS, listOf(issuer))
+        val txCommand = Command(DummyContract.Commands.Create(), issuer.owningKey)
+        val txBuilder = TransactionBuilder(notary)
+            .addOutputState(fungibleState, DummyContract.PROGRAM_ID)
+            .addCommand(txCommand)
+        val signedTx = serviceHub.signInitialTransaction(txBuilder)
+        serviceHub.recordTransactions(signedTx)
+        hook?.invoke(serviceHub.vaultService)
     }
 }
