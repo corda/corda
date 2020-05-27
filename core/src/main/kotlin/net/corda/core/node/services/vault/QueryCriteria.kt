@@ -168,19 +168,93 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             return parser.parseCriteria(this)
         }
 
-        fun withStatus(status: Vault.StateStatus): VaultQueryCriteria = copy(status = status)
-        fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): VaultQueryCriteria = copy(contractStateTypes = contractStateTypes)
-        fun withStateRefs(stateRefs: List<StateRef>): VaultQueryCriteria = copy(stateRefs = stateRefs)
-        fun withNotary(notary: List<AbstractParty>): VaultQueryCriteria = copy(notary = notary)
-        fun withSoftLockingCondition(softLockingCondition: SoftLockingCondition): VaultQueryCriteria = copy(softLockingCondition = softLockingCondition)
-        fun withTimeCondition(timeCondition: TimeCondition): VaultQueryCriteria = copy(timeCondition = timeCondition)
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [relevancyStatus].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withRelevancyStatus(relevancyStatus: Vault.RelevancyStatus): VaultQueryCriteria = copy(relevancyStatus = relevancyStatus)
+
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [constraintTypes].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withConstraintTypes(constraintTypes: Set<Vault.ConstraintInfo.Type>): VaultQueryCriteria = copy(constraintTypes = constraintTypes)
+
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [constraints].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withConstraints(constraints: Set<Vault.ConstraintInfo>): VaultQueryCriteria = copy(constraints = constraints)
+
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [participants].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withParticipants(participants: List<AbstractParty>): VaultQueryCriteria = copy(participants = participants)
+
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [externalIds].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withExternalIds(externalIds: List<UUID>): VaultQueryCriteria = copy(externalIds = externalIds)
+
+        /**
+         * This function creates a new [VaultQueryCriteria] object with default values, and sets the value of [exactParticipants].
+         * Please use only one function in this group at a time to make sure they are not overwriting each other.
+         */
         fun withExactParticipants(exactParticipants: List<AbstractParty>): VaultQueryCriteria = copy(exactParticipants = exactParticipants)
 
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [status].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withStatus(status: Vault.StateStatus): VaultQueryCriteria = copy(status = status)
+
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [contractStateTypes].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withContractStateTypes(contractStateTypes: Set<Class<out ContractState>>): VaultQueryCriteria = copy(contractStateTypes = contractStateTypes)
+
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [stateRefs].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withStateRefs(stateRefs: List<StateRef>): VaultQueryCriteria = copy(stateRefs = stateRefs)
+
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [notary].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withNotary(notary: List<AbstractParty>): VaultQueryCriteria = copy(notary = notary)
+
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [softLockingCondition].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withSoftLockingCondition(softLockingCondition: SoftLockingCondition): VaultQueryCriteria = copy(softLockingCondition = softLockingCondition)
+
+        /**
+         * This function copies the existing [VaultQueryCriteria] object and sets the given value for [timeCondition].
+         * You can use more than one of the functions in this group together.
+         * In case you are also using a function that creates a new [VaultQueryCriteria] object, make sure that you are
+         * calling that method first.
+         */
+        fun withTimeCondition(timeCondition: TimeCondition): VaultQueryCriteria = copy(timeCondition = timeCondition)
+
+        /**
+         * This function creates a [VaultQueryCriteria] object with the given values. All other fields have the default values set.
+         */
         fun copy(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -210,6 +284,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             )
         }
 
+        /**
+         * This function creates a [VaultQueryCriteria] object with the given values. All other fields have the default values set.
+         */
         fun copy(
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -237,6 +314,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             )
         }
 
+        /**
+         * This function copies [this] [VaultQueryCriteria] object.
+         */
         fun copy(
                 status: Vault.StateStatus = this.status,
                 contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
