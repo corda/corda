@@ -1284,7 +1284,7 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         serviceHub.vaultService.softLockRelease(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
 
-        // now lock with our flow Id, lock with other Id and then unlock passing in only our Id
+        // lock with our flow Id, lock with random Id and then unlock passing in only flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
