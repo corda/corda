@@ -9,6 +9,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.Destination
@@ -1284,35 +1285,42 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
     @Suspendable
     override fun call(): Boolean {
         val unlockedStatesSize = unlockedStates.size
+        val emptySet = emptySet<StateRef>()
         val lockSetFlowId = unlockedStates.subList(0, unlockedStatesSize / 2).map { it.ref }.toNonEmptySet()
         val lockSetRandomId = unlockedStates.subList(unlockedStatesSize / 2, unlockedStatesSize).map { it.ref }.toNonEmptySet()
 
-        // just lock and release with our flow Id
+        // lock and release with our flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         assertEquals(lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-        // assert softLockedStates size
+        // states locked with our flow id are held by the fiber
+        assertEquals(lockSetFlowId, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid, lockSetFlowId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
 
-        // just lock and release with a random Id
+        // lock and release with a random Id
         val randomUUID = UUID.randomUUID()
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-        // assert softLockedStates size
+        // states locked with a random Id are NOT held by the fiber
+        assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates) // in memory locked states held by flow
         serviceHub.vaultService.softLockRelease(randomUUID, lockSetRandomId)
         assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
+        assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
 
         // lock with our flow Id, lock with random Id and then unlock passing in only flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
+        // only states locked with our flow id are held by the fiber
+        assertEquals(lockSetFlowId, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
         assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-        // assert softLockedStates size
-        // the following if-block is intentionally put in the following order. We need to assert that while states are locked under the flowId,
-        // and under random Ids, when unlocking with random Id it will not make use of [flowStateMachineImpl.softLockedStates]
+        // the following if-block is intentionally put in the following order. We need to assure that while states are locked with the flowId,
+        // and with random Ids, when unlocking with random Id it will not make use of [flowStateMachineImpl.softLockedStates]
         if (releaseRandomId) {
             serviceHub.vaultService.softLockRelease(randomUUID)
         }
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
+        assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
         return true
     }
 }
