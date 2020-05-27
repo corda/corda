@@ -58,6 +58,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import kotlin.reflect.KProperty1
 
 class FlowPermissionException(message: String) : FlowException(message)
@@ -133,18 +134,20 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
 
-    internal var softLockedStatesDeactivated: Boolean = false
-        set(value) {
-            if (value) {
-                field = value
-                // Once attempted to soft lock by not our flow Id we fall back to the old release soft locks query mechanism.
-                // We will no longer use [softLockedStates]. We clear it, to reduce fiber's memory footprint.
-                softLockedStates.clear()
-            } else
-                throw IllegalArgumentException("Can only set to true")
+    internal val softLockedStates = object : LinkedHashSet<StateRef>() {
+
+        override fun remove(element: StateRef): Boolean {
+            throw UnsupportedOperationException("Can only add locked states")
         }
 
-    internal val softLockedStates = mutableSetOf<StateRef>()
+        override fun removeAll(elements: Collection<StateRef>): Boolean {
+            throw UnsupportedOperationException("Can only add locked states")
+        }
+
+        override fun removeIf(filter: Predicate<in StateRef>): Boolean {
+            throw UnsupportedOperationException("Can only add locked states")
+        }
+    }
 
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
@@ -315,7 +318,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logger.info("Flow raised an error: ${t.message}. Sending it to flow hospital to be triaged.")
             Try.Failure<R>(t)
         }
-        val softLocksId = if (softLockedStates.isNotEmpty() || softLockedStatesDeactivated) logic.runId.uuid else null
+        val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
                 Event.FlowFinish(resultOrError.value, softLocksId)
