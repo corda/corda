@@ -1297,8 +1297,6 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
             serviceHub.vaultService.softLockRelease(randomUUID)
         }
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
-        assertEquals(lockSetRandomId, queryStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
-
         return true
     }
 }
