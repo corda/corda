@@ -40,7 +40,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -48,7 +48,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeSendMultiple action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
@@ -123,7 +123,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -131,7 +131,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeSendMultiple action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 3
@@ -206,7 +206,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Set flag when inside executeAcknowledgeMessages
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeAcknowledgeMessages
                 AT INVOKE ${DeduplicationHandler::class.java.name}.afterDatabaseTransaction()
                 IF !flagged("exception_flag")
@@ -294,7 +294,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -302,7 +302,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 5
@@ -384,7 +384,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -392,7 +392,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 7
@@ -474,7 +474,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             // seems to be restarting the flow from the beginning every time
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -490,7 +490,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_flag") && readCounter("counter") < 5
@@ -498,7 +498,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && !flagged("commit_flag")
@@ -574,7 +574,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             // seems to be restarting the flow from the beginning every time
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -590,7 +590,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction when removing checkpoint
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("remove_checkpoint_flag") && readCounter("counter") < 3
@@ -673,7 +673,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_flag") && !flagged("commit_exception_flag")
@@ -681,7 +681,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && !flagged("commit_flag")
@@ -689,7 +689,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${SingleThreadedStateMachineManager::class.java.name}
+                CLASS $stateMachineManagerClassName
                 METHOD addAndStartFlow
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_flag") && !flagged("retry_exception_flag")
@@ -776,7 +776,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_flag") && !flagged("commit_exception_flag")
@@ -784,7 +784,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && !flagged("commit_flag")
@@ -792,7 +792,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("suspend_flag") && flagged("commit_exception_flag") && !flagged("retry_exception_flag")
@@ -871,7 +871,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF !flagged("commit_exception_flag")
@@ -879,7 +879,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${SingleThreadedStateMachineManager::class.java.name}
+                CLASS $stateMachineManagerClassName
                 METHOD onExternalStartFlow
                 AT ENTRY
                 IF flagged("commit_exception_flag") && !flagged("retry_exception_flag")
@@ -955,7 +955,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -971,7 +971,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction when removing checkpoint
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("remove_checkpoint_flag") && readCounter("counter") < 4
@@ -1247,7 +1247,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -1255,7 +1255,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 5
@@ -1345,7 +1345,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -1353,7 +1353,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 7
@@ -1436,7 +1436,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -1452,7 +1452,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction when removing checkpoint
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("remove_checkpoint_flag") && readCounter("counter") < 3

@@ -163,4 +163,12 @@ abstract class StatemachineErrorHandlingTest {
             }
         }
     }
+
+    internal val actionExecutorClassName: String by lazy {
+        Class.forName("net.corda.node.services.statemachine.ActionExecutorImpl").name
+    }
+
+    internal val stateMachineManagerClassName: String by lazy {
+        Class.forName("net.corda.node.services.statemachine.SingleThreadedStateMachineManager").name
+    }
 }

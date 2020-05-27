@@ -45,7 +45,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -69,7 +69,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && flagged("commit_flag") && readCounter("counter") < 5
@@ -77,7 +77,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && !flagged("commit_flag")
@@ -155,7 +155,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -179,7 +179,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("suspend_flag") && readCounter("counter") < 5
@@ -257,7 +257,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -273,7 +273,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && readCounter("counter") < 5
@@ -351,7 +351,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -367,7 +367,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && flagged("commit_flag") && readCounter("counter") < 5
@@ -375,7 +375,7 @@ class StatemachineSubflowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Set flag when executing first commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF flagged("subflow_flag") && !flagged("commit_flag")

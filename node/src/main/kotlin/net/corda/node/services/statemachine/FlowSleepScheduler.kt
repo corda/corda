@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-internal class FlowSleepScheduler(private val smm: StateMachineManagerInternal, private val scheduledExecutor: ScheduledExecutorService) {
+internal class FlowSleepScheduler(private val innerState: InnerState, private val scheduledExecutor: ScheduledExecutorService) {
 
     private companion object {
         val log = contextLogger()
@@ -29,15 +29,6 @@ internal class FlowSleepScheduler(private val smm: StateMachineManagerInternal, 
             cancelIfRunning()
         }
         currentState.future = setAlarmClock(fiber, duration)
-    }
-
-    /**
-     * Schedule a wake up event.
-     *
-     * @param fiber The [FlowFiber] to schedule a wake up event for
-     */
-    fun scheduleWakeUp(fiber: FlowFiber) {
-        fiber.scheduleEvent(Event.WakeUpFromSleep)
     }
 
     /**
@@ -64,15 +55,24 @@ internal class FlowSleepScheduler(private val smm: StateMachineManagerInternal, 
 
     private fun setAlarmClock(fiber: FlowFiber, duration: Duration): ScheduledFuture<Unit> {
         val instance = fiber.instanceId
-        log.debug { "Putting flow to sleep for $duration" }
+        log.debug { "Putting flow ${instance.runId} to sleep for $duration" }
         return scheduledExecutor.schedule<Unit>(
             {
                 log.debug { "Scheduling flow wake up event for flow ${instance.runId}" }
-                // This passes back into the SMM to check that the fiber that went to sleep is the same fiber that is now being scheduled
-                // with the wake up event
-                smm.scheduleFlowWakeUp(instance)
+                scheduleWakeUp(instance)
             },
             duration.toMillis(), TimeUnit.MILLISECONDS
         )
+    }
+
+    private fun scheduleWakeUp(instance: StateMachineInstanceId) {
+        innerState.withLock {
+            flows[instance.runId]?.let { flow ->
+                // Only schedule a wake up event if the fiber the flow is executing on has not changed
+                if (flow.fiber.instanceId == instance) {
+                    flow.fiber.scheduleEvent(Event.WakeUpFromSleep)
+                }
+            }
+        }
     }
 }

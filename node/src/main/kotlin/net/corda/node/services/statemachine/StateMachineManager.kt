@@ -102,7 +102,7 @@ interface StateMachineManager {
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
 // these functions again
-interface StateMachineManagerInternal {
+internal interface StateMachineManagerInternal {
     fun signalFlowHasStarted(flowId: StateMachineRunId)
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)
@@ -111,7 +111,6 @@ interface StateMachineManagerInternal {
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
     fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration)
-    fun scheduleFlowWakeUp(instanceId: StateMachineInstanceId)
 }
 
 /**

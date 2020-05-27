@@ -14,7 +14,7 @@ import java.lang.reflect.Field
  * If the new tracker contains any child trackers from sub-flows, we need to attach those to the old tracker as well.
  */
 //TODO: instead of replacing the progress tracker after constructing the flow logic, we should inject it during fiber deserialization
-fun StateMachineManagerInternal.injectOldProgressTracker(oldTracker: ProgressTracker?, newFlowLogic: FlowLogic<*>) {
+internal fun StateMachineManagerInternal.injectOldProgressTracker(oldTracker: ProgressTracker?, newFlowLogic: FlowLogic<*>) {
     if (oldTracker != null) {
         val newTracker = newFlowLogic.progressTracker
         if (newTracker != null) {

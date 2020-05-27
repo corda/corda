@@ -206,7 +206,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -214,7 +214,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeSendMultiple action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
