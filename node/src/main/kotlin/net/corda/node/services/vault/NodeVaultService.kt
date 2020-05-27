@@ -507,7 +507,11 @@ class NodeVaultService(
             }
             if (updatedRows > 0 && updatedRows == stateRefs.size) {
                 log.trace { "Reserving soft lock states for $lockId: $stateRefs" }
-                FlowStateMachineImpl.currentStateMachine()?.softLockedStates?.addAll(stateRefs)
+                FlowStateMachineImpl.currentStateMachine()?.let {
+                    if (lockId == it.id.uuid) {
+                        it.softLockedStates.addAll(stateRefs)
+                    }
+                }
             } else {
                 // revert partial soft locks
                 val revertUpdatedRows = execute { update, commonPredicates ->
