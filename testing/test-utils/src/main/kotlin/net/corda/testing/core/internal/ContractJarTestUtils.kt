@@ -59,12 +59,14 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName) to signer
     }
 
+    @Suppress("LongParameterList")
     @JvmOverloads
-    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1, versionSeed: Int = 0): Path {
+    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1, versionSeed: Int = 0,
+                            content: String? = null): Path {
         val packages = contractName.split(".")
         val jarName = "attachment-${packages.last()}-$version-$versionSeed-${(if (signed) "signed" else "")}.jar"
         val className = packages.last()
-        createTestClass(workingDir, className, packages.subList(0, packages.size - 1), versionSeed)
+        createTestClass(workingDir, className, packages.subList(0, packages.size - 1), versionSeed, content)
         workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
         workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
         return workingDir.resolve(jarName)
@@ -87,8 +89,8 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName)
     }
 
-    private fun createTestClass(workingDir: Path, className: String, packages: List<String>, versionSeed: Int = 0): Path {
-        val newClass = """package ${packages.joinToString(".")};
+    private fun createTestClass(workingDir: Path, className: String, packages: List<String>, versionSeed: Int = 0, content: String? = null): Path {
+        val newClass = content ?: """package ${packages.joinToString(".")};
                 import net.corda.core.contracts.*;
                 import net.corda.core.transactions.*;
 
@@ -108,7 +110,7 @@ object ContractJarTestUtils {
         val fileManager = compiler.getStandardFileManager(null, null, null)
         fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(workingDir.toFile()))
 
-        compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
+        compiler.getTask(System.out.writer(), fileManager, null, listOf("-source", "8", "-target", "8"), null, listOf(source)).call()
         val outFile = fileManager.getFileForInput(StandardLocation.CLASS_OUTPUT, packages.joinToString("."), "$className.class")
         return Paths.get(outFile.name)
     }
