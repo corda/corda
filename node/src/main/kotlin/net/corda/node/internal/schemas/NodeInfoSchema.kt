@@ -105,10 +105,11 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_cert_binary", nullable = false)
             val partyCertBinary: ByteArray,
 
-            val isMain: Boolean,
+            val isMain: Boolean
 
-            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = [(CascadeType.ALL)]) // ManyToMany because of distributed services.
-            private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
+            // Intentionally skip @ManyToMany Set<PersistentNodeInfo> field declaration here
+            // to prevent from the following exception on Party database conversion for other tables:
+            // HibernateException: "HHH000479: Collection ... was not processed by flush()"
     ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.name.toString(),
