@@ -134,20 +134,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
 
-    internal val softLockedStates = object : LinkedHashSet<StateRef>() {
-
-        override fun remove(element: StateRef): Boolean {
-            throw UnsupportedOperationException("Can only add locked states")
-        }
-
-        override fun removeAll(elements: Collection<StateRef>): Boolean {
-            throw UnsupportedOperationException("Can only add locked states")
-        }
-
-        override fun removeIf(filter: Predicate<in StateRef>): Boolean {
-            throw UnsupportedOperationException("Can only add locked states")
-        }
-    }
+    internal val softLockedStates = mutableSetOf<StateRef>()
 
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
