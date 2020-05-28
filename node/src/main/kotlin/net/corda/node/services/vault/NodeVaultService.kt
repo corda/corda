@@ -54,8 +54,7 @@ private fun CriteriaBuilder.executeUpdate(
         }
     }
     return stateRefs?.let {
-        // divide [List<PersistentStateRef>] into [List<List<PersistentStateRef>>] of [MAX_SQL_IN_CLAUSE_SET] size each for sql server performance
-        // (so that the optimizer will make use of the index)
+        // Increase SQL server performance by, processing updates in chunks allowing the database's optimizer to make use of the index.
         var updatedRows = 0
         it.asSequence()
             .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
