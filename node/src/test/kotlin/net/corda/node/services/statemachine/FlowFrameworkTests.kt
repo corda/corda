@@ -878,6 +878,23 @@ class FlowFrameworkTests {
         assertEquals(1, lockedStates)
     }
 
+    @Test
+    fun `when flow soft locks, then errors and retries from previous checkpoint, softLockedStates are reverted back correctly`() {
+        var firstRun = true
+        SoftLocksFLow.checkpointAfterReserves = true
+
+        SoftLocksFLow.hookAfterReleases = {
+            if (firstRun) {
+                firstRun = false
+                throw SQLTransientConnectionException("connection is not available")
+            }
+        }
+
+        val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
+        val completedSuccessfully = aliceNode.services.startFlow(SoftLocksFLow(vaultStates, true)).resultFuture.getOrThrow(30.seconds)
+        assertTrue(completedSuccessfully)
+    }
+
     private fun fillVault(node: TestStartedNode, thisManyStates: Int): Vault<Cash.State>? {
         val bankNode = mockNet.createPartyNode(BOC_NAME)
         val bank = bankNode.info.singleIdentity()
@@ -1280,6 +1297,9 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
                     )
                 )
             ).states
+
+        var checkpointAfterReserves: Boolean = false
+        var hookAfterReleases: (FlowStateMachineImpl<*>) -> Unit = {}
     }
 
     @Suspendable
@@ -1311,6 +1331,9 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         // lock with our flow Id, lock with random Id and then unlock passing in only flow Id
         serviceHub.vaultService.softLockReserve(stateMachine.id.uuid, lockSetFlowId)
         serviceHub.vaultService.softLockReserve(randomUUID, lockSetRandomId)
+        if (checkpointAfterReserves) {
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+        }
         // only states locked with our flow id are held by the fiber
         assertEquals(lockSetFlowId, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
         assertEquals(lockSetFlowId + lockSetRandomId, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, serviceHub.vaultService).map { it.ref }.toNonEmptySet())
@@ -1323,6 +1346,7 @@ internal class SoftLocksFLow(private val unlockedStates: List<StateAndRef<Cash.S
         }
         serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
         assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
+        hookAfterReleases((stateMachine as? FlowStateMachineImpl<*>)!!)
         return true
     }
 }
