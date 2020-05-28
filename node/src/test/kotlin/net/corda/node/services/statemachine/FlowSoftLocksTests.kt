@@ -42,10 +42,6 @@ import kotlin.test.assertTrue
 
 class FlowSoftLocksTests {
 
-    companion object {
-        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
-    }
-
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var aliceNode: TestStartedNode
     private lateinit var notaryIdentity: Party
@@ -116,7 +112,7 @@ class FlowSoftLocksTests {
         val bank = bankNode.info.singleIdentity()
         val cashIssuer = bank.ref(1)
         return node.database.transaction {
-            VaultFiller(node.services, dummyNotary, notaryIdentity, ::Random).fillWithSomeTestCash(
+            VaultFiller(node.services, TestIdentity(notaryIdentity.name, 20), notaryIdentity).fillWithSomeTestCash(
                     100.DOLLARS,
                     bankNode.services,
                     thisManyStates,
