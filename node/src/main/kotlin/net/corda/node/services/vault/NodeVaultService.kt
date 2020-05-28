@@ -47,24 +47,24 @@ private fun CriteriaBuilder.executeUpdate(
     stateRefs: NonEmptySet<StateRef>?,
     configure: Root<*>.(CriteriaUpdate<*>, List<PersistentStateRef>?) -> Any?
 ): Int {
-    var updatedRows = 0
-    stateRefs?.let {
+    fun doUpdate(persistentStateRefs: List<PersistentStateRef>?): Int {
+        createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
+            update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
+            return session.createQuery(update).executeUpdate()
+        }
+    }
+    return stateRefs?.let {
         // divide [List<PersistentStateRef>] into [List<List<PersistentStateRef>>] of [MAX_SQL_IN_CLAUSE_SET] size each for sql server performance
         // (so that the optimizer will make use of the index)
+        var updatedRows = 0
         it.asSequence()
             .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
             .chunked(NodeVaultService.MAX_SQL_IN_CLAUSE_SET)
             .forEach { persistentStateRefs ->
-                createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
-                    update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
-                    updatedRows += session.createQuery(update).executeUpdate()
-                }
+                updatedRows += doUpdate(persistentStateRefs)
             }
-    } ?: createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
-        update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, null) }
-        updatedRows = session.createQuery(update).executeUpdate()
-    }
-    return updatedRows
+        updatedRows
+    } ?: doUpdate(null)
 }
 
 /**
