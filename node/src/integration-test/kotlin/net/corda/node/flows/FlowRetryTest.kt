@@ -45,7 +45,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class FlowRetryTest {
     val config = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryIntervalMultiplier = 1.1)
@@ -218,7 +220,7 @@ class FlowRetryTest {
                 val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
-                assertEquals(true, it.proxy.retryFlow(flow.id))
+                assertTrue(it.proxy.retryFlow(flow.id))
                 flow.returnValue.getOrThrow()
             }
         }
@@ -234,9 +236,9 @@ class FlowRetryTest {
                 val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, status)
-                assertEquals(true, it.proxy.retryFlow(flow.id))
+                assertTrue(it.proxy.retryFlow(flow.id))
                 for (i in 0..5) {
-                    assertEquals(false, it.proxy.retryFlow(flow.id))
+                    assertFalse(it.proxy.retryFlow(flow.id))
                 }
                 flow.returnValue.getOrThrow()
             }
@@ -249,13 +251,9 @@ class FlowRetryTest {
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                val lock = Semaphore(0)
-                LongPausingFlow.lock = lock
                 val flow = it.proxy.startFlow(::LongPausingFlow)
-                lock.acquire()
-                for (i in 0..5) {
-                    assertEquals(false, it.proxy.retryFlow(flow.id))
-                }
+                LongPausingFlow.lock.acquire()
+                assertFalse(it.proxy.retryFlow(flow.id))
                 it.proxy.killFlow(flow.id)
             }
         }
@@ -269,9 +267,7 @@ class FlowRetryTest {
             CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 val flow = it.proxy.startFlow(::FastCompletionFlow)
                 flow.returnValue.getOrThrow()
-                for (i in 0..5) {
-                    assertEquals(false, it.proxy.retryFlow(flow.id))
-                }
+                assertFalse(it.proxy.retryFlow(flow.id))
             }
         }
     }
@@ -286,9 +282,7 @@ class FlowRetryTest {
                 val statusFlow = it.proxy.startFlow(FlowPausingTest::GetStatusFlow, flow.id)
                 val status = statusFlow.returnValue.getOrThrow()
                 assertEquals(Checkpoint.FlowStatus.FAILED, status)
-                for (i in 0..5) {
-                    assertEquals(false, it.proxy.retryFlow(flow.id))
-                }
+                assertFalse(it.proxy.retryFlow(flow.id))
             }
         }
     }
@@ -586,12 +580,12 @@ class FastCompletionFlow : FlowLogic<Boolean>() {
 class LongPausingFlow : FlowLogic<Unit>() {
 
     companion object {
-        var lock: Semaphore? = null
+        var lock: Semaphore = Semaphore(0)
     }
 
     @Suspendable
     override fun call() {
-        lock!!.release()
-        sleep(Duration.ofSeconds(300))
+        lock.release()
+        sleep(Duration.ofSeconds(60))
     }
 }

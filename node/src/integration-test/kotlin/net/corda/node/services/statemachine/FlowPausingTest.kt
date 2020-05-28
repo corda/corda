@@ -23,7 +23,10 @@ import net.corda.testing.node.User
 import org.junit.Test
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FlowPausingTest {
 
@@ -46,10 +49,10 @@ class FlowPausingTest {
                     providedName = ALICE_NAME,
                     rpcUsers = listOf(rpcUser),
                     customOverrides = mapOf("smmStartMode" to "Safe"))).getOrThrow()
-            assertEquals(true, restartedAlice.rpc.retryFlow(hospitalizedFlow.id))
+            assertTrue(restartedAlice.rpc.retryFlow(hospitalizedFlow.id))
             val finalStatusFlow = restartedAlice.rpc.startFlow(::GetStatusFlow, hospitalizedFlow.id)
             //The final checkpoint gets removed when the flow completes so lets check this is gone.
-            assertEquals(null, finalStatusFlow.returnValue.getOrThrow())
+            assertNull(finalStatusFlow.returnValue.getOrThrow())
         }
     }
 
@@ -78,10 +81,10 @@ class FlowPausingTest {
             //All messages in this period should be queued up and replayed when the flow is unpaused.
             Thread.sleep(TOTAL_MESSAGES * SLEEP_BETWEEN_MESSAGES_MS)
             //ALICE should not have finished yet as the HeartbeatResponderFlow should not have sent the final message back (as it is paused).
-            assertEquals(false, aliceFlow.returnValue.isDone)
-            assertEquals(true, restartedBob.rpc.retryFlow(initiatedFlowId!!))
+            assertFalse(aliceFlow.returnValue.isDone)
+            assertTrue(restartedBob.rpc.retryFlow(initiatedFlowId!!))
 
-            assertEquals(true, aliceFlow.returnValue.getOrThrow())
+            assertTrue(aliceFlow.returnValue.getOrThrow())
             alice.stop()
             restartedBob.stop()
         }

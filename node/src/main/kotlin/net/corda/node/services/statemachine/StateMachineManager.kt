@@ -89,7 +89,7 @@ interface StateMachineManager {
     /**
      * Retry a flow or start a paused flow.
      *
-     * @return whether the flow was successfully retired or unpaused.
+     * @return whether the flow was successfully retried or unpaused.
      */
     fun retryFlow(id: StateMachineRunId): Boolean
 
