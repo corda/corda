@@ -548,11 +548,6 @@ class NodeVaultService(
             configure(update, arrayOf(stateStatusPredication, lockIdPredicate), persistentStateRefs)
         }
 
-        // CORDA-3725: Adding to the query explicitly the flow's locked states resolved the SQL Deadlocks in sql server.
-        // The SQL Deadlocks were caused from softLockRelease when only the lockId was specified. In that case the query optimizer
-        // would use lock_id_idx(lock_id, state_status) to search and update entries in vault_states table. However, all rest of the queries would follow the
-        // opposite direction meaning they would use PK's index(output_index, transaction_id) but they could also update the lock_id and therefore the lock_id_idx as well.
-        // That was causing a circular locking among the different transactions within the database.
         val flowStateMachineImpl = FlowStateMachineImpl.currentStateMachine()
         val stateRefsToBeReleased =
             stateRefs ?: flowStateMachineImpl?.let {
