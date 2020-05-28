@@ -58,7 +58,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
-import java.util.function.Predicate
 import kotlin.reflect.KProperty1
 
 class FlowPermissionException(message: String) : FlowException(message)
