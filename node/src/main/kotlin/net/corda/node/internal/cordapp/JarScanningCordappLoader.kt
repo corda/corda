@@ -105,12 +105,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun loadCordapps(): List<CordappImpl> {
+        val invalidCordapps = mutableMapOf<String, URL>()
+
         val cordapps = cordappJarPaths
                 .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
                     if (it.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
                                 "platform version ${it.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                        invalidCordapps.put("Invalid platform version: ${it.minimumPlatformVersion}", it.jarPath)
                         false
                     } else {
                         true
@@ -127,10 +130,17 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         else {
                             logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
                                     "${blockedCertificates.map { it.publicKey }}.")
+                            invalidCordapps.put("Corresponding contracts are signed by development key only,", it.jarPath)
                             false
                         }
                     }
                 }
+
+        if (invalidCordapps.isNotEmpty()) {
+            throw InvalidCordappException("Invalid Cordapps found, that couldn't be loaded: " +
+                    "${invalidCordapps.map { "Problem: ${it.key} in Cordapp ${it.value}" }}, ")
+        }
+
         cordapps.forEach(::register)
         return cordapps
     }
@@ -471,6 +481,11 @@ class DuplicateCordappsInstalledException(app: Cordapp, duplicates: Set<Cordapp>
     override val code = CordappErrors.DUPLICATE_CORDAPPS_INSTALLED
     override val parameters = listOf(app.info.shortName, app.name, duplicates.map { it.name })
 }
+
+/**
+ * Thrown if an exception occurs during loading cordapps.
+ */
+class InvalidCordappException(message: String) : Exception(message)
 
 abstract class CordappLoaderTemplate : CordappLoader {
 

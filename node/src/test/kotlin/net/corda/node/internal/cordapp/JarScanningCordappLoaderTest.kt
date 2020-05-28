@@ -193,4 +193,13 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("/contractClassAtVersion55.jar")!!
         JarScanningCordappLoader.fromJarUrls(listOf(jar)).cordapps
     }
+
+    @Test(expected = InvalidCordappException::class, timeout = 300_000)
+    fun `cordapp classloader raises exception when cordapp is signed with blacklisted key`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
+        JarScanningCordappLoader.fromJarUrls(
+                listOf(jar),
+                cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES
+        ).cordapps
+    }
 }
