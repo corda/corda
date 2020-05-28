@@ -484,6 +484,7 @@ class NodeVaultService(
         }
     }
 
+    @Suppress("NestedBlockDepth")
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
         val softLockTimestamp = clock.instant()
@@ -534,6 +535,7 @@ class NodeVaultService(
         }
     }
 
+    @Suppress("NestedBlockDepth")
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         val softLockTimestamp = clock.instant()
         val session = currentDBSession()
