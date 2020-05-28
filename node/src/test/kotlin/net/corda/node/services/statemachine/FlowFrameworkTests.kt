@@ -1303,7 +1303,7 @@ object SoftLocks {
                 ).states
 
             var checkpointAfterReserves: Boolean = false
-            var hookAfterReleases: (FlowStateMachineImpl<*>) -> Unit = {}
+            var hookAfterReleases: () -> Unit = {}
         }
 
         @Suspendable
@@ -1365,7 +1365,7 @@ object SoftLocks {
             }
             serviceHub.vaultService.softLockRelease(stateMachine.id.uuid)
             assertEquals(emptySet, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
-            hookAfterReleases((stateMachine as? FlowStateMachineImpl<*>)!!)
+            hookAfterReleases()
             return true
         }
     }
