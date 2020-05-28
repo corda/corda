@@ -10,10 +10,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.SimpleClock
 import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.node.services.persistence.PublicKeyToTextConverter
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import java.io.PrintWriter
@@ -68,6 +71,13 @@ abstract class CordaMigration : CustomTaskChange {
         cordaDB.start(dataSource)
         identityService.database = cordaDB
         _ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
+        /** TODO: remove identityService and networkMapCache dependencies */
+        val networkMapCache = PersistentNetworkMapCache(cacheFactory, cordaDB, identityService)
+        identityService.start(
+                DEV_ROOT_CA.certificate,
+                pkToIdCache = PublicKeyToOwningIdentityCacheImpl(cordaDB, cacheFactory),
+                wellKnownPartyFromX500Name = networkMapCache::getPeerByLegalName,
+                getAllIdentities = networkMapCache::allIdentities)
 
         cordaDB.transaction {
              val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory, SimpleClock(Clock.systemUTC()))

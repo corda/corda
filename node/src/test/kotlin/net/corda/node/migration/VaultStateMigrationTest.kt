@@ -26,6 +26,7 @@ import net.corda.finance.contracts.asset.Obligation
 import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -199,6 +200,9 @@ class VaultStateMigrationTest {
                 val persistentName = PersistentIdentityService.PersistentPartyToPublicKeyHash(name.toString(), certs.first().owningKey.toStringShort())
                 persistentIDs.forEach { session.save(it) }
                 session.save(persistentName)
+                val networkIdentity = NodeInfoSchemaV1.DBPartyAndCertificate(certs.first(), true)
+                val persistentNodeInfo = NodeInfoSchemaV1.PersistentNodeInfo(0, "", listOf(), listOf(networkIdentity), 0, 0)
+                session.save(persistentNodeInfo)
             }
         }
     }
