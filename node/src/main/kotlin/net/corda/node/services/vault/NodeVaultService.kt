@@ -581,9 +581,7 @@ class NodeVaultService(
                     log.trace { "Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefsToBeReleased" }
                 }
             } catch (e: Exception) {
-                log.error("""soft lock update error attempting to release states for $lockId and $stateRefsToBeReleased")
-                    $e.
-                """)
+                log.error("Soft lock update error attempting to release states for $lockId and $stateRefsToBeReleased", e)
                 throw e
             }
         }
