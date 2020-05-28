@@ -42,30 +42,6 @@ import javax.persistence.criteria.CriteriaUpdate
 import javax.persistence.criteria.Predicate
 import javax.persistence.criteria.Root
 
-private fun CriteriaBuilder.executeUpdate(
-    session: Session,
-    stateRefs: NonEmptySet<StateRef>?,
-    configure: Root<*>.(CriteriaUpdate<*>, List<PersistentStateRef>?) -> Any?
-): Int {
-    fun doUpdate(persistentStateRefs: List<PersistentStateRef>?): Int {
-        createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
-            update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
-            return session.createQuery(update).executeUpdate()
-        }
-    }
-    return stateRefs?.let {
-        // Increase SQL server performance by, processing updates in chunks allowing the database's optimizer to make use of the index.
-        var updatedRows = 0
-        it.asSequence()
-            .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
-            .chunked(NodeVaultService.MAX_SQL_IN_CLAUSE_SET)
-            .forEach { persistentStateRefs ->
-                updatedRows += doUpdate(persistentStateRefs)
-            }
-        updatedRows
-    } ?: doUpdate(null)
-}
-
 /**
  * The vault service handles storage, retrieval and querying of states.
  *
@@ -858,6 +834,30 @@ class NodeVaultService(
         }
         return myTypes
     }
+}
+
+private fun CriteriaBuilder.executeUpdate(
+    session: Session,
+    stateRefs: NonEmptySet<StateRef>?,
+    configure: Root<*>.(CriteriaUpdate<*>, List<PersistentStateRef>?) -> Any?
+): Int {
+    fun doUpdate(persistentStateRefs: List<PersistentStateRef>?): Int {
+        createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java).let { update ->
+            update.from(VaultSchemaV1.VaultStates::class.java).run { configure(update, persistentStateRefs) }
+            return session.createQuery(update).executeUpdate()
+        }
+    }
+    return stateRefs?.let {
+        // Increase SQL server performance by, processing updates in chunks allowing the database's optimizer to make use of the index.
+        var updatedRows = 0
+        it.asSequence()
+            .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
+            .chunked(NodeVaultService.MAX_SQL_IN_CLAUSE_SET)
+            .forEach { persistentStateRefs ->
+                updatedRows += doUpdate(persistentStateRefs)
+            }
+        updatedRows
+    } ?: doUpdate(null)
 }
 
 /** The Observable returned allows subscribing with custom SafeSubscribers to source [Observable]. */
