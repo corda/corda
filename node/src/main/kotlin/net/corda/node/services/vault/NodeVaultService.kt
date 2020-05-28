@@ -459,6 +459,12 @@ class NodeVaultService(
         }
     }
 
+    /**
+     * Whenever executed inside a [FlowStateMachineImpl], if [lockId] refers to the currently running [FlowStateMachineImpl],
+     * then in that case the [FlowStateMachineImpl] instance is locking states with its [FlowStateMachineImpl.id]'s [UUID].
+     * In this case alone, we keep the reserved set of [StateRef] in [FlowStateMachineImpl.softLockedStates]. This set will be then
+     * used by default in [softLockRelease].
+     */
     @Suppress("NestedBlockDepth", "ComplexMethod")
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
@@ -510,6 +516,18 @@ class NodeVaultService(
         }
     }
 
+    /**
+     * Whenever executed inside a [FlowStateMachineImpl], if [lockId] refers to the currently running [FlowStateMachineImpl] and [stateRefs] is null,
+     * then in that case the [FlowStateMachineImpl] instance will, by default, retrieve its set of [StateRef]
+     * from [FlowStateMachineImpl.softLockedStates] (previously reserved from [softLockReserve]). This set will be then explicitly provided
+     * to the below query which then leads to the database query optimizer use the primary key index in VAULT_STATES table, instead of lock_id_idx
+     * in order to search rows to be updated. That way the query will be aligned with the rest of the queries that are following that route as well
+     * (i.e. making use of the primary key), and therefore its locking order of resources within the database will be aligned
+     * with the rest queries' locking orders (solving SQL deadlocks).
+     *
+     * If [lockId] does not refer to the currently running [FlowStateMachineImpl] and [stateRefs] is null, then it will be using only [lockId] in
+     * the below query.
+     */
     @Suppress("NestedBlockDepth", "ComplexMethod")
     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         val softLockTimestamp = clock.instant()
