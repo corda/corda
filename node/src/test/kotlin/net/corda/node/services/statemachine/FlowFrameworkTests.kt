@@ -848,7 +848,7 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow correctly soft locks and unlocks states - at the end keeps locked states reserved by random id`() {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocks.LockingUnlockingFlow(vaultStates, false)).resultFuture.getOrThrow(30.seconds)
@@ -856,7 +856,7 @@ class FlowFrameworkTests {
         assertEquals(5, SoftLocks.LockingUnlockingFlow.queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow correctly soft locks and unlocks states - at the end releases states reserved by random id`() {
         val vaultStates = fillVault(aliceNode, 10)!!.states.toList()
         val completedSuccessfully =  aliceNode.services.startFlow(SoftLocks.LockingUnlockingFlow(vaultStates, true)).resultFuture.getOrThrow(30.seconds)
@@ -864,7 +864,7 @@ class FlowFrameworkTests {
         assertEquals(10, SoftLocks.LockingUnlockingFlow.queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService).size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow soft locks fungible state upon creation`() {
         var lockedStates = 0
         SoftLocks.CreateFungibleStateFLow.hook = { vaultService ->
@@ -878,7 +878,7 @@ class FlowFrameworkTests {
         assertEquals(1, lockedStates)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `when flow soft locks, then errors and retries from previous checkpoint, softLockedStates are reverted back correctly`() {
         var firstRun = true
         SoftLocks.LockingUnlockingFlow.checkpointAfterReserves = true
