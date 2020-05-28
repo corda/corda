@@ -548,9 +548,8 @@ class NodeVaultService(
             configure(update, arrayOf(stateStatusPredication, lockIdPredicate), persistentStateRefs)
         }
 
-        val flowStateMachineImpl = FlowStateMachineImpl.currentStateMachine()
         val stateRefsToBeReleased =
-            stateRefs ?: flowStateMachineImpl?.let {
+            stateRefs ?: FlowStateMachineImpl.currentStateMachine()?.let {
                 // We only hold states under our flowId. For all other lockId fall back to old query mechanism, i.e. stateRefsToBeReleased = null
                 if (lockId == it.id.uuid && it.softLockedStates.isNotEmpty()) {
                     NonEmptySet.copyOf(it.softLockedStates)
@@ -574,7 +573,7 @@ class NodeVaultService(
                     update.where(*commonPredicates, stateRefsPredicate)
                 }
                 if (updatedRows > 0) {
-                    flowStateMachineImpl?.let {
+                    FlowStateMachineImpl.currentStateMachine()?.let {
                         if (lockId == it.id.uuid) {
                             it.softLockedStates.removeAll(stateRefsToBeReleased)
                         }
