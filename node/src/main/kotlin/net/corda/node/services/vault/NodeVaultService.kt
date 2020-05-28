@@ -484,7 +484,7 @@ class NodeVaultService(
         }
     }
 
-    @Suppress("NestedBlockDepth")
+    @Suppress("NestedBlockDepth", "ComplexMethod")
     @Throws(StatesNotAvailableException::class)
     override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
         val softLockTimestamp = clock.instant()
