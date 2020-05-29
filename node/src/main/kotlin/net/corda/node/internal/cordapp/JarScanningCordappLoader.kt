@@ -114,7 +114,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                     if (it.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
                                 "platform version ${it.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
-                        invalidCordapps.put("Invalid platform version: ${it.minimumPlatformVersion}", it.jarPath)
                         false
                     } else {
                         true

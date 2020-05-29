@@ -165,11 +165,10 @@ class JarScanningCordappLoaderTest {
         assertThat(loader.cordapps).hasSize(1)
     }
 
-    @Test(timeout=300_000)
+    @Test(expected = InvalidCordappException::class, timeout = 300_000)
 	fun `cordapp classloader does not load app signed by blacklisted certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
-        assertThat(loader.cordapps).hasSize(0)
+        JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES).cordapps
     }
 
     @Test(timeout=300_000)
@@ -192,14 +191,5 @@ class JarScanningCordappLoaderTest {
         Assume.assumeTrue(JavaVersion.isVersionAtLeast(JavaVersion.Java_11))
         val jar = JarScanningCordappLoaderTest::class.java.getResource("/contractClassAtVersion55.jar")!!
         JarScanningCordappLoader.fromJarUrls(listOf(jar)).cordapps
-    }
-
-    @Test(expected = InvalidCordappException::class, timeout = 300_000)
-    fun `cordapp classloader raises exception when cordapp is signed with blacklisted key`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        JarScanningCordappLoader.fromJarUrls(
-                listOf(jar),
-                cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES
-        ).cordapps
     }
 }
