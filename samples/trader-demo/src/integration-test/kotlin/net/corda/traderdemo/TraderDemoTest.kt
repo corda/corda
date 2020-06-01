@@ -19,7 +19,7 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import net.corda.testing.node.internal.assertCheckpoints
+import net.corda.testing.node.internal.assertUncompletedCheckpoints
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -100,7 +100,7 @@ class TraderDemoTest {
             val saleFuture = seller.rpc.startFlow(::SellerFlow, buyer.nodeInfo.singleIdentity(), 5.DOLLARS).returnValue
             buyer.rpc.stateMachinesFeed().updates.toBlocking().first() // wait until initiated flow starts
             buyer.stop()
-            assertCheckpoints(DUMMY_BANK_A_NAME, 1)
+            assertUncompletedCheckpoints(DUMMY_BANK_A_NAME, 1)
             val buyer2 = startNode(providedName = DUMMY_BANK_A_NAME, customOverrides = mapOf("p2pAddress" to buyer.p2pAddress.toString())).getOrThrow()
             saleFuture.getOrThrow()
             assertThat(buyer2.rpc.getCashBalance(USD)).isEqualTo(95.DOLLARS)

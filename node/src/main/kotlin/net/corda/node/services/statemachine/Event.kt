@@ -6,8 +6,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.DeduplicationHandler
-import java.util.*
+import java.util.UUID
 
 /**
  * Transitions in the flow state machine are triggered by [Event]s that may originate from the flow itself or from
@@ -101,17 +102,20 @@ sealed class Event {
      * @param ioRequest the request triggering the suspension.
      * @param maySkipCheckpoint indicates whether the persistence may be skipped.
      * @param fiber the serialised stack of the flow.
+     * @param progressStep the current progress tracker step.
      */
     data class Suspend(
             val ioRequest: FlowIORequest<*>,
             val maySkipCheckpoint: Boolean,
-            val fiber: SerializedBytes<FlowStateMachineImpl<*>>
+            val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
+            var progressStep: ProgressTracker.Step?
     ) : Event() {
         override fun toString() =
                 "Suspend(" +
                         "ioRequest=$ioRequest, " +
                         "maySkipCheckpoint=$maySkipCheckpoint, " +
                         "fiber=${fiber.hash}, " +
+                        "currentStep=${progressStep?.label}" +
                         ")"
     }
 
@@ -148,6 +152,15 @@ sealed class Event {
      */
     object RetryFlowFromSafePoint : Event() {
         override fun toString() = "RetryFlowFromSafePoint"
+    }
+
+    /**
+     * Keeps a flow for overnight observation. Overnight observation practically sends the fiber to get suspended,
+     * in [FlowStateMachineImpl.processEventsUntilFlowIsResumed]. Since the fiber's channel will have no more events to process,
+     * the fiber gets suspended (i.e. hospitalized).
+     */
+    object OvernightObservation : Event() {
+        override fun toString() = "OvernightObservation"
     }
 
     /**

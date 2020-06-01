@@ -94,7 +94,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -172,7 +172,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -252,7 +252,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -337,7 +337,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -426,7 +426,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -527,7 +527,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -616,7 +616,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -714,7 +714,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -812,7 +812,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -898,7 +898,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -990,7 +990,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             // 1 for errored flow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1079,9 +1079,9 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(0, charlieClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1176,11 +1176,11 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             assertEquals(1, charlieClient.stateMachinesSnapshot().size)
             // 1 for the flow that is waiting for the errored counterparty flow to finish and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for GetNumberOfCheckpointsFlow
             // the checkpoint is not persisted since it kept failing the original checkpoint commit
             // the flow will recover since artemis will keep the events and replay them on node restart
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1273,9 +1273,9 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(0, charlieClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 }

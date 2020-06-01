@@ -8,6 +8,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
@@ -128,14 +129,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     override val logger = log
     override val resultFuture: CordaFuture<R> get() = uncheckedCast(getTransientField(TransientValues::resultFuture))
-    override val context: InvocationContext get() = transientState!!.value.checkpoint.invocationContext
-    override val ourIdentity: Party get() = transientState!!.value.checkpoint.ourIdentity
+    override val context: InvocationContext get() = transientState!!.value.checkpoint.checkpointState.invocationContext
+    override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
 
-    internal var hasSoftLockedStates: Boolean = false
-        set(value) {
-            if (value) field = value else throw IllegalArgumentException("Can only set to true")
-        }
+    internal val softLockedStates = mutableSetOf<StateRef>()
 
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
@@ -297,7 +295,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
 
             val result = logic.call()
-            suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
+            suspend(FlowIORequest.WaitForSessionConfirmations(), maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
             if(t.isUnrecoverable()) {
@@ -306,7 +304,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logFlowError(t)
             Try.Failure<R>(t)
         }
-        val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
+        val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
                 Event.FlowFinish(resultOrError.value, softLocksId)
@@ -400,7 +398,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun checkpointIfSubflowIdempotent(subFlow: Class<FlowLogic<*>>) {
-        val currentFlow = snapshot().checkpoint.subFlowStack.last().flowClass
+        val currentFlow = snapshot().checkpoint.checkpointState.subFlowStack.last().flowClass
         if (!currentFlow.isIdempotentFlow() && subFlow.isIdempotentFlow()) {
             suspend(FlowIORequest.ForceCheckpoint, false)
         }
@@ -489,7 +487,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Suspend(
                         ioRequest = ioRequest,
                         maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.checkpointSerialize(context = serializationContext.value)
+                        fiber = this.checkpointSerialize(context = serializationContext.value),
+                        progressStep = logic.progressTracker?.currentStep
                 )
             } catch (exception: Exception) {
                 Event.Error(exception)
@@ -518,7 +517,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun containsIdempotentFlows(): Boolean {
-        val subFlowStack = snapshot().checkpoint.subFlowStack
+        val subFlowStack = snapshot().checkpoint.checkpointState.subFlowStack
         return subFlowStack.any { IdempotentFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 

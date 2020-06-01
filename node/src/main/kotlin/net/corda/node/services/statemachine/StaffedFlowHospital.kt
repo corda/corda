@@ -224,7 +224,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
                     onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
-                    Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
+                    Triple(Outcome.OVERNIGHT_OBSERVATION, Event.OvernightObservation, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
@@ -233,20 +233,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 }
             }
 
-            val record = MedicalRecord.Flow(time, flowFiber.id, currentState.checkpoint.numberOfSuspends, errors, report.by, outcome)
+            val numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends
+            val record = MedicalRecord.Flow(time, flowFiber.id, numberOfSuspends, errors, report.by, outcome)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
             Pair(event, backOffForChronicCondition)
         }
 
-        if (event != null) {
-            if (backOffForChronicCondition.isZero) {
+        if (backOffForChronicCondition.isZero) {
+            flowFiber.scheduleEvent(event)
+        } else {
+            hospitalJobTimer.schedule(timerTask {
                 flowFiber.scheduleEvent(event)
-            } else {
-                hospitalJobTimer.schedule(timerTask {
-                    flowFiber.scheduleEvent(event)
-                }, backOffForChronicCondition.toMillis())
-            }
+            }, backOffForChronicCondition.toMillis())
         }
     }
 
@@ -319,7 +318,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
             return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 

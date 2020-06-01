@@ -55,6 +55,7 @@ class TopLevelTransition(
             is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
             is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
             is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
+            is Event.OvernightObservation -> overnightObservationTransition()
             is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
         }
     }
@@ -98,7 +99,7 @@ class TopLevelTransition(
         return TransitionResult(
                 newState = lastState,
                 actions = listOf(
-                        Action.RemoveSessionBindings(startingState.checkpoint.sessions.keys),
+                        Action.RemoveSessionBindings(startingState.checkpoint.checkpointState.sessions.keys),
                         Action.RemoveFlow(context.id, FlowRemovalReason.SoftShutdown, lastState)
                 ),
                 continuation = FlowContinuation.Abort
@@ -128,11 +129,9 @@ class TopLevelTransition(
             val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion, event.isEnabledTimedFlow)
             when (subFlow) {
                 is Try.Success -> {
-                    val containsTimedSubflow = containsTimedFlows(currentState.checkpoint.subFlowStack)
+                    val containsTimedSubflow = containsTimedFlows(currentState.checkpoint.checkpointState.subFlowStack)
                     currentState = currentState.copy(
-                            checkpoint = currentState.checkpoint.copy(
-                                    subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
-                            )
+                            checkpoint = currentState.checkpoint.addSubflow(subFlow.value)
                     )
                     // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
                     // been scheduled already.
@@ -151,17 +150,15 @@ class TopLevelTransition(
     private fun leaveSubFlowTransition(): TransitionResult {
         return builder {
             val checkpoint = currentState.checkpoint
-            if (checkpoint.subFlowStack.isEmpty()) {
+            if (checkpoint.checkpointState.subFlowStack.isEmpty()) {
                 freshErrorTransition(UnexpectedEventInState())
             } else {
-                val isLastSubFlowTimed = checkpoint.subFlowStack.last().isEnabledTimedFlow
-                val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
+                val isLastSubFlowTimed = checkpoint.checkpointState.subFlowStack.last().isEnabledTimedFlow
+                val newSubFlowStack = checkpoint.checkpointState.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.copy(
-                                subFlowStack = newSubFlowStack
-                        )
+                        checkpoint = checkpoint.setSubflows(newSubFlowStack)
                 )
-                if (isLastSubFlowTimed && !containsTimedFlows(currentState.checkpoint.subFlowStack)) {
+                if (isLastSubFlowTimed && !containsTimedFlows(currentState.checkpoint.checkpointState.subFlowStack)) {
                     actions.add(Action.CancelFlowTimeout(currentState.flowLogic.runId))
                 }
             }
@@ -175,10 +172,22 @@ class TopLevelTransition(
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
         return builder {
-            val newCheckpoint = currentState.checkpoint.copy(
+            val newCheckpoint = currentState.checkpoint.run {
+                val newCheckpointState = if (checkpointState.invocationContext.arguments.isNotEmpty()) {
+                    checkpointState.copy(
+                        invocationContext = checkpointState.invocationContext.copy(arguments = emptyList()),
+                        numberOfSuspends = checkpointState.numberOfSuspends + 1
+                    )
+                } else {
+                    checkpointState.copy(numberOfSuspends = checkpointState.numberOfSuspends + 1)
+                }
+                copy(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
-                    numberOfSuspends = currentState.checkpoint.numberOfSuspends + 1
-            )
+                    checkpointState = newCheckpointState,
+                    flowIoRequest = event.ioRequest::class.java.simpleName,
+                    progressStep = event.progressStep?.label
+                )
+            }
             if (event.maySkipCheckpoint) {
                 actions.addAll(arrayOf(
                         Action.CommitTransaction,
@@ -215,18 +224,23 @@ class TopLevelTransition(
                     val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
                     currentState = currentState.copy(
                             checkpoint = checkpoint.copy(
-                                    numberOfSuspends = checkpoint.numberOfSuspends + 1
+                                checkpointState = checkpoint.checkpointState.copy(
+                                        numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
+                                ),
+                                flowState = FlowState.Completed,
+                                result = event.returnValue,
+                                status = Checkpoint.FlowStatus.COMPLETED
                             ),
                             pendingDeduplicationHandlers = emptyList(),
                             isFlowResumed = false,
                             isRemoved = true
                     )
-                    val allSourceSessionIds = checkpoint.sessions.keys
+                    val allSourceSessionIds = checkpoint.checkpointState.sessions.keys
                     if (currentState.isAnyCheckpointPersisted) {
                         actions.add(Action.RemoveCheckpoint(context.id))
                     }
                     actions.addAll(arrayOf(
-                            Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
+                        Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.ReleaseSoftLocks(event.softLocksId),
                             Action.CommitTransaction,
                             Action.AcknowledgeMessages(pendingDeduplicationHandlers),
@@ -247,7 +261,7 @@ class TopLevelTransition(
     }
 
     private fun TransitionBuilder.sendEndMessages() {
-        val sendEndMessageActions = currentState.checkpoint.sessions.values.mapIndexed { index, state ->
+        val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { index, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
                 val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
@@ -269,15 +283,15 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
-            val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
-            currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
+            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
+            currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)
         }
     }
 
     private fun getClosestAncestorInitiatingSubFlow(checkpoint: Checkpoint): SubFlow.Initiating? {
-        for (subFlow in checkpoint.subFlowStack.asReversed()) {
+        for (subFlow in checkpoint.checkpointState.subFlowStack.asReversed()) {
             if (subFlow is SubFlow.Initiating) {
                 return subFlow
             }
@@ -304,6 +318,17 @@ class TopLevelTransition(
             actions.add(Action.RetryFlowFromSafePoint(startingState))
             actions.add(Action.CommitTransaction)
             FlowContinuation.Abort
+        }
+    }
+
+    private fun overnightObservationTransition(): TransitionResult {
+        return builder {
+            val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+            actions.add(Action.CreateTransaction)
+            actions.add(Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted))
+            actions.add(Action.CommitTransaction)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
+            FlowContinuation.ProcessEvents
         }
     }
 
