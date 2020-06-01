@@ -26,6 +26,7 @@
     <include file="migration/node-core.changelog-v15.xml"/>
     <include file="migration/node-core.changelog-v14-data.xml"/>
     <include file="migration/node-core.changelog-v16.xml"/>
+    <include file="migration/node-core.changelog-v20.xml"/>
 
     <!-- This must run after node-core.changelog-init.xml, to prevent database columns being created twice. -->
     <include file="migration/vault-schema.changelog-v9.xml"/>
@@ -33,6 +34,5 @@
     <include file="migration/node-core.changelog-v19.xml"/>
     <include file="migration/node-core.changelog-v19-postgres.xml"/>
     <include file="migration/node-core.changelog-v19-keys.xml"/>
-    <include file="migration/node-core.changelog-v20.xml"/>
 
 </databaseChangeLog>
