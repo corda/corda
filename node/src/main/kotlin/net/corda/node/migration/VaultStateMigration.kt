@@ -73,8 +73,8 @@ class VaultStateMigration : CordaMigration() {
     // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity
     // activity. Concentrating activity on the identity cache works better than spreading checking across identity and key management,
     // because we cache misses too.
-    private fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return keys.filter { (@Suppress("DEPRECATION") identityService.certificateFromKey(it))?.name == ourName }
+    private fun PersistentIdentityService.stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return keys.filter { (@Suppress("DEPRECATION") certificateFromKey(it))?.name == ourName }
     }
 
     override fun execute(database: Database?) {
@@ -100,7 +100,7 @@ class VaultStateMigration : CordaMigration() {
 
                     // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
                     // state parties.
-                    val myKeys = stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
+                    val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
                         participant.owningKey
                     }).toSet()
                     if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
@@ -136,7 +136,6 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
         mappedTypes = listOf(
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java,
-                PersistentIdentityService.PersistentPartyToPublicKeyHash::class.java,
                 PersistentIdentityService.PersistentPublicKeyHashToParty::class.java,
                 BasicHSMKeyManagementService.PersistentKey::class.java,
                 NodeAttachmentService.DBAttachment::class.java,

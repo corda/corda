@@ -274,22 +274,15 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     override val allNodes: List<NodeInfo>
         get() {
             return database.transaction {
-                selectAll<NodeInfoSchemaV1.PersistentNodeInfo>(session).map { it.toNodeInfo() }
+                getAllNodeInfos(session).map { it.toNodeInfo() }
             }
         }
 
-    private inline fun <reified T> selectAll(session: Session): List<T> {
-        val criteria = session.criteriaBuilder.createQuery(T::class.java)
-        criteria.select(criteria.from(T::class.java))
+    private fun getAllNodeInfos(session: Session): List<NodeInfoSchemaV1.PersistentNodeInfo> {
+        val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+        criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
         return session.createQuery(criteria).resultList
     }
-
-    override val allIdentities: List<PartyAndCertificate>
-        get() {
-            return database.transaction {
-                selectAll<NodeInfoSchemaV1.DBPartyAndCertificate>(session).map { it.toLegalIdentityAndCert() }
-            }
-        }
 
     private fun updateInfoDB(nodeInfo: NodeInfo, session: Session) {
         // TODO For now the main legal identity is left in NodeInfo, this should be set comparision/come up with index for NodeInfo?
@@ -395,7 +388,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         logger.info("Clearing Network Map Cache entries")
         invalidateCaches()
         database.transaction {
-            val result = selectAll<NodeInfoSchemaV1.PersistentNodeInfo>(session)
+            val result = getAllNodeInfos(session)
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }

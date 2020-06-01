@@ -432,12 +432,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startDatabase()
         val (identity, identityKeyPairs) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(
-                trustRoot,
-                listOf(identity.certificate, nodeCa),
-                pkToIdCache = pkToIdCache,
-                wellKnownPartyFromX500Name = networkMapCache::getPeerByLegalName,
-                getAllIdentities = networkMapCache::allIdentities)
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), pkToIdCache = pkToIdCache)
         return database.use {
             it.transaction {
                 val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPairs, publish = false)
@@ -567,13 +562,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
-        identityService.start(
-                trustRoot,
-                listOf(identity.certificate, nodeCa),
-                netParams.notaries.map { it.identity },
-                pkToIdCache,
-                networkMapCache::getPeerByLegalName,
-                networkMapCache::allIdentities)
+        identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPairs, publish = true)

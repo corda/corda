@@ -54,7 +54,6 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.jar.JarFile
 import java.util.zip.ZipEntry
@@ -174,14 +173,6 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val identityService = PersistentIdentityService(cacheFactory)
-            val identityServiceWithNetwork = object: IdentityService by identityService {
-                val networkMapCache = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
-                override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-                    return identityService.verifyAndRegisterIdentity(identity).also {
-                        networkMapCache[identity.name] = identity
-                    }
-                }
-            }
             val persistence = configureDatabase(
                     hikariProperties = dataSourceProps,
                     databaseConfig = DatabaseConfig(),
@@ -197,14 +188,8 @@ open class MockServices private constructor(
             identityService.apply {
                 ourParty = initialIdentity.party
                 database = persistence
-                start(
-                        DEV_ROOT_CA.certificate,
-                        pkToIdCache = pkToIdCache,
-                        wellKnownPartyFromX500Name = { identityServiceWithNetwork.networkMapCache[it]?.party },
-                        getAllIdentities = identityServiceWithNetwork.networkMapCache::values
-                )
+                start(DEV_ROOT_CA.certificate, pkToIdCache = pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
-                (moreIdentities + initialIdentity.identity).forEach { identityServiceWithNetwork.networkMapCache[it.name] = it }
             }
 
             // Create a persistent key management service and add the key pair which was created for the TestIdentity.
@@ -228,16 +213,7 @@ open class MockServices private constructor(
             persistence.transaction { keyManagementService.start(aliasedMoreKeys + aliasedIdentityKey) }
 
             val mockService = persistence.transaction {
-                makeMockMockServices(
-                        cordappLoader,
-                        identityServiceWithNetwork,
-                        networkParameters,
-                        initialIdentity,
-                        moreKeys,
-                        keyManagementService,
-                        schemaService,
-                        persistence
-                )
+                makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, keyManagementService, schemaService, persistence)
             }
             return Pair(persistence, mockService)
         }

@@ -15,6 +15,7 @@
         </addColumn>
         <!-- TODO: implement conversion for existing data and make new columns non-nullable -->
         <dropTable tableName="node_hash_to_key"/>
+        <dropTable tableName="node_named_identities"/>
     </changeSet>
 
 </databaseChangeLog>

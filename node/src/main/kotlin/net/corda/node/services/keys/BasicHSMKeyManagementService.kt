@@ -104,7 +104,10 @@ class BasicHSMKeyManagementService(
             keysMap[keyPair.public] = keyPair.private
             // Register the key to our identity.
             // No checks performed here as entries for the new key couldn't have existed before in the maps.
-            identityService.registerKeyToParty(keyPair.public, externalId = externalId)
+            identityService.registerKeyToParty(keyPair.public)
+            if (externalId != null) {
+                identityService.registerKeyToExternalId(keyPair.public, externalId)
+            }
         }
         return keyPair.public
     }

@@ -68,7 +68,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {
-        // Identity service query is required even for well-known parties due to certificate rotation.
+        // Anonymous party as well as rotated (inactive) well-known party should be converted to the actual well-known party.
         // We assume that the destination type has already been checked by initiateFlow.
         val party = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AbstractParty)) {
             "We do not know who $destination belongs to"

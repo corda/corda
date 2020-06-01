@@ -6,10 +6,13 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.coretesting.internal.DEV_INTERMEDIATE_CA
 import net.corda.coretesting.internal.DEV_ROOT_CA
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.PublicKeyToOwningIdentityCacheImpl
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -30,7 +33,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -53,7 +55,7 @@ class PersistentIdentityServiceTests {
     private val cacheFactory = TestingNamedCacheFactory()
     private lateinit var database: CordaPersistence
     private lateinit var identityService: PersistentIdentityService
-    private val networkMapCache = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
+    private lateinit var networkMapCache: PersistentNetworkMapCache
 
     @Before
     fun setup() {
@@ -67,12 +69,8 @@ class PersistentIdentityServiceTests {
         )
         identityService.database = database
         identityService.ourParty = alice.party
-        identityService.start(
-                DEV_ROOT_CA.certificate,
-                pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory),
-                wellKnownPartyFromX500Name = { networkMapCache[it]?.party },
-                getAllIdentities = networkMapCache::values
-        )
+        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+        networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     }
 
     @After
@@ -85,14 +83,14 @@ class PersistentIdentityServiceTests {
         // Nothing registered, so empty set
         assertNull(identityService.getAllIdentities().firstOrNull())
 
-        networkMapCache[ALICE_IDENTITY.name] = ALICE_IDENTITY
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         var expected = setOf(ALICE)
         var actual = identityService.getAllIdentities().map { it.party }.toHashSet()
 
         assertEquals(expected, actual)
 
         // Add a second party and check we get both back
-        networkMapCache[BOB_IDENTITY.name] = BOB_IDENTITY
+        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         expected = setOf(ALICE, BOB)
         actual = identityService.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
@@ -101,8 +99,7 @@ class PersistentIdentityServiceTests {
     @Test(timeout=300_000)
 	fun `get identity by key`() {
         assertNull(identityService.partyFromKey(ALICE_PUBKEY))
-        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        networkMapCache[ALICE_IDENTITY.name] = ALICE_IDENTITY
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
         assertEquals(ALICE, identityService.partyFromKey(ALICE_PUBKEY))
         assertNull(identityService.partyFromKey(BOB_PUBKEY))
     }
@@ -114,10 +111,10 @@ class PersistentIdentityServiceTests {
 
     @Test(timeout=300_000)
 	fun `get identity by substring match`() {
-        networkMapCache[ALICE_IDENTITY.name] = ALICE_IDENTITY
-        networkMapCache[BOB_IDENTITY.name] = BOB_IDENTITY
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        networkMapCache.verifyAndRegisterIdentity(BOB_IDENTITY)
         val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
-        networkMapCache[alicente.name] = alicente
+        networkMapCache.verifyAndRegisterIdentity(alicente)
         assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
         assertEquals(setOf(ALICE), identityService.partiesFromName("Alice Corp", true))
         assertEquals(setOf(BOB), identityService.partiesFromName("Bob Plc", true))
@@ -129,7 +126,7 @@ class PersistentIdentityServiceTests {
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
         assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
         identities.forEach {
-            networkMapCache[it.name] = it
+            networkMapCache.verifyAndRegisterIdentity(it)
         }
         identities.forEach {
             assertEquals(it.party, identityService.wellKnownPartyFromX500Name(it.name))
@@ -210,10 +207,8 @@ class PersistentIdentityServiceTests {
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
         // Register well known identities
-        identityService.verifyAndRegisterIdentity(alice)
-        identityService.verifyAndRegisterIdentity(bob)
-        networkMapCache[alice.name] = alice
-        networkMapCache[bob.name] = bob
+        networkMapCache.verifyAndRegisterIdentity(alice)
+        networkMapCache.verifyAndRegisterIdentity(bob)
         // Register an anonymous identities
         identityService.verifyAndRegisterIdentity(anonymousAlice)
         identityService.verifyAndRegisterIdentity(anonymousBob)
@@ -221,12 +216,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(
-                    DEV_ROOT_CA.certificate,
-                    pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory),
-                    wellKnownPartyFromX500Name = { networkMapCache[it]?.party },
-                    getAllIdentities = networkMapCache::values
-            )
+            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
@@ -263,7 +253,7 @@ class PersistentIdentityServiceTests {
     @Test(timeout=300_000)
 	fun `resolve key to party for key without certificate`() {
         // Register Alice's PartyAndCert as if it was done so via the network map cache.
-        networkMapCache[ALICE_IDENTITY.name] = ALICE_IDENTITY
+        networkMapCache.verifyAndRegisterIdentity(alice.identity)
         // Use a key which is not tied to a cert.
         val publicKey = Crypto.generateKeyPair().public
         // Register the PublicKey to Alice's CordaX500Name.
@@ -273,7 +263,7 @@ class PersistentIdentityServiceTests {
 
     @Test(timeout=300_000)
 	fun `register incorrect party to public key `(){
-        networkMapCache[ALICE_IDENTITY.name] = ALICE_IDENTITY
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         identityService.registerKey(anonymousAlice.owningKey, alice.party)
         // Should have no side effect but logs a warning that we tried to overwrite an existing mapping.
@@ -300,6 +290,10 @@ class PersistentIdentityServiceTests {
                 txKey.public)
         val txCertPath = X509Utilities.buildCertPath(txCert, issuer.certPath.x509Certificates)
         return Pair(issuer, PartyAndCertificate(txCertPath))
+    }
+
+    private fun PersistentNetworkMapCache.verifyAndRegisterIdentity(identity: PartyAndCertificate) {
+        addOrUpdateNode(NodeInfo(listOf(NetworkHostAndPort("localhost", 12345)), listOf(identity), 1, 0))
     }
 
     /**

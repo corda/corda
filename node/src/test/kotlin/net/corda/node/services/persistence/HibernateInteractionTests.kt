@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -14,11 +15,13 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -70,6 +73,11 @@ class HibernateInteractionTests {
         )
         services = mockServices
         database = db
+        // Store NodeInfo in database for identityService lookups
+        val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(0), database, mockServices.identityService)
+        listOf(myself.identity, notary.identity).forEach {
+            networkMapCache.addOrUpdateNode(NodeInfo(listOf(NetworkHostAndPort("localhost", 12345)), listOf(it), 1, 0))
+        }
     }
 
     // AbstractPartyToX500NameAsStringConverter could cause circular flush of Hibernate session because it is invoked during flush, and a
