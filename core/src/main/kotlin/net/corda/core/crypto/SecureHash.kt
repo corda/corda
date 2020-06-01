@@ -34,7 +34,7 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is SHA256 && !(other is HASH && other.algorithm == algorithm)) return false
+            if (other !is SHA256) return false
             if (!super.equals(other)) return false
             return true
         }
@@ -57,7 +57,7 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         override fun equals(other: Any?): Boolean {
             return when {
                 this === other -> true
-                other !is SecureHash -> false
+                other !is HASH -> false
                 else -> algorithm == other.algorithm && super.equals(other)
             }
         }
@@ -72,13 +72,7 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
     fun toHexString(): String = bytes.toHexString()
 
     override fun toString(): String {
-        return if (algorithm == SHA2_256) {
-            // This must remain consistent with the SHA256 class
-            // for the sake of backwards-compatibility.
-            toHexString()
-        } else {
-            "$algorithm$DELIMITER${toHexString()}"
-        }
+        return "$algorithm$DELIMITER${toHexString()}"
     }
 
     /**
@@ -120,9 +114,15 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
             val txt = str ?: throw IllegalArgumentException("Provided string is null")
             val idx = txt.indexOf(DELIMITER)
             return if (idx == -1) {
-                decode(SHA2_256, txt)
+                parse(txt)
             } else {
-                decode(txt.substring(0, idx).toUpperCase(), txt.substring(idx + 1))
+                val algorithm = txt.substring(0, idx).toUpperCase()
+                val value = txt.substring(idx + 1)
+                if (algorithm == SHA2_256) {
+                    parse(value)
+                } else {
+                    decode(algorithm, value)
+                }
             }
         }
 
@@ -177,7 +177,12 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         @JvmStatic
         fun hashAs(algorithm: String, bytes: ByteArray): SecureHash {
             val upperAlgorithm = algorithm.toUpperCase()
-            return HASH(upperAlgorithm, digestAs(upperAlgorithm, bytes))
+            val hashBytes = digestAs(upperAlgorithm, bytes)
+            return if (upperAlgorithm == SHA2_256) {
+                SHA256(hashBytes)
+            } else {
+                HASH(upperAlgorithm, hashBytes)
+            }
         }
 
         /**
@@ -188,10 +193,14 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         @JvmStatic
         fun hashTwiceAs(algorithm: String, bytes: ByteArray): SecureHash {
             val upperAlgorithm = algorithm.toUpperCase()
-            val digest = digestFor(upperAlgorithm).get()
-            val firstHash = digest.digest(bytes)
-            digest.reset()
-            return HASH(upperAlgorithm, digest.digest(firstHash))
+            return if (upperAlgorithm == SHA2_256) {
+                sha256Twice(bytes)
+            } else {
+                val digest = digestFor(upperAlgorithm).get()
+                val firstHash = digest.digest(bytes)
+                digest.reset()
+                HASH(upperAlgorithm, digest.digest(firstHash))
+            }
         }
 
         /**
@@ -229,8 +238,12 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         @JvmStatic
         fun random(algorithm: String): SecureHash {
             val upperAlgorithm = algorithm.toUpperCase()
-            val digest = digestFor(upperAlgorithm)
-            return HASH(upperAlgorithm, digest.get().digest(secureRandomBytes(digest.digestLength)))
+            return if (upperAlgorithm == SHA2_256) {
+                randomSHA256()
+            } else {
+                val digest = digestFor(upperAlgorithm)
+                HASH(upperAlgorithm, digest.get().digest(secureRandomBytes(digest.digestLength)))
+            }
         }
 
         /**
@@ -262,6 +275,9 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         fun getAllOnesHash(): SHA256 = allOnesHash
 
         private val hashConstants: ConcurrentMap<String, HashConstants> = ConcurrentHashMap()
+        init {
+            hashConstants[SHA2_256] = HashConstants(zeroHash, allOnesHash)
+        }
 
         private fun getConstantsFor(algorithm: String): HashConstants {
             return hashConstants.computeIfAbsent(algorithm.toUpperCase()) { algName ->

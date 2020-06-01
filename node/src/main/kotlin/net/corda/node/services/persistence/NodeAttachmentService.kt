@@ -11,7 +11,6 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.Version
@@ -238,8 +237,7 @@ class NodeAttachmentService @JvmOverloads constructor(
         override fun open(): InputStream {
             val stream = super.open()
             // This is just an optional safety check. If it slows things down too much it can be disabled.
-            return if (checkOnLoad && id.algorithm == SHA2_256) HashCheckingStream(id, attachmentData.size, stream) else stream
-            //return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
+            return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
         private class Token(
