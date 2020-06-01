@@ -165,7 +165,7 @@ open class SchemaMigration(
         val liquibase = Liquibase(dynamicInclude, resourcesAndSourceInfo.single().first, databaseFactory.getLiquibaseDatabase(JdbcConnection(connection)))
 
         val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
-        return Triple(liquibase, unRunChanges.size, true)
+        return Triple(liquibase, unRunChanges.size, !unRunChanges.isEmpty())
     }
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
