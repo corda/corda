@@ -21,6 +21,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
@@ -74,7 +75,7 @@ class HibernateInteractionTests {
         services = mockServices
         database = db
         // Store NodeInfo in database for identityService lookups
-        val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(0), database, mockServices.identityService)
+        val networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(0), database, mockServices.identityService as IdentityServiceInternal)
         listOf(myself.identity, notary.identity).forEach {
             networkMapCache.addOrUpdateNode(NodeInfo(listOf(NetworkHostAndPort("localhost", 12345)), listOf(it), 1, 0))
         }

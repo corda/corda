@@ -27,7 +27,6 @@ import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -301,10 +300,9 @@ class PersistentIdentityServiceTests {
      */
     @Test(timeout=300_000)
 	fun `deanonymising a well known identity should return the identity`() {
-        val service = makeTestIdentityService()
         val expected = ALICE
-        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        val actual = service.wellKnownPartyFromAnonymous(expected)
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = identityService.wellKnownPartyFromAnonymous(expected)
         assertEquals(expected, actual)
     }
 
@@ -313,10 +311,9 @@ class PersistentIdentityServiceTests {
      */
     @Test(timeout=300_000)
 	fun `deanonymising a false well known identity should return null`() {
-        val service = makeTestIdentityService()
         val notAlice = Party(ALICE.name, generateKeyPair().public)
-        service.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        val actual = service.wellKnownPartyFromAnonymous(notAlice)
+        networkMapCache.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        val actual = identityService.wellKnownPartyFromAnonymous(notAlice)
         assertNull(actual)
     }
 }

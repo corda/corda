@@ -38,7 +38,6 @@ interface IdentityService {
      * @param identity a party and the certificate path linking them to the network trust root.
      * @return the issuing entity, if known.
      * @throws IllegalArgumentException if the certificate path is invalid.
-     * TODO: deprecate
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate?
@@ -48,7 +47,6 @@ interface IdentityService {
      * the anonymous party and resolving it back to the given full party.
      *
      * @throws UnknownAnonymousPartyException if the anonymous party is not owned by the full party.
-     * TODO: deprecate
      */
     @Throws(UnknownAnonymousPartyException::class)
     fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
@@ -64,7 +62,6 @@ interface IdentityService {
     /**
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
      * used in preference where possible.
-     * TODO: deprecate
      */
     fun getAllIdentities(): Iterable<PartyAndCertificate>
 
@@ -73,7 +70,6 @@ interface IdentityService {
      *
      * @param owningKey The [PublicKey] to determine well known identity for.
      * @return the party and certificate, or null if unknown.
-     * TODO: deprecate
      */
     fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate?
 
