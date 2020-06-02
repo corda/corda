@@ -1,6 +1,7 @@
 package net.corda.deterministic.contracts
 
 import net.corda.core.contracts.PrivacySalt
+import net.corda.core.crypto.SecureHash.Companion.SHA2_256
 import org.junit.Test
 import kotlin.test.*
 
@@ -21,14 +22,14 @@ class PrivacySaltTest {
     }
 
     @Test(timeout=300_000)
-	fun testTooShortPrivacySalt() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1) { 0x7f }) }
+	fun testTooShortPrivacySaltForSHA256() {
+        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1) { 0x7f }).apply { validateFor(SHA2_256) } }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }
 
     @Test(timeout=300_000)
-	fun testTooLongPrivacySalt() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1) { 0x7f }) }
+	fun testTooLongPrivacySaltForSHA256() {
+        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1) { 0x7f }).apply { validateFor(SHA2_256) } }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }
 }

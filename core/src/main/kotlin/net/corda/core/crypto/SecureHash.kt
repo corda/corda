@@ -131,11 +131,7 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
          * @param value Hash value as a hexadecimal string.
          */
         private fun decode(algorithm: String, value: String): SecureHash {
-            val digestLength = try {
-                digestFor(algorithm).digestLength
-            } catch (_: NoSuchAlgorithmException) {
-                throw IllegalArgumentException("Unknown hash algorithm $algorithm")
-            }
+            val digestLength = digestFor(algorithm).digestLength
             val data = value.parseAsHex()
             return when (data.size) {
                 digestLength -> HASH(algorithm, data)
@@ -168,6 +164,14 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
         }
 
         private fun digestAs(algorithm: String, bytes: ByteArray): ByteArray = digestFor(algorithm).get().digest(bytes)
+
+        /**
+         * @param algorithm The [MessageDigest] algorithm to query.
+         * @return The length in bytes of this [MessageDigest].
+         */
+        fun digestLengthFor(algorithm: String): Int {
+            return digestFor(algorithm.toUpperCase()).digestLength
+        }
 
         /**
          * Computes the hash value of the [ByteArray].
@@ -345,7 +349,11 @@ private class DigestSupplier(algorithm: String) : Supplier<MessageDigest> {
 // Declaring this as "object : FastThreadLocal<>" would have
 // created an extra public class in the API definition.
 private class LocalDigest(private val algorithm: String) : FastThreadLocal<MessageDigest>() {
-    override fun initialValue(): MessageDigest = MessageDigest.getInstance(algorithm)
+    override fun initialValue(): MessageDigest = try {
+        MessageDigest.getInstance(algorithm)
+    } catch (_: NoSuchAlgorithmException) {
+        throw IllegalArgumentException("Unknown hash algorithm $algorithm")
+    }
 }
 
 private class HashConstants(val zero: SecureHash, val allOnes: SecureHash)

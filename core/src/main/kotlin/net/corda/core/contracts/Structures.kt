@@ -327,13 +327,29 @@ interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out 
 @CordaSerializable
 @KeepForDJVM
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
+    /** Constructs a salt with a randomly-generated saltLength byte value. */
+    @DeleteForDJVM
+    constructor(saltLength: Int) : this(secureRandomBytes(saltLength))
+
     /** Constructs a salt with a randomly-generated 32 byte value. */
     @DeleteForDJVM
-    constructor() : this(secureRandomBytes(32))
+    constructor() : this(32)
 
     init {
-        require(bytes.size == 32) { "Privacy salt should be 32 bytes." }
         require(bytes.any { it != 0.toByte() }) { "Privacy salt should not be all zeros." }
+    }
+
+    fun validateFor(algorithm: String) {
+        val digestLength = SecureHash.digestLengthFor(algorithm)
+        require(bytes.size == digestLength) { "Privacy salt should be $digestLength bytes." }
+    }
+
+    companion object {
+        @DeleteForDJVM
+        @JvmStatic
+        fun createFor(algorithm: String): PrivacySalt {
+            return PrivacySalt(SecureHash.digestLengthFor(algorithm))
+        }
     }
 }
 

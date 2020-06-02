@@ -55,6 +55,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SHA2_256)
 
     @DeleteForDJVM
+    constructor(componentGroups: List<ComponentGroup>, hashAlgorithm: String) : this(componentGroups, PrivacySalt.createFor(hashAlgorithm), hashAlgorithm)
+
+    @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
@@ -78,6 +81,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         check(inputs.isNotEmpty() || outputs.isNotEmpty()) { "A transaction must contain at least one input or output state" }
         check(commands.isNotEmpty()) { "A transaction must contain at least one command" }
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
+        privacySalt.validateFor(hashAlgorithm)
     }
 
     /** The transaction id is represented by the root hash of Merkle tree over the transaction components. */
