@@ -55,7 +55,7 @@ class NetworkRegistrationHelperTest {
 
     private lateinit var config: NodeConfiguration
     private val networkRootTrustStoreFileName = "network-root-truststore.jks"
-    private val networkRootTrustStorePassword = "trustpass"
+    private val networkRootTrustStorePassword = "network-root-truststore-password"
 
     @Before
     fun init() {
@@ -225,34 +225,14 @@ class NetworkRegistrationHelperTest {
     }
 
     @Test(timeout=300_000)
-    fun `notary registration fails when no separate notary service identity configured`() {
-        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = null)
-        assertThat(notaryNodeConfig.notary).isNotNull
-
-        assertThatThrownBy {
-            createRegistrationHelper(nodeConfig = notaryNodeConfig)
-        }.isInstanceOf(IllegalArgumentException::class.java)
-                .hasMessageContaining("notary service legal name must be provided")
-    }
-
-    @Test(timeout=300_000)
-    fun `notary registration fails when notary service identity configured with same legal name as node`() {
-        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = config.myLegalName)
-        assertThat(notaryNodeConfig.notary).isNotNull
-
-        assertThatThrownBy {
-            createRegistrationHelper(nodeConfig = notaryNodeConfig)
-        }.isInstanceOf(IllegalArgumentException::class.java)
-                .hasMessageContaining("notary service legal name must be different from the node")
-    }
-
-    @Test(timeout=300_000)
     fun `successful registration for notary node`() {
         val notaryServiceLegalName = DUMMY_NOTARY_NAME
         val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = notaryServiceLegalName)
         assertThat(notaryNodeConfig.notary).isNotNull
 
-        val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(CORDA_ROOT_CA to it.first.certificate) }
+        val rootAndIntermediateCA = createDevIntermediateCaCertPath().also {
+            saveNetworkTrustStore(CORDA_ROOT_CA to it.first.certificate)
+        }
 
         // Mock out the registration service to ensure notary service registration is handled correctly
         createRegistrationHelper(CertRole.NODE_CA, notaryNodeConfig) {
@@ -278,6 +258,28 @@ class NetworkRegistrationHelperTest {
             assertThat(CertRole.extract(this[X509Utilities.CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
             assertThat(CertRole.extract(this[DISTRIBUTED_NOTARY_KEY_ALIAS])).isEqualTo(CertRole.SERVICE_IDENTITY)
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `notary registration fails when no separate notary service identity configured`() {
+        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = null)
+        assertThat(notaryNodeConfig.notary).isNotNull
+
+        assertThatThrownBy {
+            createRegistrationHelper(nodeConfig = notaryNodeConfig)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("notary service legal name must be provided")
+    }
+
+    @Test(timeout=300_000)
+    fun `notary registration fails when notary service identity configured with same legal name as node`() {
+        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = config.myLegalName)
+        assertThat(notaryNodeConfig.notary).isNotNull
+
+        assertThatThrownBy {
+            createRegistrationHelper(nodeConfig = notaryNodeConfig)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("notary service legal name must be different from the node")
     }
 
     private fun createNotaryNodeConfiguration(notaryServiceLegalName: CordaX500Name?): NodeConfiguration {
