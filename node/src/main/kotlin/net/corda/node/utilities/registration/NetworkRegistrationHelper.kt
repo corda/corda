@@ -25,6 +25,7 @@ import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
+import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.net.URL
 import java.nio.file.Path
@@ -39,7 +40,7 @@ import javax.security.auth.x500.X500Principal
  * needed.
  */
 open class NetworkRegistrationHelper(
-        private val config: NodeRegistrationConfiguration,
+        config: NodeRegistrationConfiguration,
         private val certService: NetworkRegistrationService,
         private val networkRootTrustStorePath: Path,
         networkRootTrustStorePassword: String,
@@ -83,30 +84,19 @@ open class NetworkRegistrationHelper(
      *
      * @throws CertificateRequestException if the certificate retrieved by doorman is invalid.
      */
-    fun generateKeysAndRegister(
-            keyAlias: String = nodeCaKeyAlias,
-            legalName: CordaX500Name = myLegalName,
-            certificateRole: CertRole = certRole
-    ) {
+    fun generateKeysAndRegister() {
         certificatesDirectory.safeSymbolicRead().createDirectories()
         // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
         // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
         val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
 
         // SELF_SIGNED_PRIVATE_KEY is used as progress indicator.
-        if (certStore.contains(keyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
+        if (certStore.contains(nodeCaKeyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
             logProgress("Certificate already exists, Corda node will now terminate...")
             return
         }
 
-        if (notaryServiceConfig != null) {
-            // As we recursively call this to generate the initial notary service config we don't want to get stuck in a loop.
-            // Hence we ignore cases where the certificate role is a service identity.
-            validateAndRegisterNotaryService(
-                    certStore,
-                    notaryServiceConfig.notaryServiceKeyAlias,
-                    notaryServiceConfig.notaryServiceLegalName)
-        }
+        notaryServiceConfig?.let { validateNotaryServiceKeyAndCert(certStore, it.notaryServiceKeyAlias, it.notaryServiceLegalName) }
 
         val tlsCrlIssuerCert = getTlsCrlIssuerCert()
 
@@ -114,9 +104,9 @@ open class NetworkRegistrationHelper(
         // When registration succeeds, this entry should be deleted.
         certStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), certificateStore.entryPassword) }
 
-        val (entityPublicKey, receivedCertificates) = generateKeyPairAndCertificate(keyAlias, legalName, certificateRole, certStore)
+        val (entityPublicKey, receivedCertificates) = generateKeyPairAndCertificate(nodeCaKeyAlias, myLegalName, certRole, certStore)
 
-        onSuccess(entityPublicKey, cryptoService.getSigner(keyAlias), receivedCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
+        onSuccess(entityPublicKey, cryptoService.getSigner(nodeCaKeyAlias), receivedCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
@@ -137,25 +127,25 @@ open class NetworkRegistrationHelper(
     }
 
     /**
-     * This method is only executed if the node is configured to be a notary. It checks for existence of a notary service identity,
-     * generating a new one if none is found. This is separate from the node identity and is used to sign notarisation requests.
+     * Used when registering a notary to validate that the shared notary service key and certificate can be accessed.
      *
-     * As the notary identity needs to be a valid identity on the network it must obtain a certificate via submitting a CSR to
-     * the Identity Manager, similar to how a standard node obtains its certificate.
+     * In the case that the notary service certificate and key is not available, a new key key is generated and a separate CSR is
+     * submitted to the Identity Manager.
+     *
+     * If this method successfully completes then the [cryptoService] will contain the notary service key and the [certStore] will contain
+     * the notary service certificate chain.
+     *
+     * @throws IllegalStateException If the notary service certificate already exists but the private key is not available.
      */
-    private fun validateAndRegisterNotaryService(
-            certStore: CertificateStore,
-            notaryServiceKeyAlias: String,
-            notaryServiceLegalName: CordaX500Name
-    ) {
+    private fun validateNotaryServiceKeyAndCert(certStore: CertificateStore, notaryServiceKeyAlias: String, notaryServiceLegalName: CordaX500Name) {
+        if (certStore.contains(notaryServiceKeyAlias) && !cryptoService.containsKey(notaryServiceKeyAlias)) {
+            throw IllegalStateException("Notary service identity certificate exists but key pair missing. " +
+                    "Please check no old certificates exist in the certificate store.")
+        }
+
         if (certStore.contains(notaryServiceKeyAlias)) {
-            if (!cryptoService.containsKey(notaryServiceKeyAlias)) {
-                throw CertificateRequestException("Notary service identity certificate exists but key pair missing. " +
-                                                  "Please check no old certificates exist in the certificate store.")
-            } else {
-                logProgress("Notary service certificate already exists. Continuing with node registration...")
-                return
-            }
+            logProgress("Notary service certificate already exists. Continuing with node registration...")
+            return
         }
 
         logProgress("Generating notary service identity for $notaryServiceLegalName...")
