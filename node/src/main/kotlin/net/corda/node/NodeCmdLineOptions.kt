@@ -14,6 +14,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -55,6 +56,12 @@ open class SharedNodeCmdLineOptions {
                 "Only available in dev mode."]
     )
     var allowHibernateToManangeAppSchema: Boolean = false
+
+    @Option(
+            names = ["--pause-all-flows"],
+            description = ["Do not run any flows on startup. Sets all flows to paused, which can be unpaused via RPC."]
+    )
+    var safeMode: Boolean = false
 
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
@@ -193,6 +200,9 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         }
         devMode?.let {
             configOverrides += "devMode" to it
+        }
+        if (safeMode) {
+            configOverrides += "smmStartMode" to StateMachineManager.StartMode.Safe.toString()
         }
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))

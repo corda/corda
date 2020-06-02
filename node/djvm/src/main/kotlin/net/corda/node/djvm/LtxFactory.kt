@@ -27,12 +27,12 @@ private const val TX_PRIVACY_SALT = 7
 private const val TX_NETWORK_PARAMETERS = 8
 private const val TX_REFERENCES = 9
 
-class LtxFactory : Function<Array<Any?>, LedgerTransaction> {
+class LtxFactory : Function<Array<out Any?>, LedgerTransaction> {
 
     @Suppress("unchecked_cast")
-    override fun apply(txArgs: Array<Any?>): LedgerTransaction {
+    override fun apply(txArgs: Array<out Any?>): LedgerTransaction {
         return LedgerTransaction.createForSandbox(
-            inputs = (txArgs[TX_INPUTS] as Array<Array<Any?>>).map { it.toStateAndRef() },
+            inputs = (txArgs[TX_INPUTS] as Array<Array<out Any?>>).map { it.toStateAndRef() },
             outputs = (txArgs[TX_OUTPUTS] as? List<TransactionState<ContractState>>) ?: emptyList(),
             commands = (txArgs[TX_COMMANDS] as? List<CommandWithParties<CommandData>>) ?: emptyList(),
             attachments = (txArgs[TX_ATTACHMENTS] as? List<Attachment>) ?: emptyList(),
@@ -41,7 +41,7 @@ class LtxFactory : Function<Array<Any?>, LedgerTransaction> {
             timeWindow = txArgs[TX_TIME_WINDOW] as? TimeWindow,
             privacySalt = txArgs[TX_PRIVACY_SALT] as PrivacySalt,
             networkParameters = txArgs[TX_NETWORK_PARAMETERS] as NetworkParameters,
-            references = (txArgs[TX_REFERENCES] as Array<Array<Any?>>).map { it.toStateAndRef() }
+            references = (txArgs[TX_REFERENCES] as Array<Array<out Any?>>).map { it.toStateAndRef() }
         )
     }
 

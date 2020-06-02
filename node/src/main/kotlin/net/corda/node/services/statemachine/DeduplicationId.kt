@@ -27,7 +27,7 @@ data class DeduplicationId(val toString: String) {
          *   message-id map to change, which means deduplication will not happen correctly.
          */
         fun createForNormal(checkpoint: Checkpoint, index: Int, session: SessionState): DeduplicationId {
-            return DeduplicationId("N-${session.deduplicationSeed}-${checkpoint.numberOfSuspends}-$index")
+            return DeduplicationId("N-${session.deduplicationSeed}-${checkpoint.checkpointState.numberOfSuspends}-$index")
         }
 
         /**

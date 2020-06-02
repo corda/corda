@@ -25,10 +25,11 @@ class KilledFlowTransition(
             val killedFlowErrorMessage = createErrorMessageFromError(killedFlowError)
             val errorMessages = listOf(killedFlowErrorMessage)
 
-            val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(startingState.checkpoint.sessions, errorMessages)
-            val newCheckpoint = startingState.checkpoint.copy(
-                sessions = newSessions
+            val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(
+                startingState.checkpoint.checkpointState.sessions,
+                errorMessages
             )
+            val newCheckpoint = startingState.checkpoint.setSessions(sessions = newSessions)
             currentState = currentState.copy(checkpoint = newCheckpoint)
             actions.add(
                 Action.PropagateErrors(
@@ -42,7 +43,7 @@ class KilledFlowTransition(
                 actions.add(Action.CreateTransaction)
             }
             // The checkpoint and soft locks are also removed directly in [StateMachineManager.killFlow]
-            if(startingState.isAnyCheckpointPersisted) {
+            if (startingState.isAnyCheckpointPersisted) {
                 actions.add(Action.RemoveCheckpoint(context.id))
             }
             actions.addAll(
@@ -51,7 +52,7 @@ class KilledFlowTransition(
                     Action.ReleaseSoftLocks(context.id.uuid),
                     Action.CommitTransaction,
                     Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                    Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
+                    Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
                 )
             )
 

@@ -336,7 +336,7 @@ object InteractiveShell {
                               ansiProgressRenderer: ANSIProgressRenderer,
                               inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         val matches = try {
-            rpcOps.registeredFlows().filter { nameFragment in it }
+            rpcOps.registeredFlows().filter { nameFragment in it }.sortedBy { it.length }
         } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Decoration.bold, Color.red)
             return

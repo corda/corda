@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
@@ -36,10 +35,10 @@ object CheckpointVerifier {
 
         val cordappsByHash = currentCordapps.associateBy { it.jarHash }
 
-        checkpointStorage.getAllCheckpoints().use {
+        checkpointStorage.getCheckpointsToRun().use {
             it.forEach { (_, serializedCheckpoint) ->
                 val checkpoint = try {
-                    serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                    serializedCheckpoint.deserialize(checkpointSerializationContext)
                 } catch (e: ClassNotFoundException) {
                     val message = e.message
                     if (message != null) {
@@ -52,7 +51,7 @@ object CheckpointVerifier {
                 }
 
                 // For each Subflow, compare the checkpointed version to the current version.
-                checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
+                checkpoint.checkpointState.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
             }
         }
     }

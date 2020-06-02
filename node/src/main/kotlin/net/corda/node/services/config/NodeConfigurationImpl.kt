@@ -8,6 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
@@ -83,7 +84,8 @@ data class NodeConfigurationImpl(
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
         override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
-        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages
+        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
+        override val smmStartMode : StateMachineManager.StartMode = Defaults.smmStartMode
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -122,6 +124,7 @@ data class NodeConfigurationImpl(
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
         val quasarExcludePackages: List<String> = emptyList()
+        val smmStartMode : StateMachineManager.StartMode = StateMachineManager.StartMode.ExcludingPaused
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

@@ -413,6 +413,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return database.transaction {
             log.info("Linking: ${publicKey.hash} to ${party.name}")
             keyToName[publicKey.toStringShort()] = party.name
+            if (party == wellKnownPartyFromX500Name(ourNames.first())) {
+                _pkToIdCache[publicKey] = KeyOwningIdentity.UnmappedIdentity
+            }
         }
     }
 
@@ -422,7 +425,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun externalIdForPublicKey(publicKey: PublicKey): UUID? {
-        return _pkToIdCache[publicKey]?.uuid
+        return _pkToIdCache[publicKey].uuid
     }
 
     private fun publicKeysForExternalId(externalId: UUID, table: Class<*>): List<PublicKey> {

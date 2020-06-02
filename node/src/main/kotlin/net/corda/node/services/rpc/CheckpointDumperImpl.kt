@@ -90,6 +90,11 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
+        private val DUMPABLE_CHECKPOINTS = setOf(
+            Checkpoint.FlowStatus.RUNNABLE,
+            Checkpoint.FlowStatus.HOSPITALIZED,
+            Checkpoint.FlowStatus.PAUSED
+        )
     }
 
     override val priority: Int = SERVICE_PRIORITY_NORMAL
@@ -141,7 +146,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
-                    checkpointStorage.getAllCheckpoints().use { stream ->
+                    checkpointStorage.getCheckpoints(DUMPABLE_CHECKPOINTS).use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
 
@@ -149,8 +154,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                                     instrumentCheckpointAgent(runId)
 
                                 val (bytes, fileName) = try {
-                                    val checkpoint =
-                                            serialisedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+                                    val checkpoint = serialisedCheckpoint.deserialize(checkpointSerializationContext)
                                     val json = checkpoint.toJson(runId.uuid, now)
                                     val jsonBytes = writer.writeValueAsBytes(json)
                                     jsonBytes to "${json.topLevelFlowClass.simpleName}-${runId.uuid}.json"
@@ -205,13 +209,16 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext)
                 fiber to fiber.logic
             }
+            else -> {
+                throw IllegalStateException("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
+            }
         }
 
         val flowCallStack = if (fiber != null) {
             // Poke into Quasar's stack and find the object references to the sub-flows so that we can correctly get the current progress
             // step for each sub-call.
             val stackObjects = fiber.getQuasarStack()
-            subFlowStack.map { it.toJson(stackObjects) }
+            checkpointState.subFlowStack.map { it.toJson(stackObjects) }
         } else {
             emptyList()
         }
@@ -226,9 +233,10 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                         timestamp,
                         now
                 ),
-                origin = invocationContext.origin.toOrigin(),
-                ourIdentity = ourIdentity,
-                activeSessions = sessions.mapNotNull { it.value.toActiveSession(it.key) },
+                origin = checkpointState.invocationContext.origin.toOrigin(),
+                ourIdentity = checkpointState.ourIdentity,
+                activeSessions = checkpointState.sessions.mapNotNull { it.value.toActiveSession(it.key) },
+                // This can only ever return as [ErrorState.Clean] which causes it to become [null]
                 errored = errorState as? ErrorState.Errored
         )
     }
