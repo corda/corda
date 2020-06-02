@@ -305,18 +305,6 @@ class SingleThreadedStateMachineManager(
         return checkpointStorage.markAllPaused()
     }
 
-    override fun unPauseFlow(id: StateMachineRunId): Boolean {
-        mutex.locked {
-            val pausedFlow = pausedFlows.remove(id) ?: return false
-            val flow = flowCreator.createFlowFromNonResidentFlow(pausedFlow) ?: return false
-            addAndStartFlow(flow.fiber.id, flow)
-            for (event in pausedFlow.externalEvents) {
-                flow.fiber.scheduleEvent(event)
-            }
-        }
-        return true
-    }
-
     override fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId) {
         val previousFlowId = sessionToFlow.put(sessionId, flowId)
         if (previousFlowId != null) {
