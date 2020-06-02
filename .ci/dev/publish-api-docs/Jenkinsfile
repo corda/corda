@@ -12,7 +12,7 @@ pipeline {
     }
 
     environment {
-        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials-for-jenkins')
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials-for-jenkins-test')
     }
 
     stages {
