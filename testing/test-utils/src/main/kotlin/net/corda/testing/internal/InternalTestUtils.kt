@@ -41,6 +41,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.ServerSocket
@@ -183,7 +185,14 @@ fun configureDatabase(hikariProperties: Properties,
             cacheFactory,
             null,
             allowHibernateToManageAppSchema)
-    persistence.startHikariPool(hikariProperties, internalSchemas, ourName = ourName, runMigrationScripts = runMigrationScripts)
+    persistence.startHikariPool(hikariProperties) { dataSource ->
+        val schemaMigration = SchemaMigration(internalSchemas, dataSource, null, null, ourName)
+        if (runMigrationScripts) {
+            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        } else {
+            schemaMigration.checkState()
+        }
+    }
     return persistence
 }
 
