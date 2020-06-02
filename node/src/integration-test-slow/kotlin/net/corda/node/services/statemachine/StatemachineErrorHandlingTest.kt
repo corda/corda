@@ -122,6 +122,19 @@ abstract class StatemachineErrorHandlingTest {
         }
     }
 
+    @StartableByRPC
+    class GetNumberOfHospitalizedCheckpointsFlow : FlowLogic<Long>() {
+        override fun call(): Long {
+            val sqlStatement = "select count(*) from node_checkpoints where status in (${Checkpoint.FlowStatus.HOSPITALIZED.ordinal})"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        }
+    }
+
     // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
