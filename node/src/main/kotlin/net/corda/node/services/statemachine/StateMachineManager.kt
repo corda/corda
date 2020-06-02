@@ -87,13 +87,6 @@ interface StateMachineManager {
     fun killFlow(id: StateMachineRunId): Boolean
 
     /**
-     * Start a paused flow.
-     *
-     * @return whether the flow was successfully started.
-     */
-    fun unPauseFlow(id: StateMachineRunId): Boolean
-
-    /**
      * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.
      * The event may be replayed if a flow fails and attempts to retry.
      */
