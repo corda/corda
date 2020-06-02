@@ -20,15 +20,10 @@ internal class FlowTimeoutScheduler(
     }
 
     /**
-     * Put a flow to sleep for a specified duration.
-     *
-     * @param fiber The [FlowFiber] that will be woken up after sleeping
-     * @param currentState The current [StateMachineState]
-     * @param duration How long to sleep for
-     */
-    /**
      * Schedules the flow [flowId] to be retried if it does not finish within the timeout period
      * specified in the config.
+     *
+     * @param flowId The id of the flow that the timeout is scheduled for
      */
     fun timeout(flowId: StateMachineRunId) {
         timeout(flowId) { flow, retryCount ->
@@ -38,9 +33,9 @@ internal class FlowTimeoutScheduler(
     }
 
     /**
-     * Cancel a sleeping flow's future. Note, this does not cause the flow to wake up.
+     * Cancel a flow's timeout future.
      *
-     * @param currentState The current [StateMachineState]
+     * @param flowId The flow's id
      */
     fun cancel(flowId: StateMachineRunId) {
         innerState.withLock {
@@ -53,6 +48,9 @@ internal class FlowTimeoutScheduler(
 
     /**
      * Resets a flow's timeout with the input timeout duration, only if it is longer than the default flow timeout configuration.
+     *
+     * @param flowId The flow's id
+     * @param timeoutSeconds The custom timeout
      */
     fun resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
         if (timeoutSeconds < serviceHub.configuration.flowTimeout.timeout.seconds) {
