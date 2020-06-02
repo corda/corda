@@ -14,7 +14,6 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -200,9 +199,6 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         }
         devMode?.let {
             configOverrides += "devMode" to it
-        }
-        if (safeMode) {
-            configOverrides += "smmStartMode" to StateMachineManager.StartMode.Safe.toString()
         }
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
