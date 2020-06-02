@@ -323,10 +323,11 @@ class NodeRegistrationConfiguration(
             cryptoService = BCCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
             certificateStore = config.signingCertificateStore.get(true),
             notaryServiceConfig = config.notary?.let {
-                // Validation is only here and not in the main configuration file. This is because we want to keep backwards compatibility
-                // and allow drop in replacements for older versions of running notaries. In this case they will be using the legacy mode
-                // that signs notarisation requests using the nodes legal identity key. Having the validation logic here prevents any new
-                // notaries from registering using the old identity structure whilst still maintaining backwards compatibility.
+                // Validation of the presence of the notary service legal name is only done here and not in the top level configuration
+                // file. This is to maintain backwards compatibility with older notaries using the legacy identity structure. Older
+                // notaries will be signing requests using the nodes legal identity key and therefore no separate notary service entity
+                // exists. Just having the validation here prevents any new notaries from being created with the legacy identity scheme
+                // but still allows drop in JAR replacements for old notaries.
                 requireNotNull(it.serviceLegalName) {
                     "The notary service legal name must be provided"
                 }
