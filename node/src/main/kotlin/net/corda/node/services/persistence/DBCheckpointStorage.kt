@@ -206,6 +206,7 @@ class DBCheckpointStorage(
         @Column(name = "started_type", nullable = false)
         var startType: StartReason,
 
+        @Type(type = "corda-blob")
         @Column(name = "flow_parameters", nullable = false)
         var initialParameters: ByteArray = EMPTY_BYTE_ARRAY,
 
