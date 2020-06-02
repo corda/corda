@@ -1,9 +1,10 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
-import java.nio.file.Files
-
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile rootProject
@@ -27,6 +28,7 @@ ext {
     dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
             '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
+    archivedApiDocsBaseFilename = 'api-docs'
 }
 
 dokka {
@@ -78,3 +80,27 @@ task makeDocs(type: Exec) {
 }
 
 apidocs.shouldRunAfter makeDocs
+
+task archiveApiDocs(type: Tar) {
+    dependsOn apidocs
+    from buildDir
+    include 'html/**'
+    extension 'tgz'
+    compression Compression.GZIP
+}
+
+publishing {
+    publications {
+        apiDocs(MavenPublication) {
+            artifact archiveApiDocs {
+                artifactId archivedApiDocsBaseFilename
+            }
+        }
+    }
+}
+
+artifactoryPublish {
+    publications('apiDocs')
+    version = version.replaceAll('-SNAPSHOT', '')
+    publishPom = false
+}
