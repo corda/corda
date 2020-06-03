@@ -80,7 +80,7 @@ class FlowCreator(
 
     @Suppress("LongParameterList")
     fun <A> createFlowFromLogic(
-        clientUUID: UUID?,
+        clientUUID: String?,
         flowId: StateMachineRunId,
         invocationContext: InvocationContext,
         flowLogic: FlowLogic<A>,

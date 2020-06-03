@@ -100,7 +100,7 @@ data class Checkpoint(
                 ourIdentity: Party,
                 subFlowVersion: SubFlowVersion,
                 isEnabledTimedFlow: Boolean,
-                clientUUID: UUID? = null
+                clientUUID: String? = null
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
@@ -206,7 +206,7 @@ data class CheckpointState(
     val sessions: SessionMap, // This must preserve the insertion order!
     val subFlowStack: List<SubFlow>,
     val numberOfSuspends: Int,
-    val clientUUID: UUID?
+    val clientUUID: String?
 )
 
 /**

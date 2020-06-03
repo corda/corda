@@ -185,7 +185,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
 import java.util.Properties
-import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -1276,7 +1275,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
         return event.future
     }
 
-    override fun <T> startFlow(clientId: UUID?, logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+    override fun <T> startFlow(clientId: String?, logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
             override fun insideDatabaseTransaction() {}
 
@@ -1287,7 +1286,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val deduplicationHandler: DeduplicationHandler
                 get() = this
 
-            override val clientId: UUID?
+            override val clientId: String?
                 get() = clientId
             override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
             override val flowLogic: FlowLogic<T>
@@ -1307,7 +1306,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
     }
 
     override fun <T> invokeFlowAsync(
-            clientId: UUID?,
+            clientId: String?,
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
             vararg args: Any?): CordaFuture<FlowStateMachine<T>> {

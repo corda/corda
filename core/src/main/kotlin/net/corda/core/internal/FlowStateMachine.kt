@@ -49,5 +49,5 @@ interface FlowStateMachine<FLOWRETURN> {
     val ourSenderUUID: String?
     val creationTime: Long
     val isKilled: Boolean
-    val clientUUID: UUID?
+    val clientUUID: String?
 }
