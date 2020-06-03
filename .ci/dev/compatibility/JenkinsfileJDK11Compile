@@ -5,7 +5,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
     agent {
-        label 'jdk11',
+        label 'k8s',
         dockerfile {
             filename '.ci/dev/compatibility/DockerfileJDK11Compile'
             }
