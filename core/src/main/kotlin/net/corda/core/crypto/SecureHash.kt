@@ -202,7 +202,6 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
             } else {
                 val digest = digestFor(upperAlgorithm).get()
                 val firstHash = digest.digest(bytes)
-                digest.reset()
                 HASH(upperAlgorithm, digest.digest(firstHash))
             }
         }
