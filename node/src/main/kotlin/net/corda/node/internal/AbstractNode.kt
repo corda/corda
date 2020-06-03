@@ -610,11 +610,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
-                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryServiceIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
-                // In case of a single notary service myNotaryIdentity will be the node's single identity.
+                // The only case where the myNotaryIdentity will be the node's legal identity is for existing single notary services running
+                // an older version. Current single notary services (V4.6+) sign requests using a separate notary service identity so the
+                // notary identity will be different from the node's legal identity.
                 identity
             }
         }
@@ -1053,8 +1055,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /** Loads pre-generated notary service cluster identity. */
-    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+    /**
+     * Loads notary service identity. In the case of the experimental RAFT and BFT notary clusters, this loads the pre-generated
+     * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
+     * that is generated during initial registration and is used to sign notarisation requests.
+     * */
+    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
         val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
 
