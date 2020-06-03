@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
@@ -79,7 +80,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             log.trace { "Sending message $deduplicationId $message to $party on behalf of $destination" }
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
-        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about $party" }
+        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { "Don't know about $party, owningKey=${party.owningKey.toStringShort()}" }
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
             is InitialSessionMessage -> message.initiatorSessionId

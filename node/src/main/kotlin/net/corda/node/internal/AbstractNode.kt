@@ -15,7 +15,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.newSecureRandom
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -732,8 +731,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             log.debug("Node-info hasn't changed")
             nodeInfoFromDb
         } else {
-            val keyHash = nodeInfoFromDb?.legalIdentities?.first()?.owningKey?.toStringShort()
-            log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb, owningKey=$keyHash")
+            log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
             val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
             networkMapCache.addOrUpdateNode(newNodeInfo)
             log.info("New node-info: $newNodeInfo")

@@ -1,7 +1,9 @@
 package net.corda.node.services.network
 
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -171,6 +173,35 @@ class PersistentNetworkMapCacheTest {
         val netMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = badCert))
         netMapCache.addOrUpdateNode(createNodeInfo(listOf(ALICE)))
         assertThat(netMapCache.allNodes).hasSize(0)
+    }
+
+    @Test(timeout = 300_000)
+    fun `rotate node certificate`() {
+        // Add original node certificate
+        val alice = createNodeInfo(listOf(ALICE))
+        charlieNetMapCache.addOrUpdateNode(alice)
+        // Check database
+        assertThat(charlieNetMapCache.getNodeByLegalName(ALICE.name)).isEqualTo(alice)
+        assertThat(charlieNetMapCache.getNodesByOwningKeyIndex(ALICE.publicKey.toStringShort())).containsOnly(alice)
+        // Check cache
+        assertThat(charlieNetMapCache.getNodeByHash(alice.serialize().hash)).isEqualTo(alice)
+        assertThat(charlieNetMapCache.getPeerCertificateByLegalName(ALICE.name)).isEqualTo(ALICE.identity)
+        assertThat(charlieNetMapCache.getNodesByLegalIdentityKey(ALICE.publicKey)).containsOnly(alice)
+
+        // Rotate node certificate
+        val aliceIdentity2 = TestIdentity(ALICE_NAME, 71)
+        val alice2 = alice.copy(serial = 2, legalIdentitiesAndCerts = listOf(aliceIdentity2.identity))
+        charlieNetMapCache.addOrUpdateNode(alice2)
+        // Check new entry
+        assertThat(charlieNetMapCache.getNodeByLegalName(ALICE.name)).isEqualTo(alice2)
+        assertThat(charlieNetMapCache.getNodesByOwningKeyIndex(aliceIdentity2.publicKey.toStringShort())).containsOnly(alice2)
+        assertThat(charlieNetMapCache.getNodeByHash(alice2.serialize().hash)).isEqualTo(alice2)
+        assertThat(charlieNetMapCache.getPeerCertificateByLegalName(ALICE.name)).isEqualTo(aliceIdentity2.identity)
+        assertThat(charlieNetMapCache.getNodesByLegalIdentityKey(aliceIdentity2.publicKey)).containsOnly(alice2)
+        // Check old entry
+        assertThat(charlieNetMapCache.getNodesByOwningKeyIndex(ALICE.publicKey.toStringShort())).isEmpty()
+        assertThat(charlieNetMapCache.getNodeByHash(alice.serialize().hash)).isNull()
+        assertThat(charlieNetMapCache.getNodesByLegalIdentityKey(ALICE.publicKey)).isEmpty()
     }
 
     private fun createNodeInfo(identities: List<TestIdentity>,
