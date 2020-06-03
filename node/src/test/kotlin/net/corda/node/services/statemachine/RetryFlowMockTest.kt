@@ -65,7 +65,7 @@ class RetryFlowMockTest {
     }
 
     private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
-        return this.services.startFlow(logic, null, this.services.newContext()).flatMap { it.resultFuture }
+        return this.services.startFlow(null, logic, this.services.newContext()).flatMap { it.resultFuture }
     }
 
     @After
@@ -148,7 +148,7 @@ class RetryFlowMockTest {
         // Make sure we have seen an update from the hospital, and thus the flow went there.
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
-        val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
+        val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(null, FinalityHandler(object : FlowSession() {
             override val destination: Destination get() = alice
             override val counterparty: Party get() = alice
 
@@ -183,7 +183,7 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
-        }), null, nodeA.services.newContext()).get()
+        }), nodeA.services.newContext()).get()
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)

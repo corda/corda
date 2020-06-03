@@ -215,7 +215,7 @@ interface FlowStarter {
      * just synthesizes an [ExternalEvent.ExternalStartFlowEvent] and calls the method below.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, clientId: UUID?, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(clientId: UUID?, logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Starts a flow as described by an [ExternalEvent.ExternalStartFlowEvent].  If a transient error
@@ -232,8 +232,8 @@ interface FlowStarter {
      * [logicType] or [args].
      */
     fun <T> invokeFlowAsync(
-            logicType: Class<out FlowLogic<T>>,
             clientId: UUID?,
+            logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
             vararg args: Any?): CordaFuture<FlowStateMachine<T>>
 }

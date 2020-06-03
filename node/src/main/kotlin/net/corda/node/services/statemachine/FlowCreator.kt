@@ -80,6 +80,7 @@ class FlowCreator(
 
     @Suppress("LongParameterList")
     fun <A> createFlowFromLogic(
+        clientUUID: UUID?,
         flowId: StateMachineRunId,
         invocationContext: InvocationContext,
         flowLogic: FlowLogic<A>,
@@ -87,8 +88,7 @@ class FlowCreator(
         ourIdentity: Party,
         existingCheckpoint: Checkpoint?,
         deduplicationHandler: DeduplicationHandler?,
-        senderUUID: String?,
-        clientUUID: UUID?): Flow<A> {
+        senderUUID: String?): Flow<A> {
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
         val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
