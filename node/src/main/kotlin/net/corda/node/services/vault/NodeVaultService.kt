@@ -473,7 +473,7 @@ class NodeVaultService(
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             fun execute(configure: Root<*>.(CriteriaUpdate<*>, Array<Predicate>) -> Any?) = criteriaBuilder.executeUpdate(session, null) { update, _ ->
-                val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.bytes.toHexString(), it.index) }
+                val persistentStateRefs = stateRefs.map { PersistentStateRef(it.txhash.toString(), it.index) }
                 val compositeKey = get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)
                 val stateRefsPredicate = criteriaBuilder.and(compositeKey.`in`(persistentStateRefs))
                 configure(update, arrayOf(stateRefsPredicate))
@@ -869,7 +869,7 @@ private fun CriteriaBuilder.executeUpdate(
         // Increase SQL server performance by, processing updates in chunks allowing the database's optimizer to make use of the index.
         var updatedRows = 0
         it.asSequence()
-            .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
+            .map { stateRef -> PersistentStateRef(stateRef.txhash.toString(), stateRef.index) }
             .chunked(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE)
             .forEach { persistentStateRefs ->
                 updatedRows += doUpdate(persistentStateRefs)
