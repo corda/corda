@@ -112,8 +112,8 @@ data class Checkpoint(
                         numberOfSuspends = 0,
                         clientUUID = clientUUID
                     ),
-                    errorState = ErrorState.Clean,
-                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
+                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
+                    errorState = ErrorState.Clean
                 )
             }
         }
