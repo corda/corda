@@ -62,8 +62,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
     }
     node {
-        name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating : true]
+        name "O=Notary Node,L=Zurich,C=CH"
+        notary = [validating : true,
+                  serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
+        ]
         p2pPort 10002
         rpcSettings {
             address("localhost:10003")
@@ -121,7 +123,9 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', n
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating : true]
+        notary = [validating : true,
+                  serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
+        ]
         cordapps = ["${project(":finance").group}:contracts:$corda_release_version", "${project(":finance").group}:workflows:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
