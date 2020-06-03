@@ -63,6 +63,7 @@ import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -236,7 +237,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, null, args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
@@ -247,16 +248,21 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, null, args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
+    override fun <T> startFlowDynamicWithClientId(logicType: Class<out FlowLogic<T>>, clientId: UUID, vararg args: Any?): FlowHandle<T> {
+        val stateMachine = startFlow(logicType, clientId, args)
+        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+    }
+
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, clientId: UUID?, args: Array<out Any?>): FlowStateMachine<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
-        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        return flowStarter.invokeFlowAsync(logicType, clientId, context(), *args).getOrThrow()
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {

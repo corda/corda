@@ -16,6 +16,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.Future
 
 /**
@@ -98,7 +99,8 @@ data class Checkpoint(
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
                 subFlowVersion: SubFlowVersion,
-                isEnabledTimedFlow: Boolean
+                isEnabledTimedFlow: Boolean,
+                clientUUID: UUID? = null
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
@@ -107,7 +109,8 @@ data class Checkpoint(
                         ourIdentity,
                         emptyMap(),
                         listOf(topLevelSubFlow),
-                        numberOfSuspends = 0
+                        numberOfSuspends = 0,
+                        clientUUID = clientUUID
                     ),
                     errorState = ErrorState.Clean,
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
@@ -202,7 +205,8 @@ data class CheckpointState(
     val ourIdentity: Party,
     val sessions: SessionMap, // This must preserve the insertion order!
     val subFlowStack: List<SubFlow>,
-    val numberOfSuspends: Int
+    val numberOfSuspends: Int,
+    val clientUUID: UUID?
 )
 
 /**

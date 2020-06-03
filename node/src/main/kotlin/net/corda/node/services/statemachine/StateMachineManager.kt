@@ -11,6 +11,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
 import java.time.Duration
+import java.util.UUID
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -135,6 +136,7 @@ interface ExternalEvent {
         val flowId: StateMachineRunId
         val flowLogic: FlowLogic<T>
         val context: InvocationContext
+        val clientId: UUID?
 
         /**
          * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.

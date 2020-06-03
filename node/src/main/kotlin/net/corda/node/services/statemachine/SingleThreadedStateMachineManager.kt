@@ -54,6 +54,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -234,7 +236,8 @@ internal class SingleThreadedStateMachineManager(
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
             ourIdentity: Party?,
-            deduplicationHandler: DeduplicationHandler?
+            deduplicationHandler: DeduplicationHandler?,
+            clientUUID: UUID?
     ): CordaFuture<FlowStateMachine<A>> {
         return startFlowInternal(
                 flowId,
@@ -242,7 +245,8 @@ internal class SingleThreadedStateMachineManager(
                 flowLogic = flowLogic,
                 flowStart = FlowStart.Explicit,
                 ourIdentity = ourIdentity ?: ourFirstIdentity,
-                deduplicationHandler = deduplicationHandler
+                deduplicationHandler = deduplicationHandler,
+                clientUUID = clientUUID
         )
     }
 
@@ -452,7 +456,8 @@ internal class SingleThreadedStateMachineManager(
                 event.flowLogic,
                 event.context,
                 ourIdentity = null,
-                deduplicationHandler = event.deduplicationHandler
+                deduplicationHandler = event.deduplicationHandler,
+                clientUUID = event.clientId
         )
         event.wireUpFuture(future)
     }
@@ -589,7 +594,8 @@ internal class SingleThreadedStateMachineManager(
             flowLogic: FlowLogic<A>,
             flowStart: FlowStart,
             ourIdentity: Party,
-            deduplicationHandler: DeduplicationHandler?
+            deduplicationHandler: DeduplicationHandler?,
+            clientUUID: UUID? = null
     ): CordaFuture<FlowStateMachine<A>> {
 
         val existingFlow = innerState.withLock { flows[flowId] }
@@ -616,7 +622,17 @@ internal class SingleThreadedStateMachineManager(
             null
         }
 
-        val flow = flowCreator.createFlowFromLogic(flowId, invocationContext, flowLogic, flowStart, ourIdentity, existingCheckpoint, deduplicationHandler, ourSenderUUID)
+        val flow = flowCreator.createFlowFromLogic(
+            flowId,
+            invocationContext,
+            flowLogic,
+            flowStart,
+            ourIdentity,
+            existingCheckpoint,
+            deduplicationHandler,
+            ourSenderUUID,
+            clientUUID
+        )
         val startedFuture = openFuture<Unit>()
         innerState.withLock {
             startedFutures[flowId] = startedFuture
@@ -661,6 +677,11 @@ internal class SingleThreadedStateMachineManager(
                 if (oldFlow == null) {
                     incrementLiveFibers()
                     unfinishedFibers.countUp()
+                    // putting in clientIdFutures only the very first future should be OK, since we are backed from capturing it from newer futures,
+                    // in case of retrying from previous checkpoint.
+                    flow.fiber.clientUUID?.let {
+                        clientIdFutures.put(it, flow.resultFuture)
+                    }
                 } else {
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
