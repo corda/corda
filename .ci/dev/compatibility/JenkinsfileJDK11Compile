@@ -24,7 +24,7 @@ pipeline {
     stages {
         stage('Docker authentication') {
             steps {
-                docker login --username ${DOCKER_CREDENTIALS_USR} --password ${DOCKER_CREDENTIALS_PSW}
+                docker login --username ${DOCKER_CREDENTIALS_USR} --password "${DOCKER_CREDENTIALS_PSW}"
             }
         }
         stage('JDK 11 Compile') {
