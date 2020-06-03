@@ -1,0 +1,3 @@
+FROM stefanotestingcr.azurecr.io/buildbase:11latest
+ARG USER="stresstester"
+RUN useradd -m ${USER}

@@ -1,0 +1,61 @@
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent {
+        label 'jdk11',
+        dockerfile {
+            filename '.ci/dev/compatibility/DockerfileJDK11Compile'
+            }
+        }
+    options {
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    environment {
+        PR_CONTEXT_STRING = "PR JDK 11 Compatibility Compilation"
+    }
+
+    stages {
+        stage('JDK 11 Compile') {
+            steps {
+                script {
+                    pullRequest.createStatus(
+                            status: 'pending',
+                            context: "${PR_CONTEXT_STRING}",
+                            description: "Compiling against JDK 11",
+                            targetUrl: "${env.BUILD_URL}")
+                }
+                sh "./gradlew --no-daemon clean compileAll"
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                pullRequest.createStatus(
+                        status: 'success',
+                        context: "${PR_CONTEXT_STRING}",
+                        description: 'Compilation successful',
+                        targetUrl: "${env.BUILD_URL}")
+            }
+        }
+
+        failure {
+            script {
+                pullRequest.createStatus(
+                        status: 'failure',
+                        context: "${PR_CONTEXT_STRING}",
+                        description: 'Compilation failed',
+                        targetUrl: "${env.BUILD_URL}")
+            }
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
