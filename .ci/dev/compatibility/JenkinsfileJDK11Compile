@@ -17,9 +17,16 @@ pipeline {
 
     environment {
         PR_CONTEXT_STRING = "PR JDK 11 Compatibility Compilation"
+        DOCKER_CREDENTIALS_USR = 'stefanotestingcr'
+        DOCKER_CREDENTIALS_PWD = credentials('container_reg_passwd')
     }
 
     stages {
+        stage('Docker authentication') {
+            steps {
+                docker login --username ${DOCKER_CREDENTIALS_USR} --password ${DOCKER_CREDENTIALS_PSW}
+            }
+        }
         stage('JDK 11 Compile') {
             steps {
                 script {
