@@ -1,7 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -51,10 +50,6 @@ data class ContractUpgradeWireTransaction(
     @DeprecatedConstructorForDeserialization(1)
     constructor(serializedComponents: List<OpaqueBytes>, privacySalt: PrivacySalt = PrivacySalt())
          : this(serializedComponents, privacySalt, SHA2_256)
-
-    @DeleteForDJVM
-    constructor(serializedComponents: List<OpaqueBytes>, hashAlgorithm: String)
-        : this(serializedComponents, PrivacySalt.createFor(hashAlgorithm), hashAlgorithm)
 
     companion object {
         /**

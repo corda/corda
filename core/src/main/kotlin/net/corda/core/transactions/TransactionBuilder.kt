@@ -828,8 +828,7 @@ open class TransactionBuilder(
         this.hashAlgorithm = hashAlgorithm
     }
 
-    fun resaltForHashAlgorithm(hashAlgorithm: String) = apply {
-        this.hashAlgorithm = hashAlgorithm
+    fun resalt() = apply {
         privacySalt = PrivacySalt.createFor(hashAlgorithm)
     }
 

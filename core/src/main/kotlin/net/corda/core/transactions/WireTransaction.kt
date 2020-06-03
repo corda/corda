@@ -55,9 +55,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     constructor(componentGroups: List<ComponentGroup>, privacySalt: PrivacySalt = PrivacySalt()) : this(componentGroups, privacySalt, SHA2_256)
 
     @DeleteForDJVM
-    constructor(componentGroups: List<ComponentGroup>, hashAlgorithm: String) : this(componentGroups, PrivacySalt.createFor(hashAlgorithm), hashAlgorithm)
-
-    @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",

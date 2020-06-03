@@ -229,11 +229,13 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransaction>() {
     override fun write(kryo: Kryo, output: Output, obj: NotaryChangeWireTransaction) {
         kryo.writeClassAndObject(output, obj.serializedComponents)
+        kryo.writeClassAndObject(output, obj.hashAlgorithm)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
         val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
-        return NotaryChangeWireTransaction(components)
+        val hashAlgorithm = kryo.readClassAndObject(input) as String
+        return NotaryChangeWireTransaction(components, hashAlgorithm)
     }
 }
 
