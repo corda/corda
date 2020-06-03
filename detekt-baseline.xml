@@ -1435,7 +1435,7 @@
     <ID>ThrowsCount:JarScanningCordappLoader.kt$JarScanningCordappLoader$private fun parseVersion(versionStr: String?, attributeName: String): Int</ID>
     <ID>ThrowsCount:LedgerDSLInterpreter.kt$Verifies$ fun failsWith(expectedMessage: String?): EnforceVerifyOrFail</ID>
     <ID>ThrowsCount:MockServices.kt$ fun &lt;T : SerializeAsToken&gt; createMockCordaService(serviceHub: MockServices, serviceConstructor: (AppServiceHub) -&gt; T): T</ID>
-    <ID>ThrowsCount:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List&lt;X509Certificate&gt;)</ID>
+    <ID>ThrowsCount:NetworkRegistrationHelper.kt$NetworkRegistrationHelper$private fun validateCertificates( registeringPublicKey: PublicKey, registeringLegalName: CordaX500Name, expectedCertRole: CertRole, certificates: List&lt;X509Certificate&gt; )</ID>
     <ID>ThrowsCount:NodeInfoFilesCopier.kt$NodeInfoFilesCopier$private fun atomicCopy(source: Path, destination: Path)</ID>
     <ID>ThrowsCount:NodeVaultService.kt$NodeVaultService$@Throws(VaultQueryException::class) private fun &lt;T : ContractState&gt; _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class&lt;out T&gt;, skipPagingChecks: Boolean): Vault.Page&lt;T&gt;</ID>
     <ID>ThrowsCount:NodeVaultService.kt$NodeVaultService$private fun makeUpdates(batch: Iterable&lt;CoreTransaction&gt;, statesToRecord: StatesToRecord, previouslySeen: Boolean): List&lt;Vault.Update&lt;ContractState&gt;&gt;</ID>
