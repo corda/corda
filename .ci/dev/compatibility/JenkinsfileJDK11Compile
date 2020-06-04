@@ -17,7 +17,7 @@ pipeline {
     }
 
     environment {
-        PR_CONTEXT_STRING = "PR JDK 11 Compatibility Compilation"
+        PR_CONTEXT_STRING = "PR JDK 11 Compatibility"
     }
 
     stages {
