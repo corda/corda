@@ -1276,7 +1276,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
         return event.future
     }
 
-    override fun <T> startFlow(clientId: UUID?, logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+    override fun <T> startFlow(logic: FlowLogic<T>, clientId: UUID?, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
             override fun insideDatabaseTransaction() {}
 
@@ -1287,11 +1287,11 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val deduplicationHandler: DeduplicationHandler
                 get() = this
 
-            override val clientId: UUID?
-                get() = clientId
             override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
             override val flowLogic: FlowLogic<T>
                 get() = logic
+            override val clientId: UUID?
+                get() = clientId
             override val context: InvocationContext
                 get() = context
 
@@ -1307,13 +1307,13 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
     }
 
     override fun <T> invokeFlowAsync(
-            clientId: UUID?,
             logicType: Class<out FlowLogic<T>>,
+            clientId: UUID?,
             context: InvocationContext,
             vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = flowLogicRefFactory.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(flowLogicRefFactory.toFlowLogic(logicRef))
-        return startFlow(clientId, logic, context)
+        return startFlow(logic, clientId, context)
     }
 }
 

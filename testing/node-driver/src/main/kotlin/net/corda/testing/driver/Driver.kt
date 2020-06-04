@@ -88,7 +88,7 @@ interface InProcess : NodeHandle {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(null, logic, internalServices.newContext()).getOrThrow().resultFuture
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = internalServices.startFlow(logic, null, internalServices.newContext()).getOrThrow().resultFuture
 }
 
 /**

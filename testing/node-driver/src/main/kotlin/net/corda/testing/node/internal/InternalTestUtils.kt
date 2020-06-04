@@ -256,7 +256,7 @@ class NodeListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenPro
         """.trimIndent()
     )
 
-fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(null, logic, newContext()).getOrThrow()
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, null, newContext()).getOrThrow()
 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 
