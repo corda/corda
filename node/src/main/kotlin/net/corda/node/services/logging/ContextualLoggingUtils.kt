@@ -13,6 +13,12 @@ internal fun InvocationContext.pushToLoggingContext() {
     origin.pushToLoggingContext()
     externalTrace?.pushToLoggingContext("external_")
     impersonatedActor?.pushToLoggingContext("impersonating_")
+
+    clientUUID?.let {
+        MDC.getMDCAdapter().apply {
+            put("client_id", it)
+        }
+    }
 }
 
 internal fun Trace.pushToLoggingContext(prefix: String = "") {
@@ -38,12 +44,5 @@ internal fun InvocationOrigin.pushToLoggingContext(prefix: String = "") {
 
     MDC.getMDCAdapter().apply {
         put("${prefix}origin", principal().name)
-    }
-}
-
-internal fun pushClientIdToLoggingContext(clientUUID: String) {
-
-    MDC.getMDCAdapter().apply {
-        put("client_id", clientUUID)
     }
 }

@@ -44,7 +44,6 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.logging.pushClientIdToLoggingContext
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
@@ -270,7 +269,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         MDC.put("flow-id", id.uuid.toString())
         MDC.put("fiber-id", this.getId().toString())
         MDC.put("thread-id", Thread.currentThread().id.toString())
-        clientUUID?.let { pushClientIdToLoggingContext(it) }
     }
 
     private fun openThreadLocalWormhole() {

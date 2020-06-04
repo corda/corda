@@ -52,7 +52,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.logging.pushClientIdToLoggingContext
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
@@ -253,7 +252,6 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startFlowDynamicWithClientId(clientUUID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        pushClientIdToLoggingContext(clientUUID)
         val stateMachine = startFlow(logicType, context().withClientId(clientUUID), args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
