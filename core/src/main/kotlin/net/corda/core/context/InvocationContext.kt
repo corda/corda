@@ -24,6 +24,7 @@ data class InvocationContext(
     val actor: Actor?,
     val externalTrace: Trace? = null,
     val impersonatedActor: Actor? = null,
+    val clientUUID: String? = null,
     val arguments: List<Any?> = emptyList()
 ) {
 
@@ -33,7 +34,7 @@ data class InvocationContext(
         actor: Actor?,
         externalTrace: Trace? = null,
         impersonatedActor: Actor? = null
-    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList())
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, null, emptyList())
 
     companion object {
         /**
@@ -49,8 +50,9 @@ data class InvocationContext(
             actor: Actor? = null,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
+            clientUUID: String? = null,
             arguments: List<Any?> = emptyList()
-        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments)
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, clientUUID, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
@@ -64,7 +66,7 @@ data class InvocationContext(
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
             arguments: List<Any?> = emptyList()
-        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments)
+        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, null, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
@@ -105,7 +107,8 @@ data class InvocationContext(
         trace: Trace = this.trace,
         actor: Actor? = this.actor,
         externalTrace: Trace? = this.externalTrace,
-        impersonatedActor: Actor? = this.impersonatedActor
+        impersonatedActor: Actor? = this.impersonatedActor,
+        clientUUID: String? = this.clientUUID
     ): InvocationContext {
         return copy(
             origin = origin,
@@ -113,6 +116,7 @@ data class InvocationContext(
             actor = actor,
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
+            clientUUID = clientUUID,
             arguments = arguments
         )
     }

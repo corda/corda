@@ -40,3 +40,10 @@ internal fun InvocationOrigin.pushToLoggingContext(prefix: String = "") {
         put("${prefix}origin", principal().name)
     }
 }
+
+internal fun pushClientIdToLoggingContext(clientUUID: String) {
+
+    MDC.getMDCAdapter().apply {
+        put("client_id", clientUUID)
+    }
+}

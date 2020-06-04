@@ -52,6 +52,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.logging.pushClientIdToLoggingContext
 import net.corda.node.services.rpc.CheckpointDumperImpl
 import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
@@ -236,7 +237,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, context(), args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
@@ -247,16 +248,22 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        val stateMachine = startFlow(logicType, args)
+        val stateMachine = startFlow(logicType, context(), args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
+    override fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        pushClientIdToLoggingContext(clientId)
+        val stateMachine = startFlow(logicType, context().withClientId(clientId), args)
+        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+    }
+
+    private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachine<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
-        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        return flowStarter.invokeFlowAsync(logicType, context, *args).getOrThrow()
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -464,4 +471,6 @@ internal class CordaRPCOpsImpl(
     private inline fun <reified TARGET> Class<*>.checkIsA() {
         require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
+
+    private fun InvocationContext.withClientId(clientUUID: String) = copy(clientUUID = clientUUID)
 }
