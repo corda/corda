@@ -23,38 +23,20 @@ pipeline {
     stages {
         stage('JDK 11 Compile') {
             steps {
-                script {
-                    pullRequest.createStatus(
-                            status: 'pending',
-                            context: "${PR_CONTEXT_STRING}",
-                            description: "Compiling against JDK 11",
-                            targetUrl: "${env.BUILD_URL}")
-                }
-                sh "./gradlew --no-daemon clean compileAll"
+                sh ```
+                ./gradlew --no-daemon -Pcompilation.allWarningsAsErrors=true -Ptests.failFast=false
+                -Ptests.ignoreFailures=true clean compileAll --stacktrace"
+                ```
+            }
+        }
+        stage('Deploy nodes') {
+            steps {
+                sh "./gradlew --no-daemon deployNodes"
             }
         }
     }
 
     post {
-        success {
-            script {
-                pullRequest.createStatus(
-                        status: 'success',
-                        context: "${PR_CONTEXT_STRING}",
-                        description: 'Compilation successful',
-                        targetUrl: "${env.BUILD_URL}")
-            }
-        }
-
-        failure {
-            script {
-                pullRequest.createStatus(
-                        status: 'failure',
-                        context: "${PR_CONTEXT_STRING}",
-                        description: 'Compilation failed',
-                        targetUrl: "${env.BUILD_URL}")
-            }
-        }
         cleanup {
             deleteDir() /* clean up our workspace */
         }
