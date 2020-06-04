@@ -63,6 +63,7 @@ import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -251,12 +252,12 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+    override fun <T> startFlowDynamicWithClientId(clientId: UUID, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         val stateMachine = startFlow(clientId, logicType, args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    private fun <T> startFlow(clientId: String?, logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
+    private fun <T> startFlow(clientId: UUID?, logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")

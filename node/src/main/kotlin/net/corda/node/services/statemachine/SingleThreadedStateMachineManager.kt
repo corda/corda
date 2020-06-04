@@ -49,6 +49,7 @@ import rx.Observable
 import java.security.SecureRandom
 import java.time.Duration
 import java.util.HashSet
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -231,7 +232,7 @@ internal class SingleThreadedStateMachineManager(
     }
 
     private fun <A> startFlow(
-            clientUUID: String?,
+            clientUUID: UUID?,
             flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
@@ -589,7 +590,7 @@ internal class SingleThreadedStateMachineManager(
 
     @Suppress("LongParameterList")
     private fun <A> startFlowInternal(
-            clientUUID: String?,
+            clientUUID: UUID?,
             flowId: StateMachineRunId,
             invocationContext: InvocationContext,
             flowLogic: FlowLogic<A>,

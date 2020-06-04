@@ -29,6 +29,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Represents information about a flow (the name "state machine" is legacy, Kotlin users can use the [FlowInfo] type
@@ -265,7 +266,7 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     @RPCReturnsObservables
-    fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+    fun <T> startFlowDynamicWithClientId(clientId: UUID, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
