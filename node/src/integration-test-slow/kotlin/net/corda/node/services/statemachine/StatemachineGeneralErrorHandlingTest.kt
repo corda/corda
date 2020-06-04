@@ -1178,9 +1178,9 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             // 1 for the flow that is waiting for the errored counterparty flow to finish and 1 for GetNumberOfCheckpointsFlow
             assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
             // 1 for GetNumberOfCheckpointsFlow
-            // the checkpoint is not persisted since it kept failing the original checkpoint commit
+            // a hospitalized flow is saved as the original checkpoint kept failing to commit
             // the flow will recover since artemis will keep the events and replay them on node restart
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfHospitalizedCheckpointsFlow).returnValue.get())
         }
     }
 
