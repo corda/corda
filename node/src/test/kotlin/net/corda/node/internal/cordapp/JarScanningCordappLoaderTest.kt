@@ -137,11 +137,10 @@ class JarScanningCordappLoaderTest {
         assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }
 
-    @Test(timeout=300_000)
+    @Test(expected = InvalidCordappException::class, timeout = 300_000)
 	fun `cordapp classloader does not load apps when their min platform version is greater than the node platform version`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1))
-        assertThat(loader.cordapps).hasSize(0)
+        JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1)).cordapps
     }
 
     @Test(timeout=300_000)
@@ -165,11 +164,10 @@ class JarScanningCordappLoaderTest {
         assertThat(loader.cordapps).hasSize(1)
     }
 
-    @Test(timeout=300_000)
+    @Test(expected = InvalidCordappException::class, timeout = 300_000)
 	fun `cordapp classloader does not load app signed by blacklisted certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES)
-        assertThat(loader.cordapps).hasSize(0)
+        JarScanningCordappLoader.fromJarUrls(listOf(jar), cordappsSignerKeyFingerprintBlacklist = DEV_PUB_KEY_HASHES).cordapps
     }
 
     @Test(timeout=300_000)
