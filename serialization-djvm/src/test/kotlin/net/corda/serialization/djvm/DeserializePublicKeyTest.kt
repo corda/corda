@@ -8,6 +8,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.serialization.djvm.SandboxType.KOTLIN
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -69,13 +70,18 @@ class DeserializePublicKeyTest : TestBase(KOTLIN) {
         sandbox {
             _contextSerializationEnv.set(createSandboxSerializationEnv(classLoader))
 
-            val sandboxKey = data.deserializeFor(classLoader)
+            val sandboxData = data.deserializeFor(classLoader)
 
-            val taskFactory = classLoader.createRawTaskFactory()
-            val showPublicKey = taskFactory.compose(classLoader.createSandboxFunction()).apply(ShowPublicKey::class.java)
-            val result = showPublicKey.apply(sandboxKey) ?: fail("Result cannot be null")
+            val taskFactory = classLoader.createRawTaskFactory().compose(classLoader.createSandboxFunction())
+            val showPublicKey = taskFactory.apply(ShowPublicKey::class.java)
+            val result = showPublicKey.apply(sandboxData) ?: fail("Result cannot be null")
 
             assertEquals(ShowPublicKey().apply(compositeData), result.toString())
+
+            val sandboxKey = taskFactory.apply(GetPublicKey::class.java)
+                .apply(sandboxData) ?: fail("PublicKey cannot be null")
+            assertThat(sandboxKey::class.java.name)
+                .isEqualTo("sandbox." + CompositeKey::class.java.name)
         }
     }
 
@@ -84,6 +90,12 @@ class DeserializePublicKeyTest : TestBase(KOTLIN) {
             return with(data) {
                 "PublicKey: algorithm='${key.algorithm}', format='${key.format}', hash=${key.hash}"
             }
+        }
+    }
+
+    class GetPublicKey : Function<PublicKeyData, PublicKey> {
+        override fun apply(data: PublicKeyData): PublicKey {
+            return data.key
         }
     }
 }

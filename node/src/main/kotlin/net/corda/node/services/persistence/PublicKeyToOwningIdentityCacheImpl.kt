@@ -5,12 +5,9 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.KeyOwningIdentity
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
-import java.util.*
 
 /**
  * The [PublicKeyToOwningIdentityCacheImpl] provides a caching layer over the pk_hash_to_external_id table. Gets will attempt to read an
@@ -22,42 +19,10 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
         val log = contextLogger()
     }
 
-    private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(Caffeine.newBuilder(), "PublicKeyToOwningIdentityCache_cache")
-
-    /**
-     * Establish whether a public key is one of the node's identity keys, by looking in the node's identity database table.
-     */
-    private fun isKeyIdentityKey(key: PublicKey): Boolean {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val queryRoot = criteriaQuery.from(PersistentIdentityService.PersistentPublicKeyHashToCertificate::class.java)
-            criteriaQuery.select(criteriaBuilder.count(queryRoot))
-            criteriaQuery.where(
-                    criteriaBuilder.equal(queryRoot.get<String>(PersistentIdentityService.PersistentPublicKeyHashToCertificate::publicKeyHash.name), key.toStringShort())
-            )
-            val query = session.createQuery(criteriaQuery)
-            query.uniqueResult() > 0
-        }
-    }
-
-    /**
-     * Check to see if the key belongs to one of the key pairs in the node_our_key_pairs table. These keys may relate to confidential
-     * identities.
-     */
-    private fun isKeyPartOfNodeKeyPairs(key: PublicKey): Boolean {
-        return database.transaction {
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val queryRoot = criteriaQuery.from(BasicHSMKeyManagementService.PersistentKey::class.java)
-            criteriaQuery.select(criteriaBuilder.count(queryRoot))
-            criteriaQuery.where(
-                    criteriaBuilder.equal(queryRoot.get<String>(BasicHSMKeyManagementService.PersistentKey::publicKeyHash.name), key.toStringShort())
-            )
-            val query = session.createQuery(criteriaQuery)
-            query.uniqueResult() > 0
-        }
-    }
+    private val cache = cacheFactory.buildNamed<PublicKey, KeyOwningIdentity>(
+            Caffeine.newBuilder(),
+            "PublicKeyToOwningIdentityCache_cache"
+    )
 
     /**
      * Return the owning identity associated with a given key.
@@ -65,25 +30,17 @@ class PublicKeyToOwningIdentityCacheImpl(private val database: CordaPersistence,
      * This method caches the result of a database lookup to prevent multiple database accesses for the same key. This assumes that once a
      * key is generated, the UUID assigned to it is never changed.
      */
-    override operator fun get(key: PublicKey): KeyOwningIdentity? {
+    override operator fun get(key: PublicKey): KeyOwningIdentity {
         return cache.asMap().computeIfAbsent(key) {
             database.transaction {
-                val criteriaBuilder = session.criteriaBuilder
-                val criteriaQuery = criteriaBuilder.createQuery(UUID::class.java)
-                val queryRoot = criteriaQuery.from(PublicKeyHashToExternalId::class.java)
-                criteriaQuery.select(queryRoot.get(PublicKeyHashToExternalId::externalId.name))
-                criteriaQuery.where(
-                        criteriaBuilder.equal(queryRoot.get<String>(PublicKeyHashToExternalId::publicKeyHash.name), key.toStringShort())
-                )
-                val query = session.createQuery(criteriaQuery)
-                val uuid = query.uniqueResult()
-                if (uuid != null || isKeyPartOfNodeKeyPairs(key) || isKeyIdentityKey(key)) {
+                val uuid = session.find(PublicKeyHashToExternalId::class.java, key.toStringShort())?.externalId
+                if (uuid != null) {
                     val signingEntity = KeyOwningIdentity.fromUUID(uuid)
                     log.debug { "Database lookup for public key ${key.toStringShort()}, found signing entity $signingEntity" }
                     signingEntity
                 } else {
-                    log.debug { "Attempted to find owning identity for public key ${key.toStringShort()}, but key is unknown to node" }
-                    null
+                    log.debug { "Database lookup for public key  ${key.toStringShort()}, using ${KeyOwningIdentity.UnmappedIdentity}" }
+                    KeyOwningIdentity.UnmappedIdentity
                 }
             }
         }

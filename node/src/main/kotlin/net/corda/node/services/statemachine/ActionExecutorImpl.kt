@@ -2,11 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
-import com.codahale.metrics.Histogram
-import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Reservoir
-import com.codahale.metrics.SlidingTimeWindowArrayReservoir
-import com.codahale.metrics.SlidingTimeWindowReservoir
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -19,8 +15,6 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * This is the bottom execution engine of flow side-effects.
@@ -30,8 +24,7 @@ class ActionExecutorImpl(
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
         private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: CheckpointSerializationContext,
-        metrics: MetricRegistry
+        private val checkpointSerializationContext: CheckpointSerializationContext
 ) : ActionExecutor {
 
     private companion object {
@@ -46,12 +39,6 @@ class ActionExecutorImpl(
             return reservoir.snapshot.values.sum()
         }
     }
-
-    private val checkpointingMeter = metrics.meter("Flows.Checkpointing Rate")
-    private val checkpointSizesThisSecond = SlidingTimeWindowReservoir(1, TimeUnit.SECONDS)
-    private val lastBandwidthUpdate = AtomicLong(0)
-    private val checkpointBandwidthHist = metrics.register("Flows.CheckpointVolumeBytesPerSecondHist", Histogram(SlidingTimeWindowArrayReservoir(1, TimeUnit.DAYS)))
-    private val checkpointBandwidth = metrics.register("Flows.CheckpointVolumeBytesPerSecondCurrent", LatchedGauge(checkpointSizesThisSecond))
 
     @Suspendable
     override fun executeAction(fiber: FlowFiber, action: Action) {
@@ -100,21 +87,22 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
-        val checkpointBytes = serializeCheckpoint(action.checkpoint)
-        if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, checkpointBytes)
-        } else {
-            checkpointStorage.addCheckpoint(action.id, checkpointBytes)
+        val checkpoint = action.checkpoint
+        val flowState = checkpoint.flowState
+        val serializedFlowState = when(flowState) {
+            FlowState.Completed -> null
+            // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the flowState as it will not get saved in the DB
+            else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
-        checkpointingMeter.mark()
-        checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
-        var lastUpdateTime = lastBandwidthUpdate.get()
-        while (System.nanoTime() - lastUpdateTime > TimeUnit.SECONDS.toNanos(1)) {
-            if (lastBandwidthUpdate.compareAndSet(lastUpdateTime, System.nanoTime())) {
-                val checkpointVolume = checkpointSizesThisSecond.snapshot.values.sum()
-                checkpointBandwidthHist.update(checkpointVolume)
+        // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the serializedCheckpointState as it will not get saved in the DB
+        val serializedCheckpointState: SerializedBytes<CheckpointState> = checkpoint.checkpointState.checkpointSerialize(checkpointSerializationContext)
+        if (action.isCheckpointUpdate) {
+            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
+        } else {
+            if (flowState is FlowState.Completed) {
+                throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
             }
-            lastUpdateTime = lastBandwidthUpdate.get()
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
         }
     }
 
@@ -267,10 +255,6 @@ class ActionExecutorImpl(
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
-    }
-
-    private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.checkpointSerialize(context = checkpointSerializationContext)
     }
 
     private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {

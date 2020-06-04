@@ -40,10 +40,13 @@ class ErrorFlowTransition(
         return builder {
             // If we're errored and propagating do the actual propagation and update the index.
             if (remainingErrorsToPropagate.isNotEmpty() && errorState.propagating) {
-                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(startingState.checkpoint.sessions, errorMessages)
+                val (initiatedSessions, newSessions) = bufferErrorMessagesInInitiatingSessions(
+                        startingState.checkpoint.checkpointState.sessions,
+                        errorMessages
+                )
                 val newCheckpoint = startingState.checkpoint.copy(
                         errorState = errorState.copy(propagatedIndex = allErrors.size),
-                        sessions = newSessions
+                        checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
                 actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
@@ -56,19 +59,20 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
-                actions.add(Action.CreateTransaction)
-                if (currentState.isAnyCheckpointPersisted) {
-                    actions.add(Action.RemoveCheckpoint(context.id))
-                }
+                val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+
                 actions.addAll(arrayOf(
+                        Action.CreateTransaction,
+                        Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)
+                        Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
                 ))
 
                 currentState = currentState.copy(
+                        checkpoint = newCheckpoint,
                         pendingDeduplicationHandlers = emptyList(),
                         isRemoved = true
                 )

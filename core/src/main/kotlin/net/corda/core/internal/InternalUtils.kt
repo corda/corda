@@ -33,6 +33,7 @@ import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_MOVED_PERM
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.Proxy
 import java.net.URI
@@ -478,7 +479,11 @@ fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String
 @DeleteForDJVM
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != HTTP_OK) {
-        throw IOException("Response Code $responseCode: $errorMessage")
+        if(responseCode == HTTP_MOVED_PERM) {
+            throw IOException("Response Code $responseCode Moved Permanently cannot be used here. We only accept $HTTP_OK responses.")
+        } else {
+            throw IOException("Response Code $responseCode: $errorMessage")
+        }
     }
 }
 

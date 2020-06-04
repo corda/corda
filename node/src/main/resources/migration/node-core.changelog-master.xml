@@ -31,4 +31,8 @@
 
     <include file="migration/node-core.changelog-v14-data.xml"/>
 
+    <include file="migration/node-core.changelog-v19.xml"/>
+    <include file="migration/node-core.changelog-v19-postgres.xml"/>
+    <include file="migration/node-core.changelog-v19-keys.xml"/>
+
 </databaseChangeLog>

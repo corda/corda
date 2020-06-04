@@ -17,7 +17,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.ListenProcessDeathException
-import net.corda.testing.node.internal.assertCheckpoints
+import net.corda.testing.node.internal.assertUncompletedCheckpoints
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -75,7 +75,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     }
 
     private fun DriverDSL.assertBobFailsToStartWithLogMessage(logMessage: String) {
-        assertCheckpoints(BOB_NAME, 1)
+        assertUncompletedCheckpoints(BOB_NAME, 1)
 
         assertFailsWith(ListenProcessDeathException::class) {
             startNode(NodeParameters(

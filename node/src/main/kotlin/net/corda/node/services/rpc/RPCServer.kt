@@ -388,10 +388,11 @@ class RPCServer(
                     val arguments = Try.on {
                         clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
                     }
-                    val context = artemisMessage.context(clientToServer.sessionId)
-                    context.invocation.pushToLoggingContext()
+                    val context: RpcAuthContext
                     when (arguments) {
                         is Try.Success -> {
+                            context = artemisMessage.context(clientToServer.sessionId, arguments.value)
+                            context.invocation.pushToLoggingContext()
                             log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
                             rpcExecutor!!.submit {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
@@ -399,6 +400,8 @@ class RPCServer(
                             }
                         }
                         is Try.Failure -> {
+                            context = artemisMessage.context(clientToServer.sessionId, emptyList())
+                            context.invocation.pushToLoggingContext()
                             // We failed to deserialise the arguments, route back the error
                             log.warn("Inbound RPC failed", arguments.exception)
                             sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
@@ -476,12 +479,12 @@ class RPCServer(
         observableMap.cleanUp()
     }
 
-    private fun ClientMessage.context(sessionId: Trace.SessionId): RpcAuthContext {
+    private fun ClientMessage.context(sessionId: Trace.SessionId, arguments: List<Any?>): RpcAuthContext {
         val trace = Trace.newInstance(sessionId = sessionId)
         val externalTrace = externalTrace()
         val rpcActor = actorFrom(this)
         val impersonatedActor = impersonatedActor()
-        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor), rpcActor.second)
+        return RpcAuthContext(InvocationContext.rpc(rpcActor.first, trace, externalTrace, impersonatedActor, arguments), rpcActor.second)
     }
 
     private fun actorFrom(message: ClientMessage): Pair<Actor, AuthorizingSubject> {

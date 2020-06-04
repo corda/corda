@@ -5,6 +5,7 @@ import com.natpryce.hamkrest.containsSubstring
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import junit.framework.TestCase.assertNull
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -20,13 +21,16 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
+import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.FlowStart
+import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SubFlowVersion
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -104,11 +108,33 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
-        checkDumpFile()
+	    checkDumpFile()
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint dumper doesn't output completed checkpoints`() {
+        val dumper = CheckpointDumperImpl(checkpointStorage, database, services, baseDirectory)
+        dumper.update(mockAfterStartEvent)
+
+        // add a checkpoint
+        val (id, checkpoint) = newCheckpoint()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
+        }
+        val newCheckpoint = checkpoint.copy(
+            flowState = FlowState.Completed,
+            status = Checkpoint.FlowStatus.COMPLETED
+        )
+        database.transaction {
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, null, serializeCheckpointState(newCheckpoint))
+        }
+
+        dumper.dumpCheckpoints()
+        checkDumpFileEmpty()
     }
 
     private fun checkDumpFile() {
@@ -117,6 +143,13 @@ class CheckpointDumperImplTest {
             assertThat(entry.name, containsSubstring("json"))
             val content = zip.readFully()
             assertThat(String(content), containsSubstring(organisation))
+        }
+    }
+
+    private fun checkDumpFileEmpty() {
+        ZipInputStream(file.inputStream()).use { zip ->
+            val entry = zip.nextEntry
+            assertNull(entry)
         }
     }
 
@@ -130,7 +163,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint)
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -140,11 +173,21 @@ class CheckpointDumperImplTest {
 
     private fun newCheckpointStorage() {
         database.transaction {
-            checkpointStorage = DBCheckpointStorage()
+            checkpointStorage = DBCheckpointStorage(
+                object : CheckpointPerformanceRecorder {
+                    override fun record(
+                        serializedCheckpointState: SerializedBytes<CheckpointState>,
+                        serializedFlowState: SerializedBytes<FlowState>?
+                    ) {
+                        // do nothing
+                    }
+                },
+                Clock.systemUTC()
+            )
         }
     }
 
-    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, SerializedBytes<Checkpoint>> {
+    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, Checkpoint> {
         val id = StateMachineRunId.createRandom()
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
@@ -152,6 +195,14 @@ class CheckpointDumperImplTest {
         val frozenLogic = logic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, myself.identity.party, SubFlowVersion.CoreFlow(version), false)
                 .getOrThrow()
-        return id to checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        return id to checkpoint
+    }
+
+    private fun serializeFlowState(checkpoint: Checkpoint): SerializedBytes<FlowState> {
+        return checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+    }
+
+    private fun serializeCheckpointState(checkpoint: Checkpoint): SerializedBytes<CheckpointState> {
+        return checkpoint.checkpointState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }
