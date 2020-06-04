@@ -1,5 +1,7 @@
 package net.corda.node.migration
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import liquibase.database.core.H2Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.crypto.toStringShort
@@ -7,7 +9,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.hash
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.node.services.api.SchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -44,11 +47,16 @@ class IdentityServiceToStringShortMigrationTest {
 
     @Before
     fun setUp() {
+        val schemaService = rigorousMock<SchemaService>()
+        doReturn(setOf(IdentityTestSchemaV1)).whenever(schemaService).schemas
+
         cordaDB = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
                 { null },
                 { null },
+                schemaService = schemaService,
+                internalSchemas = setOf(),
                 ourName = BOB_IDENTITY.name)
         liquibaseDB = H2Database()
         liquibaseDB.connection = JdbcConnection(cordaDB.dataSource.connection)
@@ -66,8 +74,8 @@ class IdentityServiceToStringShortMigrationTest {
         cordaDB.transaction {
             val groupedIdentities = identities.groupBy { it.name }
             groupedIdentities.forEach { name, certs ->
-                val persistentIDs = certs.map { PersistentIdentityService.PersistentPublicKeyHashToCertificate(it.owningKey.hash.toString(), it.certPath.encoded) }
-                val persistentName = PersistentIdentityService.PersistentPartyToPublicKeyHash(name.toString(), certs.first().owningKey.hash.toString())
+                val persistentIDs = certs.map { IdentityTestSchemaV1.NodeIdentities(it.owningKey.hash.toString(), it.certPath.encoded) }
+                val persistentName = IdentityTestSchemaV1.NodeNamedIdentities(name.toString(), certs.first().owningKey.hash.toString())
                 persistentIDs.forEach {
                     session.persist(it)
                 }
@@ -87,7 +95,7 @@ class IdentityServiceToStringShortMigrationTest {
         identities.forEach {
             logger.info("Checking: ${it.name}")
             cordaDB.transaction {
-                val hashToIdentityStatement = database.dataSource.connection.prepareStatement("SELECT ${PersistentIdentityService.PK_HASH_COLUMN_NAME} FROM ${PersistentIdentityService.HASH_TO_IDENTITY_TABLE_NAME} WHERE pk_hash=?")
+                val hashToIdentityStatement = database.dataSource.connection.prepareStatement("SELECT pk_hash FROM node_identities WHERE pk_hash=?")
                 hashToIdentityStatement.setString(1, it.owningKey.toStringShort())
                 val hashToIdentityResultSet = hashToIdentityStatement.executeQuery()
 
@@ -96,7 +104,7 @@ class IdentityServiceToStringShortMigrationTest {
                 //check that the pk_hash actually matches what we expect (kinda redundant, but deserializing the whole PartyAndCertificate feels like overkill)
                 Assert.assertThat(hashToIdentityResultSet.getString(1), `is`(it.owningKey.toStringShort()))
 
-                val nameToHashStatement = connection.prepareStatement("SELECT ${PersistentIdentityService.NAME_COLUMN_NAME} FROM ${PersistentIdentityService.NAME_TO_HASH_TABLE_NAME} WHERE pk_hash=?")
+                val nameToHashStatement = connection.prepareStatement("SELECT name FROM node_named_identities WHERE pk_hash=?")
                 nameToHashStatement.setString(1, it.owningKey.toStringShort())
                 val nameToHashResultSet = nameToHashStatement.executeQuery()
 
