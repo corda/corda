@@ -25,7 +25,7 @@ pipeline {
             steps {
                 sh '''
                 ./gradlew --no-daemon -Pcompilation.allWarningsAsErrors=true -Ptests.failFast=false
-                -Ptests.ignoreFailures=true clean compileAll --stacktrace"
+                -Ptests.ignoreFailures=true clean compileAll --stacktrace
                 '''
             }
         }
