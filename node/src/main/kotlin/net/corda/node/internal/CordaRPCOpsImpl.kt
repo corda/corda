@@ -252,9 +252,9 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        pushClientIdToLoggingContext(clientId)
-        val stateMachine = startFlow(logicType, context().withClientId(clientId), args)
+    override fun <T> startFlowDynamicWithClientId(clientUUID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        pushClientIdToLoggingContext(clientUUID)
+        val stateMachine = startFlow(logicType, context().withClientId(clientUUID), args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
