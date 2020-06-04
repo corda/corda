@@ -105,7 +105,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
                     "Please consider registering your service to node's lifecycle event: `STATE_MACHINE_STARTED`")
         }
         val context = InvocationContext.service(serviceInstance.javaClass.name, myInfo.legalIdentities[0].name)
-        return flowStarter.startFlow(flow, null, context).getOrThrow()
+        return flowStarter.startFlow(flow, context).getOrThrow()
     }
 
     override fun equals(other: Any?): Boolean {

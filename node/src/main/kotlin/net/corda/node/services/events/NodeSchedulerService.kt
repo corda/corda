@@ -36,13 +36,11 @@ import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
 import javax.persistence.Entity
-import kotlin.collections.HashSet
 import co.paralleluniverse.strands.SettableFuture as QuasarSettableFuture
 import com.google.common.util.concurrent.SettableFuture as GuavaSettableFuture
 
@@ -241,12 +239,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
-    private inner class FlowStartDeduplicationHandler(
-        val scheduledState: ScheduledStateRef,
-        override val flowLogic: FlowLogic<Any?>,
-        override val context: InvocationContext,
-        override val clientId: UUID? = null
-    ) : DeduplicationHandler, ExternalEvent.ExternalStartFlowEvent<Any?> {
+    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef, override val flowLogic: FlowLogic<Any?>, override val context: InvocationContext) : DeduplicationHandler, ExternalEvent.ExternalStartFlowEvent<Any?> {
         override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
         override val externalCause: ExternalEvent
             get() = this

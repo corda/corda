@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
-import java.util.UUID
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 @DeleteForDJVM
@@ -49,5 +48,4 @@ interface FlowStateMachine<FLOWRETURN> {
     val ourSenderUUID: String?
     val creationTime: Long
     val isKilled: Boolean
-    val clientUUID: UUID?
 }

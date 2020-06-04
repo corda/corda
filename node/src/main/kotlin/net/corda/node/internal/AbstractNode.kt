@@ -185,7 +185,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
 import java.util.Properties
-import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -195,7 +194,6 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -1276,7 +1274,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
         return event.future
     }
 
-    override fun <T> startFlow(logic: FlowLogic<T>, clientId: UUID?, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
         val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
             override fun insideDatabaseTransaction() {}
 
@@ -1290,8 +1288,6 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val flowId: StateMachineRunId = StateMachineRunId.createRandom()
             override val flowLogic: FlowLogic<T>
                 get() = logic
-            override val clientId: UUID?
-                get() = clientId
             override val context: InvocationContext
                 get() = context
 
@@ -1308,12 +1304,11 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
     override fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
-            clientId: UUID?,
             context: InvocationContext,
             vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
         val logicRef = flowLogicRefFactory.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(flowLogicRefFactory.toFlowLogic(logicRef))
-        return startFlow(logic, clientId, context)
+        return startFlow(logic, context)
     }
 }
 

@@ -65,7 +65,7 @@ class RetryFlowMockTest {
     }
 
     private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
-        return this.services.startFlow(logic, null, this.services.newContext()).flatMap { it.resultFuture }
+        return this.services.startFlow(logic, this.services.newContext()).flatMap { it.resultFuture }
     }
 
     @After
@@ -183,7 +183,7 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
-        }), null, nodeA.services.newContext()).get()
+        }), nodeA.services.newContext()).get()
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)

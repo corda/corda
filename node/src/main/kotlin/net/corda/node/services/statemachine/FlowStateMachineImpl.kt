@@ -57,7 +57,6 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
@@ -133,8 +132,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val context: InvocationContext get() = transientState!!.value.checkpoint.checkpointState.invocationContext
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
-    override val clientUUID: UUID?
-        get() = transientState?.value?.checkpoint!!.checkpointState.clientUUID
 
     internal val softLockedStates = mutableSetOf<StateRef>()
 

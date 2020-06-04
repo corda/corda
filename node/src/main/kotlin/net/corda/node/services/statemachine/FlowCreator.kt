@@ -24,7 +24,6 @@ import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.apache.activemq.artemis.utils.ReusableLatch
 import java.security.SecureRandom
-import java.util.UUID
 
 class Flow<A>(val fiber: FlowStateMachineImpl<A>, val resultFuture: OpenFuture<Any?>)
 
@@ -87,8 +86,7 @@ class FlowCreator(
         ourIdentity: Party,
         existingCheckpoint: Checkpoint?,
         deduplicationHandler: DeduplicationHandler?,
-        senderUUID: String?,
-        clientUUID: UUID?): Flow<A> {
+        senderUUID: String?): Flow<A> {
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
         val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
@@ -106,8 +104,7 @@ class FlowCreator(
             frozenFlowLogic,
             ourIdentity,
             flowCorDappVersion,
-            flowLogic.isEnabledTimedFlow(),
-            clientUUID
+            flowLogic.isEnabledTimedFlow()
         ).getOrThrow()
 
         val state = createStateMachineState(

@@ -192,7 +192,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      */
-    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, null, node.services.newContext()).getOrThrow().resultFuture
+    fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, node.services.newContext()).getOrThrow().resultFuture
 
     /**
      * Manually register an initiating-responder flow pair based on the [FlowLogic] annotations.
