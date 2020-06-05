@@ -397,14 +397,14 @@ class FlowMetadataRecordingTest {
 
     @Test(timeout = 300_000)
     fun `client id gets stored into node_flow_metadata table`() {
-        val clientUUID = UUID.randomUUID().toString()
+        val clientID = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val rpc = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).proxy
 
-            val flowId = rpc.startFlowDynamicWithClientId(clientUUID, ClientId.EmptyFlow::class.java).id
-            val dbClientUUID = rpc.startFlow(ClientId::FetchClientIdFlow, flowId).returnValue.getOrThrow(20.seconds)
-            assertEquals(clientUUID, dbClientUUID)
+            val flowId = rpc.startFlowDynamicWithClientId(clientID, ClientId.EmptyFlow::class.java).id
+            val dbClientID = rpc.startFlow(ClientId::FetchClientIdFlow, flowId).returnValue.getOrThrow(20.seconds)
+            assertEquals(clientID, dbClientID)
         }
     }
 
@@ -584,11 +584,11 @@ class FlowMetadataRecordingTest {
         class FetchClientIdFlow(private val flowId: StateMachineRunId): FlowLogic<String?>() {
             @Suspendable
             override fun call(): String? {
-                val dbClientUUID = serviceHub.withEntityManager {
+                val dbClientID = serviceHub.withEntityManager {
                     find(DBCheckpointStorage.DBFlowMetadata::class.java, flowId.uuid.toString()).userSuppliedIdentifier
                 }
                 semaphore.release()
-                return dbClientUUID
+                return dbClientID
             }
         }
     }

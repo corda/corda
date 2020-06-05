@@ -24,7 +24,7 @@ data class InvocationContext(
     val actor: Actor?,
     val externalTrace: Trace? = null,
     val impersonatedActor: Actor? = null,
-    val clientUUID: String? = null,
+    val clientID: String? = null,
     val arguments: List<Any?> = emptyList()
 ) {
 
@@ -50,9 +50,9 @@ data class InvocationContext(
             actor: Actor? = null,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            clientUUID: String? = null,
+            clientID: String? = null,
             arguments: List<Any?> = emptyList()
-        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, clientUUID, arguments)
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, clientID, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
@@ -108,7 +108,7 @@ data class InvocationContext(
         actor: Actor? = this.actor,
         externalTrace: Trace? = this.externalTrace,
         impersonatedActor: Actor? = this.impersonatedActor,
-        clientUUID: String? = this.clientUUID
+        clientID: String? = this.clientID
     ): InvocationContext {
         return copy(
             origin = origin,
@@ -116,7 +116,7 @@ data class InvocationContext(
             actor = actor,
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
-            clientUUID = clientUUID,
+            clientID = clientID,
             arguments = arguments
         )
     }

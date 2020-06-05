@@ -251,8 +251,8 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientUUID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        val stateMachine = startFlow(logicType, context().withClientId(clientUUID), args)
+    override fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        val stateMachine = startFlow(logicType, context().withClientId(clientID), args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
@@ -470,5 +470,5 @@ internal class CordaRPCOpsImpl(
         require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
 
-    private fun InvocationContext.withClientId(clientUUID: String) = copy(clientUUID = clientUUID)
+    private fun InvocationContext.withClientId(clientID: String) = copy(clientID = clientID)
 }
