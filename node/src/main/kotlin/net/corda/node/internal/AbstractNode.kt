@@ -480,7 +480,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, metricRegistry) { dataSource ->
             val schemaMigration = SchemaMigration(schemaService.internalSchemas(), dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
-            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
@@ -994,7 +994,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         database.startHikariPool(props, metricRegistry) { dataSource ->
             val schemaMigration = SchemaMigration(schemaService.internalSchemas(), dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
             if (runMigrationScripts) {
-                schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+                schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
             } else {
                 schemaMigration.checkState()
             }
