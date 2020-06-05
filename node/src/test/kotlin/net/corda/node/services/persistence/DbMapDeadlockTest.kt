@@ -95,7 +95,7 @@ class DbMapDeadlockTest {
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
             startHikariPool(hikariProperties) { dataSource ->
-                val schemaMigration = SchemaMigration(schemaService.internalSchemas(), dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
+                val schemaMigration = SchemaMigration(schemaService.internalSchemas, dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
                 schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
             }
         }.use { persistence ->
