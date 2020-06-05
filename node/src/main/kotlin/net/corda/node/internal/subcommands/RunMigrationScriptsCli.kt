@@ -19,6 +19,7 @@ class RunMigrationScriptsCli(startup: NodeStartup) : NodeCliCommand("run-migrati
 
 
     override fun runProgram(): Int {
+        require(updateAppSchemas || updateCoreSchemas) { "Nothing to do: at least one of --core-schemas or --app-schemas must be set" }
         return startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
             override fun run(node: Node) {
                 node.runDatabaseMigrationScripts(updateCoreSchemas, updateAppSchemas, updateAppSchemaWithCheckpoints)
