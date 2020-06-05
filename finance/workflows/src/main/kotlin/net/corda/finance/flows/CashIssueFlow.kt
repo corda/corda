@@ -40,7 +40,7 @@ class CashIssueFlow(private val amount: Amount<Currency>,
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary)
+        val builder = TransactionBuilder(notary).setHashAlgorithm("SHA3-256")
         val issuer = ourIdentity.ref(issuerBankPartyRef)
         val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
         progressTracker.currentStep = SIGNING_TX

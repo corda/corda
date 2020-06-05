@@ -47,7 +47,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
     @Throws(CashException::class)
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null)
+        val builder = TransactionBuilder(notary = null).setHashAlgorithm("SHA3-256")
         val issuer = ourIdentity.ref(issuerRef)
         val exitStates = AbstractCashSelection
                 .getInstance { serviceHub.jdbcSession().metaData }

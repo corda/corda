@@ -21,7 +21,7 @@ object CommercialPaperUtils {
     @JvmStatic
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val state = CommercialPaper.State(issuance, issuance.party, faceValue, maturityDate)
-        return TransactionBuilder(notary = notary).withItems(
+        return TransactionBuilder(notary = notary).setHashAlgorithm("SHA3-256").withItems(
                 StateAndContract(state, CommercialPaper.CP_PROGRAM_ID),
                 Command(CommercialPaper.Commands.Issue(), issuance.party.owningKey)
         )

@@ -59,7 +59,7 @@ open class CashPaymentFlow(
             recipient
         }
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
+        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first()).setHashAlgorithm("SHA3-256")
         logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
