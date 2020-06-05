@@ -39,24 +39,24 @@ class MissingSchemaMigrationTest {
         dataSource = DataSourceFactory.createDataSource(hikariProperties)
     }
 
-    private fun createSchemaMigration(schemasToMigrate: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): SchemaMigration {
-        return SchemaMigration(schemasToMigrate, dataSource, null, null,
+    private fun createSchemaMigration(forceThrowOnMissingMigration: Boolean): SchemaMigration {
+        return SchemaMigration(dataSource, null, null,
                 TestIdentity(ALICE_NAME, 70).name, forceThrowOnMissingMigration)
     }
 
     @Test(timeout=300_000)
 	fun `test that an error is thrown when forceThrowOnMissingMigration is set and a mapped schema is missing a migration`() {
         assertThatThrownBy {
-            createSchemaMigration(setOf(GoodSchema), true)
-                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+            createSchemaMigration(true)
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }, setOf(GoodSchema))
         }.isInstanceOf(MissingMigrationException::class.java)
     }
 
     @Test(timeout=300_000)
 	fun `test that an error is not thrown when forceThrowOnMissingMigration is not set and a mapped schema is missing a migration`() {
         assertDoesNotThrow {
-            createSchemaMigration(setOf(GoodSchema), false)
-                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+            createSchemaMigration(false)
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }, setOf(GoodSchema))
         }
     }
 
@@ -64,8 +64,8 @@ class MissingSchemaMigrationTest {
 	fun `test that there are no missing migrations for the node`() {
         assertDoesNotThrow("This test failure indicates " +
                 "a new table has been added to the node without the appropriate migration scripts being present") {
-            createSchemaMigration(NodeSchemaService().internalSchemas, false)
-                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+            createSchemaMigration(false)
+                    .runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }, NodeSchemaService().internalSchemas)
         }
     }
 

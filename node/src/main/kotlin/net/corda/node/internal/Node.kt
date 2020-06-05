@@ -561,11 +561,14 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
-    override fun runDatabaseMigrationScripts() {
+    override fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean) {
         if (allowHibernateToManageAppSchema) {
             initialiseSerialization()
         }
-        super.runDatabaseMigrationScripts()
+        super.runDatabaseMigrationScripts(updateCoreSchemas, updateAppSchemas, updateAppSchemasWithCheckpoints)
     }
 
     override fun start(): NodeInfo {

@@ -23,7 +23,6 @@ import kotlin.concurrent.withLock
 
 // Migrate the database to the current version, using liquibase.
 open class SchemaMigration(
-        val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
@@ -54,9 +53,9 @@ open class SchemaMigration(
      /**
      * Will run the Liquibase migration on the actual database.
      */
-     fun runMigration(existingCheckpoints: Boolean) {
-         migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
-         val resourcesAndSourceInfo = prepareResources()
+     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>) {
+         migrateOlderDatabaseToUseLiquibase(existingCheckpoints, schemas)
+         val resourcesAndSourceInfo = prepareResources(schemas)
 
          // current version of Liquibase appears to be non-threadsafe
          // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -77,8 +76,8 @@ open class SchemaMigration(
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    fun checkState() {
-        val resourcesAndSourceInfo = prepareResources()
+    fun checkState(schemas: Set<MappedSchema>) {
+        val resourcesAndSourceInfo = prepareResources(schemas)
 
         // current version of Liquibase appears to be non-threadsafe
         // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -121,7 +120,7 @@ open class SchemaMigration(
     // Virtual file name of the changelog that includes all schemas.
     val dynamicInclude = "master.changelog.json"
 
-    protected fun prepareResources(): List<Pair<CustomResourceAccessor, String>> {
+    protected fun prepareResources(schemas: Set<MappedSchema>): List<Pair<CustomResourceAccessor, String>> {
         // Collect all changelog files referenced in the included schemas.
         val changelogList = schemas.mapNotNull { mappedSchema ->
             val resource = getMigrationResource(mappedSchema, classLoader)
@@ -155,7 +154,7 @@ open class SchemaMigration(
     }
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
-    private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
+    private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean, schemas: Set<MappedSchema>): Boolean {
         val isFinanceAppWithLiquibase = schemas.any { schema ->
             (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
                     || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")

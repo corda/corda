@@ -2,6 +2,7 @@ package net.corda.node.services.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.checkOrUpdate
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.startHikariPool
 import net.corda.node.services.schema.NodeSchemaService
@@ -95,8 +96,8 @@ class DbMapDeadlockTest {
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
             startHikariPool(hikariProperties) { dataSource ->
-                val schemaMigration = SchemaMigration(schemaService.internalSchemas, dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
-                schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+                SchemaMigration(dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
+                        .checkOrUpdate(schemaService.internalSchemas, true, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
             }
         }.use { persistence ->
 

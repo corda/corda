@@ -473,14 +473,21 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    open fun runDatabaseMigrationScripts() {
+    open fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean
+    ) {
         check(started == null) { "Node has already been started" }
         Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, metricRegistry) { dataSource ->
-            val schemaMigration = SchemaMigration(schemaService.internalSchemas, dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
-            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+            val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+            val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
+            schemaMigration
+                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints)
+                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints)
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
@@ -992,12 +999,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, metricRegistry) { dataSource ->
-            val schemaMigration = SchemaMigration(schemaService.internalSchemas, dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
-            if (runMigrationScripts) {
-                schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
-            } else {
-                schemaMigration.checkState()
-            }
+            val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+            schemaMigration.checkOrUpdate(schemaService.schemas, runMigrationScripts, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         }
 
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
@@ -1400,7 +1403,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
-@Suppress("LongParameterList", "ComplexMethod", "ThrowsCount")
+@Suppress("ThrowsCount")
 fun CordaPersistence.startHikariPool(
         hikariProperties: Properties,
         metricRegistry: MetricRegistry? = null,
@@ -1426,6 +1429,14 @@ fun CordaPersistence.startHikariPool(
                         cause = ex)
         }
     }
+}
+
+fun SchemaMigration.checkOrUpdate(schemas: Set<MappedSchema>, update: Boolean, haveCheckpoints: Boolean): SchemaMigration {
+    if (update)
+        this.runMigration(haveCheckpoints, schemas)
+    else
+        this.checkState(schemas)
+    return this
 }
 
 fun clientSslOptionsCompatibleWith(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {
