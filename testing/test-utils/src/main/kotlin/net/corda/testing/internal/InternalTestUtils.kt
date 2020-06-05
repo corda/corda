@@ -188,7 +188,7 @@ fun configureDatabase(hikariProperties: Properties,
     persistence.startHikariPool(hikariProperties) { dataSource ->
         val schemaMigration = SchemaMigration(internalSchemas, dataSource, null, null, ourName)
         if (runMigrationScripts) {
-            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
         } else {
             schemaMigration.checkState()
         }
