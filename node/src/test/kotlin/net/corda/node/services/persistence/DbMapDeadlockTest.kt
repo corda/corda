@@ -97,7 +97,7 @@ class DbMapDeadlockTest {
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
             startHikariPool(hikariProperties) { dataSource ->
                 SchemaMigration(dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
-                        .checkOrUpdate(schemaService.internalSchemas, true, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+                        .checkOrUpdate(schemaService.internalSchemas, true, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }, false)
             }
         }.use { persistence ->
 

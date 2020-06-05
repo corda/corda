@@ -30,9 +30,6 @@ open class SchemaMigration(
         // its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
         // reworking so that multiple identities can be passed to the migration.
         private val ourName: CordaX500Name? = null,
-        // This parameter forces an error to be thrown if there are missing migrations. When using H2, Hibernate will automatically create schemas where they are
-        // missing, so no need to throw unless you're specifically testing whether all the migrations are present.
-        private val forceThrowOnMissingMigration: Boolean = false,
         protected val databaseFactory: LiquibaseDatabaseFactory = LiquibaseDatabaseFactoryImpl()) {
 
     companion object {
@@ -52,10 +49,14 @@ open class SchemaMigration(
 
      /**
      * Will run the Liquibase migration on the actual database.
+      * @param existingCheckpoints Whether checkpoints exist that would prohibit running a migration
+      * @param schemas The set of MappedSchemas to check
+      * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
+      *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>) {
+     fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
          migrateOlderDatabaseToUseLiquibase(existingCheckpoints, schemas)
-         val resourcesAndSourceInfo = prepareResources(schemas)
+         val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
          // current version of Liquibase appears to be non-threadsafe
          // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -75,9 +76,12 @@ open class SchemaMigration(
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
+     * @param schemas The set of MappedSchemas to check
+     * @param forceThrowOnMissingMigration throws an exception if a mapped schema is missing the migration resource. Can be set to false
+     *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
-    fun checkState(schemas: Set<MappedSchema>) {
-        val resourcesAndSourceInfo = prepareResources(schemas)
+    fun checkState(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
+        val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
         // current version of Liquibase appears to be non-threadsafe
         // this is apparent when multiple in-process nodes are all running migrations simultaneously
@@ -109,7 +113,7 @@ open class SchemaMigration(
         }
     }
 
-    private fun logOrThrowMigrationError(mappedSchema: MappedSchema): String? =
+    private fun logOrThrowMigrationError(mappedSchema: MappedSchema, forceThrowOnMissingMigration: Boolean): String? =
             if (forceThrowOnMissingMigration) {
                 throw MissingMigrationException(mappedSchema)
             } else {
@@ -120,7 +124,7 @@ open class SchemaMigration(
     // Virtual file name of the changelog that includes all schemas.
     val dynamicInclude = "master.changelog.json"
 
-    protected fun prepareResources(schemas: Set<MappedSchema>): List<Pair<CustomResourceAccessor, String>> {
+    protected fun prepareResources(schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean): List<Pair<CustomResourceAccessor, String>> {
         // Collect all changelog files referenced in the included schemas.
         val changelogList = schemas.mapNotNull { mappedSchema ->
             val resource = getMigrationResource(mappedSchema, classLoader)
@@ -128,7 +132,7 @@ open class SchemaMigration(
                 resource != null -> resource
                 // Corda OS FinanceApp in v3 has no Liquibase script, so no error is raised
                 (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
-                else -> logOrThrowMigrationError(mappedSchema)
+                else -> logOrThrowMigrationError(mappedSchema, forceThrowOnMissingMigration)
             }
         }
 

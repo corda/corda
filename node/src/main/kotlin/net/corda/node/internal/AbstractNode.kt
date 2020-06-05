@@ -486,8 +486,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
             val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
             schemaMigration
-                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints)
-                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints)
+                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints, false)
         }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
@@ -1000,7 +1000,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, metricRegistry) { dataSource ->
             val schemaMigration = SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
-            schemaMigration.checkOrUpdate(schemaService.schemas, runMigrationScripts, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
+            val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
+            schemaMigration
+                    .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints, false)
         }
 
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
@@ -1431,11 +1434,11 @@ fun CordaPersistence.startHikariPool(
     }
 }
 
-fun SchemaMigration.checkOrUpdate(schemas: Set<MappedSchema>, update: Boolean, haveCheckpoints: Boolean): SchemaMigration {
+fun SchemaMigration.checkOrUpdate(schemas: Set<MappedSchema>, update: Boolean, haveCheckpoints: Boolean, forceThrowOnMissingMigration: Boolean): SchemaMigration {
     if (update)
-        this.runMigration(haveCheckpoints, schemas)
+        this.runMigration(haveCheckpoints, schemas, forceThrowOnMissingMigration)
     else
-        this.checkState(schemas)
+        this.checkState(schemas, forceThrowOnMissingMigration)
     return this
 }
 
