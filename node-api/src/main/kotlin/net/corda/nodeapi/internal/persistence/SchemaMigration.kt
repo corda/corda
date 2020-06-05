@@ -54,35 +54,36 @@ open class SchemaMigration(
      /**
      * Will run the Liquibase migration on the actual database.
      */
-    fun runMigration(existingCheckpoints: Boolean) {
-        dataSource.connection.use { connection ->
-            val resourcesAndSourceInfo = prepareResources()
+     fun runMigration(existingCheckpoints: Boolean) {
+         migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
+         val resourcesAndSourceInfo = prepareResources()
 
-            // current version of Liquibase appears to be non-threadsafe
-            // this is apparent when multiple in-process nodes are all running migrations simultaneously
-            mutex.withLock {
-                val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
-                if (shouldBlockOnCheckpoints && existingCheckpoints)
-                    throw CheckpointsException()
-                try {
-                    runner.update(Contexts().toString())
-                } catch (exp: LiquibaseException) {
-                    throw DatabaseMigrationException(exp.message, exp)
-                }
-            }
-        }
-    }
+         // current version of Liquibase appears to be non-threadsafe
+         // this is apparent when multiple in-process nodes are all running migrations simultaneously
+         mutex.withLock {
+             dataSource.connection.use { connection ->
+                 val (runner, _, shouldBlockOnCheckpoints) = prepareRunner(connection, resourcesAndSourceInfo)
+                 if (shouldBlockOnCheckpoints && existingCheckpoints)
+                     throw CheckpointsException()
+                 try {
+                     runner.update(Contexts().toString())
+                 } catch (exp: LiquibaseException) {
+                     throw DatabaseMigrationException(exp.message, exp)
+                 }
+             }
+         }
+     }
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
     fun checkState() {
-        dataSource.connection.use { connection ->
-            val resourcesAndSourceInfo = prepareResources()
+        val resourcesAndSourceInfo = prepareResources()
 
-            // current version of Liquibase appears to be non-threadsafe
-            // this is apparent when multiple in-process nodes are all running migrations simultaneously
-            mutex.withLock {
+        // current version of Liquibase appears to be non-threadsafe
+        // this is apparent when multiple in-process nodes are all running migrations simultaneously
+        mutex.withLock {
+            dataSource.connection.use { connection ->
                 val (_, changeToRunCount, _) = prepareRunner(connection, resourcesAndSourceInfo)
                 if (changeToRunCount > 0)
                     throw OutstandingDatabaseChangesException(changeToRunCount)
