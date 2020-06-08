@@ -1,10 +1,8 @@
 package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
-import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
@@ -15,7 +13,6 @@ import picocli.CommandLine
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.logging.Logger
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -58,7 +55,7 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
-    @Test
+    @Test(timeout=3_000)
     fun `test logs are written to correct location correctly if verbose flag set`() {
         val node = NodeStartupCli()
         val dir = Files.createTempDirectory("verboseLoggingTest")
