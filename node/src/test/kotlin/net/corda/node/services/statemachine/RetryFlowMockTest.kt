@@ -148,7 +148,7 @@ class RetryFlowMockTest {
         // Make sure we have seen an update from the hospital, and thus the flow went there.
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
-        val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
+        val flow = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
             override val destination: Destination get() = alice
             override val counterparty: Party get() = alice
 
@@ -183,7 +183,7 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
-        }), nodeA.services.newContext()).get() as FlowStateMachine
+        }), nodeA.services.newContext()).get()
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)

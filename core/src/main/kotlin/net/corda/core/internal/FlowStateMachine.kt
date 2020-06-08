@@ -11,7 +11,10 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 
+@DeleteForDJVM
+@DoNotImplement
 interface FlowStateMachineHandle<FLOWRETURN> {
+    val logic: FlowLogic<FLOWRETURN>?
     val id: StateMachineRunId
     val resultFuture: CordaFuture<FLOWRETURN>
 }
@@ -43,7 +46,6 @@ interface FlowStateMachine<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
 
     fun updateTimedFlowTimeout(timeoutSeconds: Long)
 
-    val logic: FlowLogic<FLOWRETURN>
     val serviceHub: ServiceHub
     val logger: Logger
     val context: InvocationContext
