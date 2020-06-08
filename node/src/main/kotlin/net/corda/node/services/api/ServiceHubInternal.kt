@@ -215,13 +215,13 @@ interface FlowStarter {
      * just synthesizes an [ExternalEvent.ExternalStartFlowEvent] and calls the method below.
      * @param context indicates who started the flow, see: [InvocationContext].
      */
-    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<out FlowStateMachineReturnable<T>>
 
     /**
      * Starts a flow as described by an [ExternalEvent.ExternalStartFlowEvent].  If a transient error
      * occurs during invocation, it will re-attempt to start the flow.
      */
-    fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineReturnable<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -234,7 +234,7 @@ interface FlowStarter {
     fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>>
+            vararg args: Any?): CordaFuture<out FlowStateMachineReturnable<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter

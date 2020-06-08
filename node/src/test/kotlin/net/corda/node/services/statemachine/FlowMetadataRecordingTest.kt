@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.CordaRuntimeException
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
@@ -53,6 +54,7 @@ import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -396,6 +398,19 @@ class FlowMetadataRecordingTest {
         }
     }
 
+    @Test
+    fun `assert that flow started with longer client id than MAX_CLIENT_ID_LENGTH fails`() {
+        val clientID = "1".repeat(513) // DBCheckpointStorage.MAX_CLIENT_ID_LENGTH == 512
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val rpc = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).proxy
+
+            assertFailsWith<CordaRuntimeException>("clientID cannot be longer than ${DBCheckpointStorage.MAX_CLIENT_ID_LENGTH} characters") {
+                rpc.startFlowDynamicWithClientId(clientID, EmptyFlow::class.java).returnValue.getOrThrow()
+            }
+        }
+    }
+
     @InitiatingFlow
     @StartableByRPC
     @StartableByService
@@ -554,6 +569,13 @@ class FlowMetadataRecordingTest {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val logicRef = flowLogicRefFactory.create(MyFlow::class.jvmName, party, string, someObject)
             return ScheduledActivity(logicRef, Instant.now())
+        }
+    }
+
+    @StartableByRPC
+    class EmptyFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
         }
     }
 }

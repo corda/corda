@@ -56,6 +56,7 @@ class DBCheckpointStorage(
         private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
+        const val MAX_CLIENT_ID_LENGTH = 512
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 

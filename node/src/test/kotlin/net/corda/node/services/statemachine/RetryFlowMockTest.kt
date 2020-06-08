@@ -183,7 +183,7 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
-        }), nodeA.services.newContext()).get()
+        }), nodeA.services.newContext()).get() as FlowStateMachine
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)
