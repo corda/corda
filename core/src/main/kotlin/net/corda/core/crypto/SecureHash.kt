@@ -105,6 +105,7 @@ sealed class SecureHash constructor(val algorithm: String, bytes: ByteArray) : O
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         const val SHA2_256 = "SHA-256"
+        const val SHA3_256 = "SHA3-256"
         const val DELIMITER = ':'
 
         private val BANNED: Set<String> = unmodifiableSet(setOf("MD5", "MD2", "SHA-1"))

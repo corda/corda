@@ -12,6 +12,7 @@ import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SecureHash.Companion.SHA3_256
 import net.corda.core.crypto.SecureHash.Companion.hashAs
 import net.corda.core.crypto.hashAs
 import net.corda.core.crypto.keys
@@ -65,10 +66,10 @@ class PartialMerkleTreeWithNamedHashTest {
         val MINI_CORP_PUBKEY get() = miniCorp.publicKey
 
         fun sha3_256(str: String): SecureHash {
-            return hashAs("SHA3-256", str.toByteArray())
+            return hashAs(SHA3_256, str.toByteArray())
         }
 
-        fun OpaqueBytes.sha3_256(): SecureHash = hashAs("SHA3-256")
+        fun OpaqueBytes.sha3_256(): SecureHash = hashAs(SHA3_256)
     }
 
     @Rule
@@ -86,7 +87,7 @@ class PartialMerkleTreeWithNamedHashTest {
     @Before
     fun init() {
         hashed = nodes.map { it.serialize().sha3_256() }
-        val zeroHash = SecureHash.zeroHashFor("SHA3-256")
+        val zeroHash = SecureHash.zeroHashFor(SHA3_256)
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
 
@@ -145,7 +146,7 @@ class PartialMerkleTreeWithNamedHashTest {
 	fun `building Merkle tree odd number of nodes`() {
         val odd = hashed.subList(0, 3)
         val h1 = hashed[0].concatenate(hashed[1])
-        val h2 = hashed[2].concatenate(SecureHash.zeroHashFor("SHA3-256"))
+        val h2 = hashed[2].concatenate(SecureHash.zeroHashFor(SHA3_256))
         val expected = h1.concatenate(h2)
         val mt = MerkleTree.getMerkleTree(odd)
         assertEquals(mt.hash, expected)
@@ -153,7 +154,7 @@ class PartialMerkleTreeWithNamedHashTest {
 
     @Test(timeout=300_000)
 	fun `check full tree`() {
-        val h = SecureHash.random("SHA3-256")
+        val h = SecureHash.random(SHA3_256)
         val left = MerkleTree.Node(h, MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)),
                 MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
         val right = MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h))
