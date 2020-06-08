@@ -130,8 +130,6 @@ open class SchemaMigration(
             val resource = getMigrationResource(mappedSchema, classLoader)
             when {
                 resource != null -> resource
-                // Corda OS FinanceApp in v3 has no Liquibase script, so no error is raised
-                (mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || mappedSchema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1") && mappedSchema.migrationResource == null -> null
                 else -> logOrThrowMigrationError(mappedSchema, forceThrowOnMissingMigration)
             }
         }
@@ -159,20 +157,7 @@ open class SchemaMigration(
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
     private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean, schemas: Set<MappedSchema>): Boolean {
-        val isFinanceAppWithLiquibase = schemas.any { schema ->
-            (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
-                    || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
-                    && schema.migrationResource != null
-        }
-        val noLiquibaseEntryLogForFinanceApp: (Statement) -> Boolean = {
-            it.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE FILENAME IN ('migration/cash.changelog-init.xml','migration/commercial-paper.changelog-init.xml')")
-            if (it.resultSet.next())
-                it.resultSet.getInt(1) == 0
-            else
-                true
-        }
-
-        val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated) = dataSource.connection.use {
+        val isExistingDBWithoutLiquibase = dataSource.connection.use {
 
             val existingDatabase = it.metaData.getTables(null, null, "NODE%", null).next()
                     // Lower case names for PostgreSQL
@@ -182,12 +167,7 @@ open class SchemaMigration(
                     // Lower case names for PostgreSQL
                     || it.metaData.getTables(null, null, "databasechangelog%", null).next()
 
-            val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
-                    && existingDatabase
-                    && (!hasLiquibase // Migrate as other tables.
-                    || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
-
-            Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
+            existingDatabase && !hasLiquibase
         }
 
         if (isExistingDBWithoutLiquibase && existingCheckpoints)
@@ -222,12 +202,6 @@ open class SchemaMigration(
                 preV4Baseline.addAll(listOf("migration/notary-bft-smart.changelog-init.xml",
                         "migration/notary-bft-smart.changelog-v1.xml"))
         }
-        if (isFinanceAppWithLiquibaseNotMigrated) {
-            preV4Baseline.addAll(listOf("migration/cash.changelog-init.xml",
-                    "migration/cash.changelog-v1.xml",
-                    "migration/commercial-paper.changelog-init.xml",
-                    "migration/commercial-paper.changelog-v1.xml"))
-        }
 
         if (preV4Baseline.isNotEmpty()) {
             val dynamicInclude = "master.changelog.json" // Virtual file name of the changelog that includes all schemas.
@@ -238,7 +212,7 @@ open class SchemaMigration(
                 liquibase.changeLogSync(Contexts(), LabelExpression())
             }
         }
-        return isExistingDBWithoutLiquibase || isFinanceAppWithLiquibaseNotMigrated
+        return isExistingDBWithoutLiquibase
     }
 
     private fun checkResourcesInClassPath(resources: List<String?>) {
