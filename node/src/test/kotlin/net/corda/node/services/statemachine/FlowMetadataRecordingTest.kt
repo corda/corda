@@ -32,7 +32,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.contracts.DummyContract
@@ -47,7 +46,6 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
@@ -395,19 +393,6 @@ class FlowMetadataRecordingTest {
         }
     }
 
-    @Test(timeout = 300_000)
-    fun `client id gets stored into node_flow_metadata table`() {
-        val clientID = UUID.randomUUID().toString()
-        driver(DriverParameters(startNodesInProcess = true)) {
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val rpc = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).proxy
-
-            val flowId = rpc.startFlowDynamicWithClientId(clientID, ClientId.EmptyFlow::class.java).id
-            val dbClientID = rpc.startFlow(ClientId::FetchClientIdFlow, flowId).returnValue.getOrThrow(20.seconds)
-            assertEquals(clientID, dbClientID)
-        }
-    }
-
     @InitiatingFlow
     @StartableByRPC
     @StartableByService
@@ -566,30 +551,6 @@ class FlowMetadataRecordingTest {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val logicRef = flowLogicRefFactory.create(MyFlow::class.jvmName, party, string, someObject)
             return ScheduledActivity(logicRef, Instant.now())
-        }
-    }
-
-    object ClientId {
-        val semaphore = co.paralleluniverse.strands.concurrent.Semaphore(0)
-
-        @StartableByRPC
-        class EmptyFlow: FlowLogic<Unit>() {
-            @Suspendable
-            override fun call() {
-                semaphore.acquire()
-            }
-        }
-
-        @StartableByRPC
-        class FetchClientIdFlow(private val flowId: StateMachineRunId): FlowLogic<String?>() {
-            @Suspendable
-            override fun call(): String? {
-                val dbClientID = serviceHub.withEntityManager {
-                    find(DBCheckpointStorage.DBFlowMetadata::class.java, flowId.uuid.toString()).userSuppliedIdentifier
-                }
-                semaphore.release()
-                return dbClientID
-            }
         }
     }
 }
