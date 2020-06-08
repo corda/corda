@@ -11,7 +11,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializedBytes
 import org.slf4j.Logger
 
-interface FlowStateMachineReturnable<FLOWRETURN> {
+interface FlowStateMachineHandle<FLOWRETURN> {
     val id: StateMachineRunId
     val resultFuture: CordaFuture<FLOWRETURN>
 }
@@ -19,7 +19,7 @@ interface FlowStateMachineReturnable<FLOWRETURN> {
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 @DeleteForDJVM
 @DoNotImplement
-interface FlowStateMachine<FLOWRETURN>: FlowStateMachineReturnable<FLOWRETURN> {
+interface FlowStateMachine<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
     @Suspendable
     fun <SUSPENDRETURN : Any> suspend(ioRequest: FlowIORequest<SUSPENDRETURN>, maySkipCheckpoint: Boolean): SUSPENDRETURN
 
@@ -54,6 +54,6 @@ interface FlowStateMachine<FLOWRETURN>: FlowStateMachineReturnable<FLOWRETURN> {
     val clientID: String?
 }
 
-interface FlowStateMachineClientIdResult<FLOWRETURN>: FlowStateMachineReturnable<FLOWRETURN> {
+interface FlowStateMachineClientIdResult<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
     val clientID: String?
 }

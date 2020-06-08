@@ -5,7 +5,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.FlowStateMachineReturnable
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
@@ -140,11 +140,11 @@ interface ExternalEvent {
         /**
          * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.
          */
-        fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineReturnable<T>>)
+        fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<T>>)
 
         /**
          * The future representing the flow start, passed back from the state machine to the submitter of this event.
          */
-        val future: CordaFuture<out FlowStateMachineReturnable<T>>
+        val future: CordaFuture<out FlowStateMachineHandle<T>>
     }
 }
