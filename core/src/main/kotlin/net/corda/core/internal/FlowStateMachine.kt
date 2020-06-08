@@ -17,6 +17,7 @@ interface FlowStateMachineHandle<FLOWRETURN> {
     val logic: FlowLogic<FLOWRETURN>?
     val id: StateMachineRunId
     val resultFuture: CordaFuture<FLOWRETURN>
+    val clientID: String?
 }
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
@@ -53,9 +54,4 @@ interface FlowStateMachine<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
     val ourSenderUUID: String?
     val creationTime: Long
     val isKilled: Boolean
-    val clientID: String?
-}
-
-interface FlowStateMachineClientIdResult<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
-    val clientID: String?
 }

@@ -28,7 +28,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AttachmentTrustCalculator
-import net.corda.core.internal.FlowStateMachineClientIdResult
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
@@ -1275,7 +1274,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
         // check clientID early, so that we don't get further down if it can't be saved in the database
         val clientID = event.context.clientID
         if (clientID != null && clientID.length > maxClientIdLength) {
-            event.wireUpFuture(doneFuture(object : FlowStateMachineClientIdResult<T> {
+            event.wireUpFuture(doneFuture(object : FlowStateMachineHandle<T> {
                 override val logic: Nothing? = null
                 override val id: StateMachineRunId = event.flowId
                 override val resultFuture = openFuture<T>().also {
