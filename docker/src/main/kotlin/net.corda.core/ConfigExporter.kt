@@ -51,7 +51,7 @@ class ConfigExporter {
 }
 
 fun Config.parseAsNodeConfigWithFallback(): Validated<NodeConfiguration, Configuration.Validation.Error> {
-    val referenceConfig = ConfigFactory.parseResources("reference.conf")
+    val referenceConfig = ConfigFactory.parseResources("corda-corda-reference.conf")
     val nodeConfig = this
             .withValue("baseDirectory", ConfigValueFactory.fromAnyRef("/opt/corda"))
             .withFallback(referenceConfig)

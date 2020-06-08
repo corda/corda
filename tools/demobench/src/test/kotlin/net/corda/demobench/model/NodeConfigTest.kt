@@ -37,7 +37,7 @@ class NodeConfigTest {
 
         val nodeConfig = config.nodeConf()
                 .withValue("baseDirectory", valueFor(baseDir.toString()))
-                .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .withFallback(ConfigFactory.parseResources("corda-corda-reference.conf"))
                 .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
@@ -70,7 +70,7 @@ class NodeConfigTest {
                 .withValue("systemProperties", valueFor(mapOf("property.name" to "value")))
                 .withValue("custom.jvmArgs", valueFor("-Xmx1000G"))
                 .withValue("baseDirectory", valueFor(baseDir.toString()))
-                .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .withFallback(ConfigFactory.parseResources("corda-corda-reference.conf"))
                 .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration().value()
@@ -117,7 +117,7 @@ class NodeConfigTest {
 
         val nodeConfig = config.webServerConf()
                 .withValue("baseDirectory", valueFor(baseDir.toString()))
-                .withFallback(ConfigFactory.parseResources("web-reference.conf"))
+                .withFallback(ConfigFactory.parseResources("corda-web-corda-reference.conf"))
                 .resolve()
         val webConfig = WebServerConfig(baseDir, nodeConfig)
 
