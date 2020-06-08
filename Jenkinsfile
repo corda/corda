@@ -61,6 +61,14 @@ pipeline {
                                 " allParallelUnitTest --stacktrace"
                     }
                 }
+                stage('Node Deploy') {
+                    steps {
+                        sh "./gradlew --no-daemon " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                " clean jar deployNodes install --stacktrace"
+                    }
+                }
             }
         }
     }
