@@ -16,7 +16,6 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
 import java.sql.Connection
-import java.sql.Statement
 import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.concurrent.withLock

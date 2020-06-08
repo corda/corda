@@ -175,7 +175,6 @@ import org.slf4j.Logger
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
@@ -184,7 +183,7 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Properties
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -195,6 +194,31 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 import javax.sql.DataSource
+import kotlin.collections.ArrayList
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.drop
+import kotlin.collections.emptyList
+import kotlin.collections.filterNotNull
+import kotlin.collections.first
+import kotlin.collections.flatMap
+import kotlin.collections.fold
+import kotlin.collections.forEach
+import kotlin.collections.groupBy
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.plusAssign
+import kotlin.collections.reversed
+import kotlin.collections.setOf
+import kotlin.collections.single
+import kotlin.collections.toSet
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
