@@ -65,7 +65,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                            allowMissingConfig: Boolean = false,
                            configOverrides: Map<String, Any?> = emptyMap()): Config {
         val parseOptions = ConfigParseOptions.defaults()
-        val defaultConfig = ConfigFactory.parseResources("corda-corda-web-reference.conf", parseOptions.setAllowMissing(false))
+        val defaultConfig = ConfigFactory.parseResources("corda-web-reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val overrideConfig = ConfigFactory.parseMap(configOverrides + mapOf(
                 // Add substitution values here
