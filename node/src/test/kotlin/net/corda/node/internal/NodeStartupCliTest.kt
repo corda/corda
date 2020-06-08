@@ -1,15 +1,23 @@
 package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import picocli.CommandLine
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.logging.Logger
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NodeStartupCliTest {
     private val startup = NodeStartupCli()
@@ -48,5 +56,18 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
+    }
+
+    @Test
+    fun `test logs are written to correct location correctly if verbose flag set`() {
+        val node = NodeStartupCli()
+        val dir = Files.createTempDirectory("verboseLoggingTest")
+        node.verbose = true
+        // With verbose set, initLogging can accidentally attempt to access a logger before all required system properties are set. This
+        // causes the logging config to be parsed too early, resulting in logs being written to the wrong directory
+        node.initLogging(dir)
+        LoggerFactory.getLogger("").debug("Test message")
+        assertTrue(dir.resolve("logs").exists())
+        assertFalse(Paths.get("./logs").exists())
     }
 }
