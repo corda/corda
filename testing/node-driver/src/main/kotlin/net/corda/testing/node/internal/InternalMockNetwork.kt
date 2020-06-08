@@ -279,7 +279,10 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
     }
 
-    open class MockNode(args: MockNodeArgs, private val mockFlowManager: MockNodeFlowManager = args.flowManager) : AbstractNode<TestStartedNode>(
+    open class MockNode(
+            args: MockNodeArgs,
+            private val mockFlowManager: MockNodeFlowManager = args.flowManager,
+            blockAppSchemaUpgradeWithCheckpoints: Boolean = true) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             DefaultNamedCacheFactory(),
@@ -287,7 +290,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             mockFlowManager,
             args.network.getServerThread(args.id),
             args.network.busyLatch,
-            allowHibernateToManageAppSchema = true
+            allowHibernateToManageAppSchema = true,
+            blockAppSchemaUpgradeWithCheckpoints = blockAppSchemaUpgradeWithCheckpoints
     ) {
         companion object {
             private val staticLog = contextLogger()

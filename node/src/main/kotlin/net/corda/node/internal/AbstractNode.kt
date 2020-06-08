@@ -213,7 +213,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
                                djvmBootstrapSource: ApiSource = EmptyApi,
                                djvmCordaSource: UserSource? = null,
-                               protected val allowHibernateToManageAppSchema: Boolean = false) : SingletonSerializeAsToken() {
+                               protected val allowHibernateToManageAppSchema: Boolean = false,
+                               private val blockAppSchemaUpgradeWithCheckpoints: Boolean = true) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
@@ -1003,7 +1004,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
             schemaMigration
                     .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
-                    .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints, false)
+                    .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && blockAppSchemaUpgradeWithCheckpoints, false)
         }
 
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
