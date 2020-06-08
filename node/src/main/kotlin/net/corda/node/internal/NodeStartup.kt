@@ -527,7 +527,6 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
         return false
     }
 
-    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
     return true
