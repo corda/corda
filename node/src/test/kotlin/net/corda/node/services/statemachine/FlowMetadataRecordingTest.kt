@@ -46,6 +46,7 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
@@ -87,9 +88,11 @@ class FlowMetadataRecordingTest {
                     metadata = metadataFromHook
                 }
 
+            val clientID = UUID.randomUUID().toString()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(
-                    ::MyFlow,
+                it.proxy.startFlowDynamicWithClientId(
+                    clientID,
+                    MyFlow::class.java,
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
@@ -101,7 +104,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(flowId!!.uuid.toString(), it.flowId)
                 assertEquals(MyFlow::class.java.name, it.flowName)
                 // Should be changed when [userSuppliedIdentifier] gets filled in future changes
-                assertNull(it.userSuppliedIdentifier)
+                assertEquals(clientID, it.userSuppliedIdentifier)
                 assertEquals(DBCheckpointStorage.StartReason.RPC, it.startType)
                 assertEquals(
                     listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
