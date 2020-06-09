@@ -238,16 +238,13 @@ internal class CordaRPCOpsImpl(
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         val stateMachine = startFlow(logicType, context(), args)
-
-        return stateMachine.logic?.let { logic ->
-            FlowProgressHandleImpl(
+        return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = logic.track()?.updates?.filter { !it.startsWith(STRUCTURAL_STEP_PREFIX) } ?: Observable.empty(),
-                stepsTreeIndexFeed = logic.trackStepsTreeIndex(),
-                stepsTreeFeed = logic.trackStepsTree()
-            )
-        } ?: throw IllegalStateException("logic cannot be null")
+                progress = stateMachine.logic?.track()?.updates?.filter { !it.startsWith(STRUCTURAL_STEP_PREFIX) } ?: Observable.empty(),
+                stepsTreeIndexFeed = stateMachine.logic?.trackStepsTreeIndex(),
+                stepsTreeFeed = stateMachine.logic?.trackStepsTree()
+        )
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
