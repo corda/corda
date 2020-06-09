@@ -23,6 +23,7 @@ import java.lang.ref.WeakReference
 import java.net.*
 import java.security.Permission
 import java.util.*
+import java.util.function.Function
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -313,7 +314,7 @@ object AttachmentsClassLoaderBuilder {
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
+        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params), Function {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = try {
@@ -336,7 +337,7 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        }
+        })
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
@@ -421,14 +422,14 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
 }
 
 interface AttachmentsCache<K, V> {
-    fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V
+    fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V
 }
 
 private class AttachmentsCacheImpl<K, V>(maxSize: Int) : AttachmentsCache<K, V> {
 
     private val cache: Cache<K, V> = Caffeine.newBuilder().maximumSize(maxSize.toLong()).build()
 
-    override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V {
+    override fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
