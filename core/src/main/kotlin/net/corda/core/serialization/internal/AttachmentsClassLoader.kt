@@ -1,5 +1,7 @@
 package net.corda.core.serialization.internal
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -296,9 +298,7 @@ object AttachmentsClassLoaderBuilder {
     // can just do unordered comparisons here. But the same attachments run with different network parameters
     // may behave differently, so that has to be a part of the cache key.
     private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
-
-    // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Key, SerializationContext> = createSimpleCache<Key, SerializationContext>(CACHE_SIZE).toSynchronised()
+    private val cache: AttachmentsCache<Key, SerializationContext> = AttachmentsCacheImpl(CACHE_SIZE)
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
@@ -417,6 +417,19 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
 
     override fun set(key: URL, value: Attachment) {
         attachments[key] = WeakReference(key) to value
+    }
+}
+
+interface AttachmentsCache<K, V> {
+    fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V
+}
+
+private class AttachmentsCacheImpl<K, V>(maxSize: Int = 1000) : AttachmentsCache<K, V> {
+
+    private val cache: Cache<K, V> = Caffeine.newBuilder().maximumSize(maxSize.toLong()).build<K, V>()
+
+    override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V {
+        return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
 
