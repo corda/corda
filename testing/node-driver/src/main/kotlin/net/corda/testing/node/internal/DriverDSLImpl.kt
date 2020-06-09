@@ -337,6 +337,8 @@ class DriverDSLImpl(
         return startOutOfProcessMiniNode(config,
                 listOfNotNull(
                         "run-migration-scripts",
+                        "--core-schemas",
+                        "--app-schemas",
                         if (hibernateForAppSchema) "--allow-hibernate-to-manage-app-schema" else null
                 ).toTypedArray()).map { config }
     }
