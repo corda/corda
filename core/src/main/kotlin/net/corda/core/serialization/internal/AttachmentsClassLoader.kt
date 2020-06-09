@@ -424,9 +424,9 @@ interface AttachmentsCache<K, V> {
     fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V
 }
 
-private class AttachmentsCacheImpl<K, V>(maxSize: Int = 1000) : AttachmentsCache<K, V> {
+private class AttachmentsCacheImpl<K, V>(maxSize: Int) : AttachmentsCache<K, V> {
 
-    private val cache: Cache<K, V> = Caffeine.newBuilder().maximumSize(maxSize.toLong()).build<K, V>()
+    private val cache: Cache<K, V> = Caffeine.newBuilder().maximumSize(maxSize.toLong()).build()
 
     override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
