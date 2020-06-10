@@ -911,7 +911,7 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `assert that the flow exception is available after flow's lifetime if flow is started with a client id`() {
+    fun `flow's exception is available after flow's lifetime if flow is started with a client id`() {
         ResultFlow.hook = { throw IllegalStateException() }
         val clientID = UUID.randomUUID().toString()
 
@@ -925,7 +925,7 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `assert that the flow result is freed upon acknowledgement`() {
+    fun `flow's result is freed upon acknowledgement`() {
         // TODO upon implementing API
     }
 
