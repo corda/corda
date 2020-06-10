@@ -23,7 +23,7 @@ interface FlowStateMachineHandle<FLOWRETURN> {
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
 @DeleteForDJVM
 @DoNotImplement
-interface FlowStateMachine<FLOWRETURN>: FlowStateMachineHandle<FLOWRETURN> {
+interface FlowStateMachine<FLOWRETURN> : FlowStateMachineHandle<FLOWRETURN> {
     @Suspendable
     fun <SUSPENDRETURN : Any> suspend(ioRequest: FlowIORequest<SUSPENDRETURN>, maySkipCheckpoint: Boolean): SUSPENDRETURN
 
