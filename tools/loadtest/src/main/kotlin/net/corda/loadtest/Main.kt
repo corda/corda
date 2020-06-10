@@ -56,7 +56,7 @@ fun main(args: Array<String>) {
         // This allow us to provide some configurations via teamcity.
         ConfigFactory.parseProperties(System.getProperties()).getConfig("loadtest")
     }
-    val defaultConfig = ConfigFactory.parseResources("corda-loadtest-reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+    val defaultConfig = ConfigFactory.parseResources("loadtest-reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
     val resolvedConfig = customConfig.withFallback(defaultConfig).resolve()
     val loadTestConfiguration = resolvedConfig.parseAs<LoadTestConfiguration>()
 

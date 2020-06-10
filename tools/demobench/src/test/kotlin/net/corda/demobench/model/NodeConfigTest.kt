@@ -117,7 +117,7 @@ class NodeConfigTest {
 
         val nodeConfig = config.webServerConf()
                 .withValue("baseDirectory", valueFor(baseDir.toString()))
-                .withFallback(ConfigFactory.parseResources("corda-web-reference.conf"))
+                .withFallback(ConfigFactory.parseResources("web-reference.conf"))
                 .resolve()
         val webConfig = WebServerConfig(baseDir, nodeConfig)
 
