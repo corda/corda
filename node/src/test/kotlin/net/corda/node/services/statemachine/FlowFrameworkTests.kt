@@ -944,15 +944,10 @@ class FlowFrameworkTests {
             }
         }
 
-        val semaphores = mutableMapOf<Long, Semaphore>()
-        for (i in 0 until requests) {
-            semaphores[threads[i]!!.id] = Semaphore(0)
-        }
-
+        val semaphore = Semaphore(0)
         SingleThreadedStateMachineManager.onClientIDNotFound = {
-            val tid = Thread.currentThread().id
             // Make all threads wait after client id not found on clientIDsToFlowIds
-            semaphores[tid]!!.acquire()
+            semaphore.acquire()
         }
 
         for (i in 0 until requests) {
@@ -961,7 +956,7 @@ class FlowFrameworkTests {
 
         Thread.sleep(1000)
         for (i in 0 until requests) {
-            semaphores[threads[i]!!.id]!!.release()
+            semaphore.release()
         }
 
         for (thread in threads) {
