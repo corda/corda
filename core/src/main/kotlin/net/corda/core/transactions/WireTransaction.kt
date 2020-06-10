@@ -303,7 +303,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val groupsMerkleRoots: Map<Int, SecureHash> by lazy {
-        availableComponentHashes.map { Pair(it.key, MerkleTree.getMerkleTree(it.value).hash) }.toMap()
+        availableComponentHashes.entries.associate { it.key to MerkleTree.getMerkleTree(it.value).hash }
     }
 
     /**
@@ -316,7 +316,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * nothing about the rest.
      */
     internal val availableComponentNonces: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) }) }.toMap()
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(hashAlgorithm, internalIt, privacySalt, it.groupIndex, internalIndex) } }
     }
 
     /**
@@ -325,7 +325,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * see the user-guide section "Transaction tear-offs" to learn more about this topic.
      */
     internal val availableComponentHashes: Map<Int, List<SecureHash>> by lazy {
-        componentGroups.map { Pair(it.groupIndex, it.components.mapIndexed { internalIndex, internalIt -> componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) }) }.toMap()
+        componentGroups.associate { it.groupIndex to it.components.mapIndexed { internalIndex, internalIt -> componentHash(availableComponentNonces[it.groupIndex]!![internalIndex], internalIt) } }
     }
 
     /**
@@ -369,7 +369,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
                     is WireTransaction -> coreTransaction.componentGroups
-                            .firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
+                            .firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }
                             ?.components
                             ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
                     is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
