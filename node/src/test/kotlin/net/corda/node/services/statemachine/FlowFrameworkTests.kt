@@ -86,6 +86,7 @@ import java.time.Instant
 import java.util.ArrayList
 import java.util.UUID
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
@@ -927,6 +928,46 @@ class FlowFrameworkTests {
     @Test
     fun `flow's result is freed upon acknowledgement`() {
         // TODO upon implementing API
+    }
+
+    @Test
+    fun `only one flow starts upon concurrent requests with the same client id`() {
+        val requests = 2
+        val counter = AtomicInteger(0)
+        ResultFlow.hook = { counter.incrementAndGet() }
+
+        val clientID = UUID.randomUUID().toString()
+        val threads = arrayOfNulls<Thread>(requests)
+        for (i in 0 until requests) {
+            threads[i] = Thread {
+                aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+            }
+        }
+
+        val semaphores = mutableMapOf<Long, Semaphore>()
+        for (i in 0 until requests) {
+            semaphores[threads[i]!!.id] = Semaphore(0)
+        }
+
+        SingleThreadedStateMachineManager.onClientIDNotFound = {
+            val tid = Thread.currentThread().id
+            // Make all threads wait after client id not found on clientIDsToFlowIds
+            semaphores[tid]!!.acquire()
+        }
+
+        for (i in 0 until requests) {
+            threads[i]!!.start()
+        }
+
+        Thread.sleep(1000)
+        for (i in 0 until requests) {
+            semaphores[threads[i]!!.id]!!.release()
+        }
+
+        for (thread in threads) {
+            thread!!.join()
+        }
+        assertEquals(1, counter.get())
     }
 
     private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
