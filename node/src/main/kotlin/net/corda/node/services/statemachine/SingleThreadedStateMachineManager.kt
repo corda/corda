@@ -13,8 +13,12 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
@@ -235,14 +239,29 @@ internal class SingleThreadedStateMachineManager(
             context: InvocationContext,
             ourIdentity: Party?,
             deduplicationHandler: DeduplicationHandler?
-    ): CordaFuture<FlowStateMachine<A>> {
-        return startFlowInternal(
-                flowId,
-                invocationContext = context,
-                flowLogic = flowLogic,
-                flowStart = FlowStart.Explicit,
-                ourIdentity = ourIdentity ?: ourFirstIdentity,
-                deduplicationHandler = deduplicationHandler
+    ): CordaFuture<out FlowStateMachineHandle<A>> {
+        // if clientID exists in clientIDsToFlowIds then the flow is already thrown in the system,
+        // therefore just return its future here and don't go any further down
+        return context.clientID?.let { clientID ->
+            mutex.locked {
+                clientIDsToFlowIds[clientID]?.let {
+                    val id = it.first
+                    val future = it.second
+                    doneFuture(object : FlowStateMachineHandle<A> {
+                        override val logic: Nothing? = null
+                        override val id: StateMachineRunId = id
+                        override val resultFuture: CordaFuture<A> = future as OpenFuture<A>
+                        override val clientID: String? = clientID
+                    })
+                }
+            }
+        } ?: startFlowInternal(
+            flowId,
+            invocationContext = context,
+            flowLogic = flowLogic,
+            flowStart = FlowStart.Explicit,
+            ourIdentity = ourIdentity ?: ourFirstIdentity,
+            deduplicationHandler = deduplicationHandler
         )
     }
 
@@ -661,6 +680,10 @@ internal class SingleThreadedStateMachineManager(
                 if (oldFlow == null) {
                     incrementLiveFibers()
                     unfinishedFibers.countUp()
+                    // just point to new flow in clientIDsToFlowIds to allow previous one to get GCed
+                    flow.fiber.clientID?.let {
+                        clientIDsToFlowIds[it] = Pair(id, flow.resultFuture)
+                    }
                 } else {
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }

@@ -62,6 +62,7 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.getMessage
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.startFlowWithClientId
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -77,13 +78,16 @@ import org.junit.Ignore
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.ArrayList
+import java.util.UUID
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
+import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
@@ -832,6 +836,99 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
+    // TODO: We set a new clientId (in StateMachineManager.addAndStartFlow) much later than we check if it exists; What will happen
+    //  if two concurrent requests come in with the same client id (these two actions need to be done in one place).
+    @Test
+    fun `no new flow starts if the client id provided pre exists`() {
+        var counter = 0
+        ResultFlow.hook = { counter++ }
+        val clientID = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        assertEquals(1, counter)
+    }
+
+    @Test
+    fun `flow's result is retrievable after flow's lifetime, when flow is started with a client id - different parameters are ignored`() {
+        val clientID = UUID.randomUUID().toString()
+        val handle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val clientID0 = handle0.clientID
+        val flowId0 = handle0.id
+        val result0 = handle0.resultFuture.getOrThrow()
+
+        val handle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(10))
+        val clientID1 = handle1.clientID
+        val flowId1 = handle1.id
+        val result1 = handle1.resultFuture.getOrThrow()
+
+        assertEquals(clientID0, clientID1)
+        assertEquals(flowId0, flowId1)
+        assertEquals(result0, result1)
+    }
+
+    @Test
+    fun `flow's result is available if reconnect after flow had retried from previous checkpoint, when flow is started with a client id`() {
+        var firstRun = true
+        ResultFlow.hook = {
+            if (firstRun) {
+                firstRun = false
+                throw SQLTransientConnectionException("connection is not available")
+            }
+        }
+
+        val clientID = UUID.randomUUID().toString()
+        val result0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        val result1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        assertEquals(result0, result1)
+    }
+
+    @Test
+    fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
+        var firstRun = true
+        val semaphore = Semaphore(0)
+        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                if (firstRun) {
+                    firstRun = false
+                    throw SQLTransientConnectionException("connection is not available")
+                } else {
+                    semaphore.acquire()
+                }
+            }
+        }
+
+        var result1 = 0
+        val clientID = UUID.randomUUID().toString()
+        val handle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val t = thread { result1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow() }
+
+        Thread.sleep(1000)
+        semaphore.release()
+        val result0 = handle0.resultFuture.getOrThrow()
+        t.join()
+        assertEquals(result0, result1)
+    }
+
+    @Test
+    fun `assert that the flow exception is available after flow's lifetime if flow is started with a client id`() {
+        ResultFlow.hook = { throw IllegalStateException() }
+        val clientID = UUID.randomUUID().toString()
+
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        }
+
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `assert that the flow result is freed upon acknowledgement`() {
+        // TODO upon implementing API
+    }
+
     private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
         val criteria = session.criteriaBuilder.createQuery(T::class.java)
         criteria.select(criteria.from(T::class.java))
@@ -1204,5 +1301,24 @@ internal class SuspendingFlow : FlowLogic<Unit>() {
         stateMachine.hookBeforeCheckpoint()
         sleep(1.seconds) // flow checkpoints => checkpoint is in DB
         stateMachine.hookAfterCheckpoint()
+    }
+}
+
+internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
+    companion object {
+        var hook: (() -> Unit)? = null
+        var suspendableHook: FlowLogic<Unit>? = null
+    }
+
+    @Suspendable
+    override fun call(): A {
+        // 1. checkpoint
+        // 2. throw exception
+        // 3. retry and wait
+        // 4. re call start with ClientID
+        // 5. let it continue
+        hook?.invoke()
+        suspendableHook?.let { subFlow(it) }
+        return result
     }
 }
