@@ -92,7 +92,13 @@ class RaftUniquenessProvider(
                 )
 
         fun StateRef.encoded() = "$txhash:$index"
-        fun String.parseStateRef() = split(":").let { StateRef(SecureHash.create(it[0]), it[1].toInt()) }
+        fun String.parseStateRef(): StateRef {
+            val idx = lastIndexOf(':')
+            require(idx != -1) {
+                "Encoding error for StateRef '$this'"
+            }
+            return StateRef(SecureHash.create(substring(0, idx)), substring(idx + 1).toInt())
+        }
     }
 
     @Entity
