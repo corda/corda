@@ -1312,11 +1312,6 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
 
     @Suspendable
     override fun call(): A {
-        // 1. checkpoint
-        // 2. throw exception
-        // 3. retry and wait
-        // 4. re call start with ClientID
-        // 5. let it continue
         hook?.invoke()
         suspendableHook?.let { subFlow(it) }
         return result
