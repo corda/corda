@@ -7,6 +7,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.services.CordaServiceCriticalFailureException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.persistence.contextDatabase
+import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
 import java.io.Closeable
 import java.util.Collections.singleton
 import java.util.LinkedList
@@ -93,7 +95,14 @@ class NodeLifecycleEventsDistributor : Closeable {
             log.warn("Not distributing $event as executor been already shutdown. Double close() case?")
             result.set(null)
         } else {
+
+            val passTheDbToTheThread = contextDatabaseOrNull
+
             executor.execute {
+
+                if (passTheDbToTheThread != null)
+                    contextDatabase = passTheDbToTheThread
+
                 val orderedSnapshot = if (event.reversedPriority) snapshot.reversed() else snapshot
                 orderedSnapshot.forEach {
                     log.debug("Distributing event $event to: $it")
