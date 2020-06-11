@@ -8,6 +8,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.statemachine.*
 import java.lang.IllegalStateException
+import kotlin.collections.LinkedHashMap
 
 /**
  * This transition describes what should happen with a specific [FlowIORequest]. Note that at this time the request
@@ -36,6 +37,7 @@ class StartedFlowTransition(
             is FlowIORequest.Send -> sendTransition(flowIORequest)
             is FlowIORequest.Receive -> receiveTransition(flowIORequest)
             is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
+            is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
             is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
             is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
             is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
@@ -145,6 +147,32 @@ class StartedFlowTransition(
                     resumeFlowLogic(receivedMap)
                 }
             }
+        }
+    }
+
+    private fun closeSessionTransition(flowIORequest: FlowIORequest.CloseSessions): TransitionResult {
+        return builder {
+            val sessionIdsToRemove = flowIORequest.sessions.map { sessionToSessionId(it) }.toSet()
+            val newSessionMap = currentState.checkpoint.checkpointState.sessions
+                    .filterNot { sessionIdsToRemove.contains(it.key) }
+            val removedSessions = currentState.checkpoint.checkpointState.sessions
+                    .filter { sessionIdsToRemove.contains(it.key) }
+            val prematurelyClosedSessionIds = removedSessions.filter { it.value !is SessionState.Initiated }.map { it.key }.toSet()
+            if (prematurelyClosedSessionIds.isNotEmpty()) {
+                freshErrorTransition(PrematureSessionClose(prematurelyClosedSessionIds))
+            }
+            val sendEndMessageActions = removedSessions.values.mapIndexed { index, state ->
+                val sessionState = (state as SessionState.Initiated).initiatedState as InitiatedSessionState.Live
+                val message = ExistingSessionMessage(sessionState.peerSinkSessionId, EndSessionMessage)
+                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
+                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
+            }
+
+            currentState = currentState.copy(checkpoint = currentState.checkpoint.setSessions(newSessionMap))
+            actions.add(Action.RemoveSessionBindings(sessionIdsToRemove))
+            actions.addAll(sendEndMessageActions)
+
+            resumeFlowLogic(Unit)
         }
     }
 

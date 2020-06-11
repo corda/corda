@@ -191,6 +191,32 @@ abstract class FlowSession {
      */
     @Suspendable
     abstract fun send(payload: Any)
+
+    /**
+     * Closes this session and performs cleanup of any resources tied to this session.
+     * This method should be invoked from the side that performs the last [receive] operation.
+     *
+     * From a performance perspective, it's beneficial  to eagerly close sessions that are not needed anymore to reduce resource consumption (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the session is not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [IllegalStateException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     *
+     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
+     */
+    @Suspendable
+    abstract fun close(maySkipCheckpoint: Boolean)
+
+    /**
+     * Closes this session and performs cleanup of any resources tied to this session.
+     * This method should be invoked from the side that performs the last [receive] operation.
+     *
+     * From a performance perspective, it's beneficial  to eagerly close sessions that are not needed anymore to reduce resource consumption (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the session is not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [IllegalStateException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     */
+    @Suspendable
+    abstract fun close()
 }
 
 /**

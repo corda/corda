@@ -81,6 +81,17 @@ class FlowSessionImpl(
     @Suspendable
     override fun send(payload: Any) = send(payload, maySkipCheckpoint = false)
 
+    @Suspendable
+    override fun close(maySkipCheckpoint: Boolean) {
+        val request = FlowIORequest.CloseSessions(NonEmptySet.of(this))
+        return flowStateMachine.suspend(request, maySkipCheckpoint)
+    }
+
+    @Suspendable
+    override fun close() {
+        return close(maySkipCheckpoint = false)
+    }
+
     private fun enforceNotPrimitive(type: Class<*>) {
         require(!type.isPrimitive) { "Cannot receive primitive type $type" }
     }
