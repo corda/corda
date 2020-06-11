@@ -21,7 +21,8 @@ class NodeConfigParsingTests {
         driver(DriverParameters(
                 environmentVariables = mapOf("corda_sshd_port" to sshPort.toString()),
                 startNodesInProcess = false,
-                portAllocation = portAllocator)) {
+                portAllocation = portAllocator,
+                cordappsForAllNodes = emptyList())) {
             val hasSsh = startNode().get()
                     .logFile()
                     .readLines()
@@ -39,7 +40,8 @@ class NodeConfigParsingTests {
         driver(DriverParameters(
                 environmentVariables = mapOf("CORDA_sshd_port" to sshPort.toString()),
                 startNodesInProcess = false,
-                portAllocation = portAllocator)) {
+                portAllocation = portAllocator,
+                cordappsForAllNodes = emptyList())) {
             val hasSsh = startNode().get()
                     .logFile()
                     .readLines()
@@ -58,7 +60,8 @@ class NodeConfigParsingTests {
                 environmentVariables = mapOf("CORDA.sshd.port" to sshPort.toString(),
                                              "corda.devMode" to true.toString()),
                 startNodesInProcess = false,
-                portAllocation = portAllocator)) {
+                portAllocation = portAllocator,
+                cordappsForAllNodes = emptyList())) {
             val hasSsh = startNode(NodeParameters()).get()
                     .logFile()
                     .readLines()
@@ -95,7 +98,8 @@ class NodeConfigParsingTests {
                         "corda_bad_key" to "2077"),
                 startNodesInProcess = false,
                 portAllocation = portAllocator,
-                notarySpecs = emptyList())) {
+                notarySpecs = emptyList(),
+                cordappsForAllNodes = emptyList())) {
 
                 val hasWarning = startNode()
                         .getOrThrow()
