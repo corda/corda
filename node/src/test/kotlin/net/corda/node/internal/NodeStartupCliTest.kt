@@ -6,6 +6,7 @@ import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -56,6 +57,7 @@ class NodeStartupCliTest {
     }
 
     @Test(timeout=3_000)
+    @Ignore
     fun `test logs are written to correct location correctly if verbose flag set`() {
         val node = NodeStartupCli()
         val dir = Files.createTempDirectory("verboseLoggingTest")
