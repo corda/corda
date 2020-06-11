@@ -172,6 +172,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
@@ -1450,11 +1451,13 @@ fun CordaPersistence.startHikariPool(
                     "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
-            else ->
+            else -> {
+                LoggerFactory.getLogger("CordaPersistence extension").error("Could not create the DataSource", ex)
                 throw CouldNotCreateDataSourceException(
                         "Could not create the DataSource: ${ex.message}",
                         NodeDatabaseErrors.FAILED_STARTUP,
                         cause = ex)
+            }
         }
     }
 }
