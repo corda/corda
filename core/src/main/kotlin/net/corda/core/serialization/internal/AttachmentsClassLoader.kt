@@ -301,6 +301,7 @@ object AttachmentsClassLoaderBuilder {
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
+    @Suppress("LongParameterList")
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
