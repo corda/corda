@@ -311,13 +311,18 @@ class ReconnectingCordaRPCOps private constructor(
             checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
             var lastException: Throwable? = null
-            while (remainingAttempts != 0) {
+            while (remainingAttempts != 0 && !reconnectingRPCConnection.isClosed()) {
                 try {
                     log.debug { "Invoking RPC $method..." }
                     return method.invoke(reconnectingRPCConnection.proxy, *(args ?: emptyArray())).also {
                         log.debug { "RPC $method invoked successfully." }
                     }
                 } catch (e: InvocationTargetException) {
+                    if (method.name.equals("shutdown", true)) {
+                        log.debug("Shutdown invoked, stop reconnecting.", e)
+                        reconnectingRPCConnection.notifyServerAndClose()
+                        break
+                    }
                     when (e.targetException) {
                         is RejectedCommandException -> {
                             log.warn("Node is being shutdown. Operation ${method.name} rejected. Retrying when node is up...", e)
@@ -349,6 +354,7 @@ class ReconnectingCordaRPCOps private constructor(
                 }
             }
 
+            if (reconnectingRPCConnection.isClosed()) return null
             throw MaxRpcRetryException(maxNumberOfAttempts, method, lastException)
         }
 
