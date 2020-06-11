@@ -934,19 +934,24 @@ class FlowFrameworkTests {
     fun `only one flow starts upon concurrent requests with the same client id`() {
         val requests = 2
         val counter = AtomicInteger(0)
+        val resultsCounter = AtomicInteger(0)
         ResultFlow.hook = { counter.incrementAndGet() }
+        //(aliceNode.smm as SingleThreadedStateMachineManager).concurrentRequests = true
 
         val clientID = UUID.randomUUID().toString()
         val threads = arrayOfNulls<Thread>(requests)
         for (i in 0 until requests) {
             threads[i] = Thread {
-                aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+                val result = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+                resultsCounter.addAndGet(result)
             }
         }
 
         val semaphore = Semaphore(0)
+        val allThreadsBlocked = Semaphore(0)
         SingleThreadedStateMachineManager.onClientIDNotFound = {
             // Make all threads wait after client id not found on clientIDsToFlowIds
+            allThreadsBlocked.release()
             semaphore.acquire()
         }
 
@@ -954,7 +959,7 @@ class FlowFrameworkTests {
             threads[i]!!.start()
         }
 
-        Thread.sleep(1000)
+        allThreadsBlocked.acquire()
         for (i in 0 until requests) {
             semaphore.release()
         }
@@ -963,6 +968,7 @@ class FlowFrameworkTests {
             thread!!.join()
         }
         assertEquals(1, counter.get())
+        assertEquals(10, resultsCounter.get())
     }
 
     private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
