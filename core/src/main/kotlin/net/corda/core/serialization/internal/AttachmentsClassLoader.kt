@@ -292,14 +292,9 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    private const val CACHE_SIZE = 1000
+    const val CACHE_SIZE = 1000
 
-    // We use a set here because the ordering of attachments doesn't affect code execution, due to the no
-    // overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
-    // can just do unordered comparisons here. But the same attachments run with different network parameters
-    // may behave differently, so that has to be a part of the cache key.
-    private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
-    private val cache: AttachmentsCache<Key, SerializationContext> = AttachmentsCacheImpl(CACHE_SIZE)
+    private val fallBackCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext> = AttachmentsClassLoaderSimpleCacheImpl()
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
@@ -311,10 +306,12 @@ object AttachmentsClassLoaderBuilder {
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              attachmentsClassLoadercache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?,
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params), Function {
+        val cache = attachmentsClassLoadercache ?: fallBackCache
+        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = try {
@@ -421,18 +418,33 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
     }
 }
 
-interface AttachmentsCache<K, V> {
+interface AttachmentsClassLoaderCache<K, V> {
     fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V
 }
 
-private class AttachmentsCacheImpl<K, V>(maxSize: Int) : AttachmentsCache<K, V> {
+class AttachmentsClassLoaderCacheImpl<K, V>(cacheFactory: NamedCacheFactory) : AttachmentsClassLoaderCache<K, V> {
 
-    private val cache: Cache<K, V> = Caffeine.newBuilder().maximumSize(maxSize.toLong()).build()
+    private val cache: Cache<K, V> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
 
     override fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
+
+class AttachmentsClassLoaderSimpleCacheImpl<K, V> : AttachmentsClassLoaderCache<K, V> {
+
+    private val cache: MutableMap<K, V> = createSimpleCache<K, V>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
+
+    override fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V {
+        return cache.computeIfAbsent(key, mappingFunction)
+    }
+}
+
+// We use a set here because the ordering of attachments doesn't affect code execution, due to the no
+// overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
+// can just do unordered comparisons here. But the same attachments run with different network parameters
+// may behave differently, so that has to be a part of the cache key.
+data class AttachmentsClassLoaderKey(val hashes: Set<SecureHash>, val params: NetworkParameters)
 
 private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
     override fun getContentLengthLong(): Long = attachment.size.toLong()

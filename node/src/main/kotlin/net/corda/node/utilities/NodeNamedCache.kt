@@ -63,6 +63,7 @@ open class DefaultNamedCacheFactory protected constructor(private val metricRegi
                 name == "NodeParametersStorage_networkParametersByHash" -> caffeine.maximumSize(defaultCacheSize)
                 name == "PublicKeyToOwningIdentityCache_cache" -> caffeine.maximumSize(defaultCacheSize)
                 name == "NodeAttachmentTrustCalculator_trustedKeysCache" -> caffeine.maximumSize(defaultCacheSize)
+                name == "AttachmentsClassLoader_cache" -> caffeine.maximumSize(defaultCacheSize)
                 else -> throw IllegalArgumentException("Unexpected cache name $name. Did you add a new cache?")
             }
         }

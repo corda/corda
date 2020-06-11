@@ -26,7 +26,10 @@ import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import net.corda.core.utilities.contextLogger
 import java.util.Collections.unmodifiableList
 import java.util.function.Predicate
@@ -218,7 +221,8 @@ private constructor(
                 txAttachments,
                 getParamsWithGoo(),
                 id,
-                isAttachmentTrusted = isAttachmentTrusted) { transactionClassLoader ->
+                isAttachmentTrusted = isAttachmentTrusted,
+                attachmentsClassLoadercache = attachmentsClassLoaderCache) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
@@ -256,6 +260,9 @@ private constructor(
         isAttachmentTrusted = isAttachmentTrusted,
         verifierFactory = alternateVerifier
     )
+
+    @CordaInternal
+    var attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>? = null
 
     // Read network parameters with backwards compatibility goo.
     private fun getParamsWithGoo(): NetworkParameters {
