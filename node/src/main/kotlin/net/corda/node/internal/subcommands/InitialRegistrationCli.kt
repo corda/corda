@@ -4,7 +4,6 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-//import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
@@ -17,7 +16,6 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import picocli.CommandLine
-import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
