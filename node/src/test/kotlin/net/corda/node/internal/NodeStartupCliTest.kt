@@ -69,7 +69,8 @@ class NodeStartupCliTest {
         LoggerFactory.getLogger("").debug("Test message")
         assertTrue(dir.resolve("logs").exists())
         assertFalse(Paths.get("./logs").exists())
-
+    }
+    
     @Test(timeout=300_000)
     fun `--log-to-console and --logging-level are set correctly`() {
         CommandLine.populateCommand(startup, "--log-to-console", "--logging-level=DEBUG")
