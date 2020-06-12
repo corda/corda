@@ -271,9 +271,7 @@ internal class SingleThreadedStateMachineManager(
         ).also {
             if (clientID != null) {
                 // wire up this future to the clientIDsToFlowIds[clientID] future
-                mutex.locked {
-                    clientIDsToFlowIds[clientID]!!.captureLater(it)
-                }
+                mutex.content.clientIDsToFlowIds[clientID]!!.captureLater(it) // TODO: take care of this not checked null
             }
         }
     }
