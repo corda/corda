@@ -37,7 +37,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
                 startNodesInProcess = false,
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList(),
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         )) {
             createSuspendedFlowInBob()
             val cordappsDir = baseDirectory(BOB_NAME) / "cordapps"
