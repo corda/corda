@@ -623,26 +623,29 @@ class SingleThreadedStateMachineManager(
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
 
-        val flowAlreadyExists = mutex.locked { flows[flowId] != null }
-
-        val existingCheckpoint = if (flowAlreadyExists) {
-            // Load the flow's checkpoint
-            // The checkpoint will be missing if the flow failed before persisting the original checkpoint
-            // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
-            checkpointStorage.getCheckpoint(flowId)?.let { serializedCheckpoint ->
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
-                if (checkpoint == null) {
-                    return openFuture<FlowStateMachine<A>>().mapError {
-                        IllegalStateException("Unable to deserialize database checkpoint for flow $flowId. " +
-                                "Something is very wrong. The flow will not retry.")
+        val existingCheckpoint = mutex.locked {
+            val existingFlow = flows[flowId]
+            if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {
+                // Load the flow's checkpoint
+                // The checkpoint will be missing if the flow failed before persisting the original checkpoint
+                // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
+                checkpointStorage.getCheckpoint(flowId)?.let { serializedCheckpoint ->
+                    val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
+                    if (checkpoint == null) {
+                        return openFuture<FlowStateMachine<A>>().mapError {
+                            IllegalStateException(
+                                "Unable to deserialize database checkpoint for flow $flowId. " +
+                                        "Something is very wrong. The flow will not retry."
+                            )
+                        }
+                    } else {
+                        checkpoint
                     }
-                } else {
-                    checkpoint
                 }
+            } else {
+                // This is a brand new flow
+                null
             }
-        } else {
-            // This is a brand new flow
-            null
         }
 
         val flow = flowCreator.createFlowFromLogic(flowId, invocationContext, flowLogic, flowStart, ourIdentity, existingCheckpoint, deduplicationHandler, ourSenderUUID)

@@ -146,6 +146,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         val payload = RejectSessionMessage(message, secureRandom.nextLong())
         val replyError = ExistingSessionMessage(sessionMessage.initiatorSessionId, payload)
 
+        log.info("Sending session initiation error back to $sender", error)
+
         flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
         event.deduplicationHandler.afterDatabaseTransaction()
     }

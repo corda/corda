@@ -385,6 +385,7 @@ class DBCheckpointStorage(
         return session.createQuery(delete).executeUpdate()
     }
 
+    @Throws(SQLException::class)
     override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
