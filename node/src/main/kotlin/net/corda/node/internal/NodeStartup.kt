@@ -62,10 +62,6 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
     companion object {
         const val LOGS_DIRECTORY_NAME = "logs"
     }
-
-
-    @Mixin
-    val cmdLineOptions = SharedNodeCmdLineOptions()
 }
 
 /** Main corda entry point. */
@@ -74,29 +70,15 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     @Mixin
     val cmdLineOptions = NodeCmdLineOptions()
 
-    @CommandLine.Option(names = ["-v", "--verbose", "--log-to-console"],
-            scope = CommandLine.ScopeType.INHERIT,
-            description = ["If set, prints logging to the console as well as to a file."]
-    )
-    var verbose: Boolean = false
-
-    @CommandLine.Option(names = ["--logging-level"],
-            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
-            scope = CommandLine.ScopeType.INHERIT,
-            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
-            converter = [LoggingLevelConverter::class]
-    )
-    var loggingLevel: Level = Level.INFO
-
     private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
     private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
     private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
-    private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
+    private val validateConfigurationCli by lazy { ValidateConfigurationCli(startup) }
 
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory, loggingLevel, verbose)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory, cmdLineOptions.loggingLevel, cmdLineOptions.verbose)
 
-    override fun verbose(): Boolean = verbose
+    override fun verbose(): Boolean = cmdLineOptions.verbose
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -122,7 +104,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
-                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                //initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 initialRegistrationCli.runProgram()
             }
             //deal with legacy flags and redirect to subcommands
@@ -131,22 +113,22 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
                 requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
                 initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
                 initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
-                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                //initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 initialRegistrationCli.runProgram()
             }
             cmdLineOptions.clearNetworkMapCache -> {
                 Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
-                networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
+               // networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 networkCacheCli.runProgram()
             }
             cmdLineOptions.justGenerateNodeInfo -> {
                 Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
-                justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                //justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 justGenerateNodeInfoCli.runProgram()
             }
             cmdLineOptions.justGenerateRpcSslCerts -> {
                 Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-                justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
+              //  justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 justGenerateRpcSslCertsCli.runProgram()
             }
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {

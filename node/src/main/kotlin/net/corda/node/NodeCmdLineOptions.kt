@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
+import net.corda.cliutils.LoggingLevelConverter
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -15,6 +16,8 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
+import org.slf4j.event.Level
+import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -23,14 +26,30 @@ open class SharedNodeCmdLineOptions {
     private companion object {
         private val logger by lazy { loggerFor<SharedNodeCmdLineOptions>() }
     }
+    @CommandLine.Option(names = ["-v", "--verbose", "--log-to-console"],
+            scope = CommandLine.ScopeType.INHERIT,
+            description = ["If set, prints logging to the console as well as to a file."]
+    )
+    var verbose: Boolean = false
+
+    @CommandLine.Option(names = ["--logging-level"],
+            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
+            scope = CommandLine.ScopeType.INHERIT,
+            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
+            converter = [LoggingLevelConverter::class]
+    )
+    var loggingLevel: Level = Level.INFO
+
     @Option(
             names = ["-b", BASE_DIR],
+            scope = CommandLine.ScopeType.INHERIT,
             description = ["The node working directory where all the files are kept."]
     )
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
 
     @Option(
             names = ["-f", "--config-file"],
+            scope = CommandLine.ScopeType.INHERIT,
             description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
     private var _configFile: Path? = null
@@ -38,12 +57,14 @@ open class SharedNodeCmdLineOptions {
 
     @Option(
             names = ["--on-unknown-config-keys"],
+            scope = CommandLine.ScopeType.INHERIT,
             description = ["How to behave on unknown node configuration. \${COMPLETION-CANDIDATES}"]
     )
     var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
 
     @Option(
             names = ["-d", "--dev-mode"],
+            scope = CommandLine.ScopeType.INHERIT,
             description = ["Runs the node in development mode. Unsafe for production."]
     )
     var devMode: Boolean? = null
@@ -59,13 +80,6 @@ open class SharedNodeCmdLineOptions {
         } catch (e: ConfigException) {
             return invalid(e)
         }
-    }
-
-    fun copyFrom(other: SharedNodeCmdLineOptions) {
-        baseDirectory = other.baseDirectory
-        _configFile = other._configFile
-        unknownConfigKeysPolicy= other.unknownConfigKeysPolicy
-        devMode = other.devMode
     }
 
     fun logRawConfigurationErrors(errors: Set<ConfigException>) {
@@ -88,20 +102,6 @@ open class SharedNodeCmdLineOptions {
                 Try setting the --base-directory flag to change which directory the node
                 is looking in, or use the --config-file flag to specify it explicitly.
             """.trimIndent()
-    }
-}
-
-class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
-    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
-        return super.parseConfiguration(configuration).doIfValid { config ->
-            require(!config.devMode || config.devModeOptions?.allowCompatibilityZone == true) {
-                "Cannot perform initial registration when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true."
-            }
-            @Suppress("DEPRECATION")
-            require(config.compatibilityZoneURL != null || config.networkServices != null) {
-                "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
-            }
-        }
     }
 }
 
