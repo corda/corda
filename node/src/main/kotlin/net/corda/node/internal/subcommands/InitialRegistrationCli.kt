@@ -6,8 +6,11 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
-import net.corda.node.internal.*
+import net.corda.node.internal.Node
+import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.NodeStartupLogging
 import net.corda.node.internal.NodeStartupLogging.Companion.logger
+import net.corda.node.internal.RunAfterNodeInitialisation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
@@ -29,8 +32,6 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
         val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
         return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, startup))
     }
-
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = InitialRegistrationCmdLineOptions()
