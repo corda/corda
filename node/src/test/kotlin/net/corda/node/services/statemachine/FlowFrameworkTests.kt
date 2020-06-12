@@ -955,6 +955,12 @@ class FlowFrameworkTests {
             semaphore.acquire()
         }
 
+        val beforeCount = AtomicInteger(0)
+        SingleThreadedStateMachineManager.beforeClientIDCheck = {
+            // Make all threads wait after client id not found on clientIDsToFlowIds
+            beforeCount.incrementAndGet()
+        }
+
         for (i in 0 until requests) {
             threads[i]!!.start()
         }
@@ -968,6 +974,7 @@ class FlowFrameworkTests {
             thread!!.join()
         }
         assertEquals(1, counter.get())
+        assertEquals(2, beforeCount.get())
         assertEquals(10, resultsCounter.get())
     }
 
