@@ -4,7 +4,6 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
-import net.corda.cliutils.LoggingLevelConverter
 import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.common.logging.errorReporting.CordaErrorContextProvider
@@ -38,7 +37,6 @@ import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import org.slf4j.event.Level
-import picocli.CommandLine
 import picocli.CommandLine.Mixin
 import java.io.IOException
 import java.io.RandomAccessFile

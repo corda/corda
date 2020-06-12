@@ -6,13 +6,11 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.ExitCodes
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.utilities.loggerFor
-import net.corda.node.SharedNodeCmdLineOptions
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.NodeStartupCli
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.config.toConfigValue
 import picocli.CommandLine
-import picocli.CommandLine.Mixin
 
 internal class ValidateConfigurationCli (val startup: NodeStartup): CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
     internal companion object {
