@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 
 class ExceptionsErrorCodeFunctionsTest {
 
-    @Test
+    @Test(timeout=3_000)
     fun `error code for message prints out message and full stack trace`() {
         val originalMessage = SimpleMessage("This is a test message")
         var previous: Exception? = null
