@@ -85,10 +85,10 @@ abstract class StatemachineErrorHandlingTest {
 
     internal fun getBytemanOutput(nodeHandle: NodeHandle): List<String> {
         return nodeHandle.baseDirectory
-            .list()
-            .first { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
-            .readAllLines()
-    }
+                .list()
+                .filter { it.toString().contains("net.corda.node.Corda") && it.toString().contains("stdout.log") }
+                .flatMap {  it.readAllLines() }
+     }
 
     @StartableByRPC
     @InitiatingFlow
