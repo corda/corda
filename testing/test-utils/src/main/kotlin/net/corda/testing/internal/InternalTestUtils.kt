@@ -186,9 +186,9 @@ fun configureDatabase(hikariProperties: Properties,
             cacheFactory,
             null,
             allowHibernateToManageAppSchema)
-    persistence.startHikariPool(hikariProperties) { dataSource ->
+    persistence.startHikariPool(hikariProperties) { dataSource, haveCheckpoints ->
         SchemaMigration(dataSource, null, null, ourName)
-                .checkOrUpdate(internalSchemas, runMigrationScripts, dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }, false)
+                .checkOrUpdate(internalSchemas, runMigrationScripts, haveCheckpoints, false)
     }
     return persistence
 }
