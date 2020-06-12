@@ -22,7 +22,6 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.hibernate.annotations.Type
-import sun.plugin.dom.exception.InvalidStateException
 import java.sql.Connection
 import java.sql.SQLException
 import java.time.Clock
@@ -634,7 +633,7 @@ class DBCheckpointStorage(
             when {
                 arguments.size == 2 -> uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
                 arguments.size == 3 -> uncheckedCast<Any?, Array<Any?>>(arguments[2]).toList()
-                else -> throw InvalidStateException("Unexpected argument number provided in rpc call")
+                else -> throw IllegalStateException("Unexpected argument number provided in rpc call")
             }
         } else {
             emptyList()
