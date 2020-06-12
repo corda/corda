@@ -40,6 +40,12 @@ pipeline {
                 sh ".ci/check-api-changes.sh"
             }
         }
+
+        stage('Deploy Nodes') {
+            steps {
+                sh "./gradlew --no-daemon jar deployNodes"
+            }
+        }
     }
 
     post {
