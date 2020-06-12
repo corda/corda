@@ -9,16 +9,13 @@ import liquibase.statement.core.UpdateStatement
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.utilities.contextLogger
-import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 
 class PersistentIdentityMigration : CustomSqlChange {
 
     companion object {
-        private val logger = contextLogger()
-        const val PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE = PersistentIdentityService.HASH_TO_IDENTITY_TABLE_NAME
-        const val X500_NAME_TO_PUB_KEY_HASH_TABLE = PersistentIdentityService.NAME_TO_HASH_TABLE_NAME
+        const val PUB_KEY_HASH_TO_PARTY_AND_CERT_TABLE = "node_identities"
+        const val X500_NAME_TO_PUB_KEY_HASH_TABLE = "node_named_identities"
     }
 
     override fun validate(database: Database?): ValidationErrors? {

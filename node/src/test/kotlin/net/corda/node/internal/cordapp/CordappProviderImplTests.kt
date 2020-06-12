@@ -203,7 +203,7 @@ class CordappProviderImplTests {
             Files.copy(signedJarPath, duplicateJarPath)
             val urls = asList(signedJarPath.toUri().toURL(), duplicateJarPath.toUri().toURL())
             JarScanningCordappLoader.fromJarUrls(urls, VersionInfo.UNKNOWN).use {
-                assertFailsWith<IllegalStateException> {
+                assertFailsWith<DuplicateCordappsInstalledException> {
                     CordappProviderImpl(it, stubConfigProvider, attachmentStore).apply { start() }
                 }
             }

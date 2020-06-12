@@ -77,7 +77,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val messagingServerExternal = config[messagingServerExternal] ?: Defaults.messagingServerExternal(config[messagingServerAddress])
         val database = config[database] ?: Defaults.database(config[devMode])
         val baseDirectoryPath = config[baseDirectory]
-        val cordappDirectories = config[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectoryPath)
+        val cordappDirectories = config[cordappDirectories]?.map { baseDirectoryPath.resolve(it) } ?: Defaults.cordappsDirectories(baseDirectoryPath)
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                     baseDirectory = baseDirectoryPath,
@@ -127,7 +127,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     attachmentContentCacheSizeMegaBytes = config[attachmentContentCacheSizeMegaBytes],
                     h2port = config[h2port],
                     jarDirs = config[jarDirs],
-                    cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
+                    cordappDirectories = cordappDirectories,
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     blacklistedAttachmentSigningKeys = config[blacklistedAttachmentSigningKeys],
                     networkParameterAcceptanceSettings = config[networkParameterAcceptanceSettings],
