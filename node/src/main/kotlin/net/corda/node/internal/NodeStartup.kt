@@ -111,22 +111,18 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
                 requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
                 initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
                 initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
-                //initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 initialRegistrationCli.runProgram()
             }
             cmdLineOptions.clearNetworkMapCache -> {
                 Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
-               // networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 networkCacheCli.runProgram()
             }
             cmdLineOptions.justGenerateNodeInfo -> {
                 Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
-                //justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 justGenerateNodeInfoCli.runProgram()
             }
             cmdLineOptions.justGenerateRpcSslCerts -> {
                 Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-              //  justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 justGenerateRpcSslCertsCli.runProgram()
             }
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
