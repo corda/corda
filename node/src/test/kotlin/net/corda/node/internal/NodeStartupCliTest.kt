@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import net.corda.cliutils.CommonCliConstants
+import net.corda.cliutils.start
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
@@ -31,13 +32,13 @@ class NodeStartupCliTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `no command line arguments`() {
+    @Test(timeout = 300_000)
+    fun `no command line arguments`() {
         CommandLine.populateCommand(startup)
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory)
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "node.conf")
-        Assertions.assertThat(startup.verbose).isEqualTo(false)
-        Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.INFO)
+        Assertions.assertThat(startup.cmdLineOptions.verbose).isEqualTo(false)
+        Assertions.assertThat(startup.cmdLineOptions.loggingLevel).isEqualTo(Level.INFO)
         Assertions.assertThat(startup.cmdLineOptions.noLocalShell).isEqualTo(false)
         Assertions.assertThat(startup.cmdLineOptions.sshdServer).isEqualTo(false)
         Assertions.assertThat(startup.cmdLineOptions.justGenerateNodeInfo).isEqualTo(false)
@@ -49,8 +50,8 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
-    @Test(timeout=300_000)
-	fun `--base-directory`() {
+    @Test(timeout = 300_000)
+    fun `--base-directory`() {
         CommandLine.populateCommand(startup, CommonCliConstants.BASE_DIR, (workingDirectory / "another-base-dir").toString())
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
@@ -62,24 +63,24 @@ class NodeStartupCliTest {
     fun `test logs are written to correct location correctly if verbose flag set`() {
         val node = NodeStartupCli()
         val dir = Files.createTempDirectory("verboseLoggingTest")
-        node.verbose = true
+        node.cmdLineOptions.verbose = true
         // With verbose set, initLogging can accidentally attempt to access a logger before all required system properties are set. This
         // causes the logging config to be parsed too early, resulting in logs being written to the wrong directory
-        node.initLogging(dir, node.loggingLevel, node.verbose)
+        node.initLogging(dir, node.cmdLineOptions.loggingLevel, node.cmdLineOptions.verbose)
         LoggerFactory.getLogger("").debug("Test message")
         assertTrue(dir.resolve("logs").exists())
         assertFalse(Paths.get("./logs").exists())
     }
-    
-    @Test(timeout=300_000)
+
+    @Test(timeout = 300_000)
     fun `--log-to-console and --logging-level are set correctly`() {
         CommandLine.populateCommand(startup, "--log-to-console", "--logging-level=DEBUG")
-        Assertions.assertThat(startup.verbose).isEqualTo(true)
-        Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(startup.cmdLineOptions.verbose).isEqualTo(true)
+        Assertions.assertThat(startup.cmdLineOptions.loggingLevel).isEqualTo(Level.DEBUG)
     }
 
-    @Test(timeout=300_000)
-    fun `assert that order of global options in command line arguments is not enforced`() {
+    @Test(timeout = 300_000)
+    fun `assert that order of global options in command line arguments is not enforced 1`() {
         val nodeCli = NodeStartupCli()
 
         val temporaryFolder = TemporaryFolder()
@@ -90,11 +91,31 @@ class NodeStartupCliTest {
         nodeCli.cmd.parseArgs(
                 "--base-directory", temporaryFolder.root.toPath().toString(),
                 "initial-registration", "--network-root-truststore-password=password",
-                "--logging-level=DEBUG",  "--log-to-console"
+                "--logging-level=DEBUG", "--log-to-console"
         )
 
-        Assertions.assertThat(nodeCli.loggingLevel).isEqualTo(Level.DEBUG)
-        Assertions.assertThat(nodeCli.verbose).isTrue()
+        Assertions.assertThat(nodeCli.cmdLineOptions.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(nodeCli.cmdLineOptions.verbose).isTrue()
+        Assertions.assertThat(nodeCli.cmdLineOptions.baseDirectory.toString()).isEqualTo(temporaryFolder.root.toPath().toString())
+    }
+
+    @Test(timeout = 300_000)
+    fun `assert that order of global options in command line arguments is not enforced 2`() {
+        val nodeCli = NodeStartupCli()
+
+        val temporaryFolder = TemporaryFolder()
+        temporaryFolder.create()
+
+        nodeCli.args = arrayOf()
+
+        nodeCli.cmd.parseArgs(
+                "initial-registration", "--network-root-truststore-password=password",
+                "--logging-level=DEBUG", "--log-to-console",
+                "--base-directory", temporaryFolder.root.toPath().toString()
+        )
+
+        Assertions.assertThat(nodeCli.cmdLineOptions.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(nodeCli.cmdLineOptions.verbose).isTrue()
         Assertions.assertThat(nodeCli.cmdLineOptions.baseDirectory.toString()).isEqualTo(temporaryFolder.root.toPath().toString())
     }
 }

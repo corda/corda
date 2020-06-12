@@ -4,10 +4,11 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.node.InitialRegistrationCmdLineOptions
+//import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.NodeStartupCli
 import net.corda.node.internal.NodeStartupLogging
 import net.corda.node.internal.NodeStartupLogging.Companion.logger
 import net.corda.node.internal.RunAfterNodeInitialisation
@@ -15,6 +16,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationConfiguration
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import picocli.CommandLine
 import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.io.File
@@ -28,13 +30,13 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     @Option(names = ["-p", "--network-root-truststore-password"], description = ["Network root trust store password obtained from network operator."], required = true)
     var networkRootTrustStorePassword: String = ""
 
-    override fun runProgram() : Int {
-        val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
-        return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, startup))
-    }
+    @CommandLine.ParentCommand
+    lateinit var nodeStartupCli: NodeStartupCli
 
-    @Mixin
-    val cmdLineOptions = InitialRegistrationCmdLineOptions()
+    override fun runProgram() : Int {
+        val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: nodeStartupCli.cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
+        return startup.initialiseAndRun(nodeStartupCli.cmdLineOptions, InitialRegistration(nodeStartupCli.cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, startup))
+    }
 }
 
 class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, networkRootTrustStorePassword: String, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
@@ -104,6 +106,14 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
     }
 
     override fun run(node: Node) {
+        require(!node.configuration.devMode || node.configuration.devModeOptions?.allowCompatibilityZone == true) {
+            "Cannot perform initial registration when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true."
+        }
+        @Suppress("DEPRECATION")
+        require(node.configuration.compatibilityZoneURL != null || node.configuration.networkServices != null) {
+            "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
+        }
+
         require(networkRootTrustStorePath.exists()) { "Network root trust store path: '$networkRootTrustStorePath' doesn't exist" }
         if (checkRegistrationMode(baseDirectory)) {
             println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
