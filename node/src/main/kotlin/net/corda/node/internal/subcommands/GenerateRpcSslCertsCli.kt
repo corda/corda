@@ -5,17 +5,22 @@ import net.corda.core.internal.exists
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeCliCommand
 import net.corda.node.internal.NodeStartup
+import net.corda.node.internal.NodeStartupCli
 import net.corda.node.internal.RunAfterNodeInitialisation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
+import picocli.CommandLine
 import java.io.Console
 import kotlin.system.exitProcess
 
 class GenerateRpcSslCertsCli(startup: NodeStartup): NodeCliCommand("generate-rpc-ssl-settings", "Generate the SSL key and trust stores for a secure RPC connection.", startup) {
+    @CommandLine.ParentCommand
+    lateinit var nodeStartupCli: NodeStartupCli
+
     override fun runProgram(): Int {
-        return startup.initialiseAndRun(cmdLineOptions, GenerateRpcSslCerts())
+        return startup.initialiseAndRun(nodeStartupCli.cmdLineOptions, GenerateRpcSslCerts())
     }
 }
 
