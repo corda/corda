@@ -72,7 +72,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
     private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
-    private val validateConfigurationCli by lazy { ValidateConfigurationCli(startup) }
+    private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
     override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory, cmdLineOptions.loggingLevel, cmdLineOptions.verbose)
 
