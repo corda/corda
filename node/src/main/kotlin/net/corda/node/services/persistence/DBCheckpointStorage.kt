@@ -156,10 +156,10 @@ class DBCheckpointStorage(
             if (flowId != other.flowId) return false
             if (!checkpoint.contentEquals(other.checkpoint)) return false
 
-            if (flowStack != null) {
-                if (other.flowStack == null) return false
-                if (flowStack?.contentEquals(other.flowStack ?: EMPTY_BYTE_ARRAY) != true) return false
-            } else if (other.flowStack != null) return false
+            if (!(flowStack ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.flowStack ?: EMPTY_BYTE_ARRAY)) {
+                return false
+            }
+
             if (!hmac.contentEquals(other.hmac)) return false
             if (persistedInstant != other.persistedInstant) return false
 
@@ -244,10 +244,9 @@ class DBCheckpointStorage(
             if (type != other.type) return false
             if (message != other.message) return false
             if (stackTrace != other.stackTrace) return false
-            if (value != null) {
-                if (other.value == null) return false
-                if (!value!!.contentEquals(other.value!!)) return false
-            } else if (other.value != null) return false
+            if (!(value ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.value ?: EMPTY_BYTE_ARRAY)) {
+                return false
+            }
             if (persistedInstant != other.persistedInstant) return false
 
             return true
