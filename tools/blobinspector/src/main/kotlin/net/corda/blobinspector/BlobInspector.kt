@@ -80,7 +80,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             ExitCodes.SUCCESS
         } catch (e: Exception) {
             print("Unexpected exception: ${e.message}")
-            if (verbose) {
+            if (verbose()) {
                 println()
                 e.printStackTrace(System.out)
             }
@@ -109,7 +109,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             }
             require(bytes.size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
             return if (bytes.copyOf(amqpMagic.size).contentEquals(amqpMagic.bytes)) {
-                if (verbose)
+                if (verbose())
                     println("Parsing input as $format")
                 bytes
             } else {
