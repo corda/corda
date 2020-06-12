@@ -1,6 +1,5 @@
 package net.corda.cliutils
 
-import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
@@ -63,45 +62,8 @@ fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
-            Help.Ansi.ON
-        } else {
-            Help.Ansi.AUTO
-        }
-
-        val exceptionHandler = object : DefaultExceptionHandler<List<Any>>() {
-
-            override fun handleParseException(ex: ParameterException?, args: Array<out String>?): List<Any> {
-                super.handleParseException(ex, args)
-                return listOf(ExitCodes.FAILURE)
-            }
-            override fun handleExecutionException(ex: ExecutionException, parseResult: ParseResult?): List<Any> {
-
-                val throwable = ex.cause ?: ex
-                if (this@start.verbose || this@start.subCommands.any { it.verbose }) {
-                    throwable.printStackTrace()
-                }
-                printError(throwable.rootMessage ?: "Use --verbose for more details")
-                return listOf(ExitCodes.FAILURE)
-            }
-        }
-        @Suppress("SpreadOperator")
-        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                exceptionHandler.useErr(System.err).useAnsi(defaultAnsiMode), *args)
-
-
-        // If an error code has been returned, use this and exit
-        results?.firstOrNull()?.let {
-            if (it is Int) {
-                exitProcess(it)
-            } else {
-                exitProcess(ExitCodes.FAILURE)
-            }
-        }
-
-        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
-        exitProcess(ExitCodes.SUCCESS)
-
+    @Suppress("SpreadOperator")
+    exitProcess(cmd.execute(*args))
 }
 
 @Command(mixinStandardHelpOptions = true,
@@ -122,25 +84,14 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     // needs to be parameterless for autocomplete to work.
     lateinit var args: Array<String>
 
-    @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
-    var verbose: Boolean = false
-
-    @Option(names = ["--logging-level"],
-            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
-            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
-            converter = [LoggingLevelConverter::class]
-    )
-    var loggingLevel: Level = Level.INFO
-
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
     open fun initLogging(): Boolean {
-        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
-        if (verbose) {
-            System.setProperty("consoleLogLevel", specifiedLogLevel)
-        }
-        System.setProperty("log-path", Paths.get(".").toString())
-        return true
+        return false;
+    }
+
+    open fun verbose(): Boolean {
+        return false;
     }
 
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
@@ -151,10 +102,6 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         initLogging()
         logger.info("Application Args: ${args.joinToString(" ")}")
         return runProgram()
-    }
-
-    val specifiedLogLevel: String by lazy {
-        System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
     }
 }
 
@@ -183,6 +130,28 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
                 it.args = args
                 subCommand.commandSpec.usageMessage().description(it.description)
                 commandSpec.addSubcommand(it.alias, subCommand)
+            }
+
+            val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
+                Help.Ansi.ON
+            } else {
+                Help.Ansi.AUTO
+            }
+
+            // only print stacktraces if verbose requested by users
+            executionExceptionHandler = IExecutionExceptionHandler { ex: Exception, _: CommandLine, _: ParseResult ->
+                val throwable = ex.cause ?: ex
+                if (verbose()) {
+                    throwable.printStackTrace()
+                }
+
+                ExitCodes.FAILURE
+            }
+
+            // init logging before invoking the business logic
+            executionStrategy = IExecutionStrategy { parseResult: ParseResult ->
+                initLogging()
+                RunLast().useErr(System.err).useOut(System.out).useAnsi(defaultAnsiMode).execute(parseResult)
             }
         }
     }

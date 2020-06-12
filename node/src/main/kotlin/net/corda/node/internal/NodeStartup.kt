@@ -4,6 +4,7 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.LoggingLevelConverter
 import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
 import net.corda.common.logging.errorReporting.CordaErrorContextProvider
@@ -36,6 +37,8 @@ import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
+import org.slf4j.event.Level
+import picocli.CommandLine
 import picocli.CommandLine.Mixin
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -46,6 +49,7 @@ import java.nio.channels.UnresolvedAddressException
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
+import java.util.*
 import java.util.function.Consumer
 
 /** An interface that can be implemented to tell the node what to do once it's intitiated. */
@@ -59,7 +63,6 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
         const val LOGS_DIRECTORY_NAME = "logs"
     }
 
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
     @Mixin
     val cmdLineOptions = SharedNodeCmdLineOptions()
@@ -71,13 +74,29 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     @Mixin
     val cmdLineOptions = NodeCmdLineOptions()
 
+    @CommandLine.Option(names = ["-v", "--verbose", "--log-to-console"],
+            scope = CommandLine.ScopeType.INHERIT,
+            description = ["If set, prints logging to the console as well as to a file."]
+    )
+    var verbose: Boolean = false
+
+    @CommandLine.Option(names = ["--logging-level"],
+            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
+            scope = CommandLine.ScopeType.INHERIT,
+            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
+            converter = [LoggingLevelConverter::class]
+    )
+    var loggingLevel: Level = Level.INFO
+
     private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
     private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
     private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
-    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
+    override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory, loggingLevel, verbose)
+
+    override fun verbose(): Boolean = verbose
 
     override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
@@ -501,7 +520,10 @@ interface NodeStartupLogging {
     }
 }
 
-fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
+fun CliWrapperBase.initLogging(baseDirectory: Path, loggingLevel: Level, verbose: Boolean): Boolean {
+
+    val specifiedLogLevel = System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH)
+
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     if (verbose) {

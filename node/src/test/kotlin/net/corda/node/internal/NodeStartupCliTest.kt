@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions
 import org.junit.BeforeClass
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import org.junit.rules.TemporaryFolder
 import org.slf4j.event.Level
 import picocli.CommandLine
 import java.nio.file.Files
@@ -62,9 +63,35 @@ class NodeStartupCliTest {
         node.verbose = true
         // With verbose set, initLogging can accidentally attempt to access a logger before all required system properties are set. This
         // causes the logging config to be parsed too early, resulting in logs being written to the wrong directory
-        node.initLogging(dir)
+        node.initLogging(dir, node.loggingLevel, node.verbose)
         LoggerFactory.getLogger("").debug("Test message")
         assertTrue(dir.resolve("logs").exists())
         assertFalse(Paths.get("./logs").exists())
+
+    @Test(timeout=300_000)
+    fun `--log-to-console and --logging-level are set correctly`() {
+        CommandLine.populateCommand(startup, "--log-to-console", "--logging-level=DEBUG")
+        Assertions.assertThat(startup.verbose).isEqualTo(true)
+        Assertions.assertThat(startup.loggingLevel).isEqualTo(Level.DEBUG)
+    }
+
+    @Test(timeout=300_000)
+    fun `assert that order of global options in command line arguments is not enforced`() {
+        val nodeCli = NodeStartupCli()
+
+        val temporaryFolder = TemporaryFolder()
+        temporaryFolder.create()
+
+        nodeCli.args = arrayOf()
+
+        nodeCli.cmd.parseArgs(
+                "--base-directory", temporaryFolder.root.toPath().toString(),
+                "initial-registration", "--network-root-truststore-password=password",
+                "--logging-level=DEBUG",  "--log-to-console"
+        )
+
+        Assertions.assertThat(nodeCli.loggingLevel).isEqualTo(Level.DEBUG)
+        Assertions.assertThat(nodeCli.verbose).isTrue()
+        Assertions.assertThat(nodeCli.cmdLineOptions.baseDirectory.toString()).isEqualTo(temporaryFolder.root.toPath().toString())
     }
 }
