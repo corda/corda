@@ -1,0 +1,49 @@
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent { label 'mswin' }
+    options {
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    environment {
+    }
+
+    stages {
+        stage('Unit Tests') {
+            steps {
+                sh "./gradlew --no-daemon " +
+                        "--stacktrace " +
+                        "-Pcompilation.warningsAsErrors=false " +
+                        "-Ptests.failFast=true " +
+                        "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                        "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                        "test"
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                sh "./gradlew --no-daemon " +
+                        "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                        "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                        "integrationTest"
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            junit '**/build/test-results-xml/**/*.xml'
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
