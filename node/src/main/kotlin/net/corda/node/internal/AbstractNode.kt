@@ -1414,7 +1414,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-            databaseConfig,
+            databaseConfig.exportHibernateJMXStatistics,
             schemaService.schemas,
             jdbcUrl,
             cacheFactory,

@@ -88,7 +88,7 @@ fun <T> withoutDatabaseAccess(block: () -> T): T {
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
-        databaseConfig: DatabaseConfig,
+        exportHibernateJMXStatistics: Boolean,
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
@@ -106,7 +106,7 @@ class CordaPersistence(
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
+                HibernateConfiguration(schemas, exportHibernateJMXStatistics, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
             } catch (e: Exception) {
                 when (e) {
                     is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)

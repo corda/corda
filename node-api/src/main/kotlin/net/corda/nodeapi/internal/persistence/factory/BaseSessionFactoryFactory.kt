@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.persistence.factory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.hibernate.SessionFactory
@@ -26,7 +25,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         private val logger = contextLogger()
     }
 
-    open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
+    open fun buildHibernateConfig(metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
                 if (allowHibernateToManageAppSchema) {
                     "update"
@@ -82,7 +81,6 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     final override fun makeSessionFactoryForSchemas(
-            databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
             attributeConverters: Collection<AttributeConverter<*, *>>,
@@ -91,7 +89,7 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val config = buildHibernateConfig(databaseConfig, metadataSources, allowHibernateToMananageAppSchema)
+        val config = buildHibernateConfig(metadataSources, allowHibernateToMananageAppSchema)
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
