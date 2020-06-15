@@ -172,10 +172,10 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
@@ -184,7 +184,7 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.Properties
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -194,6 +194,32 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import javax.sql.DataSource
+import kotlin.collections.ArrayList
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableSet
+import kotlin.collections.Set
+import kotlin.collections.drop
+import kotlin.collections.emptyList
+import kotlin.collections.filterNotNull
+import kotlin.collections.first
+import kotlin.collections.flatMap
+import kotlin.collections.fold
+import kotlin.collections.forEach
+import kotlin.collections.groupBy
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.plusAssign
+import kotlin.collections.reversed
+import kotlin.collections.setOf
+import kotlin.collections.single
+import kotlin.collections.toSet
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -212,9 +238,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val busyNodeLatch: ReusableLatch = ReusableLatch(),
                                djvmBootstrapSource: ApiSource = EmptyApi,
                                djvmCordaSource: UserSource? = null,
-                               protected val allowHibernateToManageAppSchema: Boolean = false) : SingletonSerializeAsToken() {
+                               protected val allowHibernateToManageAppSchema: Boolean = false,
+                               private val allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
+
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<SerializeAsToken>? = mutableListOf(platformClock, this)
 
@@ -472,12 +500,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    open fun runDatabaseMigrationScripts() {
+    open fun runDatabaseMigrationScripts(
+            updateCoreSchemas: Boolean,
+            updateAppSchemas: Boolean,
+            updateAppSchemasWithCheckpoints: Boolean
+    ) {
         check(started == null) { "Node has already been started" }
         Node.printBasicNodeInfo("Running database schema migration scripts ...")
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = true)
+        database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
+            SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                    .checkOrUpdate(schemaService.internalSchemas, updateCoreSchemas, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, updateAppSchemas, !updateAppSchemasWithCheckpoints && haveCheckpoints, false)
+        }
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         if (allowHibernateToManageAppSchema) {
@@ -987,7 +1023,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName, runMigrationScripts = runMigrationScripts)
+        database.startHikariPool(props, metricRegistry) { dataSource, haveCheckpoints ->
+            SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                    .checkOrUpdate(schemaService.internalSchemas, runMigrationScripts, haveCheckpoints, true)
+                    .checkOrUpdate(schemaService.appSchemas, runMigrationScripts, haveCheckpoints && !allowAppSchemaUpgradeWithCheckpoints, false)
+        }
+
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1388,23 +1429,16 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
             allowHibernateToManageAppSchema = allowHibernateToManageAppSchema)
 }
 
-@Suppress("LongParameterList", "ComplexMethod", "ThrowsCount")
+@Suppress("ThrowsCount")
 fun CordaPersistence.startHikariPool(
         hikariProperties: Properties,
-        schemas: Set<MappedSchema>,
         metricRegistry: MetricRegistry? = null,
-        cordappLoader: CordappLoader? = null,
-        currentDir: Path? = null,
-        ourName: CordaX500Name,
-        runMigrationScripts: Boolean = false) {
+        schemaMigration: (DataSource, Boolean) -> Unit) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, cordappLoader, currentDir, ourName)
-        if (runMigrationScripts) {
-            schemaMigration.runMigration(dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L })
-        } else {
-            schemaMigration.checkState()
-        }
+        val haveCheckpoints = dataSource.connection.use { DBCheckpointStorage.getCheckpointCount(it) != 0L }
+
+        schemaMigration(dataSource, haveCheckpoints)
         start(dataSource)
     } catch (ex: Exception) {
         when {
@@ -1416,13 +1450,23 @@ fun CordaPersistence.startHikariPool(
                     "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
-            else ->
+            else -> {
+                LoggerFactory.getLogger("CordaPersistence extension").error("Could not create the DataSource", ex)
                 throw CouldNotCreateDataSourceException(
                         "Could not create the DataSource: ${ex.message}",
                         NodeDatabaseErrors.FAILED_STARTUP,
                         cause = ex)
+            }
         }
     }
+}
+
+fun SchemaMigration.checkOrUpdate(schemas: Set<MappedSchema>, update: Boolean, haveCheckpoints: Boolean, forceThrowOnMissingMigration: Boolean): SchemaMigration {
+    if (update)
+        this.runMigration(haveCheckpoints, schemas, forceThrowOnMissingMigration)
+    else
+        this.checkState(schemas, forceThrowOnMissingMigration)
+    return this
 }
 
 fun clientSslOptionsCompatibleWith(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {

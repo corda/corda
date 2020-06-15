@@ -86,7 +86,7 @@ class NodeStatePersistenceTests {
                 nodeName
             }()
 
-            val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to "false")).getOrThrow()
+            val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
             val result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                 val page = it.proxy.vaultQuery(MessageState::class.java)
                 page.states.singleOrNull()

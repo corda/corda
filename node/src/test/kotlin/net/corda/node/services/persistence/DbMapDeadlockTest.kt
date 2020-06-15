@@ -2,11 +2,13 @@ package net.corda.node.services.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.checkOrUpdate
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.startHikariPool
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -93,7 +95,10 @@ class DbMapDeadlockTest {
         val dbConfig = DatabaseConfig()
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
-            startHikariPool(hikariProperties, schemaService.schemas, ourName = TestIdentity(ALICE_NAME, 70).name, runMigrationScripts = true)
+            startHikariPool(hikariProperties) { dataSource, haveCheckpoints ->
+                SchemaMigration(dataSource, null, null, TestIdentity(ALICE_NAME, 70).name)
+                        .checkOrUpdate(schemaService.schemas, true, haveCheckpoints, false)
+            }
         }.use { persistence ->
 
             // First clean up any remains from previous test runs
