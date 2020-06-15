@@ -293,4 +293,27 @@ class CordaRPCClientReconnectionTest {
                     .isInstanceOf(RPCException::class.java)
         }
     }
+
+    @Test(timeout=300_000)
+    fun `rpc client does not attempt to reconnect after shutdown`() {
+        driver(DriverParameters(cordappsForAllNodes = emptyList())) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                rpcOps.shutdown()
+                // If we get here we know we're not stuck in a reconnect cycle with a node that's been shut down
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
 }

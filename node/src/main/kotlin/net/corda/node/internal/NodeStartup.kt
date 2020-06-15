@@ -339,8 +339,7 @@ open class NodeStartup : NodeStartupLogging {
         if (devMode) return true
 
         if (!certDirectory.isDirectory()) {
-            printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
-            printError("Node will now shutdown.")
+            logger.error("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator. Node will now shutdown")
             return false
         }
         return true
@@ -510,6 +509,7 @@ interface NodeStartupLogging {
 
 fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
+    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
@@ -532,7 +532,6 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
         return false
     }
 
-    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
     return true
