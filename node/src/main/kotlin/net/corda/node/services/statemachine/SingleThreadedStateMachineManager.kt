@@ -19,6 +19,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
@@ -250,11 +251,23 @@ internal class SingleThreadedStateMachineManager(
         val clientID = context.clientID
         if (clientID != null) {
             mutex.locked {
-                clientIDsToFlowIds[clientID]?.let {
-                    // if clientID exists in clientIDsToFlowIds then the flow is already thrown in the system,
-                    // therefore just return its future here and don't go any further down
-                    return@startFlow it as CordaFuture<FlowStateMachine<A>>
-                } ?: clientIDsToFlowIds.putIfAbsent(clientID, openFuture())
+                clientIDsToFlowIds[clientID]?.let { flowWithClientIdStatus ->
+                    // if clientID exists in clientIDsToFlowIds then the flow is already present in the system, just return its future here and don't go any further down
+                    val future =
+                        when (flowWithClientIdStatus) {
+                            is FlowWithClientIdStatus.Active -> flowWithClientIdStatus.flowStateMachineFuture
+                            is FlowWithClientIdStatus.Removed -> {
+                                doneFuture(object : FlowStateMachineHandle<A> {
+                                    override val logic: Nothing? = null
+                                    override val id: StateMachineRunId = flowWithClientIdStatus.flowId
+                                    // The following future will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
+                                    override val resultFuture: CordaFuture<A> = doneFuture(5) as CordaFuture<A>
+                                    override val clientID: String? = clientID
+                                })
+                            }
+                        }
+                    return@startFlow future as CordaFuture<FlowStateMachine<A>>
+                } ?: clientIDsToFlowIds.putIfAbsent(clientID, FlowWithClientIdStatus.Active(openFuture()))
             }
 
             // (testing) client id exists but is not present in the map
@@ -271,7 +284,9 @@ internal class SingleThreadedStateMachineManager(
         ).also {
             if (clientID != null) {
                 // wire up this future to the clientIDsToFlowIds[clientID] future
-                mutex.content.clientIDsToFlowIds[clientID]!!.captureLater(it) // TODO: take care of this not checked null
+                val active = mutex.content.clientIDsToFlowIds[clientID] as? FlowWithClientIdStatus.Active
+                active?.flowStateMachineFuture?.captureLater(it)
+                    ?: throw java.lang.IllegalStateException("Flow's $flowId client id mapping is in an inconsistent state")
             }
         }
     }
@@ -767,6 +782,11 @@ internal class SingleThreadedStateMachineManager(
         require(lastState.checkpoint.checkpointState.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
         flow.resultFuture.set(removalReason.flowReturnValue)
+        flow.fiber.clientID?.let {
+            val oldClientIdFlowStatus = clientIDsToFlowIds[it]
+            require (oldClientIdFlowStatus != null && oldClientIdFlowStatus is FlowWithClientIdStatus.Active)
+            clientIDsToFlowIds[it] = FlowWithClientIdStatus.Removed(flow.fiber.id, FlowWithClientIdStatus.Removed.Status.SUCCEEDED)
+        }
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
     }
@@ -784,6 +804,11 @@ internal class SingleThreadedStateMachineManager(
         lastState.flowLogic.progressTracker?.endWithError(exception)
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
+        flow.fiber.clientID?.let {
+            val oldClientIdFlowStatus = clientIDsToFlowIds[it]
+            require (oldClientIdFlowStatus != null && oldClientIdFlowStatus is FlowWithClientIdStatus.Active)
+            clientIDsToFlowIds[it] = FlowWithClientIdStatus.Removed(flow.fiber.id, FlowWithClientIdStatus.Removed.Status.FAILED)
+        }
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }
 
