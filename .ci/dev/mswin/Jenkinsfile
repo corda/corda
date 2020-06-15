@@ -18,7 +18,7 @@ pipeline {
                         "--stacktrace " +
                         "-Pcompilation.warningsAsErrors=false " +
                         "-Ptests.failFast=true " +
-                        "test"
+                        "clean test"
             }
         }
 
@@ -32,11 +32,11 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
+            junit testResults: '**/build/test-results/**/*.xml', allowEmptyResults: true
         }
-        cleanup {
-            deleteDir() /* clean up our workspace */
-        }
+//         cleanup {
+//             deleteDir() /* clean up our workspace */
+//         }
     }
 }
