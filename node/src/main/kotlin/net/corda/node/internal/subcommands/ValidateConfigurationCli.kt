@@ -11,7 +11,7 @@ import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.config.toConfigValue
 import picocli.CommandLine
 
-internal class ValidateConfigurationCli (): CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
+internal class ValidateConfigurationCli: CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
     internal companion object {
         private val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 

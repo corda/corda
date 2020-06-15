@@ -102,7 +102,6 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
-                //initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
                 initialRegistrationCli.runProgram()
             }
             //deal with legacy flags and redirect to subcommands
