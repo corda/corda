@@ -911,6 +911,7 @@ class FlowFrameworkTests {
         assertEquals(result0, result1)
     }
 
+    @Ignore // this is to be unignored upon implementing CORDA-3681
     @Test
     fun `flow's exception is available after flow's lifetime if flow is started with a client id`() {
         ResultFlow.hook = { throw IllegalStateException() }
