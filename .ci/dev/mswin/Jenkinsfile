@@ -11,9 +11,6 @@ pipeline {
         timeout(time: 3, unit: 'HOURS')
     }
 
-    environment {
-    }
-
     stages {
         stage('Unit Tests') {
             steps {
