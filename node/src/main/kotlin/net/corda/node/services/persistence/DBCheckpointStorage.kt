@@ -66,6 +66,7 @@ class DBCheckpointStorage : CheckpointStorage {
         return session.createQuery(delete).executeUpdate() > 0
     }
 
+    @Throws(SQLException::class)
     override fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>? {
         val bytes = currentDBSession().get(DBCheckpoint::class.java, id.uuid.toString())?.checkpoint ?: return null
         return SerializedBytes(bytes)
