@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
 import net.corda.nodeapi.internal.persistence.SchemaMigration
-import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
