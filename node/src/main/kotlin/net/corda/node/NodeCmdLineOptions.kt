@@ -36,9 +36,9 @@ open class SharedNodeCmdLineOptions {
     private var _configFile: Path? = null
     val configFile: Path get() {
         return when  {
-            _configFile == null -> baseDirectory / "node.conf"
-            _configFile!!.isAbsolute -> _configFile
-            else -> baseDirectory / _configFile!!.toRealPath().toString()
+                _configFile == null -> baseDirectory / "node.conf"
+                _configFile!!.isAbsolute -> _configFile
+                else -> baseDirectory / _configFile.toString()
         } as Path
     }
 
