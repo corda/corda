@@ -14,16 +14,14 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.core.config.Configurator
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Semaphore
 import kotlin.test.assertEquals
@@ -34,11 +32,6 @@ class FlowIsKilledTest {
 
     private companion object {
         const val EXCEPTION_MESSAGE = "Goodbye, cruel world!"
-    }
-
-    @Before
-    fun setup() {
-        Configurator.setLevel("net.corda.node.services.statemachine", Level.DEBUG)
     }
 
     @Test(timeout = 300_000)
@@ -82,10 +75,9 @@ class FlowIsKilledTest {
                 assertEquals(11, AFlowThatWantsToDieAndKillsItsFriends.position)
                 assertTrue(AFlowThatWantsToDieAndKillsItsFriendsResponder.receivedKilledExceptions[BOB_NAME]!!)
                 assertTrue(AFlowThatWantsToDieAndKillsItsFriendsResponder.receivedKilledExceptions[CHARLIE_NAME]!!)
-                val aliceCheckpoints = alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
-                assertEquals(1, aliceCheckpoints)
-                val bobCheckpoints = bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
-                assertEquals(1, bobCheckpoints)
+                assertEquals(1, alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                assertEquals(2, bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                assertEquals(1, bob.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
             }
         }
     }
@@ -111,17 +103,15 @@ class FlowIsKilledTest {
             assertFailsWith<UnexpectedFlowEndException> {
                 handle.returnValue.getOrThrow(1.minutes)
             }
-            assertTrue(AFlowThatGetsMurderedByItsFriend.receivedKilledException)
             assertEquals(11, AFlowThatGetsMurderedByItsFriendResponder.position)
-            val aliceCheckpoints = alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
-            assertEquals(1, aliceCheckpoints)
-            val bobCheckpoints = bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
-            assertEquals(1, bobCheckpoints)
+            assertEquals(2, alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+            assertEquals(1, alice.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+            assertEquals(1, bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
         }
     }
 
     @Test(timeout = 300_000)
-    fun `manually handle killed flows using checkForIsNotKilled`() {
+    fun `manually handle killed flows using checkFlowIsNotKilled`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
@@ -140,7 +130,7 @@ class FlowIsKilledTest {
     }
 
     @Test(timeout = 300_000)
-    fun `manually handle killed flows using checkForIsNotKilled with lazy message`() {
+    fun `manually handle killed flows using checkFlowIsNotKilled with lazy message`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
@@ -192,6 +182,7 @@ class FlowIsKilledTest {
         companion object {
             val lockA = Semaphore(0)
             val lockB = Semaphore(0)
+            var isKilled = false
             var position = 0
         }
 
@@ -208,6 +199,7 @@ class FlowIsKilledTest {
                 position = i
                 logger.info("i = $i")
                 if (isKilled) {
+                    AFlowThatWantsToDieAndKillsItsFriends.isKilled = true
                     throw KilledFlowException(runId, EXCEPTION_MESSAGE)
                 }
 
@@ -244,6 +236,9 @@ class FlowIsKilledTest {
             } catch (e: UnexpectedFlowEndException) {
                 receivedKilledExceptions[ourIdentity.name] = true
                 locks[ourIdentity.name]!!.release()
+                require(AFlowThatWantsToDieAndKillsItsFriends.isKilled) {
+                    "The initiator must be killed when this exception is received"
+                }
                 throw e
             }
         }
@@ -253,19 +248,16 @@ class FlowIsKilledTest {
     @InitiatingFlow
     class AFlowThatGetsMurderedByItsFriend(private val party: Party) : FlowLogic<Unit>() {
 
-        companion object {
-            var receivedKilledException = false
-        }
-
         @Suspendable
         override fun call() {
             val sessionOne = initiateFlow(party)
-            // trigger sessions with 2 counter parties
-            sessionOne.sendAndReceive<String>("what is up")
             try {
+                sessionOne.sendAndReceive<String>("what is up")
                 sessionOne.receive<String>()
             } catch (e: UnexpectedFlowEndException) {
-                receivedKilledException = true
+                require(AFlowThatGetsMurderedByItsFriendResponder.isKilled) {
+                    "The responder must be killed when this exception is received"
+                }
                 throw e
             }
         }
@@ -277,6 +269,7 @@ class FlowIsKilledTest {
         companion object {
             val lockA = Semaphore(0)
             val lockB = Semaphore(0)
+            var isKilled = false
             var flowId: StateMachineRunId? = null
             var position = 0
         }
@@ -289,6 +282,7 @@ class FlowIsKilledTest {
             for (i in 0..100) {
                 position = i
                 if (isKilled) {
+                    AFlowThatGetsMurderedByItsFriendResponder.isKilled = true
                     throw KilledFlowException(runId, EXCEPTION_MESSAGE)
                 }
 
@@ -359,6 +353,20 @@ class FlowIsKilledTest {
                     rs.getLong(1)
                 }
             }
+        }
+    }
+
+    @StartableByRPC
+    class GetNumberOfFailedCheckpointsFlow : FlowLogic<Long>() {
+        override fun call(): Long {
+            return serviceHub.jdbcSession()
+                .prepareStatement("select count(*) from node_checkpoints where status = ${Checkpoint.FlowStatus.FAILED.ordinal}")
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
+                }
         }
     }
 }

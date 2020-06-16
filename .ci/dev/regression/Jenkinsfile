@@ -15,7 +15,7 @@ pipeline {
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
+        stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -23,7 +23,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean pushBuildImage --stacktrace"
+                            " clean preAllocateForParallelRegressionTest preAllocateForAllSlowIntegrationTest pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -55,36 +55,6 @@ pipeline {
                                 "-Dgit.branch=\"\${GIT_BRANCH}\" " +
                                 "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
                                 " allParallelSlowIntegrationTest --stacktrace"
-                    }
-                }
-
-                stage('Generate sonarqube report') {
-                    steps {
-                        script {
-                            try {
-                                // running this step here is the only way to not majorly affect the distributed test plugin,
-                                // as now that neither returns build files nor runs jacoco reports
-                                sh "./gradlew --no-daemon build jacocoRootReport --stacktrace"
-                                withSonarQubeEnv('sq01') {
-                                    sh "./gradlew --no-daemon sonarqube -x test --stacktrace"
-                                }
-                                timeout(time: 3, unit: 'MINUTES') {
-                                    script {
-                                       try {
-                                            def qg = waitForQualityGate();
-                                            if (qg.status != 'OK') {
-                                                error "Pipeline aborted due to quality gate failure: ${qg.status}"
-                                            }
-                                        } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
-                                            println('No sonarqube webhook response within timeout. Please check the webhook configuration in sonarqube.')
-                                            // continue the pipeline
-                                        }
-                                    }
-                                }
-                            } catch (err) {
-                                println('Error while trying to execute sonarqube analysis, will be skipped.')
-                            }
-                        }
                     }
                 }
             }

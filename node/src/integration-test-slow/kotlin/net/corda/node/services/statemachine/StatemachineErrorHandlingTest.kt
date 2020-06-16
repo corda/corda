@@ -110,9 +110,23 @@ abstract class StatemachineErrorHandlingTest {
     }
 
     @StartableByRPC
-    class GetNumberOfCheckpointsFlow : FlowLogic<Long>() {
+    class GetNumberOfUncompletedCheckpointsFlow : FlowLogic<Long>() {
         override fun call(): Long {
-            return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints").use { ps ->
+            val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        }
+    }
+
+    @StartableByRPC
+    class GetNumberOfHospitalizedCheckpointsFlow : FlowLogic<Long>() {
+        override fun call(): Long {
+            val sqlStatement = "select count(*) from node_checkpoints where status in (${Checkpoint.FlowStatus.HOSPITALIZED.ordinal})"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
                 ps.executeQuery().use { rs ->
                     rs.next()
                     rs.getLong(1)

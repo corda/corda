@@ -37,7 +37,7 @@ public class CordaCaplet extends Capsule {
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
-            Config defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions);
+            Config defaultConfig = ConfigFactory.parseResources("corda-reference.conf", parseOptions);
             Config baseDirectoryConfig = ConfigFactory.parseMap(Collections.singletonMap("baseDirectory", baseDir));
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();

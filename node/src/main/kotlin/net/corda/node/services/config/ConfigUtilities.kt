@@ -42,7 +42,7 @@ object ConfigHelper {
                    allowMissingConfig: Boolean = false,
                    configOverrides: Config = ConfigFactory.empty()): Config {
         val parseOptions = ConfigParseOptions.defaults()
-        val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
+        val defaultConfig = ConfigFactory.parseResources("corda-reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
 
         // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.

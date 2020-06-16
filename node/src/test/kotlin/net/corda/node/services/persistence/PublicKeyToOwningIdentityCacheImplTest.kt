@@ -114,9 +114,9 @@ class PublicKeyToOwningIdentityCacheImplTest {
     }
 
     @Test(timeout=300_000)
-	fun `requesting a key unknown to the node returns null`() {
+	fun `requesting a key unknown to the node returns unmapped identity`() {
         val keys = generateKeyPair()
-        assertEquals(null, testCache[keys.public])
+        assertEquals(KeyOwningIdentity.UnmappedIdentity, testCache[keys.public])
     }
 
     @Test(timeout=300_000)

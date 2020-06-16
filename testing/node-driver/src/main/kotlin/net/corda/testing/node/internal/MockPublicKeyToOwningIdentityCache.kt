@@ -13,8 +13,8 @@ class MockPublicKeyToOwningIdentityCache : WritablePublicKeyToOwningIdentityCach
 
     private val cache: MutableMap<PublicKey, KeyOwningIdentity> = mutableMapOf<PublicKey, KeyOwningIdentity>().toSynchronised()
 
-    override fun get(key: PublicKey): KeyOwningIdentity? {
-        return cache[key]
+    override fun get(key: PublicKey): KeyOwningIdentity {
+        return cache[key] ?: KeyOwningIdentity.UnmappedIdentity
     }
 
     override fun set(key: PublicKey, value: KeyOwningIdentity) {

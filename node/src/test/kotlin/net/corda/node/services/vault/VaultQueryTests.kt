@@ -250,6 +250,27 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test(timeout=300_000)
+    fun `returns zero states when exact participants list is empty`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP))
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP))
+
+            val criteria = VaultQueryCriteria(exactParticipants = emptyList())
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(0)
+
+            val criteriaWithOneExactParticipant = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP))
+            val resultsWithOneExactParticipant = vaultService.queryBy<ContractState>(criteriaWithOneExactParticipant)
+            assertThat(resultsWithOneExactParticipant.states).hasSize(1)
+
+            val criteriaWithMoreExactParticipants = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP, BIG_CORP))
+            val resultsWithMoreExactParticipants = vaultService.queryBy<ContractState>(criteriaWithMoreExactParticipants)
+            assertThat(resultsWithMoreExactParticipants.states).hasSize(1)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
@@ -478,6 +499,40 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             }
 
             assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+    
+    @Test(timeout=300_000)
+    fun `query with sort criteria and pagination on large volume of states should complete in time`() {
+        val numberOfStates = 1000
+        val pageSize = 1000
+
+        for (i in 1..50) {
+            database.transaction {
+                vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+            }
+        }
+
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+
+            val start = System.currentTimeMillis()
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            val elapsed = System.currentTimeMillis() - start
+            assertThat(elapsed).isLessThan(1000)
         }
     }
 

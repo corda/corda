@@ -11,7 +11,7 @@ interface PublicKeyToOwningIdentityCache {
     /**
      * Obtain the owning identity for a public key.
      *
-     * If the key is unknown to the node, then this will return null.
+     * If the key is unknown to the node, then this will return [KeyOwningIdentity.UnmappedIdentity].
      */
-    operator fun get(key: PublicKey): KeyOwningIdentity?
+    operator fun get(key: PublicKey): KeyOwningIdentity
 }
