@@ -63,7 +63,7 @@ open class NodeBuilder {
 fun Config.parseAsNodeConfigWithFallback(preCopyConfig: Config): Validated<NodeConfiguration, Configuration.Validation.Error> {
     val nodeConfig = this
             .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(""))
-            .withFallback(ConfigFactory.parseResources("reference.conf"))
+            .withFallback(ConfigFactory.parseResources("corda-reference.conf"))
             .withFallback(preCopyConfig)
             .resolve()
     return nodeConfig.parseAsNodeConfiguration()

@@ -51,7 +51,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     applicationSource = files(
         nodeProject.configurations.runtimeClasspath,
         nodeProject.tasks.jar,
-        nodeProject.buildDir.toString() + '/resources/main/reference.conf',
+        nodeProject.buildDir.toString() + '/resources/main/corda-reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
