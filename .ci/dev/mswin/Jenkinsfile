@@ -9,7 +9,6 @@
  * unfinished builds are not required.
  * This feature doesn't play well with disableConcurrentBuilds() option
  */
-import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -20,7 +19,11 @@ pipeline {
     options {
         ansiColor('xterm')
         timestamps()
-        timeout(time: 3, unit: 'HOURS')
+        timeout(time: 4, unit: 'HOURS')
+    }
+
+    triggers {
+      pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
     }
 
     stages {
