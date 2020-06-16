@@ -7,6 +7,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 pipeline {
     agent { label 'mswin' }
     options {
+        ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
     }
@@ -35,8 +36,8 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
             junit testResults: '**/build/test-results/**/*.xml', allowEmptyResults: true
         }
-//         cleanup {
-//             deleteDir() /* clean up our workspace */
-//         }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
     }
 }
