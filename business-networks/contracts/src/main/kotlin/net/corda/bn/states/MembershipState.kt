@@ -1,6 +1,8 @@
 package net.corda.bn.states
 
+import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.schemas.MembershipStateSchemaV1
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
@@ -19,6 +21,7 @@ import java.time.Instant
  * @property issued Timestamp when the state has been issued.
  * @property modified Timestamp when the state has been modified last time.
  */
+@BelongsToContract(MembershipContract::class)
 data class MembershipState(
         val identity: Party,
         val networkId: String,
