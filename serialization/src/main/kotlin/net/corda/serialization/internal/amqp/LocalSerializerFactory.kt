@@ -7,7 +7,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.*
 import net.corda.serialization.internal.model.TypeIdentifier.*
-import net.corda.serialization.internal.model.TypeIdentifier.Companion.classLoaderFor
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -161,7 +160,7 @@ class DefaultLocalSerializerFactory(
             val declaredGenericType = if (declaredType !is ParameterizedType
                     && localTypeInformation.typeIdentifier is Parameterised
                     && declaredClass != Class::class.java) {
-                localTypeInformation.typeIdentifier.getLocalType(classLoaderFor(declaredClass))
+                localTypeInformation.typeIdentifier.getLocalType(classloader)
             } else {
                 declaredType
             }

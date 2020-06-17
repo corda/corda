@@ -45,12 +45,12 @@ sealed class TypeIdentifier {
      * Obtain a nicely-formatted representation of the identified type, for help with debugging.
      */
     fun prettyPrint(simplifyClassNames: Boolean = true): String = when(this) {
-            is TypeIdentifier.UnknownType -> "?"
-            is TypeIdentifier.TopType -> "*"
-            is TypeIdentifier.Unparameterised -> name.simplifyClassNameIfRequired(simplifyClassNames)
-            is TypeIdentifier.Erased -> "${name.simplifyClassNameIfRequired(simplifyClassNames)} (erased)"
-            is TypeIdentifier.ArrayOf -> "${componentType.prettyPrint(simplifyClassNames)}[]"
-            is TypeIdentifier.Parameterised ->
+            is UnknownType -> "?"
+            is TopType -> "*"
+            is Unparameterised -> name.simplifyClassNameIfRequired(simplifyClassNames)
+            is Erased -> "${name.simplifyClassNameIfRequired(simplifyClassNames)} (erased)"
+            is ArrayOf -> "${componentType.prettyPrint(simplifyClassNames)}[]"
+            is Parameterised ->
                 name.simplifyClassNameIfRequired(simplifyClassNames) + parameters.joinToString(", ", "<", ">") {
                     it.prettyPrint(simplifyClassNames)
                 }
@@ -62,8 +62,6 @@ sealed class TypeIdentifier {
     companion object {
         // This method has locking.  So we memo the value here.
         private val systemClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()
-
-        fun classLoaderFor(clazz: Class<*>): ClassLoader = clazz.classLoader ?: systemClassLoader
 
         /**
          * Obtain the [TypeIdentifier] for an erased Java class.
@@ -81,7 +79,7 @@ sealed class TypeIdentifier {
          * Obtain the [TypeIdentifier] for a Java [Type] (typically obtained by calling one of
          * [java.lang.reflect.Parameter.getAnnotatedType],
          * [java.lang.reflect.Field.getGenericType] or
-         * [java.lang.reflect.Method.getGenericReturnType]). Wildcard types and type variables are converted to [Unknown].
+         * [java.lang.reflect.Method.getGenericReturnType]). Wildcard types and type variables are converted to [UnknownType].
          *
          * @param type The [Type] to obtain a [TypeIdentifier] for.
          * @param resolutionContext Optionally, a [Type] which can be used to resolve type variables, for example a
@@ -273,5 +271,5 @@ private class ReconstitutedParameterizedType(
                     other.ownerType == ownerType &&
                     Arrays.equals(other.actualTypeArguments, actualTypeArguments)
     override fun hashCode(): Int =
-            Arrays.hashCode(actualTypeArguments) xor Objects.hashCode(ownerType) xor Objects.hashCode(rawType)
+            actualTypeArguments.contentHashCode() xor Objects.hashCode(ownerType) xor Objects.hashCode(rawType)
 }

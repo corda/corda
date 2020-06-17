@@ -103,7 +103,7 @@ object SerializerFactoryBuilder {
                         customSerializerRegistry))
 
         val fingerPrinter = overrideFingerPrinter ?:
-            TypeModellingFingerPrinter(customSerializerRegistry)
+            TypeModellingFingerPrinter(customSerializerRegistry, classCarpenter.classloader)
 
         val localSerializerFactory = DefaultLocalSerializerFactory(
                 whitelist,
