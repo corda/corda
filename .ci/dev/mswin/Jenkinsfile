@@ -34,7 +34,7 @@ pipeline {
         pollSCM ignorePostCommitHooks: isReleaseBranch, scmpoll_spec: '@midnight'
     }
 
-    stages {
+//    stages {
 //        stage('Unit Tests') {
 //            steps {
 //                sh "./gradlew --no-daemon " +
@@ -51,7 +51,7 @@ pipeline {
 //                        "integrationTest"
 //            }
 //        }
-    }
+//    }
 
     post {
         always {
