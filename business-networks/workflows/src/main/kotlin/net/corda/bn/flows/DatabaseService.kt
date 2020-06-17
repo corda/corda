@@ -12,9 +12,22 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.serialization.SingletonSerializeAsToken
 
+/**
+ * Service which handles all Business Network related vault queries.
+ *
+ * Each method querying vault for Business Network information must be included here.
+ */
 @CordaService
 class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAsToken() {
 
+    /**
+     * Queries for all the membership states inside Business Network with [networkId] with one of [statuses].
+     *
+     * @param networkId ID of the Business Network.
+     * @param statuses [MembershipStatus] of the memberships to be fetched.
+     *
+     * @return List of state and ref pairs of memberships matching the query.
+     */
     fun getAllMembershipsWithStatus(networkId: String, vararg statuses: MembershipStatus): List<StateAndRef<MembershipState>> {
         val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
                 .and(networkIdCriteria(networkId))
