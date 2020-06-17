@@ -1,5 +1,6 @@
 package net.corda.bn.flows
 
+import net.corda.bn.flows.extensions.BNMemberAuth
 import net.corda.bn.schemas.MembershipStateSchemaV1
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
