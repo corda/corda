@@ -37,20 +37,19 @@ pipeline {
     stages {
         stage('Unit Tests') {
             steps {
-                echo 'Unit Tests'
-//                sh "./gradlew --no-daemon " +
-//                        "--stacktrace " +
-//                        "-Pcompilation.warningsAsErrors=false " +
-//                        "-Ptests.failFast=true " +
-//                        "clean test"
+                sh "./gradlew --no-daemon " +
+                        "--stacktrace " +
+                        "-Pcompilation.warningsAsErrors=false " +
+                        "-Ptests.failFast=true " +
+                        "clean test"
             }
         }
 
         stage('Integration Tests') {
             steps {
                 echo 'Integration Tests'
-//                sh "./gradlew --no-daemon " +
-//                        "integrationTest"
+                sh "./gradlew --no-daemon " +
+                        "integrationTest"
             }
         }
     }
