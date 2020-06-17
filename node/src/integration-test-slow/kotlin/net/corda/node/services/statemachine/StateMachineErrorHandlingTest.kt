@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -23,6 +24,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
@@ -30,8 +32,11 @@ import net.corda.testing.node.internal.InternalDriverDSL
 import org.jboss.byteman.agent.submit.ScriptText
 import org.jboss.byteman.agent.submit.Submit
 import org.junit.Before
+import java.sql.SQLTransientConnectionException
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
-abstract class StatemachineErrorHandlingTest {
+abstract class StateMachineErrorHandlingTest {
 
     val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     var counter = 0
@@ -90,6 +95,13 @@ abstract class StatemachineErrorHandlingTest {
             .readAllLines()
     }
 
+    internal fun OutOfProcessImpl.stop(timeout: Duration): Boolean {
+        return process.run {
+            destroy()
+            waitFor(timeout.seconds, TimeUnit.SECONDS)
+        }.also { onStopCallback() }
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class SendAMessageFlow(private val party: Party) : FlowLogic<String>() {
@@ -97,6 +109,7 @@ abstract class StatemachineErrorHandlingTest {
         override fun call(): String {
             val session = initiateFlow(party)
             session.send("hello there")
+            logger.info("Finished my flow")
             return "Finished executing test flow - ${this.runId}"
         }
     }
@@ -106,6 +119,35 @@ abstract class StatemachineErrorHandlingTest {
         @Suspendable
         override fun call() {
             session.receive<String>().unwrap { it }
+            logger.info("Finished my flow")
+        }
+    }
+
+    @StartableByRPC
+    class ThrowAnErrorFlow : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            throwException()
+            return "cant get here"
+        }
+
+        private fun throwException() {
+            logger.info("Throwing exception in flow")
+            throw IllegalStateException("throwing exception in flow")
+        }
+    }
+
+    @StartableByRPC
+    class ThrowAHospitalizeErrorFlow : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            throwException()
+            return "cant get here"
+        }
+
+        private fun throwException() {
+            logger.info("Throwing exception in flow")
+            throw HospitalizeFlowException("throwing exception in flow")
         }
     }
 
@@ -135,24 +177,65 @@ abstract class StatemachineErrorHandlingTest {
         }
     }
 
+    @StartableByRPC
+    class GetNumberOfFailedCheckpointsFlow : FlowLogic<Long>() {
+        override fun call(): Long {
+            val sqlStatement = "select count(*) from node_checkpoints where status in (${Checkpoint.FlowStatus.FAILED.ordinal})"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        }
+    }
+
+    @StartableByRPC
+    class GetNumberOfRunnableCheckpointsFlow : FlowLogic<Long>() {
+        override fun call(): Long {
+            val sqlStatement = "select count(*) from node_checkpoints where status in (${Checkpoint.FlowStatus.RUNNABLE.ordinal})"
+            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        }
+    }
+
     // Internal use for testing only!!
     @StartableByRPC
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
         override fun call(): HospitalCounts =
             HospitalCounts(
                 serviceHub.cordaService(HospitalCounter::class.java).dischargeCounter,
-                serviceHub.cordaService(HospitalCounter::class.java).observationCounter
+                serviceHub.cordaService(HospitalCounter::class.java).observationCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).propagatedCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).dischargeRetryCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).observationRetryCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).propagatedRetryCounter
             )
     }
 
     @CordaSerializable
-    data class HospitalCounts(val discharge: Int, val observation: Int)
+    data class HospitalCounts(
+        val discharge: Int,
+        val observation: Int,
+        val propagated: Int,
+        val dischargeRetry: Int,
+        val observationRetry: Int,
+        val propagatedRetry: Int
+    )
 
     @Suppress("UNUSED_PARAMETER")
     @CordaService
     class HospitalCounter(services: AppServiceHub) : SingletonSerializeAsToken() {
-        var observationCounter: Int = 0
         var dischargeCounter: Int = 0
+        var observationCounter: Int = 0
+        var propagatedCounter: Int = 0
+        var dischargeRetryCounter: Int = 0
+        var observationRetryCounter: Int = 0
+        var propagatedRetryCounter: Int = 0
 
         init {
             StaffedFlowHospital.onFlowDischarged.add { _, _ ->
@@ -160,6 +243,16 @@ abstract class StatemachineErrorHandlingTest {
             }
             StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
                 ++observationCounter
+            }
+            StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+                ++propagatedCounter
+            }
+            StaffedFlowHospital.onFlowKeptForIntensiveCare.add { _, _, outcome ->
+                when (outcome) {
+                    StaffedFlowHospital.Outcome.DISCHARGE -> dischargeRetryCounter++
+                    StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION -> observationRetryCounter++
+                    StaffedFlowHospital.Outcome.UNTREATABLE -> propagatedRetryCounter++
+                }
             }
         }
     }
