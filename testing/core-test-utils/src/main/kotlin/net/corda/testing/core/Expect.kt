@@ -179,7 +179,7 @@ fun <S, E : Any> S.genericExpectEvents(
             // Now run the matching piece of dsl
             try {
                 expectClosure()
-            } catch (exception: Exception) {
+            } catch (exception: Throwable) {
                 finishFuture.setException(exception)
             }
             if (state is ExpectComposeState.Finished) {
