@@ -329,7 +329,7 @@ class NodeRegistrationConfiguration(
                 // exists. Just having the validation here prevents any new notaries from being created with the legacy identity scheme
                 // but still allows drop in JAR replacements for old notaries.
                 requireNotNull(it.serviceLegalName) {
-                    "The notary service legal name must be provided"
+                    "The notary service legal name must be provided via the 'notary.serviceLegalName' configuration parameter"
                 }
                 require(it.serviceLegalName != config.myLegalName) {
                     "The notary service legal name must be different from the node legal name"
