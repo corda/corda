@@ -34,24 +34,26 @@ pipeline {
         pollSCM ignorePostCommitHooks: isReleaseBranch, scmpoll_spec: '@midnight'
     }
 
-//    stages {
-//        stage('Unit Tests') {
-//            steps {
+    stages {
+        stage('Unit Tests') {
+            steps {
+                echo 'Unit Tests'
 //                sh "./gradlew --no-daemon " +
 //                        "--stacktrace " +
 //                        "-Pcompilation.warningsAsErrors=false " +
 //                        "-Ptests.failFast=true " +
 //                        "clean test"
-//            }
-//        }
-//
-//        stage('Integration Tests') {
-//            steps {
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                echo 'Integration Tests'
 //                sh "./gradlew --no-daemon " +
 //                        "integrationTest"
-//            }
-//        }
-//    }
+            }
+        }
+    }
 
     post {
         always {
