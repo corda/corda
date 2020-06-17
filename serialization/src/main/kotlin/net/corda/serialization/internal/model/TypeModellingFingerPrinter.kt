@@ -5,7 +5,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.TypeIdentifier.*
-import net.corda.serialization.internal.model.TypeIdentifier.Companion.classLoaderFor
 import java.lang.reflect.ParameterizedType
 
 /**
@@ -31,6 +30,7 @@ interface FingerPrinter {
  */
 class TypeModellingFingerPrinter(
         private val customTypeDescriptorLookup: CustomSerializerRegistry,
+        private val classLoader: ClassLoader,
         private val debugEnabled: Boolean = false) : FingerPrinter {
 
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
@@ -42,7 +42,7 @@ class TypeModellingFingerPrinter(
          * the Fingerprinter cannot guarantee that.
          */
         cache.getOrPut(typeInformation.typeIdentifier) {
-            FingerPrintingState(customTypeDescriptorLookup, FingerprintWriter(debugEnabled))
+            FingerPrintingState(customTypeDescriptorLookup, classLoader, FingerprintWriter(debugEnabled))
                     .fingerprint(typeInformation)
         }
 }
@@ -95,6 +95,7 @@ internal class FingerprintWriter(debugEnabled: Boolean = false) {
  */
 private class FingerPrintingState(
         private val customSerializerRegistry: CustomSerializerRegistry,
+        private val classLoader: ClassLoader,
         private val writer: FingerprintWriter) {
 
     companion object {
@@ -200,7 +201,7 @@ private class FingerPrintingState(
     private fun fingerprintName(type: LocalTypeInformation) {
         val identifier = type.typeIdentifier
         when (identifier) {
-            is TypeIdentifier.ArrayOf -> writer.write(identifier.componentType.name).writeArray()
+            is ArrayOf -> writer.write(identifier.componentType.name).writeArray()
             else -> writer.write(identifier.name)
         }
     }
@@ -239,7 +240,7 @@ private class FingerPrintingState(
         val observedGenericType = if (observedType !is ParameterizedType
                 && type.typeIdentifier is Parameterised
                 && observedClass != Class::class.java) {
-            type.typeIdentifier.getLocalType(classLoaderFor(observedClass))
+            type.typeIdentifier.getLocalType(classLoader)
         } else {
             observedType
         }
@@ -259,6 +260,5 @@ private class FingerPrintingState(
     // and deserializing (assuming deserialization is occurring in a factory that didn't
     // serialise the object in the  first place (and thus the cache lookup fails). This is also
     // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
-    private fun hasSeen(type: TypeIdentifier) = (type in typesSeen)
-            && (type != TypeIdentifier.UnknownType)
+    private fun hasSeen(type: TypeIdentifier) = (type in typesSeen) && (type != UnknownType)
 }
