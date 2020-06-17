@@ -35,28 +35,29 @@ pipeline {
     }
 
     stages {
-        stage('Unit Tests') {
-            steps {
-                sh "./gradlew --no-daemon " +
-                        "--stacktrace " +
-                        "-Pcompilation.warningsAsErrors=false " +
-                        "-Ptests.failFast=true " +
-                        "clean test"
-            }
-        }
-
-        stage('Integration Tests') {
-            steps {
-                sh "./gradlew --no-daemon " +
-                        "integrationTest"
-            }
-        }
+//        stage('Unit Tests') {
+//            steps {
+//                sh "./gradlew --no-daemon " +
+//                        "--stacktrace " +
+//                        "-Pcompilation.warningsAsErrors=false " +
+//                        "-Ptests.failFast=true " +
+//                        "clean test"
+//            }
+//        }
+//
+//        stage('Integration Tests') {
+//            steps {
+//                sh "./gradlew --no-daemon " +
+//                        "integrationTest"
+//            }
+//        }
     }
 
     post {
         always {
             archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
             junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
+            bat 'corda/.ci/kill_corda_procs.cmd'
         }
         cleanup {
             deleteDir() /* clean up our workspace */
