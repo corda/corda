@@ -1,6 +1,7 @@
 package net.corda.common.logging.errorReporting
 
 import org.slf4j.Logger
+import java.lang.Exception
 import java.text.MessageFormat
 import java.util.*
 
@@ -31,6 +32,10 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
     override fun report(error: ErrorCode<*>, logger: Logger) {
         val errorResource = ErrorResource.fromErrorCode(error, resourceLocation, locale)
         val message = "${errorResource.getErrorMessage(error.parameters.toTypedArray())} ${getErrorInfo(error)}"
-        logger.error(message)
+        if (error is Exception) {
+            logger.error(message, error)
+        } else {
+            logger.error(message)
+        }
     }
 }
