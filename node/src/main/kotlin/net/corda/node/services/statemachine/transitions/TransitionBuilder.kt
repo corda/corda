@@ -81,4 +81,5 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
 
 class CannotFindSessionException(sessionId: SessionId) : IllegalStateException("Couldn't find session with id $sessionId")
 class UnexpectedEventInState : IllegalStateException("Unexpected event")
-class PrematureSessionClose(sessionIds: Set<SessionId>): IllegalStateException("The following sessions were prematurely closed: $sessionIds")
+class PrematureSessionClose(sessionId: SessionId): IllegalStateException("The following session was closed before it was initialised: $sessionId")
+class PrematureSessionEndMessage(sessionId: SessionId): IllegalStateException("A premature session end message was received before the session was initialised: $sessionId")

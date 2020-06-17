@@ -8,7 +8,6 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExistingSessionMessage
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
-import net.corda.node.services.statemachine.InitiatedSessionState
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
@@ -45,7 +44,7 @@ class UnstartedFlowTransition(
         val initiatingMessage = flowStart.initiatingMessage
         val initiatedState = SessionState.Initiated(
                 peerParty = flowStart.peerSession.counterparty,
-                initiatedState = InitiatedSessionState.Live(initiatingMessage.initiatorSessionId),
+                peerSinkSessionId = initiatingMessage.initiatorSessionId,
                 peerFlowInfo = FlowInfo(
                         flowVersion = flowStart.senderCoreFlowVersion ?: initiatingMessage.flowVersion,
                         appName = initiatingMessage.appName

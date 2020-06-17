@@ -133,6 +133,14 @@ data class Checkpoint(
     }
 
     /**
+     * Returns a cope of the Checkpoint with the specified session removed from the session map.
+     * @param sessionIds the session to remove.
+     */
+    fun removeSessions(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions - sessionIds))
+    }
+
+    /**
      * Returns a copy of the Checkpoint with a new subFlow stack.
      * @param subFlows the new List of subFlows.
      */
@@ -242,23 +250,13 @@ sealed class SessionState {
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<DataSessionMessage>,
-            val initiatedState: InitiatedSessionState,
+            val peerSinkSessionId: SessionId,
             val errors: List<FlowError>,
             override val deduplicationSeed: String
     ) : SessionState()
 }
 
 typealias SessionMap = Map<SessionId, SessionState>
-
-/**
- * Tracks whether an initiated session state is live or has ended. This is a separate state, as we still need the rest
- * of [SessionState.Initiated], even when the session has ended, for un-drained session messages and potential future
- * [FlowInfo] requests.
- */
-sealed class InitiatedSessionState {
-    data class Live(val peerSinkSessionId: SessionId) : InitiatedSessionState()
-    object Ended : InitiatedSessionState() { override fun toString() = "Ended" }
-}
 
 /**
  * Represents the way the flow has started.
