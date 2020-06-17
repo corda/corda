@@ -107,7 +107,7 @@ fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose
     var subscription: Subscription? = null
 
     try {
-        return serialize().genericExpectEvents(
+        serialize().genericExpectEvents(
                 isStrict = isStrict,
                 stream = { action: (E) -> Unit ->
                     val lock = object {}
