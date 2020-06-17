@@ -59,7 +59,7 @@ pipeline {
         always {
             archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
             junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
-            bat 'corda/.ci/kill_corda_procs.cmd'
+            bat '.ci/kill_corda_procs.cmd'
         }
         cleanup {
             deleteDir() /* clean up our workspace */
