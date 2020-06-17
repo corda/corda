@@ -47,7 +47,7 @@ data class CordappImpl(
     }
 
     companion object {
-        fun jarName(url: URL): String = url.toPath().fileName.toString().removeSuffix(".jar")
+        fun jarName(url: URL): String = (url.toPath().fileName ?: "").toString().removeSuffix(".jar")
 
         /** CorDapp manifest entries */
         const val CORDAPP_CONTRACT_NAME = "Cordapp-Contract-Name"
@@ -81,7 +81,7 @@ data class CordappImpl(
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
-                info = CordappImpl.UNKNOWN_INFO,
+                info = UNKNOWN_INFO,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash,
                 minimumPlatformVersion = 1,
