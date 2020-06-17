@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine.transitions
 
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.*
 
 /**

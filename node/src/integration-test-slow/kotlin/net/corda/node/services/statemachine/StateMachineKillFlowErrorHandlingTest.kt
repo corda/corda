@@ -21,7 +21,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
+class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     /**
      * Triggers `killFlow` while the flow is suspended causing a [InterruptedException] to be thrown and passed through the hospital.
@@ -74,7 +74,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             val aliceClient =
                 CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
-            val flow = aliceClient.startTrackedFlow(StatemachineKillFlowErrorHandlingTest::SleepFlow)
+            val flow = aliceClient.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::SleepFlow)
 
             var flowKilled = false
             flow.progress.subscribe {
@@ -94,12 +94,12 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, output.filter { it.contains("Byteman test - overnight observation") }.size)
             val numberOfTerminalDiagnoses = output.filter { it.contains("Byteman test - terminal") }.size
             assertEquals(1, numberOfTerminalDiagnoses)
-            val (discharge, observation) = aliceClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
+            val (discharge, observation) = aliceClient.startFlow(StateMachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
             assertEquals(0, discharge)
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -160,7 +160,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             val aliceClient =
                 CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
-            val flow = aliceClient.startTrackedFlow(StatemachineKillFlowErrorHandlingTest::ThreadSleepFlow)
+            val flow = aliceClient.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::ThreadSleepFlow)
 
             var flowKilled = false
             flow.progress.subscribe {
@@ -181,12 +181,12 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             val numberOfTerminalDiagnoses = output.filter { it.contains("Byteman test - terminal") }.size
             println(numberOfTerminalDiagnoses)
             assertEquals(0, numberOfTerminalDiagnoses)
-            val (discharge, observation) = aliceClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
+            val (discharge, observation) = aliceClient.startFlow(StateMachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
             assertEquals(0, discharge)
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -260,7 +260,7 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             val aliceClient =
                 CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
 
-            val flow = aliceClient.startFlow(StatemachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
+            val flow = aliceClient.startFlow(StateMachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
 
             assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(20.seconds) }
 
@@ -273,12 +273,12 @@ class StatemachineKillFlowErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, output.filter { it.contains("Byteman test - overnight observation") }.size)
             val numberOfTerminalDiagnoses = output.filter { it.contains("Byteman test - terminal") }.size
             assertEquals(0, numberOfTerminalDiagnoses)
-            val (discharge, observation) = aliceClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
+            val (discharge, observation) = aliceClient.startFlow(StateMachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
             assertEquals(3, discharge)
             assertEquals(1, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 

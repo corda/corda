@@ -19,6 +19,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import java.sql.SQLException
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -212,6 +213,7 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCreateTransaction() {
         if (contextTransactionOrNull != null) {
             throw IllegalStateException("Refusing to create a second transaction")
@@ -225,6 +227,7 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCommitTransaction() {
         try {
             contextTransaction.commit()

@@ -31,6 +31,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.PersistenceException
+import kotlin.collections.HashMap
 import kotlin.concurrent.timerTask
 import kotlin.math.pow
 
@@ -51,6 +52,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             DatabaseEndocrinologist,
             TransitionErrorGeneralPractitioner,
             SedationNurse,
+            IntensiveCareDoctor,
             NotaryDoctor
         )
 
@@ -59,6 +61,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
         @VisibleForTesting
         val onFlowDischarged = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
+        val onFlowErrorPropagated = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
+
+        @VisibleForTesting
+        val onFlowKeptForIntensiveCare = mutableListOf<(id: StateMachineRunId, by: List<String>, outcome: Outcome) -> Unit>()
 
         @VisibleForTesting
         val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
@@ -164,39 +172,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Forces the flow to be kept in for overnight observation by the hospital. A flow must already exist inside the hospital
-     * and have existing medical records for it to be moved to overnight observation. If it does not meet these criteria then
-     * an [IllegalArgumentException] will be thrown.
-     *
-     * @param id The [StateMachineRunId] of the flow that you are trying to force into observation
-     * @param errors The errors to include in the new medical record
-     */
-    fun forceIntoOvernightObservation(id: StateMachineRunId, errors: List<Throwable>) {
-        mutex.locked {
-            // If a flow does not meet the criteria below, then it has moved into an invalid state or the function is being
-            // called from an incorrect location. The assertions below should error out the flow if they are not true.
-            requireNotNull(flowsInHospital[id]) { "Flow must already be in the hospital before forcing into overnight observation" }
-            val history = requireNotNull(flowPatients[id]) { "Flow must already have history before forcing into overnight observation" }
-            // Use the last staff member that last discharged the flow as the current staff member
-            val record = history.records.last().copy(
-                time = clock.instant(),
-                errors = errors,
-                outcome = Outcome.OVERNIGHT_OBSERVATION
-            )
-            onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(id, record.by.map { it.toString() }) }
-            history.records += record
-            recordsPublisher.onNext(record)
-        }
-    }
-
-
-    /**
      * Request treatment for the [flowFiber]. A flow can only be added to the hospital if they are not already being
      * treated.
      */
     fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
-        // Only treat flows that are not already in the hospital
-        if (!currentState.isRemoved && flowsInHospital.putIfAbsent(flowFiber.id, flowFiber) == null) {
+        if (!currentState.isRemoved) {
+            flowsInHospital[flowFiber.id] = flowFiber
             admit(flowFiber, currentState, errors)
         }
     }
@@ -222,13 +203,24 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
                     log.info("Flow error kept for overnight observation by ${report.by} (error was ${report.error.message})")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
-                    onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
+                    onFlowKeptForOvernightObservation.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
                     Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY, Diagnosis.TERMINAL -> {
                     // None of the staff care for these errors, or someone decided it is a terminal condition, so we let them propagate
                     log.info("Flow error allowed to propagate", report.error)
+                    onFlowErrorPropagated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
+                }
+                Diagnosis.INTENSIVE_CARE -> {
+                    // reschedule the last outcome as it failed to process it
+                    // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
+                    val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
+                    val outcome = medicalHistory.records.last().outcome
+                    log.info("Flow error kept for intensive care, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
+                    onFlowKeptForIntensiveCare.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
+//                    Triple(outcome, null, backOff)
+                    Triple(outcome, outcome.event, 0.seconds)
                 }
             }
 
@@ -249,16 +241,34 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    private fun calculateBackOffForChronicCondition(report: ConsultationReport, medicalHistory: FlowMedicalHistory, currentState: StateMachineState): Duration {
+    private fun calculateBackOffForChronicCondition(
+        report: ConsultationReport,
+        medicalHistory: FlowMedicalHistory,
+        currentState: StateMachineState
+    ): Duration {
         return report.by.firstOrNull { it is Chronic }?.let { chronicStaff ->
-            return medicalHistory.timesDischargedForTheSameThing(chronicStaff, currentState).let {
-                if (it == 0) {
-                    0.seconds
-                } else {
-                    maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
-                }
-            }
+            return calculateBackOff(chronicStaff, medicalHistory, currentState)
         } ?: 0.seconds
+    }
+
+    private fun calculateBackOffForIntensiveCareCondition(
+        report: ConsultationReport,
+        medicalHistory: FlowMedicalHistory,
+        currentState: StateMachineState
+    ): Duration {
+        return report.by.firstOrNull { it is IntensiveCareDoctor }?.let { staff ->
+            return calculateBackOff(staff, medicalHistory, currentState)
+        } ?: 0.seconds
+    }
+
+    private fun calculateBackOff(staff: Staff, medicalHistory: FlowMedicalHistory, currentState: StateMachineState): Duration {
+        return medicalHistory.timesDischargedForTheSameThing(staff, currentState).let {
+            if (it == 0) {
+                0.seconds
+            } else {
+                maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
+            }
+        }
     }
 
     private fun consultStaff(flowFiber: FlowFiber,
@@ -351,10 +361,16 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    enum class Outcome { DISCHARGE, OVERNIGHT_OBSERVATION, UNTREATABLE }
+    enum class Outcome(val event: Event?) {
+        DISCHARGE(Event.RetryFlowFromSafePoint),
+        OVERNIGHT_OBSERVATION(null),
+        UNTREATABLE(Event.StartErrorPropagation)
+    }
 
     /** The order of the enum values are in priority order. */
     enum class Diagnosis {
+        /** Could not save hospitalize status, keep track of this flow to save again on a schedule **/
+        INTENSIVE_CARE,
         /** The flow should not see other staff members */
         TERMINAL,
         /** Retry from last safe point. */
@@ -539,10 +555,10 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
-                }
+                }.also { logDiagnosis(it, newError, flowFiber, history) }
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
-            }.also { logDiagnosis(it, newError, flowFiber, history) }
+            }
         }
 
         private fun logDiagnosis(diagnosis: Diagnosis, newError: Throwable, flowFiber: FlowFiber, history: FlowMedicalHistory) {
@@ -572,6 +588,25 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         ): Diagnosis {
             return if (newError.mentionsThrowable(HospitalizeFlowException::class.java)) {
                 Diagnosis.OVERNIGHT_OBSERVATION
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+    }
+
+    /**
+     * Handles errors coming from the processing of errors events ([Event.StartErrorPropagation], [Event.RetryFlowFromSafePoint] and
+     * [Event.OvernightObservation]), returning a [Diagnosis.INTENSIVE_CARE] diagnosis
+     */
+    object IntensiveCareDoctor : Staff {
+        override fun consult(
+            flowFiber: FlowFiber,
+            currentState: StateMachineState,
+            newError: Throwable,
+            history: FlowMedicalHistory
+        ): Diagnosis {
+            return if (newError is ErrorStateTransitionException) {
+                Diagnosis.INTENSIVE_CARE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
