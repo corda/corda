@@ -28,7 +28,7 @@ pipeline {
 
     /*
      * Do no receive Github's push events for release branches -> suitable for nightly builds
-     * but pull requests will receive them as normal, PR builds are started as normal
+     * but projects for pull requests will receive them as normal, and PR builds are started ASAP
      */
     triggers {
         pollSCM ignorePostCommitHooks: isReleaseBranch, scmpoll_spec: '@midnight'
