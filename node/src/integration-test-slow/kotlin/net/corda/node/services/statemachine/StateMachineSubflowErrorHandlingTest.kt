@@ -26,7 +26,8 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * This test checks that flow calling an initiating subflow will recover correctly.
      *
      * Throws an exception when performing an [Action.CommitTransaction] event during the subflow's first send to a counterparty.
-     * The exception is thrown 5 times.
+     *
+     * The exception is thrown 3 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
@@ -72,7 +73,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("subflow_flag") && flagged("suspend_flag") && flagged("commit_flag") && readCounter("counter") < 5
+                IF flagged("subflow_flag") && flagged("suspend_flag") && flagged("commit_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 
@@ -136,7 +137,8 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * This test checks that flow calling an initiating subflow will recover correctly.
      *
      * Throws an exception when performing an [Action.CommitTransaction] event during the subflow's first receive from a counterparty.
-     * The exception is thrown 5 times.
+     *
+     * The exception is thrown 3 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
@@ -182,7 +184,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("subflow_flag") && flagged("suspend_flag") && readCounter("counter") < 5
+                IF flagged("subflow_flag") && flagged("suspend_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 
@@ -238,7 +240,8 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * This test checks that flow calling an inline subflow will recover correctly.
      *
      * Throws an exception when performing an [Action.CommitTransaction] event during the subflow's first send to a counterparty.
-     * The exception is thrown 5 times.
+     *
+     * The exception is thrown 3 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
@@ -276,7 +279,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("subflow_flag") && readCounter("counter") < 5
+                IF flagged("subflow_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 
@@ -332,7 +335,8 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * This test checks that flow calling an inline subflow will recover correctly.
      *
      * Throws an exception when performing an [Action.CommitTransaction] event during the subflow's first receive from a counterparty.
-     * The exception is thrown 5 times.
+     *
+     * The exception is thrown 3 times.
      *
      * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
      * succeeds and the flow finishes.
@@ -370,7 +374,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("subflow_flag") && flagged("commit_flag") && readCounter("counter") < 5
+                IF flagged("subflow_flag") && flagged("commit_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 

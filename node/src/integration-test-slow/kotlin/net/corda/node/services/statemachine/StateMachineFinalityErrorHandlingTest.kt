@@ -170,7 +170,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * Throws an exception when executing [Action.CommitTransaction] as part of receiving a transaction to record inside of [ReceiveFinalityFlow] on the responding
      * flow's node.
      *
-     * The exception is thrown 5 times.
+     * The exception is thrown 3 times.
      *
      * The responding flow is retried 3 times and then completes successfully.
      *
@@ -204,7 +204,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("finality_flag") && readCounter("counter") < 5
+                IF flagged("finality_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 
@@ -262,7 +262,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
      * Throws an exception when executing [Action.CommitTransaction] as part of receiving a transaction to record inside of [ReceiveFinalityFlow] on the responding
      * flow's node.
      *
-     * The exception is thrown 7 times.
+     * The exception is thrown 4 times.
      *
      * The responding flow is retried 3 times and is then kept in for observation.
      *
@@ -299,7 +299,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 CLASS ${ActionExecutorImpl::class.java.name}
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("finality_flag") && readCounter("counter") < 7
+                IF flagged("finality_flag") && readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
                 ENDRULE
                 
