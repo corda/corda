@@ -32,7 +32,6 @@ import net.corda.testing.node.internal.InternalDriverDSL
 import org.jboss.byteman.agent.submit.ScriptText
 import org.jboss.byteman.agent.submit.Submit
 import org.junit.Before
-import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
