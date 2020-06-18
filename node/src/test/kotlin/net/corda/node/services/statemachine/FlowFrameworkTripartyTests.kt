@@ -116,7 +116,8 @@ class FlowFrameworkTripartyTests {
                 aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
                 bobNode sent sessionConfirm() to aliceNode,
                 bobNode sent sessionData(bobPayload) to aliceNode,
-                bobNode sent normalEnd to aliceNode
+                bobNode sent normalEnd to aliceNode,
+                aliceNode sent normalEnd to bobNode
         )
 
         assertSessionTransfers(charlieNode,
