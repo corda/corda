@@ -341,12 +341,6 @@ class TopLevelTransition(
         }
     }
 
-//    private fun isFlowStartEvent(handler: DeduplicationHandler): Boolean {
-//        val externalEvent = handler.externalCause
-//        return externalEvent is ExternalEvent.ExternalMessageEvent && externalEvent.receivedMessage.data.deserialize<SessionMessage>() is InitialSessionMessage
-//    }
-
-    // do i need to acknowledge flow start events or just session inits?
     private fun isFlowStartEvent(handler: DeduplicationHandler): Boolean {
         return handler.externalCause.run { isSessionInit() || isFlowStart() }
     }
