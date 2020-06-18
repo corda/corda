@@ -12,7 +12,7 @@ class TypeModellingFingerPrinterTests {
 
     val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
     val customRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
-    val fingerprinter = TypeModellingFingerPrinter(customRegistry, true)
+    val fingerprinter = TypeModellingFingerPrinter(customRegistry, ClassLoader.getSystemClassLoader(), true)
 
     // See https://r3-cev.atlassian.net/browse/CORDA-2266
     @Test(timeout=300_000)

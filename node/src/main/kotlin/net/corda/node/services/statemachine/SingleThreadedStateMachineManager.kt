@@ -623,9 +623,8 @@ class SingleThreadedStateMachineManager(
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
 
-        val flowAlreadyExists = mutex.locked { flows[flowId] != null }
-
-        val existingCheckpoint = if (flowAlreadyExists) {
+        val existingFlow = mutex.locked { flows[flowId] }
+        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
@@ -633,8 +632,10 @@ class SingleThreadedStateMachineManager(
                 val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
                 if (checkpoint == null) {
                     return openFuture<FlowStateMachine<A>>().mapError {
-                        IllegalStateException("Unable to deserialize database checkpoint for flow $flowId. " +
-                                "Something is very wrong. The flow will not retry.")
+                        IllegalStateException(
+                            "Unable to deserialize database checkpoint for flow $flowId. " +
+                                    "Something is very wrong. The flow will not retry."
+                        )
                     }
                 } else {
                     checkpoint

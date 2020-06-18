@@ -7,6 +7,7 @@ import net.corda.common.logging.errorReporting.ErrorContextProvider
 import net.corda.common.logging.errorReporting.ErrorReporterImpl
 import org.junit.After
 import org.junit.Test
+import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.slf4j.Logger
@@ -24,6 +25,7 @@ class ErrorReporterImplTest {
 
     private val loggerMock = Mockito.mock(Logger::class.java).also {
         Mockito.`when`(it.error(anyString())).then { logs.addAll(it.arguments) }
+        Mockito.`when`(it.error(anyString(), any(Exception::class.java))).then { params -> logs.addAll(params.arguments) }
     }
 
     private val contextProvider: ErrorContextProvider  = object : ErrorContextProvider {
@@ -39,7 +41,8 @@ class ErrorReporterImplTest {
     private enum class TestErrors : ErrorCodes {
         CASE1,
         CASE2,
-        CASE_3;
+        CASE_3,
+        CASE4;
 
         override val namespace = TestNamespaces.TEST.toString()
     }
@@ -56,6 +59,11 @@ class ErrorReporterImplTest {
 
     private val TEST_ERROR_3 = object : ErrorCode<TestErrors> {
         override val code = TestErrors.CASE_3
+        override val parameters = listOf<Any>()
+    }
+
+    private class TestError4(cause: Exception?) : Exception("This is test error 4", cause), ErrorCode<TestErrors> {
+        override val code = TestErrors.CASE4
         override val parameters = listOf<Any>()
     }
 
@@ -117,5 +125,13 @@ class ErrorReporterImplTest {
         val testReporter = createReporterImpl("en-US")
         testReporter.report(error, loggerMock)
         assertEquals(listOf("This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US]"), logs)
+    }
+
+    @Test(timeout = 3_000)
+    fun `exception based error code logs the stack trace`() {
+        val error = TestError4(Exception("A test exception"))
+        val testReporter = createReporterImpl("en-US")
+        testReporter.report(error, loggerMock)
+        assertEquals(listOf("This is the fourth test message [Code: test-case4 URL: $TEST_URL/en-US]", error), logs)
     }
 }
