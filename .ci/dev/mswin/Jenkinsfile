@@ -20,7 +20,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os/.*/)
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
 
 pipeline {
     agent none
