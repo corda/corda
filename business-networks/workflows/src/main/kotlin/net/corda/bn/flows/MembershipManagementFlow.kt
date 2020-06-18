@@ -1,6 +1,7 @@
 package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.bn.flows.extensions.BNMemberAuth
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.Command
