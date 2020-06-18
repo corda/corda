@@ -321,7 +321,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         fun timesKeptForIntensiveCare(currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
             return records.count { IntensiveCareDoctor in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
