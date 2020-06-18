@@ -1,7 +1,8 @@
 package net.corda.node.services.statemachine.transitions
 
-import net.corda.core.utilities.contextLogger
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.StateMachineState
 
 /**
  * This transition checks the current state of the flow and determines whether anything needs to be done.

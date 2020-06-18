@@ -5,7 +5,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
