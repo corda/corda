@@ -1125,7 +1125,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(3, discharge)
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1220,7 +1220,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(3, discharge)
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1612,7 +1612,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(0, observation)
             assertEquals(0, aliceClient.stateMachinesSnapshot().size)
             assertEquals(0, charlieClient.stateMachinesSnapshot().size)
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -1712,7 +1712,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
             assertEquals(1, observation)
             assertEquals(1, aliceClient.stateMachinesSnapshot().size)
             assertEquals(1, charlieClient.stateMachinesSnapshot().size)
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
         }
     }
 }
