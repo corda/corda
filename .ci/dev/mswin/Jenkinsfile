@@ -1,6 +1,10 @@
 #!groovy
 /**
- * Jenkins pipeline to build Corda on MS Windows server
+ * Jenkins pipeline to build Corda on MS Windows server.
+ * Because it takes a long time to run tests sequentially, unit tests and
+ * integration tests are started in parallel on separate agents.
+ *
+ * Additionally, pull requests by default run only unit tests.
  */
 
 /**
@@ -16,14 +20,18 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/.*/)
+boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os/.*/)
 
 pipeline {
-    agent { label 'mswin' }
+    agent none
     options {
         ansiColor('xterm')
         timestamps()
-        timeout(time: 4, unit: 'HOURS')
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    parameters {
+        booleanParam defaultValue: (isReleaseBranch), description: 'Run integration tests?', name: 'DO_INTEGRATION_TESTS'
     }
 
     /*
@@ -35,32 +43,51 @@ pipeline {
     }
 
     stages {
-        stage('Unit Tests') {
-            steps {
-                sh "./gradlew --no-daemon " +
-                        "--stacktrace " +
-                        "-Pcompilation.warningsAsErrors=false " +
-                        "-Ptests.failFast=true " +
-                        "clean test"
-            }
-        }
+        stage('Tests') {
+            parallel {
+                stage('Unit Tests') {
+                    agent { label 'mswin' }
+                    steps {
+                        sh "./gradlew --no-daemon " +
+                                "--stacktrace " +
+                                "-Pcompilation.warningsAsErrors=false " +
+                                "-Ptests.failFast=true " +
+                                "clean test"
+                    }
+                    post {
+                        always {
+                            archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
+                            bat '.ci/kill_corda_procs.cmd'
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
 
-        stage('Integration Tests') {
-            steps {
-                sh "./gradlew --no-daemon " +
-                        "integrationTest"
+                }
+                stage('Integration Tests') {
+                    when {
+                        expression { params.DO_INTEGRATION_TESTS }
+                        beforeAgent true
+                    }
+                    agent { label 'mswin' }
+                    steps {
+                        sh "./gradlew --no-daemon " +
+                                "clean integrationTest"
+                    }
+                    post {
+                        always {
+                            archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
+                            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
+                            bat '.ci/kill_corda_procs.cmd'
+                        }
+                        cleanup {
+                            deleteDir() /* clean up our workspace */
+                        }
+                    }
+                }
             }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts allowEmptyArchive: true, artifacts: '**/logs/**/*.log'
-            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true, allowEmptyResults: true
-            bat '.ci/kill_corda_procs.cmd'
-        }
-        cleanup {
-            deleteDir() /* clean up our workspace */
         }
     }
 }
