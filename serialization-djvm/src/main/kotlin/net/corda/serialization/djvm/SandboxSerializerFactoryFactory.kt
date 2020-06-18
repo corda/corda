@@ -75,7 +75,7 @@ class SandboxSerializerFactoryFactory(
             )
         )
 
-        val fingerPrinter = TypeModellingFingerPrinter(customSerializerRegistry)
+        val fingerPrinter = TypeModellingFingerPrinter(customSerializerRegistry, classLoader)
 
         val localSerializerFactory = DefaultLocalSerializerFactory(
             whitelist = context.whitelist,
