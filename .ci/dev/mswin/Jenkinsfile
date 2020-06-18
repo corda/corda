@@ -47,7 +47,6 @@ pipeline {
 
         stage('Integration Tests') {
             steps {
-                echo 'Integration Tests'
                 sh "./gradlew --no-daemon " +
                         "integrationTest"
             }
