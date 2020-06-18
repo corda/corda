@@ -245,11 +245,14 @@ sealed class SessionState {
     /**
      * We have received a confirmation, the peer party and session id is resolved.
      * @property errors if not empty the session is in an errored state.
+     * @property toBeTerminated whether a session end message has been received and the session is planned to be terminated,
+     *           when appropriate (e.g. ongoing operations on this session, such as receives, have completed).
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<DataSessionMessage>,
+            val toBeTerminated: Boolean,
             val peerSinkSessionId: SessionId,
             val errors: List<FlowError>,
             override val deduplicationSeed: String

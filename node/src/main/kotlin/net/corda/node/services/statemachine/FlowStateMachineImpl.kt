@@ -46,7 +46,6 @@ import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.transitions.FlowContinuation
-import net.corda.node.services.statemachine.transitions.PrematureSessionClose
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.isEnabledTimedFlow

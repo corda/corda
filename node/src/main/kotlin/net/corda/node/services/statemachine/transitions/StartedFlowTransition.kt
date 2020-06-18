@@ -6,7 +6,6 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.statemachine.*
 import org.slf4j.Logger
@@ -40,17 +39,79 @@ class StartedFlowTransition(
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        return when (flowIORequest) {
-            is FlowIORequest.Send -> sendTransition(flowIORequest)
-            is FlowIORequest.Receive -> receiveTransition(flowIORequest)
-            is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
-            is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
-            is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
-            is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
-            is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
-            is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
-            is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
-            FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+        val sessionsToBeTerminated = findSessionsToBeTerminated(flowIORequest, startingState)
+        // if there are sessions to be closed, we close them as part of this transition and normal processing will continue on the next transition.
+        return if (sessionsToBeTerminated.isNotEmpty()) {
+            terminateSessions(sessionsToBeTerminated)
+        } else {
+            when (flowIORequest) {
+                is FlowIORequest.Send -> sendTransition(flowIORequest)
+                is FlowIORequest.Receive -> receiveTransition(flowIORequest)
+                is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
+                is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
+                is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
+                is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
+                is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
+                is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
+                is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
+                FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+            }
+        }
+    }
+
+    private fun findSessionsToBeTerminated(flowIORequest: FlowIORequest<*>, startingState: StateMachineState): SessionMap {
+        val initialisedSessions = startingState.checkpoint.checkpointState.sessions
+                .filter { (_, sessionState) -> sessionState is SessionState.Initiated }
+
+        return initialisedSessions.filter { (sessionId, sessionState ) ->
+            val suspendedOnThisSessionOp = when(flowIORequest) {
+                is FlowIORequest.Send -> {
+                    flowIORequest.sessionToMessage.keys.any { sessionToSessionId(it) == sessionId }
+                }
+                is FlowIORequest.Receive -> {
+                    flowIORequest.sessions.any { sessionToSessionId(it) == sessionId }
+                }
+                is FlowIORequest.SendAndReceive -> {
+                    flowIORequest.sessionToMessage.keys.any { sessionToSessionId(it) == sessionId }
+                }
+                is FlowIORequest.GetFlowInfo -> {
+                    flowIORequest.sessions.any { sessionToSessionId(it) == sessionId }
+                }
+                else -> false
+            }
+            !suspendedOnThisSessionOp && (sessionState as SessionState.Initiated).toBeTerminated
+        }
+    }
+
+    private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
+        return builder {
+            val sessionsToRemove = sessionsToBeTerminated.keys
+            currentState = currentState.copy(
+                    checkpoint = currentState.checkpoint.copy(
+                            checkpointState = currentState.checkpoint.checkpointState.copy(
+                                    numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends + 1,
+                                    sessions = currentState.checkpoint.checkpointState.sessions - sessionsToRemove
+                            )
+                    ),
+                    pendingDeduplicationHandlers = emptyList()
+            )
+            actions.addAll(arrayOf(
+                    Action.CreateTransaction,
+                    Action.PersistCheckpoint(context.id, currentState.checkpoint, currentState.isAnyCheckpointPersisted),
+                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                    Action.CommitTransaction,
+                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
+                    Action.RemoveSessionBindings(sessionsToRemove)
+            ))
+            var index = 0
+            sessionsToBeTerminated.values.forEach { sessionState ->
+                sessionState as SessionState.Initiated
+                val message = ExistingSessionMessage(sessionState.peerSinkSessionId, EndSessionMessage)
+                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index++, sessionState)
+                actions.add(Action.SendExisting(sessionState.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID)))
+            }
+            actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
+            FlowContinuation.ProcessEvents
         }
     }
 
@@ -160,7 +221,7 @@ class StartedFlowTransition(
     private fun closeSessionTransition(flowIORequest: FlowIORequest.CloseSessions): TransitionResult {
         return builder {
             val sessionIdsToRemove = flowIORequest.sessions.map { sessionToSessionId(it) }.toSet()
-            val existingSessionsToRemove = currentState.checkpoint.checkpointState.sessions.filter { (sessionId, sessionState) ->
+            val existingSessionsToRemove = currentState.checkpoint.checkpointState.sessions.filter { (sessionId, _) ->
                 sessionIdsToRemove.contains(sessionId)
             }
             val alreadyClosedSessions = sessionIdsToRemove.filter { sessionId ->

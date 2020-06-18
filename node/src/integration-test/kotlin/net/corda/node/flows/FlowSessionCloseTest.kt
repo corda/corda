@@ -99,7 +99,7 @@ class FlowSessionCloseTest {
      * This can be confirmed by commenting out [FlowSession.close] operation in the invoked flow and re-run the test.
      */
     @Test(timeout=300_000)
-    fun `flow looping over sessions can close them to release resources and avoid out-of-memory failures`() {
+    fun `flow looping over sessions can close them to release resources and avoid out-of-memory failures, when the other side does not finish early`() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
             val (nodeAHandle, nodeBHandle) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), maximumHeapSize = "256m"),
@@ -107,7 +107,21 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorLoopingFlow, nodeBHandle.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorLoopingFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `flow looping over sessions will close sessions automatically, when the other side finishes early`() {
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
+            val (nodeAHandle, nodeBHandle) = listOf(
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), maximumHeapSize = "256m"),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user), maximumHeapSize = "256m")
+            ).transpose().getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::InitiatorLoopingFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false).returnValue.getOrThrow()
             }
         }
     }
@@ -147,14 +161,20 @@ class FlowSessionCloseTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class InitiatorLoopingFlow(val party: Party): FlowLogic<Unit>() {
+    class InitiatorLoopingFlow(val party: Party, val blockingCounterparty: Boolean = false): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             for (i in 1..1_000) {
                 val session = initiateFlow(party)
-                session.sendAndReceive<String>("What's up?").unwrap{ assertEquals("All good!", it) }
+                session.sendAndReceive<String>(blockingCounterparty ).unwrap{ assertEquals("Got it", it) }
 
-                session.close()
+                /**
+                 * If the counterparty blocks, we need to eagerly close the session and release resources to avoid running out of memory.
+                 * Otherwise, the session end messages from the other side will do that automatically.
+                 */
+                if (blockingCounterparty) {
+                    session.close()
+                }
 
                 logger.info("Completed iteration $i")
             }
@@ -165,9 +185,13 @@ class FlowSessionCloseTest {
     class InitiatedLoopingFlow(private val otherSideSession: FlowSession): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            otherSideSession.receive<String>()
-                    .unwrap{ assertEquals("What's up?", it) }
-            otherSideSession.send("All good!")
+            val shouldBlock = otherSideSession.receive<Boolean>()
+                    .unwrap{ it }
+            otherSideSession.send("Got it")
+
+            if (shouldBlock) {
+                otherSideSession.receive<String>()
+            }
         }
     }
 

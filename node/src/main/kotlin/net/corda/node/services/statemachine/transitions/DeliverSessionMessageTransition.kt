@@ -4,13 +4,11 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
-import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.EndSessionMessage
 import net.corda.node.services.statemachine.ErrorSessionMessage
 import net.corda.node.services.statemachine.Event
@@ -58,11 +56,7 @@ class DeliverSessionMessageTransition(
             // Check whether we have a session corresponding to the message.
             val existingSession = startingState.checkpoint.checkpointState.sessions[event.sessionMessage.recipientSessionId]
             if (existingSession == null) {
-                val payload = event.sessionMessage.payload
-                if (payload is EndSessionMessage)
-                    log.debug { "Received session end message for a session that has already ended: ${event.sessionMessage.recipientSessionId}"}
-                else
-                    freshErrorTransition(CannotFindSessionException(event.sessionMessage.recipientSessionId))
+                checkIfMissingSessionIsAnIssue(event.sessionMessage)
             } else {
                 val payload = event.sessionMessage.payload
                 // Dispatch based on what kind of message it is.
@@ -80,6 +74,14 @@ class DeliverSessionMessageTransition(
         }
     }
 
+    private fun TransitionBuilder.checkIfMissingSessionIsAnIssue(message: ExistingSessionMessage) {
+        val payload = message.payload
+        if (payload is EndSessionMessage)
+            log.debug { "Received session end message for a session that has already ended: ${event.sessionMessage.recipientSessionId}"}
+        else
+            freshErrorTransition(CannotFindSessionException(event.sessionMessage.recipientSessionId))
+    }
+
     private fun TransitionBuilder.confirmMessageTransition(sessionState: SessionState, message: ConfirmSessionMessage) {
         // We received a confirmation message. The corresponding session state must be Initiating.
         when (sessionState) {
@@ -89,6 +91,7 @@ class DeliverSessionMessageTransition(
                         peerParty = event.sender,
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyList(),
+                        toBeTerminated = false,
                         peerSinkSessionId = message.initiatedSessionId,
                         errors = emptyList(),
                         deduplicationSeed = sessionState.deduplicationSeed
@@ -190,37 +193,14 @@ class DeliverSessionMessageTransition(
                 if (flowState !is FlowState.Started)
                     return freshErrorTransition(UnexpectedEventInState())
 
-                /**
-                 * Note: when receiving session end messages from the other side, we avoid performing local cleanup & sending session-end messages when suspended on a receive.
-                 * This is to avoid losing messages due to re-ordering between the anticipated data message and this session end message.
-                 * This means the sessions will clean up eventually as part of the natural flow termination. We essentially trade-off resources for safety.
-                 * This can go away when we have contiguous sequence numbers, since we will be able to buffer appropriately and process them in order.
-                 */
-                val ioRequest = flowState.flowIORequest
-                if (ioRequest !is FlowIORequest.Receive && ioRequest !is FlowIORequest.SendAndReceive) {
-                    val sessionsToRemove = setOf(sessionId)
-                    currentState = currentState.copy(
-                            checkpoint = currentState.checkpoint.copy(
-                                    checkpointState = currentState.checkpoint.checkpointState.copy(
-                                            numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends + 1,
-                                            sessions = currentState.checkpoint.checkpointState.sessions - sessionsToRemove
-                                    )
-                            ),
-                            pendingDeduplicationHandlers = emptyList()
-                    )
-                    val message = ExistingSessionMessage(sessionState.peerSinkSessionId, EndSessionMessage)
-                    val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, 0, sessionState)
-                    actions.addAll(arrayOf(
-                            Action.CreateTransaction,
-                            Action.PersistCheckpoint(context.id, currentState.checkpoint, currentState.isAnyCheckpointPersisted),
-                            Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                            Action.CommitTransaction,
-                            Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                            Action.RemoveSessionBindings(sessionsToRemove),
-                            Action.SendExisting(sessionState.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID)),
-                            Action.ScheduleEvent(Event.DoRemainingWork)
-                    ))
-                }
+                val newSessionState = sessionState.copy(
+                        toBeTerminated = true
+                )
+                currentState = currentState.copy(
+                        checkpoint = currentState.checkpoint.addSession(
+                                event.sessionMessage.recipientSessionId to newSessionState
+                        )
+                )
             }
             else -> {
                 freshErrorTransition(PrematureSessionEndMessage(event.sessionMessage.recipientSessionId))
