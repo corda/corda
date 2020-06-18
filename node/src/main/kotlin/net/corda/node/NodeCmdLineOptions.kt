@@ -34,13 +34,7 @@ open class SharedNodeCmdLineOptions {
             description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
     private var _configFile: Path? = null
-    val configFile: Path get() {
-        return when  {
-                _configFile == null -> baseDirectory / "node.conf"
-                _configFile!!.isAbsolute -> _configFile
-                else -> baseDirectory / _configFile.toString()
-        } as Path
-    }
+    val configFile: Path get() = if (_configFile != null) baseDirectory.resolve(_configFile) else (baseDirectory / "node.conf")
 
     @Option(
             names = ["--on-unknown-config-keys"],
