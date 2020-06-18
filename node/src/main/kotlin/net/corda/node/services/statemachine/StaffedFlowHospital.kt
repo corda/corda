@@ -53,8 +53,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             DatabaseEndocrinologist,
             TransitionErrorGeneralPractitioner,
             SedationNurse,
-            IntensiveCareDoctor,
-            NotaryDoctor
+            NotaryDoctor,
+            IntensiveCareDoctor
         )
 
         @VisibleForTesting
@@ -216,12 +216,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                 Diagnosis.INTENSIVE_CARE -> {
                     // reschedule the last outcome as it failed to process it
                     // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
-                    val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
+                    val backOff = calculateBackOffForIntensiveCareCondition(medicalHistory, currentState)
                     val outcome = medicalHistory.records.last().outcome
                     log.info("Flow error kept for intensive care, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowKeptForIntensiveCare.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
-//                    Triple(outcome, null, backOff)
-                    Triple(outcome, outcome.event, 0.seconds)
+                    Triple(outcome, outcome.event, backOff)
                 }
             }
 
@@ -246,28 +245,21 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         medicalHistory: FlowMedicalHistory,
         currentState: StateMachineState
     ): Duration {
-        return report.by.firstOrNull { it is Chronic }?.let { chronicStaff ->
-            return calculateBackOff(chronicStaff, medicalHistory, currentState)
+        return report.by.firstOrNull { it is Chronic }?.let { staff ->
+            calculateBackOff(medicalHistory.timesDischargedForTheSameThing(staff, currentState))
         } ?: 0.seconds
     }
 
     private fun calculateBackOffForIntensiveCareCondition(
-        report: ConsultationReport,
         medicalHistory: FlowMedicalHistory,
         currentState: StateMachineState
-    ): Duration {
-        return report.by.firstOrNull { it is IntensiveCareDoctor }?.let { staff ->
-            return calculateBackOff(staff, medicalHistory, currentState)
-        } ?: 0.seconds
-    }
+    ): Duration = calculateBackOff(medicalHistory.timesKeptForIntensiveCare(currentState))
 
-    private fun calculateBackOff(staff: Staff, medicalHistory: FlowMedicalHistory, currentState: StateMachineState): Duration {
-        return medicalHistory.timesDischargedForTheSameThing(staff, currentState).let {
-            if (it == 0) {
-                0.seconds
-            } else {
-                maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
-            }
+    private fun calculateBackOff(timesDiagnosisGiven: Int): Duration {
+        return if (timesDiagnosisGiven == 0) {
+            0.seconds
+        } else {
+            maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(timesDiagnosisGiven)) / 2).toInt()).seconds
         }
     }
 
@@ -332,6 +324,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
+        fun timesKeptForIntensiveCare(currentState: StateMachineState): Int {
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
+            return records.count { IntensiveCareDoctor in it.by && it.suspendCount == lastAdmittanceSuspendCount }
+        }
+
         override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
     }
 
@@ -389,6 +386,11 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
     }
 
+    /**
+     * The [Chronic] interface relates to [Staff] that return diagnoses that can be constantly be diagnosed if the flow keeps returning to
+     * the hospital. [Chronic] diagnoses apply a backoff before scheduling a new [Event], this prevents a flow from constantly retrying
+     * without a chance for the underlying issue to resolve itself.
+     */
     interface Chronic
 
     /**
@@ -599,6 +601,22 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
+     * Retry notarisation if the flow errors with a [NotaryError.General]. Notary flows are idempotent and only success or conflict
+     * responses should be returned to the client.
+     */
+    object NotaryDoctor : Staff, Chronic {
+        override fun consult(flowFiber: FlowFiber,
+                             currentState: StateMachineState,
+                             newError: Throwable,
+                             history: FlowMedicalHistory): Diagnosis {
+            if (newError is NotaryException && newError.error is NotaryError.General) {
+                return Diagnosis.DISCHARGE
+            }
+            return Diagnosis.NOT_MY_SPECIALTY
+        }
+    }
+
+    /**
      * Handles errors coming from the processing of errors events ([Event.StartErrorPropagation], [Event.RetryFlowFromSafePoint] and
      * [Event.OvernightObservation]), returning a [Diagnosis.INTENSIVE_CARE] diagnosis
      */
@@ -614,22 +632,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
-        }
-    }
-
-    /**
-     * Retry notarisation if the flow errors with a [NotaryError.General]. Notary flows are idempotent and only success or conflict
-     * responses should be returned to the client.
-     */
-    object NotaryDoctor : Staff, Chronic {
-        override fun consult(flowFiber: FlowFiber,
-                             currentState: StateMachineState,
-                             newError: Throwable,
-                             history: FlowMedicalHistory): Diagnosis {
-            if (newError is NotaryException && newError.error is NotaryError.General) {
-                return Diagnosis.DISCHARGE
-            }
-            return Diagnosis.NOT_MY_SPECIALTY
         }
     }
 }
