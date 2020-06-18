@@ -10,9 +10,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.SimpleClock
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.*
+import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import java.io.PrintWriter
 import java.sql.Connection
@@ -74,7 +76,6 @@ abstract class CordaMigration : CustomTaskChange {
                                cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>): CordaPersistence {
-        val configDefaults = DatabaseConfig()
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
                 AbstractPartyToX500NameAsStringConverter(
@@ -83,7 +84,7 @@ abstract class CordaMigration : CustomTaskChange {
         )
         // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
         // migrations may fail.
-        return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+        return CordaPersistence(false, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
     }
 
     override fun validate(database: Database?): ValidationErrors? {

@@ -535,6 +535,18 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         Node.printBasicNodeInfo("Database migration done.")
     }
 
+    fun runSchemaSync() {
+        check(started == null) { "Node has already been started" }
+        Node.printBasicNodeInfo("Synchronising CorDapp schemas to the changelog ...")
+        val hikariProperties = configuration.dataSourceProperties
+        if (hikariProperties.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
+
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
+        SchemaMigration(dataSource, cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+                .synchroniseSchemas(schemaService.appSchemas, false)
+        Node.printBasicNodeInfo("CorDapp schemas synchronised")
+    }
+
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
@@ -1414,7 +1426,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(
-            databaseConfig,
+            databaseConfig.exportHibernateJMXStatistics,
             schemaService.schemas,
             jdbcUrl,
             cacheFactory,
