@@ -1,7 +1,23 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS release branches and tags
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+/**
+ * Sense environment
+ */
+boolean isTag = (env.TAG_NAME =~ /^release-V(\d+\.\d+)?(\.\d+)?(-.+)?$/)
 
 pipeline {
     agent { label 'k8s' }
@@ -19,6 +35,12 @@ pipeline {
     }
 
     stages {
+        stage('Deploy Nodes') {
+            steps {
+                sh "./gradlew --no-daemon jar deployNodes"
+            }
+        }
+
         stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
@@ -27,7 +49,7 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean preAllocateForParallelRegressionTest preAllocateForAllSlowIntegrationTest pushBuildImage --stacktrace"
+                            " clean preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -69,7 +91,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
 
             script {
                 try {
@@ -101,38 +123,40 @@ pipeline {
                     }
                 }
             }
-            
+
             script
             {
-                // We want to send a summary email, but want to limit to once per day.
-                // Comparing the dates of the previous and current builds achieves this,
-                // i.e. we will only send an email for the first build on a given day.
-                def prevBuildDate = new Date(
-                        currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
-                def currentBuildDate = new Date(
-                        currentBuild.timeInMillis).clearTime()
+                if (!isTag) {
+                    // We want to send a summary email, but want to limit to once per day.
+                    // Comparing the dates of the previous and current builds achieves this,
+                    // i.e. we will only send an email for the first build on a given day.
+                    def prevBuildDate = new Date(
+                            currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
+                    def currentBuildDate = new Date(
+                            currentBuild.timeInMillis).clearTime()
 
-                if (prevBuildDate != currentBuildDate) {
-                    def statusSymbol = '\u2753'
-                    switch(currentBuild.result) {
-                        case 'SUCCESS':
-                            statusSymbol = '\u2705'
-                            break;
-                        case 'UNSTABLE':
-                        case 'FAILURE':
-                            statusSymbol = '\u274c'
-                            break;
-                        default:
-                            break;
+                    if (prevBuildDate != currentBuildDate) {
+                        def statusSymbol = '\u2753'
+                        switch(currentBuild.result) {
+                            case 'SUCCESS':
+                                statusSymbol = '\u2705'
+                                break;
+                            case 'UNSTABLE':
+                            case 'FAILURE':
+                                statusSymbol = '\u274c'
+                                break;
+                            default:
+                                break;
+                        }
+
+                        echo('First build for this date, sending summary email')
+                        emailext to: '$DEFAULT_RECIPIENTS',
+                            subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
+                            mimeType: 'text/html',
+                            body: '${SCRIPT, template="groovy-html.template"}'
+                    } else {
+                        echo('Already sent summary email today, suppressing')
                     }
-
-                    echo('First build for this date, sending summary email')
-                    emailext to: '$DEFAULT_RECIPIENTS',
-                        subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
-                        mimeType: 'text/html',
-                        body: '${SCRIPT, template="groovy-html.template"}'
-                } else {
-                    echo('Already sent summary email today, suppressing')
                 }
             }
         }
