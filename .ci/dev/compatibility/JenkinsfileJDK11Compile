@@ -8,7 +8,7 @@ pipeline {
         dockerfile {
             label 'k8s'
             additionalBuildArgs "--build-arg USER=stresstester"
-            filename '.ci/dev/compatibility/DockerfileJDK11Compile'
+            filename '.ci/dev/compatibility/DockerfileJDK11'
         }
     }
     options {
