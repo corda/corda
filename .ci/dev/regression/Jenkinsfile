@@ -17,10 +17,15 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isTag = (env.TAG_NAME =~ /^release-V(\d+\.\d+)?(\.\d+)?(-.+)?$/)
+boolean isReleaseTag = (env.TAG_NAME =~ /^release-.+$/)
 
 pipeline {
     agent { label 'k8s' }
+
+    parameters {
+        booleanParam defaultValue: isReleaseTag, description: 'Publish artifacts to Artifactory?', name: 'DO_PUBLISH'
+    }
+
     options {
         timestamps()
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
@@ -32,6 +37,9 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        ARTIFACTORY_BUILD_NAME = "Corda/Jenkins/${!isReleaseTag?"snapshot/":""}${env.BRANCH_NAME}".replaceAll("/", " :: ")
     }
 
     stages {
@@ -55,7 +63,7 @@ pipeline {
             }
         }
 
-        stage('Testing phase') {
+        stage('Testing Phase') {
             parallel {
                 stage('Regression Test') {
                     steps {
@@ -83,6 +91,65 @@ pipeline {
                                 " allParallelSlowIntegrationTest --stacktrace"
                     }
                 }
+            }
+        }
+
+        stage('Build Fat Jar') {
+            when {
+                expression { params.DO_PUBLISH }
+            }
+            steps {
+                sh "./gradlew jar --stacktrace"
+            }
+        }
+
+        stage('Get Project Properties') {
+            when {
+                expression { params.DO_PUBLISH }
+            }
+            steps {
+                sh "./gradlew properties >all-properties"
+            }
+        }
+
+        stage('Nexus IQ Test') {
+            when {
+                expression { params.DO_PUBLISH }
+            }
+            steps {
+                // TODO: Blocked by INFRA-315
+                sh "echo '++++ NexusIQ test placeholder ++++'"
+            }
+        }
+
+        stage('Publish to Artifactory') {
+            when {
+                expression { params.DO_PUBLISH }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+//                         repo: isReleaseTag ? 'r3-corda-releases' : 'r3-corda-dev'
+                        repo: 'r3-tools-dev' // TODO: replace with above comment. r3-tools-dev arbitrarily chosen for testing
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
             }
         }
     }
@@ -126,7 +193,7 @@ pipeline {
 
             script
             {
-                if (!isTag) {
+                if (!isReleaseTag) {
                     // We want to send a summary email, but want to limit to once per day.
                     // Comparing the dates of the previous and current builds achieves this,
                     // i.e. we will only send an email for the first build on a given day.

@@ -17,7 +17,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isReleaseTag = (env.TAG_NAME =~ /^ci03-test-.+$/)
+boolean isReleaseTag = (env.TAG_NAME =~ /^ci03-test-.+$/) // TODO: change this to /^release-.+$/ when unblocked
 
 pipeline {
     agent { label 'k8s' }
@@ -43,61 +43,60 @@ pipeline {
     }
 
     stages {
-//        stage('Deploy Nodes') {
-//            steps {
-//                sh "./gradlew --no-daemon jar deployNodes"
-//            }
-//        }
-//
-//        stage('Generate Build Image') {
-//            steps {
-//                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
-//                    sh "./gradlew " +
-//                            "-Dkubenetize=true " +
-//                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
-//                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
-//                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-//                            " clean preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest pushBuildImage --stacktrace"
-//                }
-//                sh "kubectl auth can-i get pods"
-//            }
-//        }
-//
-//        stage('Testing phase') {
-//            parallel {
-//                stage('Regression Test') {
-//                    steps {
-//                        sh "./gradlew " +
-//                                "-DbuildId=\"\${BUILD_ID}\" " +
-//                                "-Dkubenetize=true " +
-//                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-//                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-//                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-//                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-//                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-//                                " parallelRegressionTest --stacktrace"
-//                    }
-//                }
-//                stage('Slow Integration Test') {
-//                    steps {
-//                        sh "./gradlew " +
-//                                "-DbuildId=\"\${BUILD_ID}\" " +
-//                                "-Dkubenetize=true " +
-//                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-//                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
-//                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
-//                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
-//                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
-//                                " allParallelSlowIntegrationTest --stacktrace"
-//                    }
-//                }
-//            }
-//        }
+        stage('Deploy Nodes') {
+            steps {
+                sh "./gradlew --no-daemon jar deployNodes"
+            }
+        }
+
+        stage('Generate Build Image') {
+            steps {
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
+                            " clean preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest pushBuildImage --stacktrace"
+                }
+                sh "kubectl auth can-i get pods"
+            }
+        }
+
+        stage('Testing phase') {
+            parallel {
+                stage('Regression Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " parallelRegressionTest --stacktrace"
+                    }
+                }
+                stage('Slow Integration Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " allParallelSlowIntegrationTest --stacktrace"
+                    }
+                }
+            }
+        }
 
         stage('Build Fat Jar') {
             when {
                 expression { params.DO_PUBLISH }
-                beforeAgent true
             }
             steps {
                 sh "./gradlew jar --stacktrace"
@@ -107,7 +106,6 @@ pipeline {
         stage('Get Project Properties') {
             when {
                 expression { params.DO_PUBLISH }
-                beforeAgent true
             }
             steps {
                 sh "./gradlew properties >all-properties"
@@ -117,9 +115,9 @@ pipeline {
         stage('Nexus IQ Test') {
             when {
                 expression { params.DO_PUBLISH }
-                beforeAgent true
             }
             steps {
+                // TODO: Blocked by INFRA-315
                 sh "echo '++++ NexusIQ test placeholder ++++'"
             }
         }
@@ -127,7 +125,6 @@ pipeline {
         stage('Publish to Artifactory') {
             when {
                 expression { params.DO_PUBLISH }
-                beforeAgent true
             }
             steps {
                 rtServer(
@@ -138,7 +135,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-//                         repo: isRelease ? 'r3-corda-releases' : 'r3-corda-dev'
+//                         repo: isReleaseTag ? 'r3-corda-releases' : 'r3-corda-dev'
                         repo: 'r3-tools-dev'
                 )
                 rtGradleRun(
@@ -159,15 +156,73 @@ pipeline {
 
     post {
         always {
-
-            // add archive and junit post steps
-            // ...
-
-            // Summary email
-            // ...
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
 
             script {
-                echo('++++ post condition placeholder ++++')
+                try {
+                    /*
+                     * Copy all JUnit results files into a single top level directory.
+                     * This is necessary to stop the allure plugin from hitting out
+                     * of memory errors due to being passed many directories with
+                     * long paths.
+                     *
+                     * File names are pre-pended with the pod number when
+                     * copied to avoid collisions between files where the same test
+                     * classes have run on multiple pods.
+                     */
+                    fileOperations([fileCopyOperation(
+                            includes: '**/test-results-xml/**/test-runs/test-reports/**',
+                            targetLocation: 'allure-input',
+                            flattenFiles: true,
+                            renameFiles: true,
+                            sourceCaptureExpression: '.*test-results-xml/.*-([\\d]+)/.*/([^/]+)$',
+                            targetNameExpression: '$1-$2')])
+                    allure includeProperties: false,
+                            jdk: '',
+                            results: [[path: '**/allure-input']]
+                } catch (err) {
+                    echo("Allure report generation failed: $err")
+
+                    if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+
+            script {
+                if (!isReleaseTag) {
+                    // We want to send a summary email, but want to limit to once per day.
+                    // Comparing the dates of the previous and current builds achieves this,
+                    // i.e. we will only send an email for the first build on a given day.
+                    def prevBuildDate = new Date(
+                            currentBuild?.previousBuild.timeInMillis ?: 0).clearTime()
+                    def currentBuildDate = new Date(
+                            currentBuild.timeInMillis).clearTime()
+
+                    if (prevBuildDate != currentBuildDate) {
+                        def statusSymbol = '\u2753'
+                        switch(currentBuild.result) {
+                            case 'SUCCESS':
+                                statusSymbol = '\u2705'
+                                break;
+                            case 'UNSTABLE':
+                            case 'FAILURE':
+                                statusSymbol = '\u274c'
+                                break;
+                            default:
+                                break;
+                        }
+
+                        echo('First build for this date, sending summary email')
+                        emailext to: '$DEFAULT_RECIPIENTS',
+                                subject: "$statusSymbol" + '$BRANCH_NAME regression tests - $BUILD_STATUS',
+                                mimeType: 'text/html',
+                                body: '${SCRIPT, template="groovy-html.template"}'
+                    } else {
+                        echo('Already sent summary email today, suppressing')
+                    }
+                }
             }
         }
         cleanup {
