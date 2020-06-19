@@ -65,7 +65,7 @@ class DeliverSessionMessageTransition(
                     is DataSessionMessage -> dataMessageTransition(existingSession, payload)
                     is ErrorSessionMessage -> errorMessageTransition(existingSession, payload)
                     is RejectSessionMessage -> rejectMessageTransition(existingSession, payload)
-                    is EndSessionMessage -> endMessageTransition(startingState)
+                    is EndSessionMessage -> endMessageTransition()
                 }
             }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
@@ -181,14 +181,15 @@ class DeliverSessionMessageTransition(
         }
     }
 
-    private fun TransitionBuilder.endMessageTransition(state: StateMachineState) {
+    private fun TransitionBuilder.endMessageTransition() {
+
         val sessionId = event.sessionMessage.recipientSessionId
         val sessions = currentState.checkpoint.checkpointState.sessions
         // a check has already been performed to confirm the session exists for this message before this method is invoked.
         val sessionState = sessions[sessionId]!!
         when (sessionState) {
             is SessionState.Initiated -> {
-                val flowState = state.checkpoint.flowState
+                val flowState = currentState.checkpoint.flowState
                 // flow must have already been started when session messages are being delivered.
                 if (flowState !is FlowState.Started)
                     return freshErrorTransition(UnexpectedEventInState())

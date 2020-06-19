@@ -87,29 +87,9 @@ class StartedFlowTransition(
         return builder {
             val sessionsToRemove = sessionsToBeTerminated.keys
             currentState = currentState.copy(
-                    checkpoint = currentState.checkpoint.copy(
-                            checkpointState = currentState.checkpoint.checkpointState.copy(
-                                    numberOfSuspends = currentState.checkpoint.checkpointState.numberOfSuspends + 1,
-                                    sessions = currentState.checkpoint.checkpointState.sessions - sessionsToRemove
-                            )
-                    ),
-                    pendingDeduplicationHandlers = emptyList()
+                    checkpoint = currentState.checkpoint.removeSessions(sessionsToRemove)
             )
-            actions.addAll(arrayOf(
-                    Action.CreateTransaction,
-                    Action.PersistCheckpoint(context.id, currentState.checkpoint, currentState.isAnyCheckpointPersisted),
-                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                    Action.CommitTransaction,
-                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                    Action.RemoveSessionBindings(sessionsToRemove)
-            ))
-            var index = 0
-            sessionsToBeTerminated.values.forEach { sessionState ->
-                sessionState as SessionState.Initiated
-                val message = ExistingSessionMessage(sessionState.peerSinkSessionId, EndSessionMessage)
-                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index++, sessionState)
-                actions.add(Action.SendExisting(sessionState.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID)))
-            }
+            actions.add(Action.RemoveSessionBindings(sessionsToRemove))
             actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
             FlowContinuation.ProcessEvents
         }

@@ -26,6 +26,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.sql.SQLTransientConnectionException
 import kotlin.test.assertEquals
 
 class FlowSessionCloseTest {
@@ -41,7 +42,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, false).returnValue.getOrThrow() }
+                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, false, false).returnValue.getOrThrow() }
                         .isInstanceOf(CordaRuntimeException::class.java)
                         .hasMessageContaining(PrematureSessionClose::class.java.name)
                         .hasMessageContaining("The following session was closed before it was initialised")
@@ -58,7 +59,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, true).returnValue.getOrThrow() }
+                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, true, false).returnValue.getOrThrow() }
                         .isInstanceOf(UnexpectedFlowEndException::class.java)
                         .hasMessageContaining("Tried to access ended session")
             }
@@ -74,7 +75,21 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, false).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `flow can close initialised session successfully even in case of failures and replays`() {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
+            val (nodeAHandle, nodeBHandle) = listOf(
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
+            ).transpose().getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, true).returnValue.getOrThrow()
             }
         }
     }
@@ -126,11 +141,11 @@ class FlowSessionCloseTest {
         }
     }
 
-    /* test about get flow info */
+
 
     @InitiatingFlow
     @StartableByRPC
-    class InitiatorFlow(val party: Party, private val prematureClose: Boolean = false, private val accessClosedSession: Boolean = false): FlowLogic<Unit>() {
+    class InitiatorFlow(val party: Party, private val prematureClose: Boolean = false, private val accessClosedSession: Boolean = false, private val retryClose: Boolean = false): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val session = initiateFlow(party)
@@ -139,10 +154,10 @@ class FlowSessionCloseTest {
                 session.close()
             }
 
-            session.send("Hello")
+            session.send(retryClose)
+            sleep(1.seconds)
 
             if (accessClosedSession) {
-                sleep(1.seconds)
                 session.receive<String>()
             }
         }
@@ -150,12 +165,25 @@ class FlowSessionCloseTest {
 
     @InitiatedBy(InitiatorFlow::class)
     class InitiatedFlow(private val otherSideSession: FlowSession): FlowLogic<Unit>() {
+
+        companion object {
+            var thrown = false
+        }
+
         @Suspendable
         override fun call() {
-            otherSideSession.receive<String>()
-                    .unwrap{ assertEquals("Hello", it) }
+            val retryClose = otherSideSession.receive<Boolean>()
+                    .unwrap{ it }
 
             otherSideSession.close()
+
+            // failing with a transient exception to force a replay of the close.
+            if (retryClose) {
+                if (!thrown) {
+                    thrown = true
+                    throw SQLTransientConnectionException("Connection is not available")
+                }
+            }
         }
     }
 

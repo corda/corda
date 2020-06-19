@@ -42,8 +42,6 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any {
-            // shadow member variable to avoid fiber serialisation errors
-            val party = party
             return await(
                 ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
                     serviceHub.cordaService(FutureService::class.java).startFlow(party)
@@ -57,8 +55,6 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any {
-            // shadow member variable to avoid fiber serialisation errors
-            val party = party
             return await(
                 ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
                     serviceHub.cordaService(FutureService::class.java).startFlows(party)
