@@ -28,8 +28,12 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
-//        overrideIndexTriggers true // works as expected for PRs
-//        overrideIndexTriggers false // works as expected for non PRs
+
+        /*
+         * a bit awkward to read
+         * is parameter is true  -> push events are *not* ignored
+         * if parameter is false -> push events *are* ignored
+         */
         overrideIndexTriggers (!isReleaseBranch)
     }
 
