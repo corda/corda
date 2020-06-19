@@ -6,7 +6,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isTag = (env.TAG_NAME =~ /^release.*JDK11$/)
+boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
 
 pipeline {
     agent {
@@ -79,6 +79,9 @@ pipeline {
 
         if(isTag) {
             stage('Publish to Artifactory') {
+                when {
+                    expression { isReleaseTag }
+                }
                 steps {
                     sh "./gradlew artifactoryPublish"
                 }
