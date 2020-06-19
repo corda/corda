@@ -30,7 +30,8 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
-        overrideIndexTriggers true
+//        overrideIndexTriggers true // works as expected for PRs
+        overrideIndexTriggers false // works as expected for non PRs
     }
 
     parameters {
