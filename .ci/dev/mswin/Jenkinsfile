@@ -5,6 +5,7 @@
  * integration tests are started in parallel on separate agents.
  *
  * Additionally, pull requests by default run only unit tests.
+
  */
 
 /**
@@ -29,7 +30,8 @@ pipeline {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
 //        overrideIndexTriggers true // works as expected for PRs
-        overrideIndexTriggers false // works as expected for non PRs
+//        overrideIndexTriggers false // works as expected for non PRs
+        overrideIndexTriggers (!isReleaseBranch)
     }
 
     parameters {
