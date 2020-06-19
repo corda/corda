@@ -30,7 +30,7 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
-        overrideIndexTriggers true
+//        overrideIndexTriggers true
     }
 
     parameters {
