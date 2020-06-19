@@ -3,8 +3,19 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+/**
+ * Sense environment
+ */
+boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
+
 pipeline {
-    agent { label 'k8s' }
+    agent {
+        dockerfile {
+            label 'k8s'
+            additionalBuildArgs "--build-arg USER=stresstester"
+            filename '.ci/dev/compatibility/DockerfileJDK11'
+        }
+    }
     options {
         timestamps()
         buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
@@ -16,10 +27,11 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish JDK 11 Release to Artifactory".replaceAll("/", "::")
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
+        stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -29,7 +41,7 @@ pipeline {
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                             "-Ddocker.buildbase.tag=11latest " +
                             "-Ddocker.dockerfile=DockerfileJDK11Azul" +
-                            " clean pushBuildImage --stacktrace"
+                            " clean pushBuildImage preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -63,6 +75,36 @@ pipeline {
                                 " allParallelSlowIntegrationTest --stacktrace"
                     }
                 }
+            }
+        }
+
+        stage('Publish to Artifactory') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'r3-corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
             }
         }
     }

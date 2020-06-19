@@ -53,7 +53,7 @@ pipeline {
 
     post {
         always {
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */
