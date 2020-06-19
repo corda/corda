@@ -27,6 +27,7 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", " :: ")
     }
 
     stages {
@@ -77,14 +78,33 @@ pipeline {
             }
         }
 
-        if(isTag) {
-            stage('Publish to Artifactory') {
-                when {
-                    expression { isReleaseTag }
-                }
-                steps {
-                    sh "./gradlew artifactoryPublish"
-                }
+        stage('Publish to Artifactory') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'r3-corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
             }
         }
     }
