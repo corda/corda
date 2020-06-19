@@ -25,8 +25,9 @@ fun createTestSerializationEnv(): SerializationEnvironment {
 }
 
 fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironment {
+    var customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet()
     val (clientSerializationScheme, serverSerializationScheme) = if (classLoader != null) {
-        val customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
+        customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
         val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, classLoader).toSet()
 
         Pair(AMQPClientSerializationScheme(customSerializers, serializationWhitelists),
@@ -45,7 +46,7 @@ fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironm
             AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
             KRYO_CHECKPOINT_CONTEXT,
-            KryoCheckpointSerializer
+            KryoCheckpointSerializer.also { it.addCordappSerializers(customSerializers) }
     )
 }
 

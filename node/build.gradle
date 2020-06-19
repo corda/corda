@@ -191,7 +191,8 @@ dependencies {
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-    
+    integrationTestCompile "com.github.andrewoma.dexx:kollection:0.7"
+
     // BFT-Smart dependencies
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
     compile 'commons-codec:commons-codec:1.13'

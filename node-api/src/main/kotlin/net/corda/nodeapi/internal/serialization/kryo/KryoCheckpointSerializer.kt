@@ -11,6 +11,7 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -41,6 +42,7 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
 
 object KryoCheckpointSerializer : CheckpointSerializer {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
+    private var cordappSerializers: List<CustomSerializerCheckpointAdaptor<out Any?, out Any?>> = listOf()
 
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
@@ -51,6 +53,19 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
                 serializer.kryo.apply {
                     field.set(this, classResolver)
+
+                    for (customSerializer in cordappSerializers) {
+
+                        val typeName = customSerializer.type.typeName.substringBefore('<')
+                        val clazz = context.deserializationClassLoader.loadClass(typeName)
+
+                        if (clazz.isInterface){
+                            addDefaultSerializer(clazz, customSerializer)
+                        } else {
+                            register(clazz, customSerializer)
+                        }
+                    }
+
                     // don't allow overriding the public key serializer for checkpointing
                     DefaultKryoCustomizer.customize(this)
                     addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
@@ -119,6 +134,10 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 }
             })
         }
+    }
+
+    fun addCordappSerializers(customSerializers: Collection<SerializationCustomSerializer<*, *>>) {
+        cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
     }
 }
 
