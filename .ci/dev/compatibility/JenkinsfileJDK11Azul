@@ -10,11 +10,7 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
 
 pipeline {
     agent {
-        dockerfile {
-            label 'k8s'
-            additionalBuildArgs "--build-arg USER=stresstester"
-            filename '.ci/dev/compatibility/DockerfileJDK11'
-        }
+        label 'k8s;'
     }
     options {
         timestamps()
@@ -79,6 +75,13 @@ pipeline {
         }
 
         stage('Publish to Artifactory') {
+            agent {
+                dockerfile {
+                    label 'k8s'
+                    additionalBuildArgs "--build-arg USER=stresstester"
+                    filename '.ci/dev/compatibility/DockerfileJDK11'
+                }
+            }
             when {
                 expression { isReleaseTag }
             }
