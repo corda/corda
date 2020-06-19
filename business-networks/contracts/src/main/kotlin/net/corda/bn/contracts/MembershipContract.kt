@@ -4,11 +4,11 @@ import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
-import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
+import java.security.PublicKey
 
 /**
  * Contract that verifies an evolution of [MembershipState].
@@ -19,11 +19,11 @@ open class MembershipContract : Contract {
         const val CONTRACT_NAME = "net.corda.bn.contracts.MembershipContract"
     }
 
-    open class Commands : CommandData, TypeOnlyCommandData() {
-        class Request : Commands()
-        class Activate : Commands()
-        class Suspend : Commands()
-        class Revoke : Commands()
+    open class Commands(val requiredSigners: List<PublicKey>) : CommandData {
+        class Request(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+        class Activate(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+        class Suspend(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+        class Revoke(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
     }
 
     @Suppress("ComplexMethod")
@@ -36,16 +36,17 @@ open class MembershipContract : Contract {
 
         requireThat {
             input?.apply {
-                "Input state has to be validated by ${contractName()}" using (input.state.contract == contractName())
+                "Input state has to be validated by ${contractName()}" using (state.contract == contractName())
             }
             inputState?.apply {
-                "Input state's modified timestamp should be greater or equal to issued timestamp" using (inputState.issued <= inputState.modified)
-            }
-            outputState?.apply {
-                "Output state's modified timestamp should be greater or equal to issued timestamp" using (outputState.issued <= outputState.modified)
+                "Input state's modified timestamp should be greater or equal to issued timestamp" using (issued <= modified)
             }
             output?.apply {
-                "Output state has to be validated by ${contractName()}" using (output.contract == contractName())
+                "Output state has to be validated by ${contractName()}" using (contract == contractName())
+            }
+            outputState?.apply {
+                "Output state's modified timestamp should be greater or equal to issued timestamp" using (issued <= modified)
+                "Required signers should be subset of all output state's participants" using (participants.map { it.owningKey }.containsAll(command.value.requiredSigners))
             }
             if (inputState != null && outputState != null) {
                 "Input and output state should have same Corda identity" using (inputState.identity == outputState.identity)
@@ -53,7 +54,7 @@ open class MembershipContract : Contract {
                 "Input and output state should have same issued timestamps" using (inputState.issued == outputState.issued)
                 "Output state's modified timestamp should be greater or equal than input's" using (inputState.modified <= outputState.modified)
                 "Input and output state should have same linear IDs" using (inputState.linearId == outputState.linearId)
-                "Input and output state should have same participants" using (inputState.participants.toSet() == outputState.participants.toSet())
+                "Transaction must be signed by all signers specified inside command" using (command.signers.toSet() == command.value.requiredSigners.toSet())
             }
         }
 
@@ -71,6 +72,7 @@ open class MembershipContract : Contract {
     open fun verifyRequest(tx: LedgerTransaction, command: CommandWithParties<Commands>, outputMembership: MembershipState) = requireThat {
         "Membership request transaction shouldn't contain any inputs" using (tx.inputs.isEmpty())
         "Membership request transaction should contain output state in PENDING status" using (outputMembership.isPending())
+        "Pending membership owner should be required signer of membership request transaction" using (outputMembership.identity.owningKey in command.value.requiredSigners)
     }
 
     open fun verifyActivate(
@@ -81,6 +83,7 @@ open class MembershipContract : Contract {
     ) = requireThat {
         "Input state of membership activation transaction shouldn't be already active" using (!inputMembership.isActive())
         "Output state of membership activation transaction should be active" using (outputMembership.isActive())
+        "Input membership owner shouldn't be required signer of membership activation transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
     }
 
     open fun verifySuspend(
@@ -91,6 +94,7 @@ open class MembershipContract : Contract {
     ) = requireThat {
         "Input state of membership suspension transaction shouldn't be already suspended" using (!inputMembership.isSuspended())
         "Output state of membership suspension transaction should be suspended" using (outputMembership.isSuspended())
+        "Input membership owner shouldn't be required signer of membership suspension transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
     }
 
     open fun verifyRevoke(
@@ -99,5 +103,6 @@ open class MembershipContract : Contract {
             inputMembership: MembershipState
     ) = requireThat {
         "Membership revocation transaction shouldn't contain any outputs" using (tx.outputs.isEmpty())
+        "Input membership owner shouldn't be required signer of membership revocation transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
     }
 }
