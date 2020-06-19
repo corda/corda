@@ -10,7 +10,7 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
 
 pipeline {
     agent {
-        label 'k8s;'
+        label 'k8s'
     }
     options {
         timestamps()
