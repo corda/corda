@@ -62,11 +62,11 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         val versionInfo = startup.getVersionInfo()
 
         println("\n" +
-                "******************************************************************\n" +
-                "*                                                                *\n" +
-                "*      Registering as a new participant with a Corda network     *\n" +
-                "*                                                                *\n" +
-                "******************************************************************\n")
+                "*******************************************************************\n" +
+                "*                                                                 *\n" +
+                "*      Registering as a new participant with a Corda network      *\n" +
+                "*                                                                 *\n" +
+                "*******************************************************************\n")
 
         NodeRegistrationHelper(NodeRegistrationConfiguration(conf),
                 HTTPNetworkRegistrationService(
