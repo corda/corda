@@ -27,7 +27,7 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
-        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", " :: ")
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
     }
 
     stages {
