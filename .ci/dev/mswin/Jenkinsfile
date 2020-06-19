@@ -5,6 +5,7 @@
  * integration tests are started in parallel on separate agents.
  *
  * Additionally, pull requests by default run only unit tests.
+
  * Integration tests can be started when the switch parameter is on.
  */
 
@@ -29,7 +30,7 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
-        overrideIndexTriggers false
+        overrideIndexTriggers true
     }
 
     parameters {
