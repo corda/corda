@@ -78,6 +78,7 @@ pipeline {
             agent {
                 dockerfile {
                     label 'k8s'
+                    reuseNode true
                     additionalBuildArgs "--build-arg USER=stresstester"
                     filename '.ci/dev/compatibility/DockerfileJDK11'
                 }
