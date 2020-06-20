@@ -1,0 +1,124 @@
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+/**
+ * Sense environment
+ */
+boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
+
+pipeline {
+    agent {
+        label 'k8s'
+    }
+    options {
+        timestamps()
+        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    environment {
+        DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}JDK11"
+        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
+        BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish JDK 11 Release to Artifactory".replaceAll("/", "::")
+    }
+
+    stages {
+        stage('Generate Build Image') {
+            steps {
+                withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
+                    sh "./gradlew " +
+                            "-Dkubenetize=true " +
+                            "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
+                            "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                            "-Ddocker.buildbase.tag=11latest " +
+                            "-Ddocker.dockerfile=DockerfileJDK11Azul" +
+                            " clean pushBuildImage preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest --stacktrace"
+                }
+                sh "kubectl auth can-i get pods"
+            }
+        }
+
+        stage('Testing phase') {
+            parallel {
+                stage('Regression Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " parallelRegressionTest --stacktrace"
+                    }
+                }
+                stage('Slow Integration Test') {
+                    steps {
+                        sh "./gradlew " +
+                                "-DbuildId=\"\${BUILD_ID}\" " +
+                                "-Dkubenetize=true " +
+                                "-Ddocker.run.tag=\"\${DOCKER_TAG_TO_USE}\" " +
+                                "-Dartifactory.username=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                                "-Dartifactory.password=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
+                                "-Dgit.branch=\"\${GIT_BRANCH}\" " +
+                                "-Dgit.target.branch=\"\${GIT_BRANCH}\" " +
+                                " allParallelSlowIntegrationTest --stacktrace"
+                    }
+                }
+            }
+        }
+
+        stage('Publish to Artifactory') {
+            agent {
+                dockerfile {
+                    reuseNode true
+                    additionalBuildArgs "--build-arg USER=stresstester"
+                    filename '.ci/dev/compatibility/DockerfileJDK11'
+                }
+            }
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'r3-corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
+            junit '**/build/test-results-xml/**/*.xml'
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
