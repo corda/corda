@@ -17,7 +17,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isTag = (env.TAG_NAME =~ /^release-V(\d+\.\d+)?(\.\d+)?(-.+)?$/)
+boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 
 pipeline {
     agent { label 'k8s' }
@@ -33,6 +33,7 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Release to Artifactory".replaceAll("/", "::")
     }
 
     stages {
@@ -86,6 +87,36 @@ pipeline {
                 }
             }
         }
+
+        stage('Publish to Artifactory') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'r3-corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+            }
+        }
     }
 
 
@@ -127,7 +158,7 @@ pipeline {
 
             script
             {
-                if (!isTag) {
+                if (!isReleaseTag) {
                     // We want to send a summary email, but want to limit to once per day.
                     // Comparing the dates of the previous and current builds achieves this,
                     // i.e. we will only send an email for the first build on a given day.
