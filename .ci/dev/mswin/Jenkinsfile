@@ -28,6 +28,13 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+
+        /*
+         * a bit awkward to read
+         * is parameter is true  -> push events are *not* ignored
+         * if parameter is false -> push events *are* ignored
+         */
+        overrideIndexTriggers (!isReleaseBranch)
     }
 
     parameters {
