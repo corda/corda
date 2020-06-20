@@ -55,7 +55,7 @@ pipeline {
                 stage('Unit Tests') {
                     agent { label 'mswin' }
                     steps {
-                        sh "./gradlew --no-daemon " +
+                        bat "./gradlew --no-daemon " +
                                 "--stacktrace " +
                                 "-Pcompilation.warningsAsErrors=false " +
                                 "-Ptests.failFast=true " +
@@ -80,7 +80,7 @@ pipeline {
                     }
                     agent { label 'mswin' }
                     steps {
-                        sh "./gradlew --no-daemon " +
+                        bat "./gradlew --no-daemon " +
                                 "clean integrationTest"
                     }
                     post {
