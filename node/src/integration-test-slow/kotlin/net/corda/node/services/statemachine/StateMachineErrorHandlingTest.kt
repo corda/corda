@@ -105,6 +105,7 @@ abstract class StateMachineErrorHandlingTest {
         }.also { onStopCallback() }
     }
 
+    @Suppress("LongParameterList")
     internal fun CordaRPCOps.assertHospitalCounts(
         discharged: Int = 0,
         observation: Int = 0,
