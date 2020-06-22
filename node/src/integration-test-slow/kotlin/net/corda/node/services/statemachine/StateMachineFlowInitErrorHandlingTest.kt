@@ -39,7 +39,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `error during transition with CommitTransaction action that occurs during flow initialisation will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -59,7 +59,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineErrorHandlingTest::SendAMessageFlow,
@@ -87,7 +87,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `unexpected error during flow initialisation throws exception to client`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
             val rules = """
                 RULE Create Counter
                 CLASS ${FlowStateMachineImpl::class.java.name}
@@ -106,7 +106,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             assertFailsWith<CordaRuntimeException> {
                 alice.rpc.startFlow(
@@ -133,7 +133,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `error during initialisation when trying to rollback the flow's database transaction the flow is able to retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -161,7 +161,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineErrorHandlingTest::SendAMessageFlow,
@@ -186,7 +186,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `error during initialisation when trying to close the flow's database transaction the flow is able to retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -214,7 +214,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineErrorHandlingTest::SendAMessageFlow,
@@ -241,7 +241,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `error during transition with CommitTransaction action that occurs during flow initialisation will retry and be kept for observation if error persists`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -261,7 +261,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             executor.execute {
                 alice.rpc.startFlow(StateMachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
@@ -278,7 +278,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             alice.rpc.assertNumberOfCheckpoints(0)
             val terminated = (alice as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
-            val alice2 = createBytemanNode(ALICE_NAME)
+            val (alice2, _) = createBytemanNode(ALICE_NAME)
             Thread.sleep(10.seconds.toMillis())
             alice2.rpc.assertNumberOfCheckpoints(0)
         }
@@ -297,7 +297,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `error during retrying a flow that failed when committing its original checkpoint will retry the flow again and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
@@ -317,7 +317,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineErrorHandlingTest::SendAMessageFlow,
@@ -349,7 +349,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `responding flow - error during transition with CommitTransaction action that occurs during flow initialisation will retry and complete successfully`() {
         startDriver {
-            val charlie = createBytemanNode(CHARLIE_NAME)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
 
             val rules = """
@@ -370,7 +370,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineErrorHandlingTest::SendAMessageFlow,
@@ -398,7 +398,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `responding flow - error during transition with CommitTransaction action that occurs during flow initialisation will retry and be kept for observation if error persists`() {
         startDriver {
-            val charlie = createBytemanNode(CHARLIE_NAME)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME)
             val alice = createNode(ALICE_NAME)
 
             val rules = """
@@ -419,7 +419,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             executor.execute {
                 alice.rpc.startFlow(StateMachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
@@ -438,7 +438,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             charlie.rpc.assertNumberOfCheckpoints(0)
             val terminated = (charlie as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
-            val charlie2 = createBytemanNode(CHARLIE_NAME)
+            val (charlie2, _) = createBytemanNode(CHARLIE_NAME)
             Thread.sleep(10.seconds.toMillis())
             alice.rpc.assertNumberOfCheckpoints(0)
             charlie2.rpc.assertNumberOfCheckpoints(0)

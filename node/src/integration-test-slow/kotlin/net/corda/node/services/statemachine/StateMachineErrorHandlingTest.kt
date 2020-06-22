@@ -65,15 +65,17 @@ abstract class StateMachineErrorHandlingTest {
     internal fun DriverDSL.createBytemanNode(
         providedName: CordaX500Name,
         additionalCordapps: Collection<TestCordapp> = emptyList()
-    ): NodeHandle {
-        return (this as InternalDriverDSL).startNode(
+    ): Pair<NodeHandle, Int> {
+        val port = nextPort()
+        val nodeHandle = (this as InternalDriverDSL).startNode(
             NodeParameters(
                 providedName = providedName,
                 rpcUsers = listOf(rpcUser),
                 additionalCordapps = additionalCordapps
             ),
-            bytemanPort = 12000
+            bytemanPort = port
         ).getOrThrow()
+        return nodeHandle to port
     }
 
     internal fun DriverDSL.createNode(providedName: CordaX500Name, additionalCordapps: Collection<TestCordapp> = emptyList()): NodeHandle {
@@ -86,8 +88,8 @@ abstract class StateMachineErrorHandlingTest {
         ).getOrThrow()
     }
 
-    internal fun submitBytemanRules(rules: String) {
-        val submit = Submit("localhost", 12000)
+    internal fun submitBytemanRules(rules: String, port: Int) {
+        val submit = Submit("localhost", port)
         submit.addScripts(listOf(ScriptText("Test script", rules)))
     }
 

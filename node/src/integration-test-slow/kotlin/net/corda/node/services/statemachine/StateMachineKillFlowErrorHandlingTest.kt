@@ -32,7 +32,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition due to an InterruptedException (killFlow) will terminate the flow`() {
         startDriver {
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Increment terminal counter
@@ -44,7 +44,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             val flow = alice.rpc.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::SleepFlow)
 
@@ -118,7 +118,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
         startDriver {
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
             val charlie = createNode(CHARLIE_NAME)
 
             val rules = """
@@ -139,7 +139,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             val flow = alice.rpc.startFlow(StateMachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
 

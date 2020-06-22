@@ -35,7 +35,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
@@ -66,7 +66,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
@@ -97,7 +97,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
@@ -128,7 +128,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
@@ -161,7 +161,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and complete successfully`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
@@ -190,7 +190,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
@@ -226,7 +226,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and be kept for observation is error persists`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
@@ -255,7 +255,7 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             assertFailsWith<TimeoutException> {
                 alice.rpc.startFlow(

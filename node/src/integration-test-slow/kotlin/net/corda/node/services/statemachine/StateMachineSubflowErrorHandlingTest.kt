@@ -41,7 +41,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `initiating subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -85,7 +85,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineSubflowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
@@ -120,7 +120,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `initiating subflow - error during transition with CommitTransaction action that occurs after the first receive will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -156,7 +156,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineSubflowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
@@ -191,7 +191,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -219,7 +219,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineSubflowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
@@ -254,7 +254,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first receive will retry and complete successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
-            val alice = createBytemanNode(ALICE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -290,7 +290,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
                 StateMachineSubflowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
