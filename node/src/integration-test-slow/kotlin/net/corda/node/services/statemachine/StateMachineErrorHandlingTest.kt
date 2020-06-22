@@ -11,11 +11,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.list
 import net.corda.core.internal.readAllLines
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -34,6 +37,7 @@ import org.jboss.byteman.agent.submit.Submit
 import org.junit.Before
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
 
 abstract class StateMachineErrorHandlingTest {
 
@@ -101,6 +105,25 @@ abstract class StateMachineErrorHandlingTest {
         }.also { onStopCallback() }
     }
 
+    internal fun CordaRPCOps.assertHospitalCounts(
+        discharged: Int = 0,
+        observation: Int = 0,
+        propagated: Int = 0,
+        dischargedRetry: Int = 0,
+        observationRetry: Int = 0,
+        propagatedRetry: Int = 0
+    ) {
+        val counts = startFlow(StateMachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.getOrThrow(20.seconds)
+        assertEquals(discharged, counts.discharged)
+        assertEquals(observation, counts.observation)
+        assertEquals(propagated, counts.propagated)
+        assertEquals(dischargedRetry, counts.dischargeRetry)
+        assertEquals(observationRetry, counts.observationRetry)
+        assertEquals(propagatedRetry, counts.propagatedRetry)
+    }
+
+    internal fun CordaRPCOps.assertHospitalCountsAllZero() = assertHospitalCounts()
+
     @StartableByRPC
     @InitiatingFlow
     class SendAMessageFlow(private val party: Party) : FlowLogic<String>() {
@@ -167,7 +190,7 @@ abstract class StateMachineErrorHandlingTest {
     class GetHospitalCountersFlow : FlowLogic<HospitalCounts>() {
         override fun call(): HospitalCounts =
             HospitalCounts(
-                serviceHub.cordaService(HospitalCounter::class.java).dischargeCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).dischargedCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).observationCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).propagatedCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).dischargeRetryCounter,
@@ -178,7 +201,7 @@ abstract class StateMachineErrorHandlingTest {
 
     @CordaSerializable
     data class HospitalCounts(
-        val discharge: Int,
+        val discharged: Int,
         val observation: Int,
         val propagated: Int,
         val dischargeRetry: Int,
@@ -189,7 +212,7 @@ abstract class StateMachineErrorHandlingTest {
     @Suppress("UNUSED_PARAMETER")
     @CordaService
     class HospitalCounter(services: AppServiceHub) : SingletonSerializeAsToken() {
-        var dischargeCounter: Int = 0
+        var dischargedCounter: Int = 0
         var observationCounter: Int = 0
         var propagatedCounter: Int = 0
         var dischargeRetryCounter: Int = 0
@@ -198,13 +221,13 @@ abstract class StateMachineErrorHandlingTest {
 
         init {
             StaffedFlowHospital.onFlowDischarged.add { _, _ ->
-                ++dischargeCounter
+                dischargedCounter++
             }
             StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
-                ++observationCounter
+                observationCounter++
             }
             StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
-                ++propagatedCounter
+                propagatedCounter++
             }
             StaffedFlowHospital.onFlowKeptForIntensiveCare.add { _, _, outcome ->
                 when (outcome) {
