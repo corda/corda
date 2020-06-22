@@ -190,7 +190,7 @@ class DeliverSessionMessageTransition(
         when (sessionState) {
             is SessionState.Initiated -> {
                 val flowState = currentState.checkpoint.flowState
-                // flow must have already been started when session messages are being delivered.
+                // flow must have already been started when session end messages are being delivered.
                 if (flowState !is FlowState.Started)
                     return freshErrorTransition(UnexpectedEventInState())
 

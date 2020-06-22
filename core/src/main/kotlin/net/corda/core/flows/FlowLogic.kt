@@ -381,9 +381,10 @@ abstract class FlowLogic<out T> {
 
     /**
      * Closes the provided sessions and performs cleanup of any resources tied to these sessions.
-     * This method *should* be invoked from the side that performs the last [receive] operation on these sessions.
+     * This method **should** be invoked from the side that performs the last [receive] operation on these sessions.
      *
-     * From a performance perspective, it's beneficial  to eagerly close sessions that are not needed anymore to reduce resource consumption (e.g. memory, disk etc.).
+     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
+     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
      * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the provided sessions are not going to be used anymore.
      * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
      * When a session is closed, the other side is informed and the session is closed there too eventually.

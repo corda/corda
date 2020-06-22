@@ -134,7 +134,7 @@ data class Checkpoint(
 
     /**
      * Returns a copy of the Checkpoint with the specified session removed from the session map.
-     * @param sessionIds the session to remove.
+     * @param sessionIds the sessions to remove.
      */
     fun removeSessions(sessionIds: Set<SessionId>): Checkpoint {
         return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions - sessionIds))
