@@ -17,7 +17,8 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 /**
  * Sense environment
  */
-boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+//boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+boolean isReleaseTag = (env.TAG_NAME =~ /^ci03-test-.*(?<!_JDK11)$/)
 
 pipeline {
     agent { label 'k8s' }
