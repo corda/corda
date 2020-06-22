@@ -125,6 +125,10 @@ abstract class StateMachineErrorHandlingTest {
 
     internal fun CordaRPCOps.assertHospitalCountsAllZero() = assertHospitalCounts()
 
+    internal fun CordaRPCOps.assertNumberOfCheckpoints(number: Long) {
+        assertEquals(number, startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class SendAMessageFlow(private val party: Party) : FlowLogic<String>() {
@@ -177,12 +181,14 @@ abstract class StateMachineErrorHandlingTest {
     @StartableByRPC
     class GetNumberOfCheckpointsFlow : FlowLogic<Long>() {
         override fun call(): Long {
-            return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints").use { ps ->
-                ps.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
+            return serviceHub.jdbcSession().prepareStatement("select count(*) from node_checkpoints where checkpoint_id != ?")
+                .apply { setString(1, runId.uuid.toString()) }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
                 }
-            }
         }
     }
 

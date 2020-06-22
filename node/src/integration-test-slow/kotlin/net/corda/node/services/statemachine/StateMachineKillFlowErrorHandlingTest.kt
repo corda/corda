@@ -65,8 +65,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
             assertEquals(1, numberOfTerminalDiagnoses)
             alice.rpc.assertHospitalCounts(propagated = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -103,8 +102,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
             assertTrue(flowKilled)
             alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -154,8 +152,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 observation = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 

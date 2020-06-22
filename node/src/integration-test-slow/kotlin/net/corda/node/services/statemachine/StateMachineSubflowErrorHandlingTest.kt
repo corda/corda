@@ -96,8 +96,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -168,8 +167,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -232,8 +230,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -304,8 +301,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 

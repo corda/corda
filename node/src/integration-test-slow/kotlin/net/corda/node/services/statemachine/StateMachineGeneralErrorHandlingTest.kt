@@ -65,8 +65,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for the errored flow kept for observation and another for GetNumberOfCheckpointsFlow
-            assertEquals(2, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -113,8 +112,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -162,8 +160,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -210,7 +207,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 propagatedRetry = 3
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -275,8 +272,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -342,8 +338,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -401,8 +396,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -466,8 +460,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
-            // 1 for errored flow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -526,11 +519,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             charlie.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
-            assertEquals(
-                1,
-                charlie.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get()
-            )
+            alice.rpc.assertNumberOfCheckpoints(0)
+            charlie.rpc.assertNumberOfCheckpoints(0)
         }
     }
 }

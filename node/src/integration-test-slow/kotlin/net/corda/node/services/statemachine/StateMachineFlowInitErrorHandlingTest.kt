@@ -70,7 +70,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -117,7 +117,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(propagated = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -170,7 +170,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -223,7 +223,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -275,12 +275,12 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
             val terminated = (alice as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
             val alice2 = createBytemanNode(ALICE_NAME)
             Thread.sleep(10.seconds.toMillis())
-            assertEquals(1, alice2.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice2.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -326,14 +326,12 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
-            val output = getBytemanOutput(alice)
-
             alice.rpc.assertHospitalCounts(
                 discharged = 1,
                 dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -382,7 +380,8 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             )
 
             charlie.rpc.assertHospitalCounts(discharged = 3)
-            assertEquals(1, charlie.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
+            charlie.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -435,14 +434,14 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            assertEquals(2, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
-            assertEquals(1, charlie.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(1)
+            charlie.rpc.assertNumberOfCheckpoints(0)
             val terminated = (charlie as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
             val charlie2 = createBytemanNode(CHARLIE_NAME)
             Thread.sleep(10.seconds.toMillis())
-            assertEquals(1, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
-            assertEquals(1, charlie2.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(0)
+            charlie2.rpc.assertNumberOfCheckpoints(0)
         }
     }
 }
