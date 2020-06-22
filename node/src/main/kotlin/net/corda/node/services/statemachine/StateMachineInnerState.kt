@@ -9,32 +9,32 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-internal interface InnerState {
+internal interface StateMachineInnerState {
     val lock: Lock
-    val flows: MutableMap<StateMachineRunId, Flow>
+    val flows: MutableMap<StateMachineRunId, Flow<*>>
+    val pausedFlows: MutableMap<StateMachineRunId, NonResidentFlow>
     val startedFutures: MutableMap<StateMachineRunId, OpenFuture<Unit>>
     val changesPublisher: PublishSubject<Change>
     /** Flows scheduled to be retried if not finished within the specified timeout period. */
     val timedFlows: MutableMap<StateMachineRunId, ScheduledTimeout>
 
-    fun <R> withMutex(block: InnerState.() -> R): R
+    fun <R> withMutex(block: StateMachineInnerState.() -> R): R
 }
 
-internal inline fun <reified T : InnerState, R> T.withLock(block: T.() -> R): R = lock.withLock { block(this) }
-
-internal class SingleThreadedInnerState : InnerState {
+internal class SingleThreadedInnerState : StateMachineInnerState {
     /** True if we're shutting down, so don't resume anything. */
     var stopping = false
     override val lock = ReentrantLock()
     override val changesPublisher = PublishSubject.create<Change>()!!
-    override val flows = HashMap<StateMachineRunId, Flow>()
+    override val flows = HashMap<StateMachineRunId, Flow<*>>()
+    override val pausedFlows = HashMap<StateMachineRunId, NonResidentFlow>()
     override val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
     override val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
 
-    override fun <R> withMutex(block: InnerState.() -> R): R = lock.withLock { block(this) }
+    override fun <R> withMutex(block: StateMachineInnerState.() -> R): R = lock.withLock { block(this) }
 }
 
-internal class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
+internal inline fun <reified T : StateMachineInnerState, R> T.withLock(block: T.() -> R): R = lock.withLock { block(this) }
 
 internal data class ScheduledTimeout(
     /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */

@@ -132,16 +132,17 @@ internal class SingleThreadedStateMachineManager(
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
         }
         this.flowCreator = FlowCreator(
-                checkpointSerializationContext,
-                checkpointStorage,
-                scheduler,
-                database,
-                transitionExecutor,
-                actionExecutor,
-                secureRandom,
-                serviceHub,
-                unfinishedFibers,
-                ::resetCustomTimeout)
+            checkpointSerializationContext,
+            checkpointStorage,
+            scheduler,
+            database,
+            transitionExecutor,
+            actionExecutor,
+            secureRandom,
+            serviceHub,
+            unfinishedFibers,
+            flowTimeoutScheduler::resetCustomTimeout
+        )
 
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
@@ -154,7 +155,7 @@ internal class SingleThreadedStateMachineManager(
         }
 
         val pausedFlows = restoreNonResidentFlowsFromPausedCheckpoints()
-        mutex.locked {
+        innerState.withLock {
             this.pausedFlows.putAll(pausedFlows)
             for ((id, flow) in pausedFlows) {
                 val checkpoint = flow.checkpoint
@@ -643,7 +644,7 @@ internal class SingleThreadedStateMachineManager(
         flowSleepScheduler.sleep(fiber, currentState, duration)
     }
 
-    private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
+    private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
         return try {
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
         } catch (e: Exception) {
@@ -730,7 +731,7 @@ internal class SingleThreadedStateMachineManager(
         return StaffedFlowHospital(flowMessaging, serviceHub.clock, ourSenderUUID)
     }
 
-    private fun InnerState.removeFlowOrderly(
+    private fun StateMachineInnerState.removeFlowOrderly(
             flow: Flow<*>,
             removalReason: FlowRemovalReason.OrderlyFinish,
             lastState: StateMachineState
@@ -746,7 +747,7 @@ internal class SingleThreadedStateMachineManager(
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
     }
 
-    private fun InnerState.removeFlowError(
+    private fun StateMachineInnerState.removeFlowError(
             flow: Flow<*>,
             removalReason: FlowRemovalReason.ErrorFinish,
             lastState: StateMachineState

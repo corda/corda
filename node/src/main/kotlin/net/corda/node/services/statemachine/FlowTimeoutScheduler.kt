@@ -10,7 +10,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 internal class FlowTimeoutScheduler(
-    private val innerState: InnerState,
+    private val innerState: StateMachineInnerState,
     private val scheduledExecutor: ScheduledExecutorService,
     private val serviceHub: ServiceHubInternal
 ) {
@@ -64,7 +64,7 @@ internal class FlowTimeoutScheduler(
         }
     }
 
-    private inline fun timeout(flowId: StateMachineRunId, timeout: (flow: Flow, retryCount: Int) -> ScheduledTimeout) {
+    private inline fun timeout(flowId: StateMachineRunId, timeout: (flow: Flow<*>, retryCount: Int) -> ScheduledTimeout) {
         innerState.withLock {
             val flow = flows[flowId]
             if (flow != null) {
@@ -80,7 +80,7 @@ internal class FlowTimeoutScheduler(
     }
 
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
-    private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
+    private fun scheduleTimeoutException(flow: Flow<*>, delay: Long): ScheduledFuture<*> {
         return scheduledExecutor.schedule({
             val event = Event.Error(FlowTimeoutException())
             flow.fiber.scheduleEvent(event)

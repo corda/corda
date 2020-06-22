@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-internal class FlowSleepScheduler(private val innerState: InnerState, private val scheduledExecutor: ScheduledExecutorService) {
+internal class FlowSleepScheduler(private val innerState: StateMachineInnerState, private val scheduledExecutor: ScheduledExecutorService) {
 
     private companion object {
         val log = contextLogger()
