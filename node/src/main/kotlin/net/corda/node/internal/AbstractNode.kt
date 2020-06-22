@@ -1266,7 +1266,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
             val ledgerTransaction = servicesForResolution.specialise(ltx)
-            ledgerTransaction.attachmentsClassLoaderCache = attachmentsClassLoaderCache
             return verifierFactoryService.apply(ledgerTransaction)
         }
     }
