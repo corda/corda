@@ -83,7 +83,7 @@ internal class SingleThreadedStateMachineManager(
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
         ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
     )
-    // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
+    // How many Fibers are running (this includes suspended flows). If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -151,6 +151,8 @@ internal class SingleThreadedStateMachineManager(
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
             } else {
                 (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
+                (fiber.resultFuture as? OpenFuture<*>)?.setException(throwable)
+                decrementLiveFibers()
             }
         }
 
