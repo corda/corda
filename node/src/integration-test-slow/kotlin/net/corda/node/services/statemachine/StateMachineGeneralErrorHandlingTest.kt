@@ -314,7 +314,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules)
 
             assertFailsWith<CordaRuntimeException> {
-                alice.rpc.startFlow(StateMachineErrorHandlingTest::ThrowAnErrorFlow).returnValue.getOrThrow(40.seconds)
+                alice.rpc.startFlow(StateMachineErrorHandlingTest::ThrowAnErrorFlow).returnValue.getOrThrow(60.seconds)
             }
             val output = getBytemanOutput(alice)
 
