@@ -135,7 +135,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl<AttachmentsClassLoaderKey, SerializationContext>(TestingNamedCacheFactory())
+        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
         val transaction = createLedgerTransaction(
                 inputs,
                 outputs,
@@ -189,7 +189,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl<AttachmentsClassLoaderKey, SerializationContext>(TestingNamedCacheFactory())
+        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
         fun buildTransaction() = createLedgerTransaction(
                 inputs,

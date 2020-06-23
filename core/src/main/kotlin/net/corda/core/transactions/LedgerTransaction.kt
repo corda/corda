@@ -91,7 +91,7 @@ private constructor(
         private val serializedReferences: List<SerializedStateAndRef>?,
         private val isAttachmentTrusted: (Attachment) -> Boolean,
         private val verifierFactory: (LedgerTransaction, ClassLoader) -> Verifier,
-        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?
+        private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
 ) : FullTransaction() {
 
     init {
@@ -129,7 +129,7 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 isAttachmentTrusted: (Attachment) -> Boolean,
-                attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?
+                attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
         ): LedgerTransaction {
             return LedgerTransaction(
                 inputs = inputs,

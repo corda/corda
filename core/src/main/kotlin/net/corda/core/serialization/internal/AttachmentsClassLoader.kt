@@ -295,7 +295,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 object AttachmentsClassLoaderBuilder {
     const val CACHE_SIZE = 1000
 
-    private val fallBackCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext> = AttachmentsClassLoaderSimpleCacheImpl()
+    private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl()
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
@@ -308,7 +308,7 @@ object AttachmentsClassLoaderBuilder {
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?,
+                                              attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
@@ -420,26 +420,27 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
     }
 }
 
-interface AttachmentsClassLoaderCache<K, V> {
-    fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V
+interface AttachmentsClassLoaderCache {
+    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext
 }
 
 @DeleteForDJVM
-class AttachmentsClassLoaderCacheImpl<K, V>(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache<K, V> {
+class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
-    private val cache: Cache<K, V> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
+    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
 
-    override fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
 
 @DeleteForDJVM
-class AttachmentsClassLoaderSimpleCacheImpl<K, V> : SingletonSerializeAsToken(), AttachmentsClassLoaderCache<K, V> {
+class AttachmentsClassLoaderSimpleCacheImpl : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
 
-    private val cache: MutableMap<K, V> = createSimpleCache<K, V>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
+    private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
+            = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
 
-    override fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext {
         return cache.computeIfAbsent(key, mappingFunction)
     }
 }

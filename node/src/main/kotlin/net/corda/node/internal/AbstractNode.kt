@@ -321,8 +321,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     } else {
         BasicVerifierFactoryService()
     }
-    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>
-                                 = AttachmentsClassLoaderCacheImpl<AttachmentsClassLoaderKey, SerializationContext>(cacheFactory).tokenize()
+    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -1177,8 +1176,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
 
-        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>
-                        get() = this@AbstractNode.attachmentsClassLoaderCache
+        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters

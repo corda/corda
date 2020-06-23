@@ -135,8 +135,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
         override val notaryService: NotaryService? = null
 
-        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>
-                                                  = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
+        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

@@ -178,7 +178,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
             isAttachmentTrusted: (Attachment) -> Boolean,
-            attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?
+            attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->

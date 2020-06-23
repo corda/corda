@@ -25,7 +25,7 @@ interface ServiceHubCoreInternal : ServiceHub {
 
     fun createTransactionsResolver(flow: ResolveTransactionsFlow): TransactionsResolver
 
-    val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>
+    val attachmentsClassLoaderCache: AttachmentsClassLoaderCache
 }
 
 interface TransactionsResolver {

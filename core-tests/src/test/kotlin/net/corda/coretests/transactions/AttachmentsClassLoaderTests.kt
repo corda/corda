@@ -524,7 +524,7 @@ class AttachmentsClassLoaderTests {
             val id = SecureHash.randomSHA256()
             val timeWindow: TimeWindow? = null
             val privacySalt = PrivacySalt()
-            val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl<AttachmentsClassLoaderKey, SerializationContext>(cacheFactory)
+            val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
             val transaction = createLedgerTransaction(
                     inputs,
                     outputs,
