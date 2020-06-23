@@ -421,7 +421,7 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
 }
 
 interface AttachmentsClassLoaderCache {
-    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext
+    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
 }
 
 @DeleteForDJVM
@@ -429,18 +429,17 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
 
     private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
 
-    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
     }
 }
 
-@DeleteForDJVM
-class AttachmentsClassLoaderSimpleCacheImpl : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
+class AttachmentsClassLoaderSimpleCacheImpl : AttachmentsClassLoaderCache {
 
     private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
             = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
 
-    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<AttachmentsClassLoaderKey, SerializationContext>): SerializationContext {
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         return cache.computeIfAbsent(key, mappingFunction)
     }
 }
