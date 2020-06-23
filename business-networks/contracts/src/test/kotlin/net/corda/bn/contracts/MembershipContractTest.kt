@@ -30,7 +30,7 @@ class MembershipContractTest {
     private val memberIdentity = TestIdentity(CordaX500Name.parse("O=Member,L=London,C=GB")).party
     private val bnoIdentity = TestIdentity(CordaX500Name.parse("O=BNO,L=London,C=GB")).party
 
-    private fun membershipState() = MembershipState(
+    private val membershipState = MembershipState(
             identity = memberIdentity,
             networkId = "network-id",
             status = MembershipStatus.PENDING,
@@ -41,45 +41,45 @@ class MembershipContractTest {
     fun `test common contract verification`() {
         ledgerServices.ledger {
             transaction {
-                val input = membershipState()
+                val input = membershipState
                 output(MembershipContract.CONTRACT_NAME, input)
                 command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), DummyCommand())
                 fails()
             }
             transaction {
-                val input = membershipState()
+                val input = membershipState
                 input(DummyContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input)
                 command(memberIdentity.owningKey, MembershipContract.Commands.Revoke(listOf(memberIdentity.owningKey)))
                 this `fails with` "Input state has to be validated by ${MembershipContract.CONTRACT_NAME}"
             }
             transaction {
-                val output = membershipState()
+                val output = membershipState
                 input(MembershipContract.CONTRACT_NAME, output)
                 output(DummyContract.CONTRACT_NAME, output)
                 command(memberIdentity.owningKey, MembershipContract.Commands.Request(listOf(memberIdentity.owningKey)))
                 this `fails with` "Output state has to be validated by ${MembershipContract.CONTRACT_NAME}"
             }
             transaction {
-                val input = membershipState().run { copy(modified = modified.minusSeconds(100)) }
+                val input = membershipState.run { copy(modified = modified.minusSeconds(100)) }
                 input(MembershipContract.CONTRACT_NAME, input)
                 command(memberIdentity.owningKey, MembershipContract.Commands.Revoke(listOf(memberIdentity.owningKey)))
                 this `fails with` "Input state's modified timestamp should be greater or equal to issued timestamp"
             }
             transaction {
-                val output = membershipState().run { copy(modified = modified.minusSeconds(100)) }
+                val output = membershipState.run { copy(modified = modified.minusSeconds(100)) }
                 output(MembershipContract.CONTRACT_NAME, output)
                 command(memberIdentity.owningKey, MembershipContract.Commands.Request(listOf(memberIdentity.owningKey)))
                 this `fails with` "Output state's modified timestamp should be greater or equal to issued timestamp"
             }
             transaction {
-                val output = membershipState().run { copy(participants = listOf(memberIdentity)) }
+                val output = membershipState.run { copy(participants = listOf(memberIdentity)) }
                 output(MembershipContract.CONTRACT_NAME, output)
                 command(bnoIdentity.owningKey, MembershipContract.Commands.Request(listOf(bnoIdentity.owningKey)))
                 this `fails with` "Required signers should be subset of all output state's participants"
             }
 
-            val input = membershipState()
+            val input = membershipState
             transaction {
                 val output = input.copy(identity = bnoIdentity)
                 input(MembershipContract.CONTRACT_NAME, input)
@@ -127,7 +127,7 @@ class MembershipContractTest {
     @Test(timeout = 300_000)
     fun `test request membership command contract verification`() {
         ledgerServices.ledger {
-            val output = membershipState()
+            val output = membershipState
             transaction {
                 input(MembershipContract.CONTRACT_NAME, output)
                 output(MembershipContract.CONTRACT_NAME, output)
@@ -155,7 +155,7 @@ class MembershipContractTest {
     @Test(timeout = 300_000)
     fun `test activate membership command contract verification`() {
         ledgerServices.ledger {
-            val input = membershipState()
+            val input = membershipState
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.ACTIVE))
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.ACTIVE))
@@ -186,7 +186,7 @@ class MembershipContractTest {
     @Test(timeout = 300_000)
     fun `test suspend membership command contract verification`() {
         ledgerServices.ledger {
-            val input = membershipState()
+            val input = membershipState
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
@@ -217,7 +217,7 @@ class MembershipContractTest {
     @Test(timeout = 300_000)
     fun `test revoke membership command contract verification`() {
         ledgerServices.ledger {
-            val input = membershipState()
+            val input = membershipState
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input)
