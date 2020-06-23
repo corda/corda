@@ -1056,7 +1056,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -1064,7 +1064,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 5
@@ -1151,7 +1151,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -1159,7 +1159,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 7
@@ -1540,7 +1540,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -1548,7 +1548,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 5
@@ -1638,7 +1638,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -1646,7 +1646,7 @@ class StatemachineGeneralErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 7
