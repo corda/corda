@@ -2,6 +2,7 @@ package net.corda.core.serialization.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -307,11 +308,11 @@ object AttachmentsClassLoaderBuilder {
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
-                                              attachmentsClassLoadercache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?,
+                                              attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>?,
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val cache = attachmentsClassLoadercache ?: fallBackCache
+        val cache = attachmentsClassLoaderCache ?: fallBackCache
         val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
@@ -423,7 +424,8 @@ interface AttachmentsClassLoaderCache<K, V> {
     fun computeIfAbsent(key: K, mappingFunction: Function<in K, out V>): V
 }
 
-class AttachmentsClassLoaderCacheImpl<K, V>(cacheFactory: NamedCacheFactory) : AttachmentsClassLoaderCache<K, V> {
+@DeleteForDJVM
+class AttachmentsClassLoaderCacheImpl<K, V>(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache<K, V> {
 
     private val cache: Cache<K, V> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
 
@@ -432,7 +434,8 @@ class AttachmentsClassLoaderCacheImpl<K, V>(cacheFactory: NamedCacheFactory) : A
     }
 }
 
-class AttachmentsClassLoaderSimpleCacheImpl<K, V> : AttachmentsClassLoaderCache<K, V> {
+@DeleteForDJVM
+class AttachmentsClassLoaderSimpleCacheImpl<K, V> : SingletonSerializeAsToken(), AttachmentsClassLoaderCache<K, V> {
 
     private val cache: MutableMap<K, V> = createSimpleCache<K, V>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
 

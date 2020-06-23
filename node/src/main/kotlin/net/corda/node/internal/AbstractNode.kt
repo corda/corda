@@ -62,7 +62,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
-import net.corda.core.serialization.internal.AttachmentsClassLoaderSimpleCacheImpl
 import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
@@ -323,8 +322,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         BasicVerifierFactoryService()
     }
     private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache<AttachmentsClassLoaderKey, SerializationContext>
-                                   = djvmCordaSource?.let { AttachmentsClassLoaderSimpleCacheImpl<AttachmentsClassLoaderKey, SerializationContext>() }
-                                     ?: AttachmentsClassLoaderCacheImpl(cacheFactory)
+                                 = AttachmentsClassLoaderCacheImpl<AttachmentsClassLoaderKey, SerializationContext>(cacheFactory).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")

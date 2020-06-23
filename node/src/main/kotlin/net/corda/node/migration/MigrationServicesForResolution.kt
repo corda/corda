@@ -125,7 +125,7 @@ class MigrationServicesForResolution(
                     tx.id,
                     attachmentTrustCalculator::calculate,
                     cordappLoader.appClassLoader,
-                    attachmentsClassLoadercache = null) {
+                    attachmentsClassLoaderCache = null) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

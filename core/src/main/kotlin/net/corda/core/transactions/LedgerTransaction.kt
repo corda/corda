@@ -226,7 +226,7 @@ private constructor(
                 getParamsWithGoo(),
                 id,
                 isAttachmentTrusted = isAttachmentTrusted,
-                attachmentsClassLoadercache = attachmentsClassLoaderCache) { transactionClassLoader ->
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache) { transactionClassLoader ->
             // Create a copy of the outer LedgerTransaction which deserializes all fields inside the [transactionClassLoader].
             // Only the copy will be used for verification, and the outer shell will be discarded.
             // This artifice is required to preserve backwards compatibility.
