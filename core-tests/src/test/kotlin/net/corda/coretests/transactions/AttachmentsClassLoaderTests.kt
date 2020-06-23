@@ -22,10 +22,8 @@ import net.corda.core.internal.hash
 import net.corda.core.internal.inputStream
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
-import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.contracts.DummyContract

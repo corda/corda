@@ -10,9 +10,7 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.TESTDSL_UPLOADER
 import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.node.NotaryInfo
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
-import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.common.internal.testNetworkParameters

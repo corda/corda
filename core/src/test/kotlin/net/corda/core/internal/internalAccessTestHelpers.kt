@@ -4,9 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction

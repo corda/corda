@@ -5,9 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
-import net.corda.core.serialization.internal.AttachmentsClassLoaderKey
 import java.util.concurrent.ExecutorService
 
 // TODO: This should really be called ServiceHubInternal but that name is already taken by net.corda.node.services.api.ServiceHubInternal.
