@@ -82,6 +82,6 @@ class NetworkParametersReaderTest {
         assertNotNull(inputStream)
         val inByteArray: ByteArray = inputStream.readBytes()
         val parameters = inByteArray.deserialize<SignedNetworkParameters>()
-        assertThat(parameters.verified().eventHorizon).isEqualTo(Int.MAX_VALUE.days)
+        assertThat(parameters.deserialize().eventHorizon).isEqualTo(Int.MAX_VALUE.days)
     }
 }

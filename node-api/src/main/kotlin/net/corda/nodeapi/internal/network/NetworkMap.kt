@@ -63,7 +63,7 @@ fun <T : Any> SignedDataWithCert<T>.verifiedCertWithRole(rootCert: X509Certifica
         sig.fullCertChain
     }
     X509Utilities.validateCertificateChain(rootCert, path)
-    return verified()
+    return deserialize()
 }
 
 /** Verify that a Network Map certificate path and its [CertRole] is correct. */

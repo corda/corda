@@ -8,7 +8,6 @@ import liquibase.resource.ResourceAccessor
 import net.corda.core.internal.div
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -89,7 +88,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
         return try {
             val networkParametersBytes = path.readObject<SignedNetworkParameters>()
-            networkParametersBytes.raw.deserialize()
+            networkParametersBytes.deserialize()
         } catch (e: Exception) {
             // This condition is logged in the calling function, so no need to do that here.
             null

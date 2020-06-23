@@ -149,7 +149,7 @@ class VaultStateMigrationTest {
             val persistentParams = DBNetworkParametersStorage.PersistentNetworkParameters(
                     SecureHash.allOnesHash.toString(),
                     params.epoch,
-                    signedParams.raw.bytes,
+                    signedParams.bytes,
                     signedParams.sig.bytes,
                     signedParams.sig.by.encoded,
                     X509Utilities.buildCertPath(signedParams.sig.parentCertsChain).encoded

@@ -49,9 +49,9 @@ class DBNetworkParametersStorageTest {
         netParams1 = certKeyPair.sign(testNetworkParameters(minimumPlatformVersion = 1))
         netParams2 = certKeyPair.sign(testNetworkParameters(minimumPlatformVersion = 2))
         incorrectParams = createDevNetworkMapCa(DEV_INTERMEDIATE_CA).sign(testNetworkParameters(minimumPlatformVersion = 3))
-        hash1 = netParams1.raw.hash
-        hash2 = netParams2.raw.hash
-        hash3 = incorrectParams.raw.hash
+        hash1 = netParams1.hash
+        hash2 = netParams2.hash
+        hash3 = incorrectParams.hash
         database = configureDatabase(
                 MockServices.makeTestDataSourceProperties(),
                 DatabaseConfig(),
@@ -74,7 +74,7 @@ class DBNetworkParametersStorageTest {
     @Test(timeout=300_000)
 	fun `set current parameters`() {
         assertThat(networkParametersService.currentHash).isEqualTo(hash1)
-        assertThat(networkParametersService.lookup(hash1)).isEqualTo(netParams1.verified())
+        assertThat(networkParametersService.lookup(hash1)).isEqualTo(netParams1.deserialize())
     }
 
     @Test(timeout=300_000)

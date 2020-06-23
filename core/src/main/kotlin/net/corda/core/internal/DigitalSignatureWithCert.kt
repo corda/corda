@@ -45,11 +45,14 @@ Cert path: $fullCertPath
 
 /** Similar to [SignedData] but instead of just attaching the public key, the certificate for the key is attached instead. */
 @CordaSerializable
-class SignedDataWithCert<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignatureWithCert): NamedByHash {
-    override val id: SecureHash get () = raw.hash
-
-    fun verified(): T {
+class SignedDataWithCert<T : Any>(private val raw: SerializedBytes<T>, val sig: DigitalSignatureWithCert): NamedByHash {
+    init {
         sig.verify(raw)
-        return uncheckedCast(raw.deserialize<Any>())
     }
+
+    override val id: SecureHash get () = hash
+    val bytes = raw.bytes
+    val hash = raw.hash
+
+    fun deserialize(): T = uncheckedCast(raw.deserialize<Any>())
 }

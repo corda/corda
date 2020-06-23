@@ -55,10 +55,10 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             //  you get them from network map, but you have to run the approval step.
             if (signedParametersFromFile == null) { // Node joins for the first time.
                 downloadParameters(advertisedParametersHash)
-            } else if (signedParametersFromFile.raw.hash == advertisedParametersHash) { // Restarted with the same parameters.
+            } else if (signedParametersFromFile.hash == advertisedParametersHash) { // Restarted with the same parameters.
                 signedParametersFromFile
             } else { // Update case.
-                readParametersUpdate(advertisedParametersHash, signedParametersFromFile.raw.hash)
+                readParametersUpdate(advertisedParametersHash, signedParametersFromFile.hash)
             }
         } else { // No compatibility zone configured. Node should proceed with parameters from file.
             signedParametersFromFile ?: throw Error.ParamsNotConfigured()
@@ -73,7 +73,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             throw Error.OldParams(previousParametersHash, advertisedParametersHash)
         }
         val signedUpdatedParameters = parametersUpdateFile.readObject<SignedNetworkParameters>()
-        if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
+        if (signedUpdatedParameters.hash != advertisedParametersHash) {
             throw Error.OldParamsAndUpdate()
         }
         parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
@@ -86,6 +86,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         logger.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
         networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
+        signedParams.verifiedNetworkParametersCert(trustRoot)
         signedParams.serialize().open().copyTo(baseDirectory / NETWORK_PARAMS_FILE_NAME)
         return signedParams
     }

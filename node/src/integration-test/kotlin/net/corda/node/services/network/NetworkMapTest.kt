@@ -136,7 +136,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             assertEquals(laterHash, networkMapServer.latestParametersAccepted(alice.nodeInfo.legalIdentities.first().owningKey))
             networkMapServer.advertiseNewParameters()
             val networkParameters = (alice.configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME)
-                    .readObject<SignedNetworkParameters>().verified()
+                    .readObject<SignedNetworkParameters>().deserialize()
             assertEquals(networkParameters, laterParams)
         }
     }
@@ -201,7 +201,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     private fun assertDownloadedNetworkParameters(node: NodeHandle) {
         val networkParameters = (node.baseDirectory / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verified()
+                .deserialize()
         // We use a random modified time above to make the network parameters unqiue so that we're sure they came
         // from the server
         assertEquals(networkMapServer.networkParameters, networkParameters)

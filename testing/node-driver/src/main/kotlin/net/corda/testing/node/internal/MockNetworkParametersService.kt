@@ -49,8 +49,8 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
     override fun lookup(hash: SecureHash): NetworkParameters? = hashToParametersMap[hash]
     override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
     override fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>) {
-        val networkParameters = signedNetworkParameters.verified()
-        val hash = signedNetworkParameters.raw.hash
+        val networkParameters = signedNetworkParameters.deserialize()
+        val hash = signedNetworkParameters.hash
         hashToParametersMap[hash] = networkParameters
         hashToSignedParametersMap[hash] = signedNetworkParameters
     }
