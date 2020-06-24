@@ -18,7 +18,12 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
         val types = userSerializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
                 .flatMap { it.arguments }
                 .map { it.type!!.javaType }
-        if (types.size != 2) {
+
+        // We are expecting a cordapp type and a proxy type.
+        // We will only use the cordapp type in this class
+        // but we want to check both are present.
+        val typeParameterCount = 2
+        if (types.size != typeParameterCount) {
             throw UnableToDetermineSerializerTypesException("Unable to determine serializer parent types")
         }
         cordappType = types[CORDAPP_TYPE]
