@@ -34,10 +34,22 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
     }
 }
 
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever Business Network with provided [MembershipState.networkId] doesn't exist.
+ */
 class BusinessNetworkNotFoundException(message: String) : FlowException(message)
 
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever provided parties membership doesn't exist.
+ */
 class MembershipNotFoundException(message: String) : FlowException(message)
 
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever provided member's state is not appropriate for the context.
+ */
 class IllegalMembershipStatusException(message: String) : FlowException(message)
 
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever membership fails role based authorisation.
+ */
 class MembershipAuthorisationException(message: String) : FlowException(message)
