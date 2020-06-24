@@ -54,17 +54,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 serializer.kryo.apply {
                     field.set(this, classResolver)
 
-                    for (customSerializer in cordappSerializers) {
-
-                        val typeName = customSerializer.type.typeName.substringBefore('<')
-                        val clazz = context.deserializationClassLoader.loadClass(typeName)
-
-                        if (clazz.isInterface){
-                            addDefaultSerializer(clazz, customSerializer)
-                        } else {
-                            register(clazz, customSerializer)
-                        }
-                    }
+                    addCustomSerializers(context)
 
                     // don't allow overriding the public key serializer for checkpointing
                     DefaultKryoCustomizer.customize(this)
@@ -74,6 +64,19 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 }
             }.build()
 
+        }
+    }
+
+    private fun Kryo.addCustomSerializers(context: CheckpointSerializationContext) {
+        for (customSerializer in cordappSerializers) {
+            val typeName = customSerializer.type.typeName.substringBefore('<')
+            val clazz = context.deserializationClassLoader.loadClass(typeName)
+
+            if (clazz.isInterface) {
+                addDefaultSerializer(clazz, customSerializer)
+            } else {
+                register(clazz, customSerializer)
+            }
         }
     }
 
