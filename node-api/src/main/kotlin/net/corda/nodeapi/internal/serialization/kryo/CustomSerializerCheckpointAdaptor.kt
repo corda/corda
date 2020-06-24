@@ -15,9 +15,11 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
     val cordappType: Type
 
     init {
-        val types = userSerializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
+        val types: List<Type> = userSerializer::class
+                .supertypes
+                .filter { it.jvmErasure == SerializationCustomSerializer::class }
                 .flatMap { it.arguments }
-                .map { it.type!!.javaType }
+                .mapNotNull { it.type?.javaType }
 
         // We are expecting a cordapp type and a proxy type.
         // We will only use the cordapp type in this class
