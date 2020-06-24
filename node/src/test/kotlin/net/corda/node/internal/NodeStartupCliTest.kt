@@ -65,7 +65,7 @@ class NodeStartupCliTest {
     @Test(timeout=300_000)
     fun `--nodeconf using absolute path will not be changed`() {
         CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, "/$customNodeConf")
-        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo( "/" / customNodeConf)
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo( Paths.get("/", customNodeConf))
     }
 
     @Test(timeout=3_000)
