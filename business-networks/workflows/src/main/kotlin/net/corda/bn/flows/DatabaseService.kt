@@ -21,6 +21,17 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAsToken() {
 
     /**
+     * Checks whether Business Network with [networkID] ID exists.
+     *
+     * @param networkID ID of the Business Network.
+     */
+    fun businessNetworkExists(networkID: String): Boolean {
+        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
+                .and(networkIdCriteria(networkID))
+        return serviceHub.vaultService.queryBy<MembershipState>(criteria).states.isNotEmpty()
+    }
+
+    /**
      * Queries for all the membership states inside Business Network with [networkId] with one of [statuses].
      *
      * @param networkId ID of the Business Network.

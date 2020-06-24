@@ -32,7 +32,7 @@ class CreateBusinessNetworkFlow(private val networkId: UniqueIdentifier = Unique
     private fun createMembershipRequest(): SignedTransaction {
         // check if business network with networkId already exists
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        if (databaseService.getAllMembershipsWithStatus(networkId.toString(), MembershipStatus.PENDING, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED).isNotEmpty()) {
+        if (databaseService.businessNetworkExists(networkId.toString())) {
             throw DuplicateBusinessNetworkException("Business Network with $networkId ID already exists")
         }
 
