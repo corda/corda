@@ -28,12 +28,14 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
     }
 
     override fun write(kryo: Kryo, output: Output, obj: OBJ) {
-        kryo.writeClassAndObject(output, userSerializer.toProxy(obj))
+        val proxy = userSerializer.toProxy(obj)
+        kryo.writeClassAndObject(output, proxy)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
         @Suppress("UNCHECKED_CAST")
-        return userSerializer.fromProxy(kryo.readClassAndObject(input) as PROXY)
+        val proxy = kryo.readClassAndObject(input) as PROXY
+        return userSerializer.fromProxy(proxy)
     }
 }
 
