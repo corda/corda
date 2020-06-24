@@ -103,7 +103,21 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `flow can close multiple sessions successfully without a checkpoint`() {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
+            val (nodeAHandle, nodeBHandle) = listOf(
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
+            ).transpose().getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true).returnValue.getOrThrow()
             }
         }
     }
@@ -225,7 +239,7 @@ class FlowSessionCloseTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class InitiatorMultipleSessionsFlow(val party: Party): FlowLogic<Unit>() {
+    class InitiatorMultipleSessionsFlow(val party: Party, val skipCheckpoint: Boolean = false): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             for (round in 1 .. 2) {
@@ -235,7 +249,7 @@ class FlowSessionCloseTest {
                     sessions.add(session)
                     session.sendAndReceive<String>("What's up?").unwrap{ assertEquals("All good!", it) }
                 }
-                close(sessions.toNonEmptySet())
+                close(sessions.toNonEmptySet(), skipCheckpoint)
             }
         }
     }

@@ -204,9 +204,7 @@ class StartedFlowTransition(
             val existingSessionsToRemove = currentState.checkpoint.checkpointState.sessions.filter { (sessionId, _) ->
                 sessionIdsToRemove.contains(sessionId)
             }
-            val alreadyClosedSessions = sessionIdsToRemove.filter { sessionId ->
-                !existingSessionsToRemove.containsKey(sessionId)
-            }
+            val alreadyClosedSessions = sessionIdsToRemove.filter { sessionId -> sessionId !in existingSessionsToRemove }
             if (alreadyClosedSessions.isNotEmpty()) {
                 logger.warn("Attempting to close already closed sessions: $alreadyClosedSessions")
             }
