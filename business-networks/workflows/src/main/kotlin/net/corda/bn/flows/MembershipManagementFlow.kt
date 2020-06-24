@@ -149,7 +149,7 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
 
     /**
      * This method needs to be called in the responder flow that is initiated by flow which calls [sendMemberships] method. Receives all of
-     * the transactions sent via [sendMemberships] method.
+     * the transactions sent via the [sendMemberships] method.
      */
     @Suspendable
     protected fun receiveMemberships(session: FlowSession) {

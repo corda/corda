@@ -4,7 +4,6 @@ import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.flows.FlowException
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -17,9 +16,7 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
         val authorisedMember = authorisedMembers.first()
 
         val invalidMembershipId = UniqueIdentifier()
-        assertFailsWith<FlowException>("Membership state with $invalidMembershipId linear ID doesn't exist") {
-            runActivateMembershipFlow(authorisedMember, invalidMembershipId)
-        }
+        assertFailsWith<MembershipNotFoundException> { runActivateMembershipFlow(authorisedMember, invalidMembershipId) }
     }
 
     @Test(timeout = 300_000)
@@ -31,14 +28,24 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
         val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
 
-        assertFailsWith<FlowException>("Initiator is not member of a business network") {
-            runActivateMembershipFlow(nonMember, membership.linearId)
-        }
+        assertFailsWith<MembershipNotFoundException> { runActivateMembershipFlow(nonMember, membership.linearId) }
 
         runRequestMembershipFlow(nonMember, authorisedMember, networkId)
-        assertFailsWith<FlowException>("Initiator's membership is not active") {
-            runActivateMembershipFlow(nonMember, membership.linearId)
-        }
+        // this ideally has to throw `IllegalMembershipStatusException` but this will only be available after we introduce flow for
+        // membership suspension and then we'll be able to have authorised member which has all memberships but cannot activate them
+        // since it is suspended.
+        assertFailsWith<MembershipNotFoundException> { runActivateMembershipFlow(nonMember, membership.linearId) }
+    }
+
+    @Test(timeout = 300_000)
+    fun `activate membership flow should fail if invalid notary argument is provided`() {
+        val authorisedMember = authorisedMembers.first()
+        val regularMember = regularMembers.first()
+
+        val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
+
+        val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
+        assertFailsWith<IllegalArgumentException> { runActivateMembershipFlow(authorisedMember, membership.linearId, authorisedMember.identity()) }
     }
 
     @Test(timeout = 300_000)
