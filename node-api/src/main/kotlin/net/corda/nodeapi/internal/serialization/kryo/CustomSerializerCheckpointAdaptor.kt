@@ -12,7 +12,7 @@ import kotlin.reflect.jvm.jvmErasure
 
 class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer : SerializationCustomSerializer<OBJ, PROXY>) : Serializer<OBJ>() {
 
-    val type: Type
+    val cordappType: Type
 
     init {
         val types = userSerializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
@@ -21,7 +21,7 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
         if (types.size != 2) {
             throw UnableToDetermineSerializerTypesException("Unable to determine serializer parent types")
         }
-        type = types[CORDAPP_TYPE]
+        cordappType = types[CORDAPP_TYPE]
     }
 
     override fun write(kryo: Kryo, output: Output, obj: OBJ) {

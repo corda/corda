@@ -69,7 +69,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
 
     private fun Kryo.addCustomSerializers(context: CheckpointSerializationContext) {
         for (customSerializer in cordappSerializers) {
-            val typeName = customSerializer.type.typeName.substringBefore('<')
+            val typeName = customSerializer.cordappType.typeName.substringBefore('<')
             val clazz = context.deserializationClassLoader.loadClass(typeName)
 
             if (clazz.isInterface) {
