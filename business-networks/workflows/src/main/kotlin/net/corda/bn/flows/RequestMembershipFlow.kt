@@ -15,9 +15,13 @@ import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
+
+@CordaSerializable
+data class MembershipRequest(val networkId: String, val notary: Party?)
 
 /**
  * This flow is initiated by new potential member who requests membership activation from authorised Business Network member. Issues
@@ -28,7 +32,7 @@ import net.corda.core.utilities.unwrap
  */
 @InitiatingFlow
 @StartableByRPC
-class RequestMembershipFlow(private val authorisedParty: Party, private val networkId: String) : FlowLogic<SignedTransaction>() {
+class RequestMembershipFlow(private val authorisedParty: Party, private val networkId: String, private val notary: Party? = null) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -40,7 +44,7 @@ class RequestMembershipFlow(private val authorisedParty: Party, private val netw
 
         // send request to authorised member
         val authorisedPartySession = initiateFlow(authorisedParty)
-        authorisedPartySession.send(networkId)
+        authorisedPartySession.send(MembershipRequest(networkId, notary))
 
         // sign transaction
         val signResponder = object : SignTransactionFlow(authorisedPartySession) {
@@ -72,7 +76,7 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
     @Suspendable
     override fun call() {
         // receive network ID
-        val networkId = session.receive<String>().unwrap { it }
+        val (networkId, notary) = session.receive<MembershipRequest>().unwrap { it }
 
         // check whether party is authorised to activate membership
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
@@ -92,7 +96,7 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
                 participants = (observers + ourIdentity + counterparty).toList()
         )
         val requiredSigners = listOf(ourIdentity.owningKey, counterparty.owningKey)
-        val builder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first())
+        val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(membershipState)
                 .addCommand(MembershipContract.Commands.Request(requiredSigners), requiredSigners)
         builder.verify(serviceHub)

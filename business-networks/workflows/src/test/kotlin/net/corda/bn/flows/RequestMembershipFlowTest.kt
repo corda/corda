@@ -4,6 +4,7 @@ import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.UnexpectedFlowEndException
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -49,6 +50,16 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         runRequestMembershipFlow(pendingMember, authorisedMember, networkId)
 
         assertFailsWith<IllegalMembershipStatusException> { runRequestMembershipFlow(regularMember, pendingMember, networkId) }
+    }
+
+    @Test(timeout = 300_000)
+    fun `request membership flow should fail if invalid notary argument is provided`() {
+        val authorisedMember = authorisedMembers.first()
+        val regularMember = regularMembers.first()
+
+        val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
+
+        assertFailsWith<UnexpectedFlowEndException> { runRequestMembershipFlow(regularMember, authorisedMember, networkId, authorisedMember.identity()) }
     }
 
     @Test(timeout = 300_000)
