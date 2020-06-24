@@ -29,6 +29,7 @@ data class MembershipRequest(val networkId: String, val notary: Party?)
  *
  * @property authorisedParty Identity of authorised member from whom the membership activation is requested.
  * @property networkId ID of the Business Network that potential new member wants to join.
+ * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
 @StartableByRPC
