@@ -23,19 +23,20 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
     }
 
     @Test(timeout = 300_000)
-    fun `request membership flow should fail if receiver is not member of a business network`() {
+    fun `request membership flow should fail if receiver is not member of a business network or if business network doesn't exist`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
         val invalidNetworkId = "invalid-network-id"
 
-        assertFailsWith<FlowException>("Receiver is not member of a business network") {
-            runRequestMembershipFlow(regularMember, regularMember, networkId)
-        }
-        assertFailsWith<FlowException>("Receiver is not member of a business network") {
-            runRequestMembershipFlow(regularMember, authorisedMember, invalidNetworkId)
-        }
+        // this would also fail with `MembershipNotFoundException`, however this will fail with `BusinessNetworkNotFoundException` since no
+        // membership state with `networkId` exists on `regularMember` vault yet. This can be "fixed" when we introduce flow for revocation
+        // of memberships since then we would have nodes having leftover membership states with `networkId` and their state wouldn't be
+        // present due to revocation.
+        assertFailsWith<BusinessNetworkNotFoundException> { runRequestMembershipFlow(regularMember, regularMember, networkId) }
+
+        assertFailsWith<BusinessNetworkNotFoundException> { runRequestMembershipFlow(regularMember, authorisedMember, invalidNetworkId) }
     }
 
     @Test(timeout = 300_000)
@@ -47,9 +48,7 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
         runRequestMembershipFlow(pendingMember, authorisedMember, networkId)
 
-        assertFailsWith<FlowException>("Receiver's membership is not active") {
-            runRequestMembershipFlow(regularMember, pendingMember, networkId)
-        }
+        assertFailsWith<IllegalMembershipStatusException> { runRequestMembershipFlow(regularMember, pendingMember, networkId) }
     }
 
     @Test(timeout = 300_000)

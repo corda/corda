@@ -20,13 +20,24 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
     @Suppress("ThrowsCount")
     @Suspendable
     protected fun authorise(networkId: String, databaseService: DatabaseService, authorisationMethod: (MembershipState) -> Boolean) {
+        if (!databaseService.businessNetworkExists(networkId)) {
+            throw BusinessNetworkNotFoundException("Business Network with $networkId doesn't exist")
+        }
         val ourMembership = databaseService.getMembership(networkId, ourIdentity)?.state?.data
-                ?: throw FlowException("Receiver is not member of a business network")
+                ?: throw MembershipNotFoundException("$ourIdentity is not member of a business network")
         if (!ourMembership.isActive()) {
-            throw FlowException("Receiver's membership is not active")
+            throw IllegalMembershipStatusException("Membership owned by $ourIdentity is not active")
         }
         if (!authorisationMethod(ourMembership)) {
-            throw FlowException("Receiver is not authorised to activate membership")
+            throw MembershipAuthorisationException("$ourIdentity is not authorised to activate membership")
         }
     }
 }
+
+class BusinessNetworkNotFoundException(message: String) : FlowException(message)
+
+class MembershipNotFoundException(message: String) : FlowException(message)
+
+class IllegalMembershipStatusException(message: String) : FlowException(message)
+
+class MembershipAuthorisationException(message: String) : FlowException(message)

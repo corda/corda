@@ -91,9 +91,10 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
                 status = MembershipStatus.PENDING,
                 participants = (observers + ourIdentity + counterparty).toList()
         )
+        val requiredSigners = listOf(ourIdentity.owningKey, counterparty.owningKey)
         val builder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first())
                 .addOutputState(membershipState)
-                .addCommand(MembershipContract.Commands.Request(), listOf(ourIdentity.owningKey, counterparty.owningKey))
+                .addCommand(MembershipContract.Commands.Request(requiredSigners), requiredSigners)
         builder.verify(serviceHub)
 
         // sign transaction
