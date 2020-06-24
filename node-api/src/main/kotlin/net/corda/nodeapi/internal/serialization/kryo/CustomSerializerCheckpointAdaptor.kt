@@ -21,7 +21,7 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
                 .flatMap { it.arguments }
                 .map { it.type!!.javaType }
         if (types.size != 2) {
-            throw CustomSerializerCheckpointAdaptorException("Unable to determine serializer parent types")
+            throw UnableToDetermineSerializerTypesException("Unable to determine serializer parent types")
         }
         type = types[CORDAPP_TYPE]
         proxyType = types[PROXY_TYPE]
@@ -37,7 +37,7 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
     }
 }
 
-class CustomSerializerCheckpointAdaptorException : java.lang.Exception {
+class UnableToDetermineSerializerTypesException : java.lang.Exception {
     constructor() : super()
     constructor(message: String?) : super(message)
     constructor(message: String?, cause: Throwable?) : super(message, cause)
