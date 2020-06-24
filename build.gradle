@@ -547,6 +547,7 @@ bintrayConfig {
             'corda-deterministic-verifier',
             'corda-deserializers-djvm',
             'corda',
+            'corda-business-network-contracts',
             'corda-finance-workflows',
             'corda-finance-contracts',
             'corda-node',
