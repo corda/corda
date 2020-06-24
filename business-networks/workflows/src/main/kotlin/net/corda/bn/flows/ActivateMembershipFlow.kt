@@ -46,7 +46,11 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity }
 
         // building transaction
-        val outputMembership = membership.state.data.copy(status = MembershipStatus.ACTIVE, modified = serviceHub.clock.instant())
+        val outputMembership = membership.state.data.copy(
+                status = MembershipStatus.ACTIVE,
+                modified = serviceHub.clock.instant(),
+                participants = (observers + ourIdentity).toList()
+        )
         val requiredSigners = signers.map { it.owningKey }
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
