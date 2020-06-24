@@ -2,7 +2,9 @@ package net.corda.bn.flows
 
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
@@ -46,8 +48,8 @@ abstract class MembershipManagementFlowTest(
 
     private fun createNode(name: CordaX500Name) = mockNetwork.createNode(MockNodeParameters(legalName = name))
 
-    protected fun runCreateBusinessNetworkFlow(initiator: StartedMockNode): SignedTransaction {
-        val future = initiator.startFlow(CreateBusinessNetworkFlow())
+    protected fun runCreateBusinessNetworkFlow(initiator: StartedMockNode, networkId: UniqueIdentifier = UniqueIdentifier(), notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(CreateBusinessNetworkFlow(networkId, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }

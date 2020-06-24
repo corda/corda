@@ -8,7 +8,6 @@ apply plugin: 'net.corda.plugins.cordformation'
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
-    // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':business-networks:contracts')
     cordapp project(':business-networks:workflows')
 

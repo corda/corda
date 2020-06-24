@@ -21,7 +21,7 @@ open class MembershipContract : Contract {
 
     open class Commands(val requiredSigners: List<PublicKey>) : CommandData {
         class Request(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
-        class Activate(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+        class Activate(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
         class Suspend(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
         class Revoke(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
     }
@@ -83,7 +83,9 @@ open class MembershipContract : Contract {
     ) = requireThat {
         "Input state of membership activation transaction shouldn't be already active" using (!inputMembership.isActive())
         "Output state of membership activation transaction should be active" using (outputMembership.isActive())
-        "Input membership owner shouldn't be required signer of membership activation transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
+        (command.value as Commands.Activate).apply {
+            "Input membership owner shouldn't be required signer of membership activation transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.owningKey !in requiredSigners)
+        }
     }
 
     open fun verifySuspend(
