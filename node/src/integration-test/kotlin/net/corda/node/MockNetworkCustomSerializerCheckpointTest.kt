@@ -47,7 +47,7 @@ class MockNetworkCustomSerializerCheckpointTest{
             val difficultToSerialize: ImmutableMap<String, Int> = immutableMapOf("foo" to purchase)
 
             // Force a checkpoint
-            sleep(Duration.ofSeconds(10), maySkipCheckpoint = false)
+            sleep(Duration.ofSeconds(0), maySkipCheckpoint = false)
 
             // Return value from deserialized object
             return difficultToSerialize["foo"] ?: 0
