@@ -131,17 +131,11 @@ class InMemoryIdentityService(
         if (existingEntry == null) {
             registerKeyToParty(publicKey, party)
             hashToKey[publicKeyHash] = publicKey
-        } else {
-            if (party.name != existingEntry) {
-            }
         }
         if (externalId != null) {
             val existingExtId = keyToExternalId[publicKeyHash]
             if (existingExtId == null) {
                 registerKeyToExternalId(publicKey, externalId)
-            } else {
-                if (existingExtId != externalId) {
-                }
             }
         }
     }
