@@ -28,20 +28,12 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
     }
 
     override fun write(kryo: Kryo, output: Output, obj: OBJ) {
-        try {
-            kryo.writeClassAndObject(output, userSerializer.toProxy(obj))
-        } catch (e: Exception) {
-            throw CustomSerializerCheckpointAdaptorException("Failed converting ${type.typeName} to ${proxyType.typeName}", e)
-        }
+        kryo.writeClassAndObject(output, userSerializer.toProxy(obj))
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
-        try {
-            @Suppress("UNCHECKED_CAST")
-            return userSerializer.fromProxy(kryo.readClassAndObject(input) as PROXY)
-        } catch (e: Exception) {
-            throw CustomSerializerCheckpointAdaptorException("Failed converting ${proxyType.typeName} to ${this.type.typeName}", e)
-        }
+        @Suppress("UNCHECKED_CAST")
+        return userSerializer.fromProxy(kryo.readClassAndObject(input) as PROXY)
     }
 }
 
