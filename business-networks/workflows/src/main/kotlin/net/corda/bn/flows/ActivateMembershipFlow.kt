@@ -62,7 +62,7 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
         val observerSessions = observers.map { initiateFlow(it) }
         val finalisedTransaction = collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
 
-        // send authorised memberships to new activated or new suspended member (status moved from PENDING to ACTIVE)
+        // send authorised memberships to new activated (status moved from PENDING to ACTIVE)
         // also send all non revoked memberships (ones that can be modified) if new activated member is authorised to modify them
         if (membership.state.data.isPending()) {
             onboardMembershipSync(networkId, outputMembership, authorisedMemberships, observerSessions, auth, databaseService)

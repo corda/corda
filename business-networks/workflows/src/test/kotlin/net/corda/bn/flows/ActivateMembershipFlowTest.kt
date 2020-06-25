@@ -30,11 +30,8 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
 
         assertFailsWith<MembershipNotFoundException> { runActivateMembershipFlow(nonMember, membership.linearId) }
 
-        runRequestMembershipFlow(nonMember, authorisedMember, networkId)
-        // this ideally has to throw `IllegalMembershipStatusException` but this will only be available after we introduce flow for
-        // membership suspension and then we'll be able to have authorised member which has all memberships but cannot activate them
-        // since it is suspended.
-        assertFailsWith<MembershipNotFoundException> { runActivateMembershipFlow(nonMember, membership.linearId) }
+        runRequestAndSuspendMembershipFlow(nonMember, authorisedMember, networkId)
+        assertFailsWith<IllegalMembershipStatusException> { runActivateMembershipFlow(nonMember, membership.linearId) }
     }
 
     @Test(timeout = 300_000)
