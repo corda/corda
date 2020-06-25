@@ -4,25 +4,24 @@ import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.states.BNORole
 import net.corda.bn.states.MemberRole
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
+class ModifyRolesFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
 
     @Test(timeout = 300_000)
-    fun `suspend membership flow should fail if membership with given ID doesn't exist`() {
+    fun `modify roles flow should fail if membership with given ID doesn't exist`() {
         val authorisedMember = authorisedMembers.first()
 
         val invalidMembershipId = UniqueIdentifier()
-        assertFailsWith<MembershipNotFoundException> { runSuspendMembershipFlow(authorisedMember, invalidMembershipId) }
+        assertFailsWith<MembershipNotFoundException> { runModifyRolesFlow(authorisedMember, invalidMembershipId, setOf(BNORole())) }
     }
 
     @Test(timeout = 300_000)
-    fun `suspend membership flow should fail if initiator is not part of the business network, its membership is not active or is not authorised`() {
+    fun `modify roles flow should fail if initiator is not part of the business network, its membership is not active or is not authorised`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
         val nonMember = regularMembers[1]
@@ -30,41 +29,42 @@ class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
         val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
 
-        assertFailsWith<MembershipNotFoundException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
+        assertFailsWith<MembershipNotFoundException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
 
         runRequestAndSuspendMembershipFlow(nonMember, authorisedMember, networkId).apply {
             val membership = tx.outputStates.single() as MembershipState
 
             // make `nonMember` authorised to modify membership so he fetches all members to be modified
             runModifyRolesFlow(authorisedMember, membership.linearId, setOf(BNORole()))
-            assertFailsWith<IllegalMembershipStatusException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
+            assertFailsWith<IllegalMembershipStatusException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
 
             // remove permissions from `nonMember` and activate membership
             runActivateMembershipFlow(authorisedMember, membership.linearId)
             runModifyRolesFlow(authorisedMember, membership.linearId, setOf(MemberRole()))
-            assertFailsWith<MembershipAuthorisationException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
+            assertFailsWith<MembershipAuthorisationException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
         }
     }
 
     @Test(timeout = 300_000)
-    fun `suspend membership flow should fail if invalid notary argument is provided`() {
+    fun `modify roles flow should fail if invalid notary argument is provided`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
 
         val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
-        assertFailsWith<IllegalArgumentException> { runSuspendMembershipFlow(authorisedMember, membership.linearId, authorisedMember.identity()) }
+        assertFailsWith<IllegalArgumentException> { runModifyRolesFlow(authorisedMember, membership.linearId, setOf(BNORole()), authorisedMember.identity()) }
     }
 
     @Test(timeout = 300_000)
-    fun `suspend membership flow happy path`() {
+    fun `modify roles flow happy path`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
 
-        val (membership, command) = runRequestAndSuspendMembershipFlow(regularMember, authorisedMember, networkId).run {
+        val activatedMembership = runRequestAndActivateMembershipFlows(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
+        val (membership, command) = runModifyRolesFlow(authorisedMember, activatedMembership.linearId, setOf(BNORole())).run {
             assertEquals(1, tx.inputs.size)
             verifyRequiredSignatures()
             tx.outputs.single() to tx.commands.single()
@@ -76,9 +76,9 @@ class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             val data = data as MembershipState
             assertEquals(regularMember.identity(), data.identity)
             assertEquals(networkId, data.networkId)
-            assertEquals(MembershipStatus.SUSPENDED, data.status)
+            assertEquals(BNORole(), data.roles.single())
         }
-        assertTrue(command.value is MembershipContract.Commands.Suspend)
+        assertTrue(command.value is MembershipContract.Commands.ModifyRoles)
 
         // also check ledgers
         listOf(authorisedMember, regularMember).forEach { member ->

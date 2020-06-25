@@ -81,11 +81,10 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
 
         // check whether party is authorised to activate membership
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        val auth = BNUtils.loadBNMemberAuth()
-        authorise(networkId, databaseService) { auth.canActivateMembership(it) }
+        authorise(networkId, databaseService) { it.canActivateMembership() }
 
         // fetch observers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId, auth)
+        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
         val observers = (authorisedMemberships.map { it.state.data.identity } - ourIdentity).toSet()
 
         // build transaction

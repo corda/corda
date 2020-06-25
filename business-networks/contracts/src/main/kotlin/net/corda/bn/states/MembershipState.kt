@@ -18,6 +18,7 @@ import java.time.Instant
  * @property identity Corda Identity of a member.
  * @property networkId Unique identifier of a Business Network membership belongs to.
  * @property status Status of the state (i.e. PENDING, ACTIVE, SUSPENDED).
+ * @property roles Set of all the roles associated to the membership.
  * @property issued Timestamp when the state has been issued.
  * @property modified Timestamp when the state has been modified last time.
  */
@@ -26,6 +27,7 @@ data class MembershipState(
         val identity: Party,
         val networkId: String,
         val status: MembershipStatus,
+        val roles: Set<BNRole> = emptySet(),
         val issued: Instant = Instant.now(),
         val modified: Instant = issued,
         override val linearId: UniqueIdentifier = UniqueIdentifier(),
@@ -46,6 +48,13 @@ data class MembershipState(
     fun isPending() = status == MembershipStatus.PENDING
     fun isActive() = status == MembershipStatus.ACTIVE
     fun isSuspended() = status == MembershipStatus.SUSPENDED
+
+    private fun permissions() = roles.flatMap { it.permissions }.toSet()
+    fun canActivateMembership() = AdminPermission.CAN_ACTIVATE_MEMBERSHIP in permissions()
+    fun canSuspendMembership() = AdminPermission.CAN_SUSPEND_MEMBERSHIP in permissions()
+    fun canRevokeMembership() = AdminPermission.CAN_REVOKE_MEMBERSHIP in permissions()
+    fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
+    fun canModifyMembership() = permissions().isNotEmpty()
 }
 
 /**
@@ -67,4 +76,61 @@ enum class MembershipStatus {
      * Suspended members can't transact on the Business Network or modify other memberships. Suspended members can be activated back.
      */
     SUSPENDED
+}
+
+/**
+ * Represents role associated with Business Network membership. Every custom Business Network related role should extend this class.
+ *
+ * @property name Name of the role.
+ * @property permissions Set of permissions given to the role.
+ */
+@CordaSerializable
+open class BNRole(val name: String, val permissions: Set<BNPermission>) {
+    override fun equals(other: Any?) = other is BNRole && name == other.name && permissions == other.permissions
+    override fun hashCode() = name.hashCode() + 31 * permissions.hashCode()
+}
+
+/**
+ * Represents Business Network Operator (BNO) role which has all Business Network administrative permissions given.
+ */
+@CordaSerializable
+class BNORole : BNRole("BNO", AdminPermission.values().toSet())
+
+/**
+ * Represents simple member which doesn't have any Business Network administrative permission given.
+ */
+@CordaSerializable
+class MemberRole : BNRole("Member", emptySet())
+
+/**
+ * Represents permission given in the context of Business Network membership. Every custom Business Network related permission should
+ * implement this interface.
+ */
+@CordaSerializable
+interface BNPermission
+
+/**
+ * Business Network administrative permissions that can be given to a role.
+ */
+@CordaSerializable
+enum class AdminPermission : BNPermission {
+    /**
+     * Enables member to activate Business Network memberships.
+     */
+    CAN_ACTIVATE_MEMBERSHIP,
+
+    /**
+     * Enables member to suspend Business Network memberships.
+     */
+    CAN_SUSPEND_MEMBERSHIP,
+
+    /**
+     * Enables member to revoke Business Network memberships.
+     */
+    CAN_REVOKE_MEMBERSHIP,
+
+    /**
+     * Enables member to modify memberships' roles.
+     */
+    CAN_MODIFY_ROLE
 }

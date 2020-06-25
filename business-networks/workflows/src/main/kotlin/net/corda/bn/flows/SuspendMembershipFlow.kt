@@ -37,11 +37,10 @@ class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private 
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
-        val auth = BNUtils.loadBNMemberAuth()
-        authorise(networkId, databaseService) { auth.canSuspendMembership(it) }
+        authorise(networkId, databaseService) { it.canSuspendMembership() }
 
         // fetch observers and signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId, auth).toSet()
+        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
         val observers = authorisedMemberships.map { it.state.data.identity }.toSet() + membership.state.data.identity - ourIdentity
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity } - membership.state.data.identity
 
@@ -65,7 +64,7 @@ class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private 
         // send authorised memberships to new suspended member (status moved from PENDING to SUSPENDED)
         // also send all non revoked memberships (ones that can be modified) if new activated member is authorised to modify them
         if (membership.state.data.isPending()) {
-            onboardMembershipSync(networkId, outputMembership, authorisedMemberships, observerSessions, auth, databaseService)
+            onboardMembershipSync(networkId, outputMembership, authorisedMemberships, observerSessions, databaseService)
         }
 
         return finalisedTransaction

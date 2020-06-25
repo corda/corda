@@ -39,15 +39,18 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
     }
 
     @Test(timeout = 300_000)
-    fun `request membership flow should fail if receiver's membership is not active`() {
+    fun `request membership flow should fail if receiver's membership is not active or is not authorised`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
         val pendingMember = regularMembers[1]
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
-        runRequestMembershipFlow(pendingMember, authorisedMember, networkId)
 
+        val membership = runRequestMembershipFlow(pendingMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
         assertFailsWith<IllegalMembershipStatusException> { runRequestMembershipFlow(regularMember, pendingMember, networkId) }
+
+        runActivateMembershipFlow(authorisedMember, membership.linearId)
+        assertFailsWith<MembershipAuthorisationException> { runRequestMembershipFlow(regularMember, pendingMember, networkId) }
     }
 
     @Test(timeout = 300_000)
