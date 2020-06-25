@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -17,16 +18,17 @@ import net.corda.core.transactions.TransactionBuilder
  * authorised to modify membership and on revoked member's ledger.
  *
  * @property membershipId ID of the membership to be revoked.
+ * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
 @StartableByRPC
-class RevokeMembershipFlow(private val membershipId: UniqueIdentifier) : MembershipManagementFlow<SignedTransaction>() {
+class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
         val membership = databaseService.getMembership(membershipId)
-                ?: throw FlowException("Membership state with $membershipId linear ID doesn't exist")
+                ?: throw MembershipNotFoundException("Membership state with $membershipId linear ID doesn't exist")
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
@@ -39,9 +41,10 @@ class RevokeMembershipFlow(private val membershipId: UniqueIdentifier) : Members
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity } - membership.state.data.identity
 
         // building transaction
-        val builder = TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first())
+        val requiredSigners = signers.map { it.owningKey }
+        val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
-                .addCommand(MembershipContract.Commands.Revoke(), signers.map { it.owningKey })
+                .addCommand(MembershipContract.Commands.Revoke(requiredSigners), requiredSigners)
         builder.verify(serviceHub)
 
         // send info to observers whether they need to sign the transaction
