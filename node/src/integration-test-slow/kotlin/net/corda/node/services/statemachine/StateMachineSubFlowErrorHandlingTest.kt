@@ -19,7 +19,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
+class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     /**
      * This test checks that flow calling an initiating subflow will recover correctly.
@@ -88,7 +88,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
-                StateMachineSubflowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
+                StateMachineSubFlowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(
                 30.seconds
@@ -159,7 +159,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
-                StateMachineSubflowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
+                StateMachineSubFlowErrorHandlingTest::SendAMessageInAnInitiatingSubflowFlow,
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(
                 30.seconds
@@ -222,7 +222,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
-                StateMachineSubflowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
+                StateMachineSubFlowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(
                 30.seconds
@@ -293,7 +293,7 @@ class StateMachineSubflowErrorHandlingTest : StateMachineErrorHandlingTest() {
             submitBytemanRules(rules, port)
 
             alice.rpc.startFlow(
-                StateMachineSubflowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
+                StateMachineSubFlowErrorHandlingTest::SendAMessageInAnInlineSubflowFlow,
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(
                 30.seconds
