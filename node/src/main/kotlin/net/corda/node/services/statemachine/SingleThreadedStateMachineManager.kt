@@ -476,7 +476,7 @@ internal class SingleThreadedStateMachineManager(
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, event.deduplicationHandler, sender)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, event.deduplicationHandler, sender, event.receivedMessage.uniqueMessageId)
                 is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
@@ -486,7 +486,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, sender: Party) {
+    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, sender: Party, messageIdentifier: MessageIdentifier) {
         try {
             val recipientId = sessionMessage.recipientSessionId
             val flowId = sessionToFlow[recipientId]
@@ -502,7 +502,7 @@ internal class SingleThreadedStateMachineManager(
                     logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                val event = Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender)
+                val event = Event.DeliverSessionMessage(sessionMessage, messageIdentifier.sessionSequenceNumber, deduplicationHandler, sender)
                 innerState.withLock {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.

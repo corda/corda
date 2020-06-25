@@ -3,14 +3,16 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.KilledFlowException
 import net.corda.node.services.statemachine.Action
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ErrorSessionMessage
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.FlowError
 import net.corda.node.services.statemachine.FlowRemovalReason
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.generateShard
 
 class KilledFlowTransition(
     override val context: TransitionContext,
@@ -29,12 +31,31 @@ class KilledFlowTransition(
                 startingState.checkpoint.checkpointState.sessions,
                 errorMessages
             )
-            val newCheckpoint = startingState.checkpoint.setSessions(sessions = newSessions)
+
+            val sessionsWithAdvancedSeqNumbers = mutableMapOf<SessionId, SessionState>()
+            val errorsPerSession = initiatedSessions
+                // no need to send error messages to terminated sessions.
+                // after close() changes are merged, these won't be needed since these sessions will have been cleaned up completely.
+                .filter { it.initiatedState is InitiatedSessionState.Live }
+                .map { sessionState ->
+                    val sessionId = (sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId
+                    var currentSequenceNumber = sessionState.sequenceNumber
+                    val errorsWithId = errorMessages.map { error ->
+                        val result = Pair(MessageIdentifier("XX", context.id.toString(), sessionId.toLong, currentSequenceNumber), error)
+                        currentSequenceNumber++
+                        result
+                    }.toList()
+                    val newSessionState = sessionState.copy(sequenceNumber = currentSequenceNumber)
+                    sessionsWithAdvancedSeqNumbers[sessionId] = newSessionState
+                    Pair(sessionState, errorsWithId)
+                }.toMap()
+
+            val newCheckpoint = startingState.checkpoint.setSessions(sessions = newSessions + sessionsWithAdvancedSeqNumbers)
             currentState = currentState.copy(checkpoint = newCheckpoint)
+
             actions.add(
                 Action.PropagateErrors(
-                    errorMessages,
-                    initiatedSessions,
+                    errorsPerSession,
                     startingState.senderUUID
                 )
             )
@@ -95,12 +116,14 @@ class KilledFlowTransition(
     ): Pair<List<SessionState.Initiated>, Map<SessionId, SessionState>> {
         val newSessions = sessions.mapValues { (sourceSessionId, sessionState) ->
             if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
-                // *prepend* the error messages in order to error the other sessions ASAP. The other messages will
-                // be delivered all the same, they just won't trigger flow resumption because of dirtiness.
+                /**
+                 * Error messages are *not* prepended anymore. The other side will process messages in order.
+                 */
+                var currentSequenceNumber = sessionState.sequenceNumber
                 val errorMessagesWithDeduplication = errorMessages.map {
-                    DeduplicationId.createForError(it.errorId, sourceSessionId) to it
+                    (MessageIdentifier("XX", generateShard(context.id.toString()), sourceSessionId.toLong, currentSequenceNumber) to it).also { currentSequenceNumber++ }
                 }
-                sessionState.copy(bufferedMessages = errorMessagesWithDeduplication + sessionState.bufferedMessages)
+                sessionState.copy(bufferedMessages =  sessionState.bufferedMessages + errorMessagesWithDeduplication, sequenceNumber = sessionState.sequenceNumber + errorMessages.size)
             } else {
                 sessionState
             }

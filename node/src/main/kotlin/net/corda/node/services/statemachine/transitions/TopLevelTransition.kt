@@ -6,7 +6,6 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.Try
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.EndSessionMessage
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event
@@ -15,11 +14,13 @@ import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.SubFlow
+import net.corda.node.services.statemachine.generateShard
 
 /**
  * This is the top level event-handling transition function capable of handling any [Event].
@@ -261,11 +262,15 @@ class TopLevelTransition(
     }
 
     private fun TransitionBuilder.sendEndMessages() {
-        val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { index, state ->
+        val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { _, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
-                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
-                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
+                val messageIdentifier = MessageIdentifier("XE", generateShard(context.id.toString()), state.initiatedState.peerSinkSessionId.toLong, state.sequenceNumber)
+                val newSessionState = state.copy(sequenceNumber = state.sequenceNumber + 1)
+                val newSessions = LinkedHashMap(currentState.checkpoint.checkpointState.sessions)
+                newSessions[state.initiatedState.peerSinkSessionId] = newSessionState
+                currentState = currentState.copy(checkpoint = currentState.checkpoint.setSessions(sessions = newSessions))
+                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(messageIdentifier, currentState.senderUUID))
             } else {
                 null
             }
@@ -283,7 +288,7 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
-            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
+            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong(), 0))
             currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)

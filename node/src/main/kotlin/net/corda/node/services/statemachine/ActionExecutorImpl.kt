@@ -133,20 +133,19 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executePropagateErrors(action: Action.PropagateErrors) {
-        action.errorMessages.forEach { (exception) ->
+        val errors = action.errorsPerSession.values.flatMap { it.map { it.second } }.distinct()
+        errors.forEach { exception ->
             log.warn("Propagating error", exception)
         }
-        for (sessionState in action.sessions) {
+        action.errorsPerSession.forEach { sessionState, sessionErrors ->
             // We cannot propagate if the session isn't live.
-            if (sessionState.initiatedState !is InitiatedSessionState.Live) {
-                continue
-            }
-            // Don't propagate errors to the originating session
-            for (errorMessage in action.errorMessages) {
-                val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
-                val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
-                val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
-                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
+            if (sessionState.initiatedState is InitiatedSessionState.Live) {
+                // Don't propagate errors to the originating session
+                for ((id, msg) in sessionErrors) {
+                    val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
+                    val existingMessage = ExistingSessionMessage(sinkSessionId, msg)
+                    flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(id, action.senderUUID))
+                }
             }
         }
     }

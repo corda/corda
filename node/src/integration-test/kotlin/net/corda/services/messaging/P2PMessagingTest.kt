@@ -13,6 +13,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
+import net.corda.node.services.statemachine.MessageIdentifier
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
@@ -29,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class P2PMessagingTest {
     private companion object {
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
+        private val STATIC_SHARD_ID = "00000000"
     }
 
     @Test(timeout=300_000)
@@ -73,7 +76,8 @@ class P2PMessagingTest {
     private fun InProcess.respondWith(message: Any) {
         internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
+            val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0)
+            val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes, SenderDeduplicationId(messageIdentifier, null))
             internalServices.networkService.send(response, request.replyTo)
             handler.afterDatabaseTransaction()
         }
@@ -84,7 +88,8 @@ class P2PMessagingTest {
         internalServices.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target)
+        val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0)
+        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target, SenderDeduplicationId(messageIdentifier, null))
         return response
     }
 

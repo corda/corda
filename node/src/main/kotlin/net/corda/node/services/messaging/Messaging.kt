@@ -11,6 +11,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 import java.time.Instant
@@ -100,7 +101,7 @@ interface MessagingService : ServiceLifecycleSupport {
      * @param deduplicationId optional message deduplication ID including sender identifier.
      * @param additionalHeaders optional additional message headers.
      */
-    fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()): Message
+    fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String> = emptyMap()): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -109,7 +110,7 @@ interface MessagingService : ServiceLifecycleSupport {
     val myAddress: SingleMessageRecipient
 }
 
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
 
 interface MessageHandlerRegistration
 
@@ -128,7 +129,7 @@ interface Message {
     val topic: String
     val data: ByteSequence
     val debugTimestamp: Instant
-    val uniqueMessageId: DeduplicationId
+    val uniqueMessageId: MessageIdentifier
     val senderUUID: String?
     val additionalHeaders: Map<String, String>
 }

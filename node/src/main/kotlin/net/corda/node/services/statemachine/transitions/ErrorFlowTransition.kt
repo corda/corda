@@ -44,12 +44,32 @@ class ErrorFlowTransition(
                         startingState.checkpoint.checkpointState.sessions,
                         errorMessages
                 )
+
+                val sessionsWithAdvancedSeqNumbers = mutableMapOf<SessionId, SessionState>()
+                val errorsPerSession = initiatedSessions
+                        // no need to send error messages to terminated sessions.
+                        // after close() changes are merged, these won't be needed since these sessions will have been cleaned up completely.
+                        .filter { it.initiatedState is InitiatedSessionState.Live }
+                        .map { sessionState ->
+                            val sessionId = (sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId
+                            var currentSequenceNumber = sessionState.sequenceNumber
+                            val errorsWithSequenceNumber = errorMessages.map { error ->
+                                val result = Pair(MessageIdentifier("XX", generateShard(context.id.toString()), sessionId.toLong, currentSequenceNumber), error)
+                                currentSequenceNumber++
+                                result
+                            }.toList()
+                            val newSessionState = sessionState.copy(sequenceNumber = currentSequenceNumber)
+                            sessionsWithAdvancedSeqNumbers[sessionId] = newSessionState
+                            Pair(sessionState, errorsWithSequenceNumber)
+                        }.toMap()
+
                 val newCheckpoint = startingState.checkpoint.copy(
                         errorState = errorState.copy(propagatedIndex = allErrors.size),
-                        checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions)
+                        checkpointState = startingState.checkpoint.checkpointState.copy(sessions = newSessions + sessionsWithAdvancedSeqNumbers)
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
-                actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
+
+                actions.add(Action.PropagateErrors(errorsPerSession, startingState.senderUUID))
             }
 
             // If we're errored but not propagating keep processing events.
@@ -107,12 +127,14 @@ class ErrorFlowTransition(
     ): Pair<List<SessionState.Initiated>, Map<SessionId, SessionState>> {
         val newSessions = sessions.mapValues { (sourceSessionId, sessionState) ->
             if (sessionState is SessionState.Initiating && sessionState.rejectionError == null) {
-                // *prepend* the error messages in order to error the other sessions ASAP. The other messages will
-                // be delivered all the same, they just won't trigger flow resumption because of dirtiness.
+                /**
+                 * Error messages are *not* prepended anymore. The other side will process messages in order.
+                 */
+                var currentSequenceNumber = sessionState.sequenceNumber
                 val errorMessagesWithDeduplication = errorMessages.map {
-                    DeduplicationId.createForError(it.errorId, sourceSessionId) to it
+                    (MessageIdentifier("XX", generateShard(context.id.toString()), sourceSessionId.toLong, currentSequenceNumber) to it).also { currentSequenceNumber++ }
                 }
-                sessionState.copy(bufferedMessages = errorMessagesWithDeduplication + sessionState.bufferedMessages)
+                sessionState.copy(bufferedMessages =  sessionState.bufferedMessages + errorMessagesWithDeduplication, sequenceNumber = sessionState.sequenceNumber + errorMessages.size)
             } else {
                 sessionState
             }

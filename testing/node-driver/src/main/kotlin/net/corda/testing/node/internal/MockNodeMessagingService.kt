@@ -15,6 +15,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
@@ -178,7 +179,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
 
     /** Returns the given (topic & session, data) pair as a newly created message object. */
     override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, senderUUID = deduplicationId.senderUUID)
+        return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId.messageIdentifier, senderUUID = deduplicationId.senderUUID)
     }
 
     /**
@@ -235,7 +236,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     private fun pumpReceiveInternal(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? {
         val q = network.getQueueForPeerHandle(myAddress)
         val (transfer, deliverTo) = getNextQueue(q, block) ?: return null
-        if (transfer.message.uniqueMessageId !in processedMessages) {
+        if (transfer.message.uniqueMessageId.toDeduplicationId() !in processedMessages) {
             executor.execute {
                 for (handler in deliverTo) {
                     try {
@@ -268,7 +269,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     private data class InMemoryReceivedMessage(override val topic: String,
                                                override val data: ByteSequence,
                                                override val platformVersion: Int,
-                                               override val uniqueMessageId: DeduplicationId,
+                                               override val uniqueMessageId: MessageIdentifier,
                                                override val debugTimestamp: Instant,
                                                override val peer: CordaX500Name,
                                                override val senderUUID: String? = null,
@@ -291,7 +292,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         }
 
         override fun insideDatabaseTransaction() {
-            processedMessages += transfer.message.uniqueMessageId
+            processedMessages += transfer.message.uniqueMessageId.toDeduplicationId()
         }
     }
 

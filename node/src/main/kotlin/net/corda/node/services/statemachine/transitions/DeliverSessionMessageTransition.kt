@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
@@ -37,6 +38,11 @@ class DeliverSessionMessageTransition(
         override val startingState: StateMachineState,
         val event: Event.DeliverSessionMessage
 ) : Transition {
+
+    companion object {
+        val log = contextLogger()
+    }
+
     override fun transition(): TransitionResult {
         return builder {
             // Add the DeduplicationHandler to the pending ones ASAP so in case an error happens we still know
@@ -52,11 +58,12 @@ class DeliverSessionMessageTransition(
                 freshErrorTransition(CannotFindSessionException(event.sessionMessage.recipientSessionId))
             } else {
                 val payload = event.sessionMessage.payload
+                val sequenceNumber = event.sequenceNumber
                 // Dispatch based on what kind of message it is.
                 when (payload) {
                     is ConfirmSessionMessage -> confirmMessageTransition(existingSession, payload)
-                    is DataSessionMessage -> dataMessageTransition(existingSession, payload)
-                    is ErrorSessionMessage -> errorMessageTransition(existingSession, payload)
+                    is DataSessionMessage -> dataMessageTransition(existingSession, payload, sequenceNumber)
+                    is ErrorSessionMessage -> errorMessageTransition(existingSession, payload, sequenceNumber)
                     is RejectSessionMessage -> rejectMessageTransition(existingSession, payload)
                     is EndSessionMessage -> endMessageTransition()
                 }
@@ -75,33 +82,39 @@ class DeliverSessionMessageTransition(
                 val initiatedSession = SessionState.Initiated(
                         peerParty = event.sender,
                         peerFlowInfo = message.initiatedFlowInfo,
-                        receivedMessages = emptyList(),
+                        receivedMessages = mutableMapOf(),
                         initiatedState = InitiatedSessionState.Live(message.initiatedSessionId),
-                        errors = emptyList(),
-                        deduplicationSeed = sessionState.deduplicationSeed
+                        errors = mutableMapOf(),
+                        deduplicationSeed = sessionState.deduplicationSeed,
+                        sequenceNumber = sessionState.sequenceNumber,
+                        lastSequenceNumberProcessed = 0
                 )
                 val newCheckpoint = currentState.checkpoint.addSession(
                         event.sessionMessage.recipientSessionId to initiatedSession
                 )
                 // Send messages that were buffered pending confirmation of session.
-                val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
+                val sendActions = sessionState.bufferedMessages.map { (messageId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
+                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(messageId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)
             }
-            else -> freshErrorTransition(UnexpectedEventInState())
+            else -> {
+                log.info("Received a confirmation while at $sessionState")
+                freshErrorTransition(UnexpectedEventInState())
+            }
         }
     }
 
-    private fun TransitionBuilder.dataMessageTransition(sessionState: SessionState, message: DataSessionMessage) {
+    private fun TransitionBuilder.dataMessageTransition(sessionState: SessionState, message: DataSessionMessage, sequenceNumber: Int) {
         // We received a data message. The corresponding session must be Initiated.
         return when (sessionState) {
             is SessionState.Initiated -> {
                 // Buffer the message in the session's receivedMessages buffer.
+                sessionState.receivedMessages[sequenceNumber] = message
                 val newSessionState = sessionState.copy(
-                        receivedMessages = sessionState.receivedMessages + message
+                        receivedMessages = sessionState.receivedMessages
                 )
 
                 currentState = currentState.copy(
@@ -114,7 +127,7 @@ class DeliverSessionMessageTransition(
         }
     }
 
-    private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage) {
+    private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage, sequenceNumber: Int) {
         val exception: Throwable = if (payload.flowException == null) {
             UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = payload.errorId)
         } else {
@@ -136,9 +149,9 @@ class DeliverSessionMessageTransition(
                 val checkpoint = currentState.checkpoint
                 val sessionId = event.sessionMessage.recipientSessionId
                 val flowError = FlowError(payload.errorId, exception)
-                val newSessionState = sessionState.copy(errors = sessionState.errors + flowError)
+                sessionState.errors[sequenceNumber] = flowError
                 currentState = currentState.copy(
-                        checkpoint = checkpoint.addSession(sessionId to newSessionState)
+                        checkpoint = checkpoint.addSession(sessionId to sessionState)
                 )
             }
             else -> freshErrorTransition(UnexpectedEventInState())
@@ -174,10 +187,11 @@ class DeliverSessionMessageTransition(
         }
         when (sessionState) {
             is SessionState.Initiated -> {
+                // Note: this should be replaced with a buffering of termination signal that's acted upon only when previous messages have been processed.
+                //       that's already done as part of the session close API changes btw.
                 val newSessionState = sessionState.copy(initiatedState = InitiatedSessionState.Ended)
                 currentState = currentState.copy(
                         checkpoint = currentState.checkpoint.addSession(sessionId to newSessionState)
-
                 )
             }
             else -> {

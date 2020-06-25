@@ -197,8 +197,15 @@ class StartedFlowTransition(
                     if (messages.isEmpty()) {
                         someNotFound = true
                     } else {
-                        newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toList())
-                        resultMessages[sessionId] = messages[0].payload
+                        val nextSequenceNumber = sessionState.lastSequenceNumberProcessed + 1
+                        if (messages.containsKey(nextSequenceNumber)) {
+                            val newMessage = messages[nextSequenceNumber]
+                            messages.remove(nextSequenceNumber)
+                            newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages, lastSequenceNumberProcessed = nextSequenceNumber)
+                            resultMessages[sessionId] = newMessage!!.payload
+                        } else {
+                            someNotFound = true
+                        }
                     }
                 }
                 else -> {
@@ -216,7 +223,6 @@ class StartedFlowTransition(
     private fun TransitionBuilder.sendInitialSessionMessagesIfNeeded(sourceSessions: Set<SessionId>) {
         val checkpoint = startingState.checkpoint
         val newSessions = LinkedHashMap<SessionId, SessionState>(checkpoint.checkpointState.sessions)
-        var index = 0
         for (sourceSessionId in sourceSessions) {
             val sessionState = checkpoint.checkpointState.sessions[sourceSessionId]
             if (sessionState == null) {
@@ -229,10 +235,11 @@ class StartedFlowTransition(
             val newSessionState = SessionState.Initiating(
                     bufferedMessages = emptyList(),
                     rejectionError = null,
-                    deduplicationSeed = sessionState.deduplicationSeed
+                    deduplicationSeed = sessionState.deduplicationSeed,
+                    sequenceNumber = sessionState.sequenceNumber + 1
             )
-            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, newSessionState)
-            actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
+            val messageIdentifier = MessageIdentifier("XI", generateShard(context.id.toString()), sourceSessionId.toLong, sessionState.sequenceNumber)
+            actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
         currentState = currentState.copy(checkpoint = checkpoint.setSessions(sessions = newSessions))
@@ -255,7 +262,6 @@ class StartedFlowTransition(
     private fun TransitionBuilder.sendToSessionsTransition(sourceSessionIdToMessage: Map<SessionId, SerializedBytes<Any>>) {
         val checkpoint = startingState.checkpoint
         val newSessions = LinkedHashMap(checkpoint.checkpointState.sessions)
-        var index = 0
         for ((sourceSessionId, _) in sourceSessionIdToMessage) {
             val existingSessionState = checkpoint.checkpointState.sessions[sourceSessionId] ?: return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             if (existingSessionState is SessionState.Initiated && existingSessionState.initiatedState is InitiatedSessionState.Ended) {
@@ -269,32 +275,34 @@ class StartedFlowTransition(
 
         val sendInitialActions = messagesByType[SessionState.Uninitiated::class]?.map { (sourceSessionId, sessionState, message) ->
             val uninitiatedSessionState = sessionState as SessionState.Uninitiated
-            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, sessionState)
             val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, uninitiatedSessionState.additionalEntropy, message)
             newSessions[sourceSessionId] = SessionState.Initiating(
                     bufferedMessages = emptyList(),
                     rejectionError = null,
-                    deduplicationSeed = uninitiatedSessionState.deduplicationSeed
+                    deduplicationSeed = uninitiatedSessionState.deduplicationSeed,
+                    sequenceNumber = uninitiatedSessionState.sequenceNumber + 1
             )
-            Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
+            val messageIdentifier = MessageIdentifier("XI", generateShard(context.id.toString()), sourceSessionId.toLong, uninitiatedSessionState.sequenceNumber)
+            Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
         } ?: emptyList()
         messagesByType[SessionState.Initiating::class]?.forEach { (sourceSessionId, sessionState, message) ->
             val initiatingSessionState = sessionState as SessionState.Initiating
             val sessionMessage = DataSessionMessage(message)
-            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, initiatingSessionState)
-            val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(deduplicationId, sessionMessage)
-            newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages)
+            val messageIdentifier = MessageIdentifier("XD", generateShard(context.id.toString()), sourceSessionId.toLong, sessionState.sequenceNumber)
+            val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(messageIdentifier, sessionMessage)
+            newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages, sequenceNumber = sessionState.sequenceNumber + 1)
         }
-        val sendExistingActions = messagesByType[SessionState.Initiated::class]?.mapNotNull {(_, sessionState, message) ->
+        val sendExistingActions = messagesByType[SessionState.Initiated::class]?.mapNotNull {(sessionId, sessionState, message) ->
             val initiatedSessionState = sessionState as SessionState.Initiated
             if (initiatedSessionState.initiatedState !is InitiatedSessionState.Live)
                 null
             else {
                 val sessionMessage = DataSessionMessage(message)
-                val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, initiatedSessionState)
                 val sinkSessionId = initiatedSessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
+                val messageIdentifier = MessageIdentifier("XD", generateShard(context.id.toString()), sinkSessionId.toLong, initiatedSessionState.sequenceNumber)
+                newSessions[sessionId] = initiatedSessionState.copy(sequenceNumber = initiatedSessionState.sequenceNumber + 1)
+                Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
             }
         } ?: emptyList()
 
@@ -320,7 +328,14 @@ class StartedFlowTransition(
                         listOf(sessionState.rejectionError.exception)
                     }
                 }
-                is SessionState.Initiated -> sessionState.errors.map(FlowError::exception)
+                is SessionState.Initiated -> {
+                    val nextSequenceNumber = sessionState.lastSequenceNumberProcessed + 1
+                    if (sessionState.errors.containsKey(nextSequenceNumber)) {
+                        return listOf(sessionState.errors[nextSequenceNumber]!!.exception)
+                    } else {
+                        emptyList()
+                    }
+                }
             }
         }
     }

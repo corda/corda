@@ -4,14 +4,15 @@ import net.corda.core.flows.FlowInfo
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.ConfirmSessionMessage
 import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExistingSessionMessage
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.generateShard
 
 /**
  * This transition is responsible for starting the flow from a FlowLogic instance. It creates the first checkpoint and
@@ -51,15 +52,22 @@ class UnstartedFlowTransition(
                         appName = initiatingMessage.appName
                 ),
                 receivedMessages = if (initiatingMessage.firstPayload == null) {
-                    emptyList()
+                    mutableMapOf()
                 } else {
-                    listOf(DataSessionMessage(initiatingMessage.firstPayload))
+                    mutableMapOf(Pair(0, DataSessionMessage(initiatingMessage.firstPayload)))
                 },
-                errors = emptyList(),
+                errors = mutableMapOf(),
+                sequenceNumber = 1,
+                lastSequenceNumberProcessed = if (initiatingMessage.firstPayload == null) {
+                    0
+                } else {
+                    -1
+                },
                 deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}"
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
+        val messageIdentifier = MessageIdentifier("XC", generateShard(context.id.toString()), flowStart.initiatedSessionId.toLong, 0)
         currentState = currentState.copy(
                 checkpoint = currentState.checkpoint.setSessions(mapOf(flowStart.initiatedSessionId to initiatedState))
         )
@@ -67,7 +75,7 @@ class UnstartedFlowTransition(
                 Action.SendExisting(
                         flowStart.peerSession.counterparty,
                         sessionMessage,
-                        SenderDeduplicationId(DeduplicationId.createForNormal(currentState.checkpoint, 0, initiatedState), currentState.senderUUID)
+                        SenderDeduplicationId(messageIdentifier, currentState.senderUUID)
                 )
         )
     }

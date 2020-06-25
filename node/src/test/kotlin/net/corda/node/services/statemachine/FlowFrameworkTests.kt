@@ -1015,10 +1015,12 @@ internal fun Observable<MessageTransfer>.toSessionTransfers(): Observable<Sessio
     }
 }
 
-internal fun TestStartedNode.sendSessionMessage(message: SessionMessage, destination: Party) {
+internal fun TestStartedNode.sendSessionMessage(message: InitialSessionMessage, destination: Party) {
+    val STATIC_SHARD_ID = "00000000"
     services.networkService.apply {
         val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
-        send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, message.initiatorSessionId.toLong, 0)
+        send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes, SenderDeduplicationId(messageIdentifier, ourSenderUUID)), address)
     }
 }
 

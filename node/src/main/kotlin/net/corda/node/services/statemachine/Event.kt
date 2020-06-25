@@ -33,6 +33,7 @@ sealed class Event {
      */
     data class DeliverSessionMessage(
             val sessionMessage: ExistingSessionMessage,
+            val sequenceNumber: Int,
             override val deduplicationHandler: DeduplicationHandler,
             val sender: Party
     ) : Event(), GeneratedByExternalEvent

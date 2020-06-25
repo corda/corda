@@ -42,7 +42,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         )
     }
 
-    private fun isDuplicateInDatabase(msg: ReceivedMessage): Boolean = database.transaction { msg.uniqueMessageId in processedMessages }
+    private fun isDuplicateInDatabase(msg: ReceivedMessage): Boolean = database.transaction { msg.uniqueMessageId.toDeduplicationId() in processedMessages }
 
     // We need to incorporate the sending party, and the sessionInit flag as per the in-memory cache.
     private fun senderHash(senderKey: SenderKey) = SecureHash.sha256(senderKey.peer.toString() + senderKey.isSessionInit.toString() + senderKey.senderUUID).toString()
@@ -51,7 +51,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
      * @return true if we have seen this message before.
      */
     fun isDuplicate(msg: ReceivedMessage): Boolean {
-        if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {
+        if (beingProcessedMessages.containsKey(msg.uniqueMessageId.toDeduplicationId())) {
             return true
         }
         return isDuplicateInDatabase(msg)
@@ -66,7 +66,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         // We don't want a mix of nulls and values so we ensure that here.
         val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) senderHash(SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)) else null
         val senderSeqNo: Long? = if (senderHash != null) msg.senderSeqNo else null
-        beingProcessedMessages[msg.uniqueMessageId] = MessageMeta(Instant.now(), senderHash, senderSeqNo)
+        beingProcessedMessages[msg.uniqueMessageId.toDeduplicationId()] = MessageMeta(Instant.now(), senderHash, senderSeqNo)
     }
 
     /**

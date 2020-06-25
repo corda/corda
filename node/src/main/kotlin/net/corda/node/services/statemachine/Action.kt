@@ -73,12 +73,13 @@ sealed class Action {
     data class AcknowledgeMessages(val deduplicationHandlers: List<DeduplicationHandler>) : Action()
 
     /**
-     * Propagate [errorMessages] to [sessions].
-     * @param sessions a map from source session IDs to initiated sessions.
+     * Propagate the specified error messages to the specified sessions.
+     *
+     * Note: This could be refactored to have only one error message per session - the list always has size zero.
+     * @param errorsPerSession a map containing the error messages to be sent per session along with their sequence numbers.
      */
     data class PropagateErrors(
-            val errorMessages: List<ErrorSessionMessage>,
-            val sessions: List<SessionState.Initiated>,
+            val errorsPerSession: Map<SessionState.Initiated, List<Pair<MessageIdentifier, ErrorSessionMessage>>>,
             val senderUUID: String?
     ) : Action()
 

@@ -27,6 +27,7 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
@@ -101,7 +102,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private class NodeClientMessage(override val topic: String,
                                     override val data: ByteSequence,
-                                    override val uniqueMessageId: DeduplicationId,
+                                    override val uniqueMessageId: MessageIdentifier,
                                     override val senderUUID: String?,
                                     override val additionalHeaders: Map<String, String>) : Message {
         override val debugTimestamp: Instant = Instant.now()
@@ -370,7 +371,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
-            val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { DeduplicationId(message.getStringProperty(it)) }
+            val uniqueMessageId = message.required(HDR_DUPLICATE_DETECTION_ID) { MessageIdentifier.parse(message.getStringProperty(it)) }
             val receivedSenderUUID = message.getStringProperty(P2PMessagingHeaders.senderUUID)
             val receivedSenderSeqNo = if (message.containsProperty(P2PMessagingHeaders.senderSeqNo)) message.getLongProperty(P2PMessagingHeaders.senderSeqNo) else null
             val isSessionInit = message.getStringProperty(P2PMessagingHeaders.Type.KEY) == P2PMessagingHeaders.Type.SESSION_INIT_VALUE
@@ -391,7 +392,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private class ArtemisReceivedMessage(override val topic: String,
                                          override val peer: CordaX500Name,
                                          override val platformVersion: Int,
-                                         override val uniqueMessageId: DeduplicationId,
+                                         override val uniqueMessageId: MessageIdentifier,
                                          override val senderUUID: String?,
                                          override val senderSeqNo: Long?,
                                          override val isSessionInit: Boolean,
@@ -436,11 +437,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
             get() = this
 
         override fun insideDatabaseTransaction() {
-            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId)
+            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId.toDeduplicationId())
         }
 
         override fun afterDatabaseTransaction() {
-            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId)
+            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId.toDeduplicationId())
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 
@@ -584,7 +585,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, deduplicationId.senderUUID, additionalHeaders)
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId.messageIdentifier, deduplicationId.senderUUID, additionalHeaders)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

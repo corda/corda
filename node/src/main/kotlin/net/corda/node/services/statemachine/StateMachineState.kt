@@ -16,6 +16,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Future
 
 /**
@@ -219,7 +220,8 @@ sealed class SessionState {
             val destination: Destination,
             val initiatingSubFlow: SubFlow.Initiating,
             val sourceSessionId: SessionId,
-            val additionalEntropy: Long
+            val additionalEntropy: Long,
+            val sequenceNumber: Int
     ) : SessionState() {
         override val deduplicationSeed: String get() = "R-${sourceSessionId.toLong}-$additionalEntropy"
     }
@@ -229,22 +231,31 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
-            val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
+            val bufferedMessages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
-            override val deduplicationSeed: String
+            override val deduplicationSeed: String,
+            val sequenceNumber: Int
     ) : SessionState()
 
     /**
      * We have received a confirmation, the peer party and session id is resolved.
      * @property errors if not empty the session is in an errored state.
+     * @property sequenceNumber the sequence number that corresponds to the next message to be sent.
+     * @property lastSequenceNumberProcessed the last sequence number that has been processed.
+     *           This value corresponds to the sequence number of the last message that has been processed.
+     *           In case of session initiation, there are two different cases:
+     *            * an empty session-init, where this field is set to 0 (processing corresponds to session initiation).
+     *            * a session-init with a payload, where this field is set to -1, so that the embedded data message is buffered & processed separately.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<DataSessionMessage>,
+            val receivedMessages: MutableMap<Int, DataSessionMessage>,
             val initiatedState: InitiatedSessionState,
-            val errors: List<FlowError>,
-            override val deduplicationSeed: String
+            val errors: MutableMap<Int, FlowError>,
+            override val deduplicationSeed: String,
+            val sequenceNumber: Int,
+            val lastSequenceNumberProcessed: Int
     ) : SessionState()
 }
 

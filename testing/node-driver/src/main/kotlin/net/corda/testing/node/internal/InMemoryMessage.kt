@@ -3,6 +3,7 @@ package net.corda.testing.node.internal
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.MessageIdentifier
 import java.time.Instant
 
 /**
@@ -10,7 +11,7 @@ import java.time.Instant
  */
 data class InMemoryMessage(override val topic: String,
                            override val data: ByteSequence,
-                           override val uniqueMessageId: DeduplicationId,
+                           override val uniqueMessageId: MessageIdentifier,
                            override val debugTimestamp: Instant = Instant.now(),
                            override val senderUUID: String? = null) : Message {
 

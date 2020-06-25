@@ -137,18 +137,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         if (outcome == Outcome.UNTREATABLE) {
-            sendBackError(error, sessionMessage, sender, event)
+            sendBackError(error, sessionMessage, sender, event, id)
         }
     }
 
-    private fun sendBackError(error: Throwable, sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent) {
+    private fun sendBackError(error: Throwable, sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent, flowId: StateMachineRunId) {
         val message = (error as? SessionRejectException)?.message ?: "Unable to establish session"
         val payload = RejectSessionMessage(message, secureRandom.nextLong())
         val replyError = ExistingSessionMessage(sessionMessage.initiatorSessionId, payload)
 
         log.info("Sending session initiation error back to $sender", error)
 
-        flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
+        val messageIdentifier = MessageIdentifier("XR", generateShard(flowId.toString()), sessionMessage.initiatorSessionId.toLong, 0)
+        flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(messageIdentifier, ourSenderUUID))
         event.deduplicationHandler.afterDatabaseTransaction()
     }
 
@@ -162,7 +163,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             treatableSessionInits.remove(id) ?: return false
         }
         log.info("Errored session-init permanently dropped: $publicRecord")
-        sendBackError(publicRecord.error, sessionMessage, publicRecord.sender, event)
+        sendBackError(publicRecord.error, sessionMessage, publicRecord.sender, event, id)
         return true
     }
 
