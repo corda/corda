@@ -326,7 +326,8 @@ class ReconnectingCordaRPCOps private constructor(
                     when (e.targetException) {
                         is RejectedCommandException -> {
                             log.warn("Node is being shutdown. Operation ${method.name} rejected. Shutting down...", e)
-                            remainingAttempts = 1
+                            lastException = e.targetException
+                            return null
                         }
                         is ConnectionFailureException -> {
                             log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
