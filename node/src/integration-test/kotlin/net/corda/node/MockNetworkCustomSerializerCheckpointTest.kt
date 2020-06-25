@@ -6,6 +6,7 @@ import com.github.andrewoma.dexx.kollection.immutableMapOf
 import com.github.andrewoma.dexx.kollection.toImmutableMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
@@ -92,7 +93,10 @@ class MockNetworkCustomSerializerCheckpointTest{
     // Custom serializers
 
     @Suppress("unused")
-    class TestSerializer : SerializationCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>> {
+    class TestSerializer :
+            SerializationCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>>,
+            CheckpointCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>> {
+
         override fun toProxy(obj: ImmutableMap<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
