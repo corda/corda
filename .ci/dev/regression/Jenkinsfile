@@ -124,7 +124,7 @@ pipeline {
             }
             steps {
                 withCredentials([
-                        usernamePassword(credentialsId: 'docker-credentials',
+                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
                                 usernameVariable: 'DOCKER_USERNAME',
                                 passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh "./gradlew pushOfficialImages"
