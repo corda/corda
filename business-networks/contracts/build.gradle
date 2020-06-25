@@ -8,6 +8,9 @@ dependencies {
     cordaCompile project(':core')
 
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    // Bring in the MockNode infrastructure for writing protocol unit tests.
+    testCompile project(":node-driver")
 }
 
 jar {
