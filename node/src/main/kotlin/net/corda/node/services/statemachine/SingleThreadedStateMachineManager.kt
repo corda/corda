@@ -78,7 +78,7 @@ internal class SingleThreadedStateMachineManager(
         private val logger = contextLogger()
     }
 
-    private val innerState = SingleThreadedInnerState()
+    private val innerState = StateMachineInnerStateImpl()
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
         ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()

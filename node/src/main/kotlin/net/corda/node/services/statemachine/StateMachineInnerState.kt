@@ -21,7 +21,7 @@ internal interface StateMachineInnerState {
     fun <R> withMutex(block: StateMachineInnerState.() -> R): R
 }
 
-internal class SingleThreadedInnerState : StateMachineInnerState {
+internal class StateMachineInnerStateImpl : StateMachineInnerState {
     /** True if we're shutting down, so don't resume anything. */
     var stopping = false
     override val lock = ReentrantLock()
