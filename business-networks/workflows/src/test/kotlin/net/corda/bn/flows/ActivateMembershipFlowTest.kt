@@ -71,9 +71,9 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
         // also check ledgers
         listOf(authorisedMember, regularMember).forEach { member ->
             getAllMembershipsFromVault(member, networkId).apply {
-                assertEquals(2, size)
-                assertTrue(any { it.identity == authorisedMember.identity() })
-                assertTrue(any { it.identity == regularMember.identity() })
+                assertEquals(2, size, "Vault size assertion failed for ${member.identity()}")
+                assertTrue(any { it.identity == authorisedMember.identity() }, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
+                assertTrue(any { it.identity == regularMember.identity() }, "Expected to have ${regularMember.identity()} in ${member.identity()} vault")
             }
         }
     }
