@@ -238,7 +238,7 @@ abstract class StateMachineErrorHandlingTest {
             StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
                 propagatedCounter++
             }
-            StaffedFlowHospital.onFlowKeptForIntensiveCare.add { _, _, outcome ->
+            StaffedFlowHospital.onFlowResuscitated.add { _, _, outcome ->
                 when (outcome) {
                     StaffedFlowHospital.Outcome.DISCHARGE -> dischargeRetryCounter++
                     StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION -> observationRetryCounter++

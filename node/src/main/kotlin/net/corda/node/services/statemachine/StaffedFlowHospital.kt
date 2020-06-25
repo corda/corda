@@ -53,7 +53,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             TransitionErrorGeneralPractitioner,
             SedationNurse,
             NotaryDoctor,
-            IntensiveCareDoctor
+            ResuscitationSpecialist
         )
 
         @VisibleForTesting
@@ -66,7 +66,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         val onFlowErrorPropagated = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
 
         @VisibleForTesting
-        val onFlowKeptForIntensiveCare = mutableListOf<(id: StateMachineRunId, by: List<String>, outcome: Outcome) -> Unit>()
+        val onFlowResuscitated = mutableListOf<(id: StateMachineRunId, by: List<String>, outcome: Outcome) -> Unit>()
 
         @VisibleForTesting
         val onFlowAdmitted = mutableListOf<(id: StateMachineRunId) -> Unit>()
@@ -212,13 +212,13 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                     onFlowErrorPropagated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }) }
                     Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
                 }
-                Diagnosis.INTENSIVE_CARE -> {
+                Diagnosis.RESUSCITATE -> {
                     // reschedule the last outcome as it failed to process it
                     // do a 0.seconds backoff in dev mode? / when coming from the driver? make it configurable?
-                    val backOff = calculateBackOffForIntensiveCareCondition(medicalHistory, currentState)
+                    val backOff = calculateBackOffForResuscitation(medicalHistory, currentState)
                     val outcome = medicalHistory.records.last().outcome
-                    log.info("Flow error kept for intensive care, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
-                    onFlowKeptForIntensiveCare.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
+                    log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
+                    onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
                     Triple(outcome, outcome.event, backOff)
                 }
             }
@@ -250,10 +250,10 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         } ?: 0.seconds
     }
 
-    private fun calculateBackOffForIntensiveCareCondition(
+    private fun calculateBackOffForResuscitation(
         medicalHistory: FlowMedicalHistory,
         currentState: StateMachineState
-    ): Duration = calculateBackOff(medicalHistory.timesKeptForIntensiveCare(currentState))
+    ): Duration = calculateBackOff(medicalHistory.timesResuscitated(currentState))
 
     private fun calculateBackOff(timesDiagnosisGiven: Int): Duration {
         return if (timesDiagnosisGiven == 0) {
@@ -320,9 +320,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
-        fun timesKeptForIntensiveCare(currentState: StateMachineState): Int {
+        fun timesResuscitated(currentState: StateMachineState): Int {
             val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
-            return records.count { IntensiveCareDoctor in it.by && it.suspendCount == lastAdmittanceSuspendCount }
+            return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
         override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
@@ -366,8 +366,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
     /** The order of the enum values are in priority order. */
     enum class Diagnosis {
-        /** Could not save hospitalize status, keep track of this flow to save again on a schedule **/
-        INTENSIVE_CARE,
+        /** Retry the last outcome/diagnosis **/
+        RESUSCITATE,
         /** The flow should not see other staff members */
         TERMINAL,
         /** Retry from last safe point. */
@@ -613,10 +613,10 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Handles errors coming from the processing of errors events ([Event.StartErrorPropagation], [Event.RetryFlowFromSafePoint] and
-     * [Event.OvernightObservation]), returning a [Diagnosis.INTENSIVE_CARE] diagnosis
+     * Handles errors coming from the processing of errors events ([Event.StartErrorPropagation] and [Event.RetryFlowFromSafePoint]),
+     * returning a [Diagnosis.RESUSCITATE] diagnosis
      */
-    object IntensiveCareDoctor : Staff {
+    object ResuscitationSpecialist : Staff {
         override fun consult(
             flowFiber: FlowFiber,
             currentState: StateMachineState,
@@ -624,7 +624,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             history: FlowMedicalHistory
         ): Diagnosis {
             return if (newError is ErrorStateTransitionException) {
-                Diagnosis.INTENSIVE_CARE
+                Diagnosis.RESUSCITATE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
