@@ -94,7 +94,6 @@ class MockNetworkCustomSerializerCheckpointTest{
 
     @Suppress("unused")
     class TestSerializer :
-            SerializationCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>>,
             CheckpointCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>> {
 
         override fun toProxy(obj: ImmutableMap<Any, Any>): HashMap<Any, Any> {

@@ -10,6 +10,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationDefaults
@@ -139,7 +140,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
     }
 
-    fun addCordappSerializers(customSerializers: Collection<SerializationCustomSerializer<*, *>>) {
+    fun addCordappSerializers(customSerializers: Collection<CheckpointCustomSerializer<*, *>>) {
         cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
     }
 }
