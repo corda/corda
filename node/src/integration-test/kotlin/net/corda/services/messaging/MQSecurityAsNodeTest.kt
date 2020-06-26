@@ -1,11 +1,13 @@
 package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
@@ -13,6 +15,7 @@ import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
@@ -22,8 +25,10 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
+import kotlin.test.assertEquals
 
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
@@ -37,6 +42,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         attacker.start(PEER_USER, PEER_USER)  // Login as a peer
     }
 
+    @Ignore("Core protocol messages are no allowed for PEER_USER: need to switch to AMQP")
     @Test
     fun `send message to RPC requests address`() {
         assertSendAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
@@ -116,5 +122,18 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)
         }
+    }
+
+    @Ignore("Core protocol messages are no allowed for PEER_USER: need to switch to AMQP")
+    override fun `send message to notifications address`() {
+    }
+
+    @Test(timeout=300_000)
+    fun `send message on core protocol`() {
+        val message = attacker.createMessage()
+        assertEquals(true, attacker.producer.isBlockOnNonDurableSend)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.producer.send("${ArtemisMessagingComponent.P2P_PREFIX}${alice.info.singleIdentity().owningKey.toStringShort()}", message)
+        }.withMessageContaining("CoreMessage").withMessageContaining("AMQPMessage")
     }
 }

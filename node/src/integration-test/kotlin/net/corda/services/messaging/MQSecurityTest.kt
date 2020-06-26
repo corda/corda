@@ -79,7 +79,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `send message to notifications address`() {
+    open fun `send message to notifications address`() {
         assertSendAttackFails(NOTIFICATIONS_ADDRESS)
     }
 

@@ -7,6 +7,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -25,6 +26,7 @@ abstract class P2PMQSecurityTest : MQSecurityTest() {
         assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toStringShort()}")
     }
 
+    @Ignore("Core protocol messages are no allowed for PEER_USER: need to switch to AMQP")
     @Test
     fun `send message to address of peer which has been communicated with`() {
         val bobParty = startBobAndCommunicateWithAlice()
