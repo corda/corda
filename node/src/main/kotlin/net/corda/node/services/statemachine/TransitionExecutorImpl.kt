@@ -44,7 +44,7 @@ class TransitionExecutorImpl(
             try {
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Exception) {
-                rollbackTransaction()
+                rollbackTransactionOnError()
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
                     log.warn("Error while executing $action, with error event $event, updating errored state", exception)
 
@@ -103,7 +103,7 @@ class TransitionExecutorImpl(
         return Pair(transition.continuation, transition.newState)
     }
 
-    private fun rollbackTransaction() {
+    private fun rollbackTransactionOnError() {
         contextTransactionOrNull?.run {
             try {
                 rollback()
