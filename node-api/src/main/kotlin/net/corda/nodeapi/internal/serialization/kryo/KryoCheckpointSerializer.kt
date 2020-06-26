@@ -9,6 +9,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
+import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
@@ -73,7 +74,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
             val typeName = customSerializer.cordappType.typeName.substringBefore('<')
             val clazz = context.deserializationClassLoader.loadClass(typeName)
 
-            if (clazz.isInterface) {
+            if (clazz.isInterface || clazz.isAbstractClass) {
                 addDefaultSerializer(clazz, customSerializer)
             } else {
                 register(clazz, customSerializer)
