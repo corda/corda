@@ -13,7 +13,6 @@ import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext

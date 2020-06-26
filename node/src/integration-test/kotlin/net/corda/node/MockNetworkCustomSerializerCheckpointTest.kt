@@ -7,7 +7,6 @@ import com.github.andrewoma.dexx.kollection.toImmutableMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.serialization.CheckpointCustomSerializer
-import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.enclosedCordapp
