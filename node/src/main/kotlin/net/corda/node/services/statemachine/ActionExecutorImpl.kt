@@ -19,7 +19,7 @@ import java.time.Duration
 /**
  * This is the bottom execution engine of flow side-effects.
  */
-class ActionExecutorImpl(
+internal class ActionExecutorImpl(
         private val services: ServiceHubInternal,
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
