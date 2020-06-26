@@ -82,6 +82,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(PublicKey::class.java, PublicKeyMixin::class.java)
         context.setMixInAnnotations(ByteSequence::class.java, ByteSequenceMixin::class.java)
         context.setMixInAnnotations(SecureHash.SHA256::class.java, SecureHashMixin::class.java)
+        context.setMixInAnnotations(SecureHash.HASH::class.java, SecureHashMixin::class.java)
         context.setMixInAnnotations(SecureHash::class.java, SecureHashMixin::class.java)
         context.setMixInAnnotations(SerializedBytes::class.java, SerializedBytesMixin::class.java)
         context.setMixInAnnotations(DigitalSignature.WithKey::class.java, ByteSequenceWithPropertiesMixin::class.java)

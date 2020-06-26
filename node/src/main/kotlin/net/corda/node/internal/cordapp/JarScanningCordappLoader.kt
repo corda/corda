@@ -87,7 +87,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
         fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(),
-                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()): JarScanningCordappLoader {
+                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash> = emptyList()): JarScanningCordappLoader {
             val paths = scanJars.map { it.restricted() }
             return JarScanningCordappLoader(paths, versionInfo, extraCordapps, cordappsSignerKeyFingerprintBlacklist)
         }
