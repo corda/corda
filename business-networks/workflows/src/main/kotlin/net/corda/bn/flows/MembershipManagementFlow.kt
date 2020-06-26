@@ -97,28 +97,26 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
     }
 
     /**
-     * Sends memberships of all members authorised to modify memberships to [activatedMembership] member. It also sends all non revoked
-     * memberships to [activatedMembership] member if it is authorised to modify memberships.
+     * Sends memberships of all members authorised to modify memberships to [receivingMembership] member. It also sends all non revoked
+     * memberships to [receivingMembership] member if it is authorised to modify memberships.
      *
      * @param networkId ID of the Business Network from which we query for memberships to be sent.
-     * @param activatedMembership Just activated member to which mentioned memberships are sent.
+     * @param receivingMembership Member to which mentioned memberships are sent.
      * @param authorisedMemberships Set of memberships of all members authorised to modify memberships.
      * @param observerSessions Sessions of all observers who get finalised transaction.
-     * @param auth Object containing authorisation methods.
      * @param databaseService Service used to query vault for memberships.
      */
-    @Suppress("LongParameterList")
     @Suspendable
-    protected fun onboardMembershipSync(
+    protected fun syncMembershipList(
             networkId: String,
-            activatedMembership: MembershipState,
+            receivingMembership: MembershipState,
             authorisedMemberships: Set<StateAndRef<MembershipState>>,
             observerSessions: List<FlowSession>,
             databaseService: DatabaseService
     ) {
-        val activatedMemberSession = observerSessions.single { it.counterparty == activatedMembership.identity }
+        val activatedMemberSession = observerSessions.single { it.counterparty == receivingMembership.identity }
         val pendingAndSuspendedMemberships =
-                if (activatedMembership.canModifyMembership()) {
+                if (receivingMembership.canModifyMembership()) {
                     databaseService.getAllMembershipsWithStatus(networkId, MembershipStatus.PENDING, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED)
                 } else emptyList()
         sendMemberships(authorisedMemberships + pendingAndSuspendedMemberships, observerSessions, activatedMemberSession)

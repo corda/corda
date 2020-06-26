@@ -64,7 +64,7 @@ class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private 
         // send authorised memberships to new suspended member (status moved from PENDING to SUSPENDED)
         // also send all non revoked memberships (ones that can be modified) if new activated member is authorised to modify them
         if (membership.state.data.isPending()) {
-            onboardMembershipSync(networkId, outputMembership, authorisedMemberships, observerSessions, databaseService)
+            syncMembershipList(networkId, outputMembership, authorisedMemberships, observerSessions, databaseService)
         }
 
         return finalisedTransaction

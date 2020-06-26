@@ -66,7 +66,7 @@ class ModifyRolesFlow(private val membershipId: UniqueIdentifier, private val ro
 
         // send all non revoked memberships (ones that can be modified) if modified member becomes authorised to modify them
         if (!membership.state.data.canModifyMembership() && outputMembership.canModifyMembership()) {
-            onboardMembershipSync(networkId, outputMembership, emptySet(), observerSessions, databaseService)
+            syncMembershipList(networkId, outputMembership, emptySet(), observerSessions, databaseService)
         }
 
         return finalisedTransaction
