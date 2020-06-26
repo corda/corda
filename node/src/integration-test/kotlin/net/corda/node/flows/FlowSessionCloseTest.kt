@@ -122,20 +122,6 @@ class FlowSessionCloseTest {
         }
     }
 
-    @Test(timeout=300_000)
-    fun `flow can close multiple sessions successfully without a checkpoint`() {
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
-            val (nodeAHandle, nodeBHandle) = listOf(
-                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
-                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
-            ).transpose().getOrThrow()
-
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-            }
-        }
-    }
-
     /**
      * This test ensures that when sessions are closed, the associated resources are eagerly cleaned up.
      * If sessions are not closed, then the node will crash with an out-of-memory error.
