@@ -56,6 +56,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             ResuscitationSpecialist
         )
 
+        private const val MAX_BACKOFF_TIME = 110.0 // Totals to 2 minutes when calculating the backoff time
+
         @VisibleForTesting
         val onFlowKeptForOvernightObservation = mutableListOf<(id: StateMachineRunId, by: List<String>) -> Unit>()
 
@@ -259,7 +261,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         return if (timesDiagnosisGiven == 0) {
             0.seconds
         } else {
-            maxOf(10, (10 + (Math.random()) * minOf(110.0, (10 * 1.5.pow(timesDiagnosisGiven)) / 2)).toInt()).seconds
+            maxOf(10, (10 + (Math.random()) * minOf(MAX_BACKOFF_TIME, (10 * 1.5.pow(timesDiagnosisGiven)) / 2)).toInt()).seconds
         }
     }
 
