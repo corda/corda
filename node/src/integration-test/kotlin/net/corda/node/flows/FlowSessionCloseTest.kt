@@ -42,7 +42,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, false, false).returnValue.getOrThrow() }
+                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, false, false, false).returnValue.getOrThrow() }
                         .isInstanceOf(CordaRuntimeException::class.java)
                         .hasMessageContaining(PrematureSessionClose::class.java.name)
                         .hasMessageContaining("The following session was closed before it was initialised")
@@ -59,7 +59,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, true, false).returnValue.getOrThrow() }
+                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, true, false, false).returnValue.getOrThrow() }
                         .isInstanceOf(UnexpectedFlowEndException::class.java)
                         .hasMessageContaining("Tried to access ended session")
             }
@@ -75,7 +75,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, false).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, false, false).returnValue.getOrThrow()
             }
         }
     }
@@ -89,7 +89,21 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, true).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, true, false).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `flow can close initialised session successfully skipping checkpoint even in case of failures and replays`() {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), notarySpecs = emptyList())) {
+            val (nodeAHandle, nodeBHandle) = listOf(
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
+            ).transpose().getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, true, true).returnValue.getOrThrow()
             }
         }
     }
@@ -103,7 +117,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }
         }
     }
@@ -117,7 +131,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorMultipleSessionsFlow, nodeBHandle.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }
         }
     }
@@ -159,7 +173,10 @@ class FlowSessionCloseTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class InitiatorFlow(val party: Party, private val prematureClose: Boolean = false, private val accessClosedSession: Boolean = false, private val retryClose: Boolean = false): FlowLogic<Unit>() {
+    class InitiatorFlow(val party: Party, private val prematureClose: Boolean = false,
+                        private val accessClosedSession: Boolean = false,
+                        private val retryClose: Boolean = false,
+                        private val skipCheckpoint: Boolean = false): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val session = initiateFlow(party)
@@ -168,7 +185,7 @@ class FlowSessionCloseTest {
                 session.close()
             }
 
-            session.send(retryClose)
+            session.send(Pair(retryClose, skipCheckpoint))
             sleep(1.seconds)
 
             if (accessClosedSession) {
@@ -186,10 +203,10 @@ class FlowSessionCloseTest {
 
         @Suspendable
         override fun call() {
-            val retryClose = otherSideSession.receive<Boolean>()
+            val (retryClose, skipCheckpoint) = otherSideSession.receive<Pair<Boolean, Boolean>>()
                     .unwrap{ it }
 
-            otherSideSession.close()
+            otherSideSession.close(skipCheckpoint)
 
             // failing with a transient exception to force a replay of the close.
             if (retryClose) {
@@ -239,7 +256,7 @@ class FlowSessionCloseTest {
 
     @InitiatingFlow
     @StartableByRPC
-    class InitiatorMultipleSessionsFlow(val party: Party, val skipCheckpoint: Boolean = false): FlowLogic<Unit>() {
+    class InitiatorMultipleSessionsFlow(val party: Party): FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             for (round in 1 .. 2) {
@@ -249,7 +266,7 @@ class FlowSessionCloseTest {
                     sessions.add(session)
                     session.sendAndReceive<String>("What's up?").unwrap{ assertEquals("All good!", it) }
                 }
-                close(sessions.toNonEmptySet(), skipCheckpoint)
+                close(sessions.toNonEmptySet())
             }
         }
     }
