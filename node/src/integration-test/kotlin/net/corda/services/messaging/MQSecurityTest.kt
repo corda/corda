@@ -45,7 +45,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     private val rpcUser = User("user1", "pass", permissions = emptySet())
     lateinit var alice: NodeWithInfo
     lateinit var attacker: SimpleMQClient
-    private val clients = ArrayList<SimpleMQClient>()
+    private val runOnStop = ArrayList<() -> Any?>()
 
     @Before
     override fun setUp() {
@@ -62,8 +62,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
     abstract fun startAttacker(attacker: SimpleMQClient)
 
     @After
-    fun stopClients() {
-        clients.forEach { it.stop() }
+    fun tearDown() {
+        runOnStop.forEach { it() }
     }
 
     @Test(timeout=300_000)
@@ -97,18 +97,21 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun clientTo(target: NetworkHostAndPort, sslConfiguration: MutualSslConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
-        clients += client
+        runOnStop += client::stop
+        return client
+    }
+
+    fun amqpClientTo(target: NetworkHostAndPort,
+                     sslConfiguration: MutualSslConfiguration = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))
+    ): SimpleAMQPClient {
+        val client = SimpleAMQPClient(target, sslConfiguration)
+        runOnStop += client::stop
         return client
     }
 
     private val rpcConnections = mutableListOf<CordaRPCConnection>()
     private fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
-        return CordaRPCClient(target).start(rpcUser.username, rpcUser.password).also { rpcConnections.add(it) }.proxy
-    }
-
-    @After
-    fun closeRPCConnections() {
-        rpcConnections.forEach { it.forceClose() }
+        return CordaRPCClient(target).start(rpcUser.username, rpcUser.password).also { runOnStop += it::forceClose }.proxy
     }
 
     fun loginToRPCAndGetClientQueue(): String {
@@ -152,7 +155,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         }
     }
 
-    fun assertSendAttackFails(address: String) {
+    open fun assertSendAttackFails(address: String) {
         val message = attacker.createMessage()
         assertEquals(true, attacker.producer.isBlockOnNonDurableSend)
         assertAttackFails(address, "SEND") {
