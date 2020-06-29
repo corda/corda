@@ -54,6 +54,12 @@ abstract class MembershipManagementFlowTest(
         return future.getOrThrow()
     }
 
+    protected fun runRequestMembershipFlow(initiator: StartedMockNode, authorisedNode: StartedMockNode, networkId: String, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(RequestMembershipFlow(authorisedNode.identity(), networkId, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
     protected fun getAllMembershipsFromVault(node: StartedMockNode, networkId: String): List<MembershipState> {
         val databaseService = node.services.cordaService(DatabaseService::class.java)
         return databaseService.getAllMembershipsWithStatus(
