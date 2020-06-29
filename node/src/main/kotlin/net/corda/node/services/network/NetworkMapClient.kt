@@ -13,6 +13,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.utilities.registration.cacheControl
+import net.corda.node.utilities.registration.serverVersion
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
@@ -30,6 +31,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
+    private val networkMapUrlV2 = URL("$compatibilityZoneURL/network-map/v2")
     private lateinit var trustRoot: X509Certificate
 
     fun start(trustRoot: X509Certificate) {
@@ -61,8 +63,9 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
+        val version = connection.serverVersion
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
-        return NetworkMapResponse(networkMap, timeout)
+        return NetworkMapResponse(networkMap, timeout, version)
     }
 
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
@@ -81,6 +84,14 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         return networkParameter
     }
 
+    fun getNodeInfos(): List<NodeInfo> {
+        val url = URL("$networkMapUrlV2/node-infos")
+        logger.trace { "Fetching node infos from $url." }
+        val verifiedNodeInfo = url.openHttpConnection().responseAs<List<SignedNodeInfo>>().map { it.verified() }
+        logger.trace { "Fetched node infos successfully. Node Infos size: ${verifiedNodeInfo.size}" }
+        return verifiedNodeInfo
+    }
+
     fun myPublicHostname(): String {
         val url = URL("$networkMapUrl/my-hostname")
         logger.trace { "Resolving public hostname from '$url'." }
@@ -90,4 +101,4 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 }
 
-data class NetworkMapResponse(val payload: NetworkMap, val cacheMaxAge: Duration)
+data class NetworkMapResponse(val payload: NetworkMap, val cacheMaxAge: Duration, val serverVersion: String)

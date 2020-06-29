@@ -171,7 +171,10 @@ class NetworkMapServer(private val pollInterval: Duration,
         private fun networkMapResponse(nodeInfoHashes: List<SecureHash>): Response {
             val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes)
+                    .header("Cache-Control", "max-age=${pollInterval.seconds}")
+                    .header("X-Corda-Server-Version", 2)
+                    .build()
         }
 
         // Remove nodeInfo for testing.
@@ -204,6 +207,12 @@ class NetworkMapServer(private val pollInterval: Duration,
                 Response.status(Response.Status.NOT_FOUND)
             }.build()
         }
+
+        @GET
+        @Path("v2/node-infos")
+        @Produces(MediaType.APPLICATION_OCTET_STREAM)
+        fun getNodeInfos(): Response =
+                Response.ok(nodeInfoMap.values.toList().serialize().bytes).build()
 
         @GET
         @Path("network-parameters/{var}")
