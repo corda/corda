@@ -41,8 +41,8 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
 
         // fetch observers and signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val observers = authorisedMemberships.map { it.state.data.identity }.toSet() + membership.state.data.identity - ourIdentity
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity }
+        val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity }.toSet() + membership.state.data.identity.cordaIdentity - ourIdentity
+        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity }
 
         // building transaction
         val outputMembership = membership.state.data.copy(

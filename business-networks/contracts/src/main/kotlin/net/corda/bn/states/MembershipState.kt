@@ -15,7 +15,7 @@ import java.time.Instant
 /**
  * Represents a membership on the ledger.
  *
- * @property identity Corda Identity of a member.
+ * @property identity Identity of a member.
  * @property networkId Unique identifier of a Business Network membership belongs to.
  * @property status Status of the state (i.e. PENDING, ACTIVE, SUSPENDED).
  * @property roles Set of all the roles associated to the membership.
@@ -24,7 +24,7 @@ import java.time.Instant
  */
 @BelongsToContract(MembershipContract::class)
 data class MembershipState(
-        val identity: Party,
+        val identity: MembershipIdentity,
         val networkId: String,
         val status: MembershipStatus,
         val roles: Set<BNRole> = emptySet(),
@@ -36,7 +36,7 @@ data class MembershipState(
 
     override fun generateMappedObject(schema: MappedSchema) = when (schema) {
         is MembershipStateSchemaV1 -> MembershipStateSchemaV1.PersistentMembershipState(
-                cordaIdentity = identity,
+                cordaIdentity = identity.cordaIdentity,
                 networkId = networkId,
                 status = status
         )
@@ -56,6 +56,12 @@ data class MembershipState(
     fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
     fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
+
+@CordaSerializable
+interface BNIdentity
+
+@CordaSerializable
+data class MembershipIdentity(val cordaIdentity: Party, val additionalIdentity: BNIdentity? = null)
 
 /**
  * Statuses that membership can go through.

@@ -2,6 +2,7 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
+import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.flows.CollectSignaturesFlow
@@ -56,7 +57,7 @@ class RequestMembershipFlow(private val authorisedParty: Party, private val netw
                 }
 
                 val membershipState = stx.tx.outputs.single().data as MembershipState
-                if (ourIdentity != membershipState.identity) {
+                if (ourIdentity != membershipState.identity.cordaIdentity) {
                     throw IllegalArgumentException("Membership identity does not match the one of the initiator")
                 }
 
@@ -85,12 +86,12 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
 
         // fetch observers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val observers = (authorisedMemberships.map { it.state.data.identity } - ourIdentity).toSet()
+        val observers = (authorisedMemberships.map { it.state.data.identity.cordaIdentity } - ourIdentity).toSet()
 
         // build transaction
         val counterparty = session.counterparty
         val membershipState = MembershipState(
-                identity = counterparty,
+                identity = MembershipIdentity(counterparty),
                 networkId = networkId,
                 status = MembershipStatus.PENDING,
                 participants = (observers + ourIdentity + counterparty).toList()

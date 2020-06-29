@@ -50,7 +50,7 @@ open class MembershipContract : Contract {
                 "Required signers should be subset of all output state's participants" using (participants.map { it.owningKey }.containsAll(command.value.requiredSigners))
             }
             if (inputState != null && outputState != null) {
-                "Input and output state should have same Corda identity" using (inputState.identity == outputState.identity)
+                "Input and output state should have same Corda identity" using (inputState.identity.cordaIdentity == outputState.identity.cordaIdentity)
                 "Input and output state should have same network IDs" using (inputState.networkId == outputState.networkId)
                 "Input and output state should have same issued timestamps" using (inputState.issued == outputState.issued)
                 "Output state's modified timestamp should be greater or equal than input's" using (inputState.modified <= outputState.modified)
@@ -75,7 +75,7 @@ open class MembershipContract : Contract {
         "Membership request transaction shouldn't contain any inputs" using (tx.inputs.isEmpty())
         "Membership request transaction should contain output state in PENDING status" using (outputMembership.isPending())
         "Membership request transaction should issue membership with empty roles set" using (outputMembership.roles.isEmpty())
-        "Pending membership owner should be required signer of membership request transaction" using (outputMembership.identity.owningKey in command.value.requiredSigners)
+        "Pending membership owner should be required signer of membership request transaction" using (outputMembership.identity.cordaIdentity.owningKey in command.value.requiredSigners)
     }
 
     open fun verifyActivate(
@@ -88,7 +88,7 @@ open class MembershipContract : Contract {
         "Output state of membership activation transaction should be active" using (outputMembership.isActive())
         "Input and output state of membership activation transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
         (command.value as Commands.Activate).apply {
-            "Input membership owner shouldn't be required signer of membership activation transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.owningKey !in requiredSigners)
+            "Input membership owner shouldn't be required signer of membership activation transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.cordaIdentity.owningKey !in requiredSigners)
         }
     }
 
@@ -101,7 +101,7 @@ open class MembershipContract : Contract {
         "Input state of membership suspension transaction shouldn't be already suspended" using (!inputMembership.isSuspended())
         "Output state of membership suspension transaction should be suspended" using (outputMembership.isSuspended())
         "Input and output state of membership suspension transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
-        "Input membership owner shouldn't be required signer of membership suspension transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
+        "Input membership owner shouldn't be required signer of membership suspension transaction" using (inputMembership.identity.cordaIdentity.owningKey !in command.value.requiredSigners)
     }
 
     open fun verifyRevoke(
@@ -110,7 +110,7 @@ open class MembershipContract : Contract {
             inputMembership: MembershipState
     ) = requireThat {
         "Membership revocation transaction shouldn't contain any outputs" using (tx.outputs.isEmpty())
-        "Input membership owner shouldn't be required signer of membership revocation transaction" using (inputMembership.identity.owningKey !in command.value.requiredSigners)
+        "Input membership owner shouldn't be required signer of membership revocation transaction" using (inputMembership.identity.cordaIdentity.owningKey !in command.value.requiredSigners)
     }
 
     open fun verifyModifyRoles(
@@ -123,7 +123,7 @@ open class MembershipContract : Contract {
         "Membership roles modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
         "Input and output state of membership roles modification transaction should have different set of roles" using (inputMembership.roles != outputMembership.roles)
         (command.value as Commands.ModifyRoles).apply {
-            "Input membership owner shouldn't be required signer of membership roles modification transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.owningKey !in requiredSigners)
+            "Input membership owner shouldn't be required signer of membership roles modification transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.cordaIdentity.owningKey !in requiredSigners)
         }
     }
 }

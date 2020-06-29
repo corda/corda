@@ -3,6 +3,7 @@ package net.corda.bn.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.states.BNORole
+import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.StateAndRef
@@ -38,7 +39,7 @@ class CreateBusinessNetworkFlow(private val networkId: UniqueIdentifier = Unique
         }
 
         val membership = MembershipState(
-                identity = ourIdentity,
+                identity = MembershipIdentity(ourIdentity),
                 networkId = networkId.toString(),
                 status = MembershipStatus.PENDING,
                 participants = listOf(ourIdentity)

@@ -39,7 +39,7 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
             assertEquals(MembershipContract.CONTRACT_NAME, contract)
             assertTrue(data is MembershipState)
             val data = data as MembershipState
-            assertEquals(authorisedMember.identity(), data.identity)
+            assertEquals(authorisedMember.identity(), data.identity.cordaIdentity)
             assertEquals(MembershipStatus.ACTIVE, data.status)
 
             data.networkId
@@ -48,7 +48,7 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
 
         // also check ledger
         getAllMembershipsFromVault(authorisedMember, networkId).single().apply {
-            assertEquals(authorisedMember.identity(), identity)
+            assertEquals(authorisedMember.identity(), identity.cordaIdentity)
         }
     }
 }

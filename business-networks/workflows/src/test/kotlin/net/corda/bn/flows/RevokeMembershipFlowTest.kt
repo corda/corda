@@ -72,7 +72,7 @@ class RevokeMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorised
         // also check ledgers
         listOf(authorisedMember, regularMember).forEach { member ->
             getAllMembershipsFromVault(member, networkId).single().apply {
-                assertEquals(authorisedMember.identity(), identity, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
+                assertEquals(authorisedMember.identity(), identity.cordaIdentity, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
             }
         }
     }

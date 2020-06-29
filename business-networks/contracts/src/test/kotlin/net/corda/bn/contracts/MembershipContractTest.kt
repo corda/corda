@@ -1,6 +1,7 @@
 package net.corda.bn.contracts
 
 import net.corda.bn.states.BNORole
+import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.Contract
@@ -32,7 +33,7 @@ class MembershipContractTest {
     private val bnoIdentity = TestIdentity(CordaX500Name.parse("O=BNO,L=London,C=GB")).party
 
     private val membershipState = MembershipState(
-            identity = memberIdentity,
+            identity = MembershipIdentity(memberIdentity),
             networkId = "network-id",
             status = MembershipStatus.PENDING,
             participants = listOf(memberIdentity, bnoIdentity)
@@ -82,7 +83,7 @@ class MembershipContractTest {
 
             val input = membershipState
             transaction {
-                val output = input.copy(identity = bnoIdentity)
+                val output = input.copy(identity = MembershipIdentity(bnoIdentity))
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, output)
                 command(listOf(bnoIdentity.owningKey), MembershipContract.Commands.Activate(listOf(bnoIdentity.owningKey)))

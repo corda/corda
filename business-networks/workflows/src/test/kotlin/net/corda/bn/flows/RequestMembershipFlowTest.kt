@@ -90,7 +90,7 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             assertEquals(MembershipContract.CONTRACT_NAME, contract)
             assertTrue(data is MembershipState)
             val data = data as MembershipState
-            assertEquals(regularMember.identity(), data.identity)
+            assertEquals(regularMember.identity(), data.identity.cordaIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.PENDING, data.status)
         }
@@ -99,11 +99,11 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         // also check ledgers
         getAllMembershipsFromVault(authorisedMember, networkId).apply {
             assertEquals(2, size)
-            assertTrue(any { it.identity == authorisedMember.identity() })
-            assertTrue(any { it.identity == regularMember.identity() })
+            assertTrue(any { it.identity.cordaIdentity == authorisedMember.identity() })
+            assertTrue(any { it.identity.cordaIdentity == regularMember.identity() })
         }
         getAllMembershipsFromVault(regularMember, networkId).single().apply {
-            assertEquals(regularMember.identity(), identity)
+            assertEquals(regularMember.identity(), identity.cordaIdentity)
         }
     }
 }
