@@ -21,6 +21,7 @@ import java.time.Instant
 import java.time.ZoneId.systemDefault
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 
 class NodeProcess(
@@ -103,6 +104,7 @@ class NodeProcess(
             (nodeDir / "node.conf").writeText(config.toText())
             createNetworkParameters(NotaryInfo(notaryParty!!, true), nodeDir)
 
+            createSchema(nodeDir)
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
             waitForNode(process, config, client)
@@ -138,9 +140,22 @@ class NodeProcess(
             }
         }
 
-        private fun startNode(nodeDir: Path): Process {
+        class SchemaCreationTimedOutError(nodeDir: Path) : Exception("Creating node schema timed out for $nodeDir")
+        class SchemaCreationFailedError(nodeDir: Path) : Exception("Creating node schema failed for $nodeDir")
+
+        private fun createSchema(nodeDir: Path){
+            val process = startNode(nodeDir, arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas"))
+            if (!process.waitFor(3, MINUTES)) {
+                throw SchemaCreationTimedOutError(nodeDir)
+            }
+            if (process.exitValue() != 0){
+                throw SchemaCreationFailedError(nodeDir)
+            }
+        }
+
+        private fun startNode(nodeDir: Path, extraArgs: Array<String> = emptyArray()): Process {
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString())
+                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString(), *extraArgs)
                     .directory(nodeDir.toFile())
                     .redirectError(ProcessBuilder.Redirect.INHERIT)
                     .redirectOutput(ProcessBuilder.Redirect.INHERIT)
