@@ -2,6 +2,7 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
+import net.corda.bn.states.BNIdentity
 import net.corda.bn.states.BNORole
 import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
@@ -22,13 +23,18 @@ import net.corda.core.transactions.TransactionBuilder
  * initiate this flow.
  *
  * @property networkId Custom ID to be given to the new Business Network. If not specified, randomly selected one will be used.
+ * @property additionalIdentity Custom additional identity to be given to membership.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  *
  * @throws DuplicateBusinessNetworkException If Business Network with [networkId] ID already exists.
  */
 @InitiatingFlow
 @StartableByRPC
-class CreateBusinessNetworkFlow(private val networkId: UniqueIdentifier = UniqueIdentifier(), private val notary: Party? = null) : FlowLogic<SignedTransaction>() {
+class CreateBusinessNetworkFlow(
+        private val networkId: UniqueIdentifier = UniqueIdentifier(),
+        private val additionalIdentity: BNIdentity? = null,
+        private val notary: Party? = null
+) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     private fun createMembershipRequest(): SignedTransaction {
@@ -39,7 +45,7 @@ class CreateBusinessNetworkFlow(private val networkId: UniqueIdentifier = Unique
         }
 
         val membership = MembershipState(
-                identity = MembershipIdentity(ourIdentity),
+                identity = MembershipIdentity(ourIdentity, additionalIdentity),
                 networkId = networkId.toString(),
                 status = MembershipStatus.PENDING,
                 participants = listOf(ourIdentity)

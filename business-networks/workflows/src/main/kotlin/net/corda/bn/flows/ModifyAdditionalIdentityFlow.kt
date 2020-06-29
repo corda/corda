@@ -25,7 +25,11 @@ import net.corda.core.transactions.TransactionBuilder
  */
 @InitiatingFlow
 @StartableByRPC
-class ModifyAdditionalIdentityFlow(private val membershipId: UniqueIdentifier, private val additionalIdentity: BNIdentity, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
+class ModifyAdditionalIdentityFlow(
+        private val membershipId: UniqueIdentifier,
+        private val additionalIdentity: BNIdentity,
+        private val notary: Party? = null
+) : MembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -40,7 +44,14 @@ class ModifyAdditionalIdentityFlow(private val membershipId: UniqueIdentifier, p
         // fetch observers and signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
         val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity }.toSet() + membership.state.data.identity.cordaIdentity - ourIdentity
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
+        val signers = authorisedMemberships.filter {
+            it.state.data.isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        }.filterNot {
+            // remove modified member from signers only if it is not the flow initiator (since initiator must sign the transaction)
+            it == membership.state.data.identity.cordaIdentity && it != ourIdentity
+        }
 
         // building transaction
         val outputMembership = membership.state.data.run {

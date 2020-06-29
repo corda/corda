@@ -1,19 +1,14 @@
 package net.corda.bn.flows
 
 import net.corda.bn.contracts.MembershipContract
-import net.corda.bn.states.BNIdentity
 import net.corda.bn.states.BNORole
 import net.corda.bn.states.MemberRole
 import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-
-@CordaSerializable
-private data class DummyIdentity(val name: String) : BNIdentity
 
 class ModifyAdditionalIdentityFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
 

@@ -9,6 +9,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
@@ -75,6 +76,7 @@ class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             assertTrue(data is MembershipState)
             val data = data as MembershipState
             assertEquals(regularMember.identity(), data.identity.cordaIdentity)
+            assertNull(data.identity.additionalIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.SUSPENDED, data.status)
         }

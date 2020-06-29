@@ -45,7 +45,7 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
             throw IllegalMembershipStatusException("Membership owned by $ourIdentity is not active")
         }
         if (!authorisationMethod(ourMembership)) {
-            throw MembershipAuthorisationException("$ourIdentity is not authorised to activate membership")
+            throw MembershipAuthorisationException("$ourIdentity is not authorised to run $this")
         }
     }
 
