@@ -908,6 +908,7 @@ class SingleThreadedStateMachineManager(
         (exception as? FlowException)?.originalErrorId = flowError.errorId
         flow.resultFuture.setException(exception)
         lastState.flowLogic.progressTracker?.endWithError(exception)
+        // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }

@@ -174,8 +174,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
     }
 
     /**
-     * Request treatment for the [flowFiber]. A flow can only be added to the hospital if they are not already being
-     * treated.
+     * Request treatment for the [flowFiber].
      */
     fun requestTreatment(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
         if (!currentState.isRemoved) {

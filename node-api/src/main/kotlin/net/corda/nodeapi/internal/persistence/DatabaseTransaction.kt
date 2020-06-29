@@ -101,10 +101,9 @@ class DatabaseTransaction(
                 connection.close()
             }
         } finally {
+            clearException()
             contextTransactionOrNull = outerTransaction
         }
-
-        clearException()
 
         if (outerTransaction == null) {
             synchronized(this) {
