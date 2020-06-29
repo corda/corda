@@ -149,6 +149,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             isJMXManagementEnabled = true
             isJMXUseBrokerName = true
         }
+        // Validate user in AMQP message header against authenticated session
+        registerBrokerPlugin(UserValidationPlugin())
 
     }.configureAddressSecurity()
 
