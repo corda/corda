@@ -62,7 +62,7 @@ class NodeVaultService(
     companion object {
         private val log = contextLogger()
 
-        val MAX_SQL_IN_CLAUSE_SET = 16
+        const val DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE = 16
 
         /**
          * Establish whether a given state is relevant to a node, given the node's public keys.
@@ -491,7 +491,7 @@ class NodeVaultService(
                 log.trace { "Reserving soft lock states for $lockId: $stateRefs" }
                 FlowStateMachineImpl.currentStateMachine()?.let {
                     if (lockId == it.id.uuid) {
-                        it.softLockedStates.addAll(stateRefs)
+                        it.softLockedStates += stateRefs
                     }
                 }
             } else {
@@ -545,8 +545,8 @@ class NodeVaultService(
         val stateRefsToBeReleased =
             stateRefs ?: FlowStateMachineImpl.currentStateMachine()?.let {
                 // We only hold states under our flowId. For all other lockId fall back to old query mechanism, i.e. stateRefsToBeReleased = null
-                if (lockId == it.id.uuid && it.softLockedStates.isNotEmpty()) {
-                    NonEmptySet.copyOf(it.softLockedStates)
+                if (lockId == it.id.uuid && it.softLockedStates.exist()) {
+                    (it.softLockedStates as? FlowStateMachineImpl.SoftLockedStates.HoldingStates)?.states?.toNonEmptySet()
                 } else {
                     null
                 }
@@ -569,7 +569,7 @@ class NodeVaultService(
                 if (updatedRows > 0) {
                     FlowStateMachineImpl.currentStateMachine()?.let {
                         if (lockId == it.id.uuid) {
-                            it.softLockedStates.removeAll(stateRefsToBeReleased)
+                            it.softLockedStates -= stateRefsToBeReleased
                         }
                     }
                     log.trace { "Releasing $updatedRows soft locked states for $lockId and stateRefs $stateRefsToBeReleased" }
@@ -870,7 +870,7 @@ private fun CriteriaBuilder.executeUpdate(
         var updatedRows = 0
         it.asSequence()
             .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
-            .chunked(NodeVaultService.MAX_SQL_IN_CLAUSE_SET)
+            .chunked(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE)
             .forEach { persistentStateRefs ->
                 updatedRows += doUpdate(persistentStateRefs)
             }

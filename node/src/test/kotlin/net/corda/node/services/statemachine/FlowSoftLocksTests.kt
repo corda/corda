@@ -62,7 +62,7 @@ class FlowSoftLocksTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP)
+            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP)
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryIdentity = mockNet.defaultNotaryIdentity
@@ -80,7 +80,7 @@ class FlowSoftLocksTests {
             SoftLockAction(SoftLockingAction.LOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = vaultStates),
             SoftLockAction(SoftLockingAction.UNLOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.UNLOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(vaultStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
     }
@@ -91,7 +91,7 @@ class FlowSoftLocksTests {
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, null, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = vaultStates)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(vaultStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
     }
@@ -110,7 +110,7 @@ class FlowSoftLocksTests {
             )
         )
         assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+            aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         }
         assertEquals(vaultStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
         LockingUnlockingFlow.throwOnlyOnce = true
@@ -124,7 +124,7 @@ class FlowSoftLocksTests {
             SoftLockAction(SoftLockingAction.LOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET),
             SoftLockAction(SoftLockingAction.UNLOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.UNLOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(vaultStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
     }
@@ -136,7 +136,7 @@ class FlowSoftLocksTests {
         val softLockActions = arrayOf(
             SoftLockAction(SoftLockingAction.LOCK, randomId, vaultStates, ExpectedSoftLocks(vaultStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(vaultStates, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, aliceNode.services.vaultService))
     }
@@ -152,7 +152,7 @@ class FlowSoftLocksTests {
             SoftLockAction(SoftLockingAction.LOCK, null, flowIdStates, ExpectedSoftLocks(flowIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = flowIdStates),
             SoftLockAction(SoftLockingAction.LOCK, randomId, randomIdStates, ExpectedSoftLocks(flowIdStates + randomIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = flowIdStates)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(flowIdStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
         assertEquals(randomIdStates, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, aliceNode.services.vaultService))
@@ -169,7 +169,7 @@ class FlowSoftLocksTests {
             SoftLockAction(SoftLockingAction.LOCK, randomId, randomIdStates, ExpectedSoftLocks(flowIdStates + randomIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = flowIdStates),
             SoftLockAction(SoftLockingAction.UNLOCK, null, flowIdStates, ExpectedSoftLocks(randomIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = EMPTY_SET)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(flowIdStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
         assertEquals(randomIdStates, queryCashStates(QueryCriteria.SoftLockingType.LOCKED_ONLY, aliceNode.services.vaultService))
@@ -186,7 +186,7 @@ class FlowSoftLocksTests {
             SoftLockAction(SoftLockingAction.LOCK, randomId, randomIdStates, ExpectedSoftLocks(flowIdStates + randomIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = flowIdStates),
             SoftLockAction(SoftLockingAction.UNLOCK, randomId, randomIdStates, ExpectedSoftLocks(flowIdStates, QueryCriteria.SoftLockingType.LOCKED_ONLY), expectedSoftLockedStates = flowIdStates)
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(flowIdStates + randomIdStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
     }
@@ -229,7 +229,7 @@ class FlowSoftLocksTests {
                 exception = SQLTransientConnectionException("connection is not available")
             )
         )
-        val flowCompleted = aliceNode.services.startFlow(LockingUnlockingFlow(softLockActions)).resultFuture.getOrThrow(30.seconds)
+        val flowCompleted = aliceNode.services.startFlow(HoldingStatesOnFiberFlow().also { it.softLockActions = softLockActions }).resultFuture.getOrThrow(30.seconds)
         assertTrue(flowCompleted)
         assertEquals(flowIdStates + randomIdStates, queryCashStates(QueryCriteria.SoftLockingType.UNLOCKED_ONLY, aliceNode.services.vaultService))
         LockingUnlockingFlow.throwOnlyOnce = true
@@ -269,11 +269,16 @@ data class SoftLockAction(val action: SoftLockingAction,
                           val exception: Exception? = null,
                           val doCheckpoint: Boolean = false)
 
-internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockAction>): FlowLogic<Boolean>() {
+internal abstract class LockingUnlockingFlow: FlowLogic<Boolean>() {
+
+    lateinit var softLockActions: Array<SoftLockAction>
 
     companion object {
         var throwOnlyOnce = true
     }
+
+    abstract fun assertSoftLockActionOnLock(softLockAction: SoftLockAction)
+    abstract fun assertSoftLockActionOnUnlock(softLockAction: SoftLockAction)
 
     @Suspendable
     override fun call(): Boolean {
@@ -288,12 +293,12 @@ internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockA
                         stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
                     }
                     assertEquals(softLockAction.expectedSoftLocks.states, queryCashStates(softLockAction.expectedSoftLocks.queryCriteria, serviceHub.vaultService))
-                    assertEquals(softLockAction.expectedSoftLockedStates, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
+                    assertSoftLockActionOnLock(softLockAction)
                 }
                 SoftLockingAction.UNLOCK -> {
                     serviceHub.vaultService.softLockRelease(softLockAction.lockId!!, NonEmptySet.copyOf(softLockAction.states))
                     assertEquals(softLockAction.expectedSoftLocks.states, queryCashStates(softLockAction.expectedSoftLocks.queryCriteria, serviceHub.vaultService))
-                    assertEquals(softLockAction.expectedSoftLockedStates, (stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates)
+                    assertSoftLockActionOnUnlock(softLockAction)
                 }
             }
 
@@ -305,6 +310,22 @@ internal class LockingUnlockingFlow(private val softLockActions: Array<SoftLockA
             }
         }
         return true
+    }
+}
+
+internal class HoldingStatesOnFiberFlow : LockingUnlockingFlow() {
+    override fun assertSoftLockActionOnLock(softLockAction: SoftLockAction) {
+        assertEquals(
+            softLockAction.expectedSoftLockedStates,
+            ((stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates as FlowStateMachineImpl.SoftLockedStates.HoldingStates).states
+        )
+    }
+
+    override fun assertSoftLockActionOnUnlock(softLockAction: SoftLockAction) {
+        assertEquals(
+            softLockAction.expectedSoftLockedStates,
+            ((stateMachine as? FlowStateMachineImpl<*>)!!.softLockedStates as FlowStateMachineImpl.SoftLockedStates.HoldingStates).states
+        )
     }
 }
 
