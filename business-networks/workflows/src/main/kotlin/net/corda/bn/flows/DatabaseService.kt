@@ -5,6 +5,7 @@ import net.corda.bn.schemas.MembershipStateSchemaV1
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -50,6 +51,20 @@ class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAs
     }
 
     /**
+     * Queries for membership with [linearId] linear ID.
+     *
+     * @param linearId Linear ID of the [MembershipState].
+     *
+     * @return Membership state matching the query. If that membership doesn't exist, returns [null].
+     */
+    fun getMembership(linearId: UniqueIdentifier): StateAndRef<MembershipState>? {
+        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+                .and(linearIdCriteria(linearId))
+        val states = serviceHub.vaultService.queryBy<MembershipState>(criteria).states
+        return states.maxBy { it.state.data.modified }
+    }
+
+    /**
      * Queries for all the membership states inside Business Network with [networkId] with one of [statuses].
      *
      * @param networkId ID of the Business Network.
@@ -84,4 +99,5 @@ class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAs
     private fun networkIdCriteria(networkID: String) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::networkId.equal(networkID) })
     private fun identityCriteria(cordaIdentity: Party) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::cordaIdentity.equal(cordaIdentity) })
     private fun statusCriteria(statuses: List<MembershipStatus>) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::status.`in`(statuses) })
+    private fun linearIdCriteria(linearId: UniqueIdentifier) = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
 }
