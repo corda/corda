@@ -224,18 +224,19 @@ class DriverDSLImpl(
      */
     private fun establishRpc(config: NodeConfig,
                              processDeathFuture: CordaFuture<out Process>,
-                             connectRetries: Int = 3): CordaFuture<CordaRPCOps> {
+                             pollInterval: Duration = DEFAULT_CONNECT_POLL_INTERVAL): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
-        var connectRetriesTtl = connectRetries
-        val connectionFuture = poll(executorService, "RPC connection") {
+        val connectionFuture = poll(
+                executorService = executorService,
+                pollName = "RPC connection",
+                pollInterval = pollInterval) {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: RPCException) {
-                connectRetriesTtl--
-                if (processDeathFuture.isDone || connectRetriesTtl <= 0) throw e
-                log.info("Failed to connect to RPC at $rpcAddress, retrying $connectRetriesTtl more times")
+                if (processDeathFuture.isDone) throw e
+                log.info("Failed to connect to RPC at $rpcAddress")
                 null
             }
         }
@@ -788,6 +789,7 @@ class DriverDSLImpl(
     }
 
     companion object {
+        private val DEFAULT_CONNECT_POLL_INTERVAL: Duration = 100.millis
         internal val log = contextLogger()
 
         // While starting with inProcess mode, we need to have different names to avoid clashes

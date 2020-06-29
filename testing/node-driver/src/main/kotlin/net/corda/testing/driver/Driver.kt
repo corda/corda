@@ -218,7 +218,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  *    and may be specified in [DriverDSL.startNode].
  * @property portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults
  *    to incremental.
- * @property debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @property debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to the same as
+ * [portAllocation].
  * @property systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @property useTestClock If true the test clock will be used in Node.
  * @property startNodesInProcess Provides the default behaviour of whether new nodes should start inside this process or
@@ -247,7 +248,7 @@ data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
         val portAllocation: PortAllocation = incrementalPortAllocation(),
-        val debugPortAllocation: PortAllocation = incrementalPortAllocation(),
+        val debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
@@ -272,7 +273,7 @@ data class DriverParameters(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
-            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
@@ -311,7 +312,7 @@ data class DriverParameters(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
-            debugPortAllocation: PortAllocation = incrementalPortAllocation(),
+            debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
