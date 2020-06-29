@@ -22,11 +22,13 @@ class NodeStartupCliTest {
 
     companion object {
         private lateinit var workingDirectory: Path
+        private lateinit var rootDirectory: Path
         private var customNodeConf = "custom_node.conf"
         @BeforeClass
         @JvmStatic
         fun initDirectories() {
             workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+            rootDirectory = Paths.get("/").normalize().toAbsolutePath()
         }
     }
 
@@ -64,8 +66,8 @@ class NodeStartupCliTest {
 
     @Test(timeout=300_000)
     fun `--nodeconf using absolute path will not be changed`() {
-        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, "/$customNodeConf")
-        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo( "/" / customNodeConf)
+        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, (rootDirectory / customNodeConf).toString())
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(rootDirectory / customNodeConf)
     }
 
     @Test(timeout=3_000)
