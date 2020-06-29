@@ -1,6 +1,9 @@
 package net.corda.nodeapi.internal.persistence
 
 import javax.persistence.EntityManager
+import javax.persistence.EntityTransaction
+import javax.persistence.LockModeType
+import javax.persistence.metamodel.Metamodel
 
 /**
  * A delegate of [EntityManager] which disallows some operations.
