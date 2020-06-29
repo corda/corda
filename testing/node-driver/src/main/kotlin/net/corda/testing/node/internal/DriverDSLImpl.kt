@@ -219,16 +219,23 @@ class DriverDSLImpl(
         }
     }
 
-    private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+    /**
+     * @param connectRetries number of times to try reconnecting before giving up.
+     */
+    private fun establishRpc(config: NodeConfig,
+                             processDeathFuture: CordaFuture<out Process>,
+                             connectRetries: Int = 3): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
+        var connectRetriesTtl = connectRetries
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
             } catch (e: RPCException) {
-                if (processDeathFuture.isDone) throw e
-                log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
+                connectRetriesTtl--
+                if (processDeathFuture.isDone || connectRetriesTtl <= 0) throw e
+                log.info("Failed to connect to RPC at $rpcAddress, retrying $connectRetriesTtl more times")
                 null
             }
         }
@@ -674,7 +681,7 @@ class DriverDSLImpl(
                     }
             )
             val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
-                node.node.startupComplete.get() // Wait for startup to finish before we connect to the node
+                node.node.nodeReadyFuture.get() // Wait for the node to be ready before we connect to the node
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
