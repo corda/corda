@@ -338,10 +338,7 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    override fun startMessagingService(rpcOps: RPCOps,
-                                       nodeInfo: NodeInfo,
-                                       myNotaryIdentity: PartyAndCertificate?,
-                                       networkParameters: NetworkParameters) {
+    override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
         network as P2PMessagingClient
