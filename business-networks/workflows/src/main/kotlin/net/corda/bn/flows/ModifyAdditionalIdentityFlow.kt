@@ -13,6 +13,16 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
+/**
+ * This flow is initiated by any member authorised to modify membership's additional identity. Queries for the membership with
+ * [membershipId] linear ID and overwrites [MembershipState.identity.additionalIdentity] field with [additionalIdentity] value. Transaction
+ * is signed by all active members authorised to modify membership and stored on ledger of all members authorised to modify membership and
+ * on modified member's ledger.
+ *
+ * @property membershipId ID of the membership to modify additional identity.
+ * @property additionalIdentity Custom additional identity to be given to membership.
+ * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
+ */
 @InitiatingFlow
 @StartableByRPC
 class ModifyAdditionalIdentityFlow(private val membershipId: UniqueIdentifier, private val additionalIdentity: BNIdentity, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {

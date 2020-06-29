@@ -58,9 +58,20 @@ data class MembershipState(
     fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
 
+/**
+ * Represents identity addition associated with Business Network membership. Every custom Business Network related additional identity
+ * should implement this interface.
+ */
 @CordaSerializable
 interface BNIdentity
 
+/**
+ * Represents identity associated with Business Network membership made up of 2 components: required Corda identity and optional custom
+ * defined additional identity.
+ *
+ * @property cordaIdentity Required Corda X509 identity associated with membership.
+ * @property additionalIdentity Optional custom defined identity associated with same membership.
+ */
 @CordaSerializable
 data class MembershipIdentity(val cordaIdentity: Party, val additionalIdentity: BNIdentity? = null)
 
