@@ -54,6 +54,7 @@ data class MembershipState(
     fun canSuspendMembership() = AdminPermission.CAN_SUSPEND_MEMBERSHIP in permissions()
     fun canRevokeMembership() = AdminPermission.CAN_REVOKE_MEMBERSHIP in permissions()
     fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
+    fun canModifyAdditionalIdentity() = AdminPermission.CAN_MODIFY_ADDITIONAL_IDENTITY in permissions()
     fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
 
@@ -138,5 +139,10 @@ enum class AdminPermission : BNPermission {
     /**
      * Enables member to modify memberships' roles.
      */
-    CAN_MODIFY_ROLE
+    CAN_MODIFY_ROLE,
+
+    /**
+     * Enables member to modify memberships' additional identity.
+     */
+    CAN_MODIFY_ADDITIONAL_IDENTITY
 }

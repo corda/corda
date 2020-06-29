@@ -25,6 +25,7 @@ open class MembershipContract : Contract {
         class Suspend(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
         class Revoke(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
         class ModifyRoles(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
+        class ModifyAdditionalIdentity(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
     }
 
     @Suppress("ComplexMethod")
@@ -65,6 +66,7 @@ open class MembershipContract : Contract {
             is Commands.Suspend -> verifySuspend(tx, command, inputState!!, outputState!!)
             is Commands.Revoke -> verifyRevoke(tx, command, inputState!!)
             is Commands.ModifyRoles -> verifyModifyRoles(tx, command, inputState!!, outputState!!)
+            is Commands.ModifyAdditionalIdentity -> verifyModifyAdditionalIdentity(tx, command, inputState!!, outputState!!)
             else -> throw IllegalArgumentException("Unsupported command ${command.value}")
         }
     }
@@ -87,6 +89,7 @@ open class MembershipContract : Contract {
         "Input state of membership activation transaction shouldn't be already active" using (!inputMembership.isActive())
         "Output state of membership activation transaction should be active" using (outputMembership.isActive())
         "Input and output state of membership activation transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
+        "Input and output state of membership activation transaction should have same additional identity" using (inputMembership.identity.additionalIdentity == outputMembership.identity.additionalIdentity)
         (command.value as Commands.Activate).apply {
             "Input membership owner shouldn't be required signer of membership activation transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.cordaIdentity.owningKey !in requiredSigners)
         }
@@ -101,6 +104,7 @@ open class MembershipContract : Contract {
         "Input state of membership suspension transaction shouldn't be already suspended" using (!inputMembership.isSuspended())
         "Output state of membership suspension transaction should be suspended" using (outputMembership.isSuspended())
         "Input and output state of membership suspension transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
+        "Input and output state of membership suspension transaction should have same additional identity" using (inputMembership.identity.additionalIdentity == outputMembership.identity.additionalIdentity)
         "Input membership owner shouldn't be required signer of membership suspension transaction" using (inputMembership.identity.cordaIdentity.owningKey !in command.value.requiredSigners)
     }
 
@@ -122,8 +126,22 @@ open class MembershipContract : Contract {
         "Input and output state of membership roles modification transaction should have same status" using (inputMembership.status == outputMembership.status)
         "Membership roles modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
         "Input and output state of membership roles modification transaction should have different set of roles" using (inputMembership.roles != outputMembership.roles)
+        "Input and output state of membership roles modification transaction should have same additional identity" using (inputMembership.identity.additionalIdentity == outputMembership.identity.additionalIdentity)
         (command.value as Commands.ModifyRoles).apply {
             "Input membership owner shouldn't be required signer of membership roles modification transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.cordaIdentity.owningKey !in requiredSigners)
         }
+    }
+
+    open fun verifyModifyAdditionalIdentity(
+            tx: LedgerTransaction,
+            command: CommandWithParties<Commands>,
+            inputMembership: MembershipState,
+            outputMembership: MembershipState
+    ) = requireThat {
+        "Input and output state of membership additional identity modification transaction should have same status" using (inputMembership.status == outputMembership.status)
+        "Membership additional identity modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
+        "Input and output state of membership additional identity modification transaction should have same roles" using (inputMembership.roles == outputMembership.roles)
+        "Input and output state of membership additional identity modification transaction should have different additional identity" using (inputMembership.identity.additionalIdentity != outputMembership.identity.additionalIdentity)
+        "Input membership owner"
     }
 }

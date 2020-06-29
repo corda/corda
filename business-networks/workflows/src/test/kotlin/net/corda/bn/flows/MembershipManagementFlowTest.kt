@@ -1,5 +1,6 @@
 package net.corda.bn.flows
 
+import net.corda.bn.states.BNIdentity
 import net.corda.bn.states.BNRole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
@@ -91,6 +92,12 @@ abstract class MembershipManagementFlowTest(
 
     protected fun runModifyRolesFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, roles: Set<BNRole>, notary: Party? = null): SignedTransaction {
         val future = initiator.startFlow(ModifyRolesFlow(membershipId, roles, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
+    protected fun runModifyAdditionalIdentityFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, additionalIdentity: BNIdentity, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(ModifyAdditionalIdentityFlow(membershipId, additionalIdentity, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }
