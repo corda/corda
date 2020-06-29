@@ -29,6 +29,8 @@ import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class DistributedServiceTests {
     private lateinit var alice: NodeHandle
@@ -157,9 +159,9 @@ class DistributedServiceTests {
 
         // The distribution of requests should be very close to sg like 16/17/17 as by default artemis does round robin
         println("Notarisation distribution: $notarisationsPerNotary")
-        require(notarisationsPerNotary.size == 3)
+        assertEquals(3, notarisationsPerNotary.size)
         // We allow some leeway for artemis as it doesn't always produce perfect distribution
-        require(notarisationsPerNotary.values.all { it > 10 })
+        assertTrue { notarisationsPerNotary.values.all { it > 10 } }
     }
 
     private fun issueCash(amount: Amount<Currency>) {

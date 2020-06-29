@@ -185,6 +185,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
 import java.util.Properties
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -553,7 +554,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             flowMonitor.start()
             schedulerService.start()
 
-            val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
+            val resultingNodeInfo = createStartedNode(nodeInfo, rpcOps, notaryService)
+                    .also {
+                        _started = it
+                    }
             val readyFuture = smmStartedFuture.flatMap {
                 log.debug("SMM ready")
                 network.activeChange.filter { it }.toFuture()

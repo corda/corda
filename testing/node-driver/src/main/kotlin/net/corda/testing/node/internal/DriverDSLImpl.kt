@@ -9,6 +9,7 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -225,7 +226,7 @@ class DriverDSLImpl(
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
-            } catch (e: Exception) {
+            } catch (e: RPCException) {
                 if (processDeathFuture.isDone) throw e
                 log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
                 null
@@ -673,6 +674,7 @@ class DriverDSLImpl(
                     }
             )
             val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
+                node.node.startupComplete.get() // Wait for startup to finish before we connect to the node
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
