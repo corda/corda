@@ -36,7 +36,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -68,7 +67,6 @@ class TransientReference<out A>(@Transient val value: A)
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val logic: FlowLogic<R>,
                               scheduler: FiberScheduler,
-                              val softLockedStates: SoftLockedStates = SoftLockedStates.HoldingStates(),
                               override val creationTime: Long = System.currentTimeMillis()
 ) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R>, FlowFiber {
     companion object {
@@ -134,6 +132,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val context: InvocationContext get() = transientState!!.value.checkpoint.checkpointState.invocationContext
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
+
+    internal val softLockedStates = mutableSetOf<StateRef>()
 
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
@@ -304,7 +304,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logFlowError(t)
             Try.Failure<R>(t)
         }
-        val softLocksId = if (softLockedStates.exist()) logic.runId.uuid else null
+        val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
                 Event.FlowFinish(resultOrError.value, softLocksId)
@@ -553,21 +553,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // Start time gets serialized along with the fiber when it suspends
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
-    }
-
-    sealed class SoftLockedStates {
-        abstract fun exist(): Boolean
-        abstract operator fun plusAssign(stateRef: StateRef)
-        abstract operator fun plusAssign(stateRefs: NonEmptySet<StateRef>)
-        abstract operator fun minusAssign(stateRefs: NonEmptySet<StateRef>)
-
-        class HoldingStates: SoftLockedStates() {
-            val states = mutableSetOf<StateRef>()
-            override fun exist(): Boolean = states.isNotEmpty()
-            override operator fun plusAssign(stateRef: StateRef) { states.add(stateRef) }
-            override operator fun plusAssign(stateRefs: NonEmptySet<StateRef>) { states.addAll(stateRefs) }
-            override operator fun minusAssign(stateRefs: NonEmptySet<StateRef>) { states.removeAll(stateRefs) }
-        }
     }
 }
 

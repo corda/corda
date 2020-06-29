@@ -416,7 +416,7 @@ class NodeVaultServiceTest {
         }
 
         val softLockId = UUID.randomUUID()
-        val lockCount = NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE * 2
+        val lockCount = NodeVaultService.MAX_SQL_IN_CLAUSE_SET * 2
         database.transaction {
             assertEquals(100, queryStates(SoftLockingType.UNLOCKED_ONLY).size)
             val unconsumedStates = vaultService.queryBy<Cash.State>().states
@@ -429,18 +429,18 @@ class NodeVaultServiceTest {
             assertEquals(lockCount, queryStates(SoftLockingType.LOCKED_ONLY).size)
 
             val unlockSet0 = mutableSetOf<StateRef>()
-            for (i in 0 until NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 1) {
+            for (i in 0 until NodeVaultService.MAX_SQL_IN_CLAUSE_SET + 1) {
                 unlockSet0.add(lockSet[i])
             }
             vaultService.softLockRelease(softLockId, NonEmptySet.copyOf(unlockSet0))
-            assertEquals(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE - 1, queryStates(SoftLockingType.LOCKED_ONLY).size)
+            assertEquals(NodeVaultService.MAX_SQL_IN_CLAUSE_SET - 1, queryStates(SoftLockingType.LOCKED_ONLY).size)
 
             val unlockSet1 = mutableSetOf<StateRef>()
-            for (i in NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 1 until NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE + 3) {
+            for (i in NodeVaultService.MAX_SQL_IN_CLAUSE_SET + 1 until NodeVaultService.MAX_SQL_IN_CLAUSE_SET + 3) {
                 unlockSet1.add(lockSet[i])
             }
             vaultService.softLockRelease(softLockId, NonEmptySet.copyOf(unlockSet1))
-            assertEquals(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE - 1 - 2, queryStates(SoftLockingType.LOCKED_ONLY).size)
+            assertEquals(NodeVaultService.MAX_SQL_IN_CLAUSE_SET - 1 - 2, queryStates(SoftLockingType.LOCKED_ONLY).size)
 
             vaultService.softLockRelease(softLockId) // release the rest
             assertEquals(100, queryStates(SoftLockingType.UNLOCKED_ONLY).size)
