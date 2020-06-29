@@ -1,9 +1,7 @@
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
-import com.github.andrewoma.dexx.kollection.ImmutableMap
-import com.github.andrewoma.dexx.kollection.immutableMapOf
-import com.github.andrewoma.dexx.kollection.toImmutableMap
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.serialization.CheckpointCustomSerializer
@@ -43,7 +41,8 @@ class MockNetworkCustomSerializerCheckpointTest{
     @Test(timeout = 300_000)
     fun `check references are restored correctly`() {
         val node = mockNetwork.createPartyNode()
-        val expectedReference = immutableMapOf(1 to 1)
+        val expectedReference = BrokenMap<String, Int>()
+        expectedReference.putAll(mapOf("one" to 1))
         val actualReference = node.startFlow(TestFlowCheckingReferencesWork(expectedReference)).get()
 
         Assertions.assertThat(actualReference).isSameAs(expectedReference)
@@ -57,7 +56,8 @@ class MockNetworkCustomSerializerCheckpointTest{
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: ImmutableMap<String, Int> = immutableMapOf("foo" to purchase)
+            val difficultToSerialize: BrokenMap<String, Int> = BrokenMap()
+            difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
             sleep(Duration.ofSeconds(0), maySkipCheckpoint = false)
@@ -89,19 +89,44 @@ class MockNetworkCustomSerializerCheckpointTest{
         }
     }
 
+    // Broken Map
+    // This map breaks the rules for the put method. Making the normal map serializer fail.
+
+    class BrokenMap<K,V> : MutableMap<K,V>{
+        private val map = HashMap<K,V>()
+
+        override val size: Int
+            get() = map.size
+        override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+            get() = map.entries
+        override val keys: MutableSet<K>
+            get() = map.keys
+        override val values: MutableCollection<V>
+            get() = map.values
+
+        override fun containsKey(key: K): Boolean = map.containsKey(key)
+        override fun containsValue(value: V): Boolean = map.containsValue(value)
+        override fun get(key: K): V? = map.get(key)
+        override fun isEmpty(): Boolean = map.isEmpty()
+        override fun clear() = map.clear()
+        override fun put(key: K, value: V): V? = throw FlowException("Broken on purpose")
+        override fun putAll(from: Map<out K, V>) = map.putAll(from)
+        override fun remove(key: K): V? = map.remove(key)
+    }
+
     // Custom serializers
 
     @Suppress("unused")
     class TestSerializer :
-            CheckpointCustomSerializer<ImmutableMap<Any, Any>, HashMap<Any, Any>> {
+            CheckpointCustomSerializer<BrokenMap<Any, Any>, HashMap<Any, Any>> {
 
-        override fun toProxy(obj: ImmutableMap<Any, Any>): HashMap<Any, Any> {
+        override fun toProxy(obj: BrokenMap<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
         }
 
-        override fun fromProxy(proxy: HashMap<Any, Any>): ImmutableMap<Any, Any> {
-            return proxy.toImmutableMap()
+        override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMap<Any, Any> {
+            return BrokenMap<Any, Any>().also { it.putAll(proxy) }
         }
     }
 }
