@@ -15,7 +15,6 @@ import org.apache.qpid.jms.transports.netty.NettyTcpTransport
 import org.apache.qpid.proton.engine.Sasl
 import org.apache.qpid.proton.engine.SaslListener
 import org.apache.qpid.proton.engine.Transport
-import java.io.IOException
 import java.net.URI
 import java.security.SecureRandom
 import java.util.concurrent.ExecutionException
@@ -36,9 +35,8 @@ class SimpleAMQPClient(private val target: NetworkHostAndPort, private val confi
     companion object {
         /**
          * Send message and wait for completion.
-         * @throws IOException on failure
+         * @throws Exception on failure
          */
-        @Throws(IOException::class)
         fun MessageProducer.sendAndVerify(message: Message) {
             val request = openFuture<Unit>()
             send(message, object : CompletionListener {
