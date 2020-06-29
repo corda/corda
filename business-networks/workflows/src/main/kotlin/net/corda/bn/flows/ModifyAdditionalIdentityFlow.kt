@@ -54,7 +54,7 @@ class ModifyAdditionalIdentityFlow(private val membershipId: UniqueIdentifier, p
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
                 .addOutputState(outputMembership)
-                .addCommand(MembershipContract.Commands.ModifyAdditionalIdentity(requiredSigners), requiredSigners)
+                .addCommand(MembershipContract.Commands.ModifyAdditionalIdentity(requiredSigners, ourIdentity), requiredSigners)
         builder.verify(serviceHub)
 
         val observerSessions = observers.map { initiateFlow(it) }

@@ -6,6 +6,7 @@ import net.corda.core.contracts.CommandWithParties
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
+import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
 import java.security.PublicKey
@@ -25,7 +26,7 @@ open class MembershipContract : Contract {
         class Suspend(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
         class Revoke(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
         class ModifyRoles(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
-        class ModifyAdditionalIdentity(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+        class ModifyAdditionalIdentity(requiredSigners: List<PublicKey>, val initiator: Party) : Commands(requiredSigners)
     }
 
     @Suppress("ComplexMethod")
@@ -142,6 +143,11 @@ open class MembershipContract : Contract {
         "Membership additional identity modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
         "Input and output state of membership additional identity modification transaction should have same roles" using (inputMembership.roles == outputMembership.roles)
         "Input and output state of membership additional identity modification transaction should have different additional identity" using (inputMembership.identity.additionalIdentity != outputMembership.identity.additionalIdentity)
-        "Input membership owner"
+        (command.value as Commands.ModifyAdditionalIdentity).apply {
+            val selfModification = initiator == inputMembership.identity.cordaIdentity
+            val memberIsSigner = inputMembership.identity.cordaIdentity.owningKey in requiredSigners
+            "Input membership owner should be required signer of membership additional identity modification transaction if it initiated it" using (!selfModification || memberIsSigner)
+            "Input membership owner shouldn't be required signer of membership additional identity modification transaction if it didn't initiate it" using (selfModification || !memberIsSigner)
+        }
     }
 }

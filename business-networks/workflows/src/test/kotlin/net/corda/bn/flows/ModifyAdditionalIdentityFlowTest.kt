@@ -13,7 +13,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @CordaSerializable
-data class DummyIdentity(val name: String) : BNIdentity
+private data class DummyIdentity(val name: String) : BNIdentity
 
 class ModifyAdditionalIdentityFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
 
