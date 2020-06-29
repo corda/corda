@@ -18,6 +18,20 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+/*
+** calculate the stage for NexusIQ evaluation
+**  * build for snapshots
+**  * stage-release:  for release candidates and for health checks
+**  * operate: for final release
+*/
+def nexusIqStage = "build"
+if (isReleaseTag) {
+    switch (env.TAG_NAME) {
+        case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        default: nexusIqStage = "operate"
+    }
+}
 
 pipeline {
     agent { label 'k8s' }
@@ -36,6 +50,25 @@ pipeline {
     }
 
     stages {
+        stage('Sonatype Check') {
+            steps {
+                sh "./gradlew --no-daemon clean jar"
+                script {
+                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
+                    def artifactId = 'corda'
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                }
+                nexusPolicyEvaluation (
+                        failBuildOnNetworkError: false,
+                        iqApplication: manualApplication(nexusAppId),
+                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
+                        iqStage: nexusIqStage
+                )
+            }
+        }
+
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
