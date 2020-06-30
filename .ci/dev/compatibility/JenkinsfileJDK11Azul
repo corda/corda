@@ -49,7 +49,7 @@ pipeline {
                     def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
-                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-jdk11-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
