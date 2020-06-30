@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaSystemUtils
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -36,11 +37,28 @@ object ConfigHelper {
     private const val UPPERCASE_PROPERTY_PREFIX = "CORDA."
 
     private val log = LoggerFactory.getLogger(javaClass)
+
     @Suppress("LongParameterList")
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
                    allowMissingConfig: Boolean = false,
-                   configOverrides: Config = ConfigFactory.empty()): Config {
+                   configOverrides: Config = ConfigFactory.empty()): Config
+        = loadConfig(baseDirectory,
+            configFile = configFile,
+            allowMissingConfig = allowMissingConfig,
+            configOverrides = configOverrides,
+            rawSystemOverrides = ConfigFactory.systemProperties(),
+            rawEnvironmentOverrides = ConfigFactory.systemEnvironment())
+
+    @Suppress("LongParameterList")
+    @VisibleForTesting
+    fun loadConfig(baseDirectory: Path,
+                   configFile: Path = baseDirectory / "node.conf",
+                   allowMissingConfig: Boolean = false,
+                   configOverrides: Config = ConfigFactory.empty(),
+                   rawSystemOverrides: Config,
+                   rawEnvironmentOverrides: Config
+    ): Config {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("corda-reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
@@ -55,8 +73,8 @@ object ConfigHelper {
                 "flowExternalOperationThreadPoolSize" to min(coreCount, FLOW_EXTERNAL_OPERATION_THREAD_POOL_SIZE_MAX).toString()
         )
 
-        val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
-        val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
+        val systemOverrides = rawSystemOverrides.cordaEntriesOnly()
+        val environmentOverrides = rawEnvironmentOverrides.cordaEntriesOnly()
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
@@ -91,8 +109,8 @@ object ConfigHelper {
                 .mapKeys {
                     val original = it.key as String
 
-                    // Reject environment variable that are in all caps 
-		    // since these cannot be properties.
+                    // Reject environment variable that are in all caps
+                    // since these cannot be properties.
                     if (original == original.toUpperCase()){
                         return@mapKeys original
                     }
