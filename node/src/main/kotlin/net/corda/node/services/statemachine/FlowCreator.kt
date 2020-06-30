@@ -28,6 +28,8 @@ import java.security.SecureRandom
 class Flow<A>(val fiber: FlowStateMachineImpl<A>, val resultFuture: OpenFuture<Any?>)
 
 class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint) {
+    val resultFuture: OpenFuture<Any?> = openFuture()
+
     val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
 
     fun addExternalEvent(message: Event.DeliverSessionMessage) {
@@ -62,13 +64,12 @@ class FlowCreator(
             }
             else -> nonResidentFlow.checkpoint
         }
-        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint)
+        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint, nonResidentFlow.resultFuture)
     }
 
-    fun createFlowFromCheckpoint(runId: StateMachineRunId, oldCheckpoint: Checkpoint): Flow<*>? {
+    fun createFlowFromCheckpoint(runId: StateMachineRunId, oldCheckpoint: Checkpoint, resultFuture: OpenFuture<Any?> = openFuture()): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
-        val resultFuture = openFuture<Any?>()
         fiber.transientValues = TransientReference(createTransientValues(runId, resultFuture))
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)

@@ -178,19 +178,18 @@ internal class SingleThreadedStateMachineManager(
             }
         }
 
-        // paused flows do not have a flowStateMachineImpl yet...
-//        for (pausedFlow in pausedFlows) {
-//            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientID?.let {
-//                mutex.content.clientIDsToFlowIds[it] = FlowWithClientIdStatus.Active(
-//                    doneFuture(object : FlowStateMachineHandle<Any> {
-//                        override val logic: Nothing? = null
-//                        override val id: StateMachineRunId = pausedFlow.key
-//                        override val resultFuture: CordaFuture<Any> = openFuture()
-//                        override val clientID: String? = it
-//                    }
-//                ))
-//            }
-//        }
+        for (pausedFlow in pausedFlows) {
+            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientID?.let {
+                mutex.content.clientIDsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                    doneFuture(object : FlowStateMachineHandle<Any?> {
+                        override val logic: Nothing? = null
+                        override val id: StateMachineRunId = pausedFlow.key
+                        override val resultFuture: CordaFuture<Any?> = pausedFlow.value.resultFuture
+                        override val clientID: String? = it
+                    }
+                ))
+            }
+        }
 
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
