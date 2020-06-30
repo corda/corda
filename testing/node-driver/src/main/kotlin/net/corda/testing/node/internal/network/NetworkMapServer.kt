@@ -211,8 +211,11 @@ class NetworkMapServer(private val pollInterval: Duration,
         @GET
         @Path("node-infos")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
-        fun getNodeInfos(): Response =
-                Response.ok(nodeInfoMap.values.toList().serialize().bytes).build()
+        fun getNodeInfos(): Response {
+            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
+            val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
+            return Response.ok(Pair(signedNetworkMap, nodeInfoMap.values.toList()).serialize().bytes).build()
+        }
 
         @GET
         @Path("network-parameters/{var}")

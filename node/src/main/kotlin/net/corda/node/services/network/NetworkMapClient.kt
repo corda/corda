@@ -1,7 +1,10 @@
 package net.corda.node.services.network
 
+import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
+import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.post
 import net.corda.core.internal.responseAs
@@ -86,7 +89,16 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     fun getNodeInfos(): List<NodeInfo> {
         val url = URL("$networkMapUrl/node-infos")
         logger.trace { "Fetching node infos from $url." }
-        val verifiedNodeInfo = url.openHttpConnection().responseAs<List<SignedNodeInfo>>().map { it.verified() }
+        val verifiedNodeInfo = url.openHttpConnection().responseAs<Pair<SignedNetworkMap, List<SignedNodeInfo>>>()
+                .also {
+                    val verifiedNodeInfoHashes = it.first.verifiedNetworkMapCert(trustRoot).nodeInfoHashes
+                    val nodeInfoHashes = it.second.map { signedNodeInfo -> signedNodeInfo.verified().serialize().sha256() }
+                    require(
+                            verifiedNodeInfoHashes.containsAll(nodeInfoHashes) &&
+                                    verifiedNodeInfoHashes.size == nodeInfoHashes.size
+                    )
+                }
+                .second.map { it.verified() }
         logger.trace { "Fetched node infos successfully. Node Infos size: ${verifiedNodeInfo.size}" }
         return verifiedNodeInfo
     }
