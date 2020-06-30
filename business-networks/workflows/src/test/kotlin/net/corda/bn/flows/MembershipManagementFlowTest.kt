@@ -71,6 +71,17 @@ abstract class MembershipManagementFlowTest(
         return runActivateMembershipFlow(authorisedNode, membership.linearId, notary)
     }
 
+    protected fun runSuspendMembershipFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(SuspendMembershipFlow(membershipId, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
+    protected fun runRequestAndSuspendMembershipFlow(initiator: StartedMockNode, authorisedNode: StartedMockNode, networkId: String, notary: Party? = null): SignedTransaction {
+        val membership = runRequestMembershipFlow(initiator, authorisedNode, networkId, notary).tx.outputStates.single() as MembershipState
+        return runSuspendMembershipFlow(authorisedNode, membership.linearId, notary)
+    }
+
     protected fun getAllMembershipsFromVault(node: StartedMockNode, networkId: String): List<MembershipState> {
         val databaseService = node.services.cordaService(DatabaseService::class.java)
         return databaseService.getAllMembershipsWithStatus(
