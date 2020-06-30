@@ -185,7 +185,6 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
     return genericDriver(
             driverDsl = DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
-                    debugPortAllocation = defaultParameters.debugPortAllocation,
                     systemProperties = defaultParameters.systemProperties,
                     driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
                     useTestClock = defaultParameters.useTestClock,
@@ -248,7 +247,6 @@ data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
         val portAllocation: PortAllocation = incrementalPortAllocation(),
-        val debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
@@ -273,7 +271,6 @@ data class DriverParameters(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
-            debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
@@ -289,7 +286,6 @@ data class DriverParameters(
             isDebug,
             driverDirectory,
             portAllocation,
-            debugPortAllocation,
             systemProperties,
             useTestClock,
             startNodesInProcess,
@@ -312,7 +308,6 @@ data class DriverParameters(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" / getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(),
-            debugPortAllocation: PortAllocation = portAllocation, // Share port allocator by default
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
@@ -327,7 +322,6 @@ data class DriverParameters(
             isDebug,
             driverDirectory,
             portAllocation,
-            debugPortAllocation,
             systemProperties,
             useTestClock,
             startNodesInProcess,
@@ -345,7 +339,6 @@ data class DriverParameters(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
             systemProperties: Map<String, String>,
             useTestClock: Boolean,
             startNodesInProcess: Boolean,
@@ -358,7 +351,6 @@ data class DriverParameters(
             isDebug,
             driverDirectory,
             portAllocation,
-            debugPortAllocation,
             systemProperties,
             useTestClock,
             startNodesInProcess,
@@ -376,7 +368,6 @@ data class DriverParameters(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
             systemProperties: Map<String, String>,
             useTestClock: Boolean,
             startNodesInProcess: Boolean,
@@ -390,7 +381,6 @@ data class DriverParameters(
             isDebug,
             driverDirectory,
             portAllocation,
-            debugPortAllocation,
             systemProperties,
             useTestClock,
             startNodesInProcess,
@@ -407,7 +397,6 @@ data class DriverParameters(
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
     fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
-    fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
     fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
     fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
@@ -430,7 +419,6 @@ data class DriverParameters(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
             systemProperties: Map<String, String>,
             useTestClock: Boolean,
             startNodesInProcess: Boolean,
@@ -443,7 +431,6 @@ data class DriverParameters(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
             portAllocation = portAllocation,
-            debugPortAllocation = debugPortAllocation,
             systemProperties = systemProperties,
             useTestClock = useTestClock,
             startNodesInProcess = startNodesInProcess,
@@ -459,7 +446,6 @@ data class DriverParameters(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
             systemProperties: Map<String, String>,
             useTestClock: Boolean,
             startNodesInProcess: Boolean,
@@ -473,7 +459,6 @@ data class DriverParameters(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
             portAllocation = portAllocation,
-            debugPortAllocation = debugPortAllocation,
             systemProperties = systemProperties,
             useTestClock = useTestClock,
             startNodesInProcess = startNodesInProcess,
@@ -492,7 +477,6 @@ data class DriverParameters(
             isDebug: Boolean,
             driverDirectory: Path,
             portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
             systemProperties: Map<String, String>,
             useTestClock: Boolean,
             startNodesInProcess: Boolean,
@@ -508,7 +492,6 @@ data class DriverParameters(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
             portAllocation = portAllocation,
-            debugPortAllocation = debugPortAllocation,
             systemProperties = systemProperties,
             useTestClock = useTestClock,
             startNodesInProcess = startNodesInProcess,
