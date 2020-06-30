@@ -12,7 +12,6 @@ import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
-import net.corda.node.services.statemachine.generateShard
 
 class KilledFlowTransition(
     override val context: TransitionContext,
@@ -121,7 +120,7 @@ class KilledFlowTransition(
                  */
                 var currentSequenceNumber = sessionState.sequenceNumber
                 val errorMessagesWithDeduplication = errorMessages.map {
-                    (MessageIdentifier("XX", generateShard(context.id.toString()), sourceSessionId.toLong, currentSequenceNumber) to it).also { currentSequenceNumber++ }
+                    (MessageIdentifier("XX", sessionState.shardId, sourceSessionId.toLong, currentSequenceNumber) to it).also { currentSequenceNumber++ }
                 }
                 sessionState.copy(bufferedMessages =  sessionState.bufferedMessages + errorMessagesWithDeduplication, sequenceNumber = sessionState.sequenceNumber + errorMessages.size)
             } else {

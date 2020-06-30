@@ -118,6 +118,7 @@
     <ID>ComplexMethod:CordaRPCClient.kt$CordaRPCClientConfiguration$override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:CordaRPCClientTest.kt$CordaRPCClientTest$@Test(timeout=300_000) fun `shutdown command stops the node`()</ID>
     <ID>ComplexMethod:CustomSerializerRegistry.kt$CachingCustomSerializerRegistry$private fun doFindCustomSerializer(clazz: Class&lt;*&gt;, declaredType: Type): AMQPSerializer&lt;Any&gt;?</ID>
+    <ID>ComplexMethod:DeliverSessionMessageTransition.kt$DeliverSessionMessageTransition$private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage, messageIdentifier: MessageIdentifier)</ID>
     <ID>ComplexMethod:DeserializationInput.kt$DeserializationInput$fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any</ID>
     <ID>ComplexMethod:DriverDSLImpl.kt$DriverDSLImpl$override fun start()</ID>
     <ID>ComplexMethod:Expect.kt$ fun &lt;S, E : Any&gt; S.genericExpectEvents( isStrict: Boolean = true, stream: S.((E) -&gt; Unit) -&gt; Unit, expectCompose: () -&gt; ExpectCompose&lt;E&gt; )</ID>
@@ -1721,7 +1722,6 @@
     <ID>UnusedImports:Messaging.kt$import net.corda.node.services.statemachine.DeduplicationId</ID>
     <ID>UnusedImports:NetworkMap.kt$import net.corda.core.node.NodeInfo</ID>
     <ID>UnusedImports:NodeParameters.kt$import net.corda.core.identity.Party</ID>
-    <ID>UnusedImports:P2PMessagingClient.kt$import net.corda.node.services.statemachine.DeduplicationId</ID>
     <ID>UnusedImports:SerializerFactory.kt$import java.io.NotSerializableException</ID>
     <ID>UnusedImports:TransformTypes.kt$import net.corda.core.serialization.CordaSerializationTransformEnumDefaults</ID>
     <ID>UnusedImports:VaultSchema.kt$import net.corda.core.contracts.ContractState</ID>

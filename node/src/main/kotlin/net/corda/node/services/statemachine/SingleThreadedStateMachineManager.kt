@@ -502,7 +502,7 @@ internal class SingleThreadedStateMachineManager(
                     logger.info("Cannot find flow corresponding to session ID - $recipientId.")
                 }
             } else {
-                val event = Event.DeliverSessionMessage(sessionMessage, messageIdentifier.sessionSequenceNumber, deduplicationHandler, sender)
+                val event = Event.DeliverSessionMessage(sessionMessage, messageIdentifier, deduplicationHandler, sender)
                 innerState.withLock {
                     flows[flowId]?.run { fiber.scheduleEvent(event) }
                         // If flow is not running add it to the list of external events to be processed if/when the flow resumes.
@@ -531,9 +531,8 @@ internal class SingleThreadedStateMachineManager(
                 is InitiatedFlowFactory.CorDapp -> null
             }
             startInitiatedFlow(
-                    event.flowId,
+                    event,
                     flowLogic,
-                    event.deduplicationHandler,
                     senderSession,
                     initiatedSessionId,
                     sessionMessage,
@@ -568,24 +567,23 @@ internal class SingleThreadedStateMachineManager(
 
     @Suppress("LongParameterList")
     private fun <A> startInitiatedFlow(
-            flowId: StateMachineRunId,
+            event: ExternalEvent.ExternalMessageEvent,
             flowLogic: FlowLogic<A>,
-            initiatingMessageDeduplicationHandler: DeduplicationHandler,
             peerSession: FlowSessionImpl,
             initiatedSessionId: SessionId,
             initiatingMessage: InitialSessionMessage,
             senderCoreFlowVersion: Int?,
             initiatedFlowInfo: FlowInfo
     ) {
-        val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
+        val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo, event.receivedMessage.uniqueMessageId.shardIdentifier)
         val ourIdentity = ourFirstIdentity
         startFlowInternal(
-                flowId,
+                event.flowId,
                 InvocationContext.peer(peerSession.counterparty.name),
                 flowLogic,
                 flowStart,
                 ourIdentity,
-                initiatingMessageDeduplicationHandler
+                event.deduplicationHandler
         )
     }
 

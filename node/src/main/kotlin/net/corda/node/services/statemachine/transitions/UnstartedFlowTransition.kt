@@ -12,7 +12,6 @@ import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
-import net.corda.node.services.statemachine.generateShard
 
 /**
  * This transition is responsible for starting the flow from a FlowLogic instance. It creates the first checkpoint and
@@ -63,11 +62,12 @@ class UnstartedFlowTransition(
                 } else {
                     -1
                 },
-                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}"
+                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}",
+                shardId = flowStart.shardId
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
-        val messageIdentifier = MessageIdentifier("XC", generateShard(context.id.toString()), flowStart.initiatedSessionId.toLong, 0)
+        val messageIdentifier = MessageIdentifier("XC", flowStart.shardId, flowStart.initiatedSessionId.toLong, 0)
         currentState = currentState.copy(
                 checkpoint = currentState.checkpoint.setSessions(mapOf(flowStart.initiatedSessionId to initiatedState))
         )

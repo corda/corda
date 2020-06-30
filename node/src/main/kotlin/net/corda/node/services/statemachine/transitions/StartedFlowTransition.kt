@@ -231,14 +231,20 @@ class StartedFlowTransition(
             if (sessionState !is SessionState.Uninitiated) {
                 continue
             }
+            sessionState.destination
             val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, sessionState.additionalEntropy, null)
+            val shardId = generateShard(context.id.toString())
             val newSessionState = SessionState.Initiating(
+                    peerParty = sessionState.peerParty,
                     bufferedMessages = emptyList(),
                     rejectionError = null,
                     deduplicationSeed = sessionState.deduplicationSeed,
-                    sequenceNumber = sessionState.sequenceNumber + 1
+                    sequenceNumber = sessionState.sequenceNumber + 1,
+                    receivedMessages = mutableMapOf(),
+                    errors = mutableMapOf(),
+                    shardId = shardId
             )
-            val messageIdentifier = MessageIdentifier("XI", generateShard(context.id.toString()), sourceSessionId.toLong, sessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XI", shardId, sourceSessionId.toLong, sessionState.sequenceNumber)
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
@@ -276,19 +282,24 @@ class StartedFlowTransition(
         val sendInitialActions = messagesByType[SessionState.Uninitiated::class]?.map { (sourceSessionId, sessionState, message) ->
             val uninitiatedSessionState = sessionState as SessionState.Uninitiated
             val initialMessage = createInitialSessionMessage(uninitiatedSessionState.initiatingSubFlow, sourceSessionId, uninitiatedSessionState.additionalEntropy, message)
+            val shardId = generateShard(context.id.toString())
             newSessions[sourceSessionId] = SessionState.Initiating(
+                    peerParty = sessionState.peerParty,
                     bufferedMessages = emptyList(),
                     rejectionError = null,
                     deduplicationSeed = uninitiatedSessionState.deduplicationSeed,
-                    sequenceNumber = uninitiatedSessionState.sequenceNumber + 1
+                    sequenceNumber = uninitiatedSessionState.sequenceNumber + 1,
+                    receivedMessages = mutableMapOf(),
+                    errors = mutableMapOf(),
+                    shardId = shardId
             )
-            val messageIdentifier = MessageIdentifier("XI", generateShard(context.id.toString()), sourceSessionId.toLong, uninitiatedSessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XI", shardId, sourceSessionId.toLong, uninitiatedSessionState.sequenceNumber)
             Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
         } ?: emptyList()
         messagesByType[SessionState.Initiating::class]?.forEach { (sourceSessionId, sessionState, message) ->
             val initiatingSessionState = sessionState as SessionState.Initiating
             val sessionMessage = DataSessionMessage(message)
-            val messageIdentifier = MessageIdentifier("XD", generateShard(context.id.toString()), sourceSessionId.toLong, sessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, sourceSessionId.toLong, sessionState.sequenceNumber)
             val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(messageIdentifier, sessionMessage)
             newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages, sequenceNumber = sessionState.sequenceNumber + 1)
         }
@@ -300,7 +311,7 @@ class StartedFlowTransition(
                 val sessionMessage = DataSessionMessage(message)
                 val sinkSessionId = initiatedSessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                val messageIdentifier = MessageIdentifier("XD", generateShard(context.id.toString()), sinkSessionId.toLong, initiatedSessionState.sequenceNumber)
+                val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, sinkSessionId.toLong, initiatedSessionState.sequenceNumber)
                 newSessions[sessionId] = initiatedSessionState.copy(sequenceNumber = initiatedSessionState.sequenceNumber + 1)
                 Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
             }

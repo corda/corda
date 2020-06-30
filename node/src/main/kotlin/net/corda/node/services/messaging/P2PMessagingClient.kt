@@ -25,7 +25,6 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multiplex
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
@@ -405,22 +404,32 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     internal fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
-            if (!deduplicator.isDuplicate(cordaMessage)) {
-                deduplicator.signalMessageProcessStart(cordaMessage)
-                deliver(cordaMessage, artemisMessage)
+            if (cordaMessage.isSessionInit) {
+                if (!deduplicator.isDuplicate(cordaMessage)) {
+                    deduplicator.signalMessageProcessStart(cordaMessage)
+                    deliver(cordaMessage, artemisMessage, true)
+                } else {
+                    log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
+                    messagingExecutor!!.acknowledge(artemisMessage)
+                }
             } else {
-                log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                messagingExecutor!!.acknowledge(artemisMessage)
+                // non session-init messages are directly handed to the state machine, which is responsible for performing dedup
+                deliver(cordaMessage, artemisMessage, false)
             }
+
         }
     }
 
-    private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {
+    private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage, isSessionInit: Boolean) {
         state.checkNotLocked()
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
             try {
-                deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandler(artemisMessage, msg))
+                if (isSessionInit) {
+                    deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandlerForSessionInitMessages(artemisMessage, msg))
+                } else {
+                    deliverTo(msg, HandlerRegistration(msg.topic, deliverTo), MessageDeduplicationHandlerForRegularMessages(artemisMessage, msg))
+                }
             } catch (e: Exception) {
                 log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
             }
@@ -429,11 +438,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+    private inner class MessageDeduplicationHandlerForSessionInitMessages(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
         override val externalCause: ExternalEvent
             get() = this
         override val flowId: StateMachineRunId by lazy { StateMachineRunId.createRandom() }
-        override val deduplicationHandler: MessageDeduplicationHandler
+        override val deduplicationHandler: MessageDeduplicationHandlerForSessionInitMessages
             get() = this
 
         override fun insideDatabaseTransaction() {
@@ -442,6 +451,27 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         override fun afterDatabaseTransaction() {
             deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId.toDeduplicationId())
+            messagingExecutor!!.acknowledge(artemisMessage)
+        }
+
+        override fun toString(): String {
+            return "${javaClass.simpleName}(${receivedMessage.uniqueMessageId})"
+        }
+    }
+
+    private inner class MessageDeduplicationHandlerForRegularMessages(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val flowId: StateMachineRunId by lazy { StateMachineRunId.createRandom() }
+        override val deduplicationHandler: MessageDeduplicationHandlerForRegularMessages
+            get() = this
+
+        /**
+         * Nothing to do, since deduplication information is kept in the state machine.
+         */
+        override fun insideDatabaseTransaction() {}
+
+        override fun afterDatabaseTransaction() {
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 

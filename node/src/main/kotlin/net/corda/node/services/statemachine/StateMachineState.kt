@@ -218,6 +218,7 @@ sealed class SessionState {
      */
     data class Uninitiated(
             val destination: Destination,
+            val peerParty: Party,
             val initiatingSubFlow: SubFlow.Initiating,
             val sourceSessionId: SessionId,
             val additionalEntropy: Long,
@@ -231,10 +232,14 @@ sealed class SessionState {
      * @property rejectionError if non-null the initiation failed.
      */
     data class Initiating(
+            val peerParty: Party,
             val bufferedMessages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>,
             val rejectionError: FlowError?,
             override val deduplicationSeed: String,
-            val sequenceNumber: Int
+            val sequenceNumber: Int,
+            val receivedMessages: MutableMap<Int, DataSessionMessage>,
+            val errors: MutableMap<Int, FlowError>,
+            val shardId: String
     ) : SessionState()
 
     /**
@@ -255,7 +260,8 @@ sealed class SessionState {
             val errors: MutableMap<Int, FlowError>,
             override val deduplicationSeed: String,
             val sequenceNumber: Int,
-            val lastSequenceNumberProcessed: Int
+            val lastSequenceNumberProcessed: Int,
+            val shardId: String
     ) : SessionState()
 }
 
@@ -288,7 +294,8 @@ sealed class FlowStart {
             val initiatedSessionId: SessionId,
             val initiatingMessage: InitialSessionMessage,
             val senderCoreFlowVersion: Int?,
-            val initiatedFlowInfo: FlowInfo
+            val initiatedFlowInfo: FlowInfo,
+            val shardId: String
     ) : FlowStart() { override fun toString() = "Initiated" }
 }
 

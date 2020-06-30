@@ -20,7 +20,6 @@ import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.SubFlow
-import net.corda.node.services.statemachine.generateShard
 
 /**
  * This is the top level event-handling transition function capable of handling any [Event].
@@ -265,7 +264,7 @@ class TopLevelTransition(
         val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { _, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
-                val messageIdentifier = MessageIdentifier("XE", generateShard(context.id.toString()), state.initiatedState.peerSinkSessionId.toLong, state.sequenceNumber)
+                val messageIdentifier = MessageIdentifier("XE", state.shardId, state.initiatedState.peerSinkSessionId.toLong, state.sequenceNumber)
                 val newSessionState = state.copy(sequenceNumber = state.sequenceNumber + 1)
                 val newSessions = LinkedHashMap(currentState.checkpoint.checkpointState.sessions)
                 newSessions[state.initiatedState.peerSinkSessionId] = newSessionState
@@ -288,7 +287,7 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.destination, event.wellKnownParty, sourceSessionId)
-            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong(), 0))
+            val newSessions = checkpoint.checkpointState.sessions + (sourceSessionId to SessionState.Uninitiated(event.destination, event.wellKnownParty, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong(), 0))
             currentState = currentState.copy(checkpoint = checkpoint.setSessions(newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)
