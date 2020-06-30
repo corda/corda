@@ -415,6 +415,7 @@ data class DriverParameters(
     fun withDjvmCordaSource(djvmCordaSource: List<Path>): DriverParameters = copy(djvmCordaSource = djvmCordaSource)
     fun withEnvironmentVariables(variables : Map<String, String>): DriverParameters = copy(environmentVariables = variables)
 
+    @Suppress("LongParameterList")
     fun copy(
             isDebug: Boolean,
             driverDirectory: Path,
@@ -442,6 +443,7 @@ data class DriverParameters(
             notaryCustomOverrides = emptyMap()
     )
 
+    @Suppress("LongParameterList")
     fun copy(
             isDebug: Boolean,
             driverDirectory: Path,

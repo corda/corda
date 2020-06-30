@@ -218,9 +218,6 @@ class DriverDSLImpl(
         }
     }
 
-    /**
-     * @param connectRetries number of times to try reconnecting before giving up.
-     */
     private fun establishRpc(config: NodeConfig,
                              processDeathFuture: CordaFuture<out Process>,
                              pollInterval: Duration = DEFAULT_CONNECT_POLL_INTERVAL): CordaFuture<CordaRPCOps> {
