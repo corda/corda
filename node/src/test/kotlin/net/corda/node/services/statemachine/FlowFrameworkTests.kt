@@ -883,7 +883,8 @@ class FlowFrameworkTests {
         assertEquals(result0, result1)
     }
 
-    @Test
+    @Test // TODO: this test needs change -> what makes sense is to test this scenario: flow has retried, AND THEN the second request comes in
+            // and gets a [FlowStateMachineHandle] whose future is the old one
     fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
         var firstRun = true
         val semaphore = Semaphore(0)
@@ -977,6 +978,45 @@ class FlowFrameworkTests {
         assertEquals(1, counter.get())
         assertEquals(2, beforeCount.get())
         assertEquals(10, resultsCounter.get())
+    }
+
+
+    @Test
+    fun `on node restart flows -to run- with client id are hook-able`() {
+        val clientID = UUID.randomUUID().toString()
+
+        var run = 0
+        val semaphore = Semaphore(0)
+        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                if (run == 0) {
+                    run++
+                    semaphore.acquire() // make flow wait on first run so it remains in the system on shutdown
+                }
+            }
+        }
+
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
+        val aliceNode = mockNet.restartNode(aliceNode)
+
+        // Wait for the flow to get removed
+        val future = openFuture<StateMachineManager.Change>()
+        aliceNode.smm.track().updates.subscribe {
+            future.set(it)
+        }
+        assertTrue(future.getOrThrow(20.seconds) is StateMachineManager.Change.Removed)
+
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+
+        assertEquals(flowHandle0.id, flowHandle1.id)
+        assertEquals(clientID, flowHandle1.clientID)
+        assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
+    }
+
+    @Test
+    fun `on node restart -paused- flows with client id are hook-able`() {
     }
 
     private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {

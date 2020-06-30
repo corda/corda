@@ -90,7 +90,7 @@ internal class SingleThreadedStateMachineManager(
     private val innerState = StateMachineInnerStateImpl()
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
-        ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
+            ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
     )
     // How many Fibers are running (this includes suspended flows). If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
@@ -168,6 +168,29 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
         }
+
+        // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED -> TODO: RESULTED AND FAILED still need to be fetched
+        // populate [clientIDsToFlowIds] with done futures for -started from checkpoint- flows, as these flows have already started
+        for (flow in fibers) {
+            flow.fiber.clientID?.let {
+                mutex.content.clientIDsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+            }
+        }
+
+        // paused flows do not have a flowStateMachineImpl yet...
+//        for (pausedFlow in pausedFlows) {
+//            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientID?.let {
+//                mutex.content.clientIDsToFlowIds[it] = FlowWithClientIdStatus.Active(
+//                    doneFuture(object : FlowStateMachineHandle<Any> {
+//                        override val logic: Nothing? = null
+//                        override val id: StateMachineRunId = pausedFlow.key
+//                        override val resultFuture: CordaFuture<Any> = openFuture()
+//                        override val clientID: String? = it
+//                    }
+//                ))
+//            }
+//        }
+
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
@@ -285,7 +308,7 @@ internal class SingleThreadedStateMachineManager(
             if (clientID != null) {
                 // wire up this future to the clientIDsToFlowIds[clientID] future
                 val active = mutex.content.clientIDsToFlowIds[clientID] as? FlowWithClientIdStatus.Active
-                active?.flowStateMachineFuture?.captureLater(it)
+                (active?.flowStateMachineFuture as? OpenFuture<FlowStateMachine<*>>)?.captureLater(it)
                     ?: throw java.lang.IllegalStateException("Flow's $flowId client id mapping is in an inconsistent state")
             }
         }

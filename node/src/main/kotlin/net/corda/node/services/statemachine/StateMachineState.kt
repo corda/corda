@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.Destination
@@ -8,8 +9,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -385,7 +385,7 @@ sealed class SubFlowVersion {
 }
 
 sealed class FlowWithClientIdStatus {
-    data class Active(val flowStateMachineFuture: OpenFuture<FlowStateMachine<*>>) : FlowWithClientIdStatus()
+    data class Active(val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>) : FlowWithClientIdStatus()
     data class Removed(val flowId: StateMachineRunId, val removedStatus: Status) : FlowWithClientIdStatus() {
         enum class Status { SUCCEEDED, FAILED }
     }
