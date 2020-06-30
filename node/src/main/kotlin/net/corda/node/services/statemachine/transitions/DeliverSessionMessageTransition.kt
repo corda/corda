@@ -66,7 +66,7 @@ class DeliverSessionMessageTransition(
                     is DataSessionMessage -> dataMessageTransition(existingSession, payload, event.messageIdentifier)
                     is ErrorSessionMessage -> errorMessageTransition(existingSession, payload, event.messageIdentifier)
                     is RejectSessionMessage -> rejectMessageTransition(existingSession, payload)
-                    is EndSessionMessage -> endMessageTransition()
+                    is EndSessionMessage -> endMessageTransition(event.messageIdentifier)
                 }
             }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
@@ -86,6 +86,7 @@ class DeliverSessionMessageTransition(
                         receivedMessages = mutableMapOf(),
                         initiatedState = InitiatedSessionState.Live(message.initiatedSessionId),
                         errors = mutableMapOf(),
+                        toBeTerminated = null,
                         deduplicationSeed = sessionState.deduplicationSeed,
                         sequenceNumber = sessionState.sequenceNumber,
                         lastSequenceNumberProcessed = 0,
@@ -161,7 +162,7 @@ class DeliverSessionMessageTransition(
 
         return when (sessionState) {
             is SessionState.Initiated -> {
-                if (sequenceNumber < sessionState.lastSequenceNumberProcessed) {
+                if (sequenceNumber > sessionState.lastSequenceNumberProcessed) {
                     when (exception) {
                         // reflection used to access private field
                         is UnexpectedFlowEndException -> DeclaredField<Party?>(
@@ -229,7 +230,7 @@ class DeliverSessionMessageTransition(
         }
     }
 
-    private fun TransitionBuilder.endMessageTransition() {
+    private fun TransitionBuilder.endMessageTransition(messageIdentifier: MessageIdentifier) {
         val sessionId = event.sessionMessage.recipientSessionId
         val sessions = currentState.checkpoint.checkpointState.sessions
         val sessionState = sessions[sessionId]
@@ -238,9 +239,7 @@ class DeliverSessionMessageTransition(
         }
         when (sessionState) {
             is SessionState.Initiated -> {
-                // Note: this should be replaced with a buffering of termination signal that's acted upon only when previous messages have been processed.
-                //       That's already done as part of the session close API changes, so not doing it for now to save some time.
-                val newSessionState = sessionState.copy(initiatedState = InitiatedSessionState.Ended)
+                val newSessionState = sessionState.copy(toBeTerminated = messageIdentifier.sessionSequenceNumber)
                 currentState = currentState.copy(
                         checkpoint = currentState.checkpoint.addSession(sessionId to newSessionState)
                 )

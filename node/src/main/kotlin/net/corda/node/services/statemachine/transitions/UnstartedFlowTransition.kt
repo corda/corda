@@ -56,6 +56,7 @@ class UnstartedFlowTransition(
                     mutableMapOf(Pair(0, DataSessionMessage(initiatingMessage.firstPayload)))
                 },
                 errors = mutableMapOf(),
+                toBeTerminated = null,
                 sequenceNumber = 1,
                 lastSequenceNumberProcessed = if (initiatingMessage.firstPayload == null) {
                     0
@@ -67,7 +68,7 @@ class UnstartedFlowTransition(
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
-        val messageIdentifier = MessageIdentifier("XC", flowStart.shardId, flowStart.initiatedSessionId.toLong, 0)
+        val messageIdentifier = MessageIdentifier("XC", flowStart.shardId, initiatingMessage.initiatorSessionId.toLong, 0)
         currentState = currentState.copy(
                 checkpoint = currentState.checkpoint.setSessions(mapOf(flowStart.initiatedSessionId to initiatedState))
         )

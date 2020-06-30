@@ -519,7 +519,7 @@ internal class SingleThreadedStateMachineManager(
     private fun onSessionInit(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent) {
         try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
-            val initiatedSessionId = SessionId.createRandom(secureRandom)
+            val initiatedSessionId = SessionId(event.receivedMessage.uniqueMessageId.sessionIdentifier + 1)
             val senderSession = FlowSessionImpl(sender, sender, initiatedSessionId)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {

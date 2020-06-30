@@ -32,16 +32,47 @@ class StartedFlowTransition(
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        return when (flowIORequest) {
-            is FlowIORequest.Send -> sendTransition(flowIORequest)
-            is FlowIORequest.Receive -> receiveTransition(flowIORequest)
-            is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
-            is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
-            is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
-            is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
-            is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
-            is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
-            FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+        val sessionsToBeTerminated = findSessionsToBeTerminated(flowIORequest, startingState)
+        return if (sessionsToBeTerminated.isNotEmpty()) {
+            terminateSessions(sessionsToBeTerminated)
+        }
+        else {
+            when (flowIORequest) {
+                is FlowIORequest.Send -> sendTransition(flowIORequest)
+                is FlowIORequest.Receive -> receiveTransition(flowIORequest)
+                is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
+                is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
+                is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
+                is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
+                is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
+                is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
+                FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+            }
+        }
+    }
+
+    private fun findSessionsToBeTerminated(flowIORequest: FlowIORequest<*>, startingState: StateMachineState): SessionMap {
+        return startingState.checkpoint.checkpointState.sessions
+                .filter { (_, sessionState) ->
+                    sessionState is SessionState.Initiated &&
+                            sessionState.initiatedState is InitiatedSessionState.Live &&
+                            sessionState.toBeTerminated != null &&
+                            sessionState.toBeTerminated == sessionState.lastSequenceNumberProcessed + 1
+                }
+    }
+
+    private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
+        return builder {
+            val sessionsToRemove = sessionsToBeTerminated.keys
+            sessionsToBeTerminated.forEach { sessionId, sessionState ->
+                val newSessionState = (sessionState as SessionState.Initiated).copy(initiatedState = InitiatedSessionState.Ended)
+                currentState = currentState.copy(
+                        checkpoint = currentState.checkpoint.addSession(sessionId to newSessionState)
+                )
+            }
+            actions.add(Action.RemoveSessionBindings(sessionsToRemove))
+            actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
+            FlowContinuation.ProcessEvents
         }
     }
 
@@ -186,7 +217,7 @@ class StartedFlowTransition(
             val newSessionMap: SessionMap
     )
     private fun pollSessionMessages(sessions: SessionMap, sessionIds: Set<SessionId>): PollResult? {
-        val newSessionMessages = LinkedHashMap(sessions)
+        val newSessionStates = LinkedHashMap(sessions)
         val resultMessages = LinkedHashMap<SessionId, SerializedBytes<Any>>()
         var someNotFound = false
         for (sessionId in sessionIds) {
@@ -200,8 +231,9 @@ class StartedFlowTransition(
                         val nextSequenceNumber = sessionState.lastSequenceNumberProcessed + 1
                         if (messages.containsKey(nextSequenceNumber)) {
                             val newMessage = messages[nextSequenceNumber]
-                            messages.remove(nextSequenceNumber)
-                            newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages, lastSequenceNumberProcessed = nextSequenceNumber)
+                            val newMessages = LinkedHashMap(messages)
+                            newMessages.remove(nextSequenceNumber)
+                            newSessionStates[sessionId] = sessionState.copy(receivedMessages = newMessages, lastSequenceNumberProcessed = nextSequenceNumber)
                             resultMessages[sessionId] = newMessage!!.payload
                         } else {
                             someNotFound = true
@@ -216,7 +248,7 @@ class StartedFlowTransition(
         return if (someNotFound) {
             return null
         } else {
-            PollResult(resultMessages, newSessionMessages)
+            PollResult(resultMessages, newSessionStates)
         }
     }
 
@@ -244,7 +276,8 @@ class StartedFlowTransition(
                     errors = mutableMapOf(),
                     shardId = shardId
             )
-            val messageIdentifier = MessageIdentifier("XI", shardId, sourceSessionId.toLong, sessionState.sequenceNumber)
+            val otherSideSession = sourceSessionId.toLong + 1
+            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSession, sessionState.sequenceNumber)
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
@@ -293,13 +326,15 @@ class StartedFlowTransition(
                     errors = mutableMapOf(),
                     shardId = shardId
             )
-            val messageIdentifier = MessageIdentifier("XI", shardId, sourceSessionId.toLong, uninitiatedSessionState.sequenceNumber)
+            val otherSideSessionId = sourceSessionId.toLong + 1
+            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSessionId, uninitiatedSessionState.sequenceNumber)
             Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
         } ?: emptyList()
         messagesByType[SessionState.Initiating::class]?.forEach { (sourceSessionId, sessionState, message) ->
             val initiatingSessionState = sessionState as SessionState.Initiating
             val sessionMessage = DataSessionMessage(message)
-            val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, sourceSessionId.toLong, sessionState.sequenceNumber)
+            val otherSideSessionId = sourceSessionId.toLong + 1
+            val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, otherSideSessionId, sessionState.sequenceNumber)
             val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(messageIdentifier, sessionMessage)
             newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages, sequenceNumber = sessionState.sequenceNumber + 1)
         }

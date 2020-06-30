@@ -246,6 +246,7 @@ sealed class SessionState {
      * We have received a confirmation, the peer party and session id is resolved.
      * @property errors if not empty the session is in an errored state.
      * @property sequenceNumber the sequence number that corresponds to the next message to be sent.
+     * @property toBeTerminated whether the session has received a session-end message (and its corresponding sequence number).
      * @property lastSequenceNumberProcessed the last sequence number that has been processed.
      *           This value corresponds to the sequence number of the last message that has been processed.
      *           In case of session initiation, there are two different cases:
@@ -258,6 +259,7 @@ sealed class SessionState {
             val receivedMessages: MutableMap<Int, DataSessionMessage>,
             val initiatedState: InitiatedSessionState,
             val errors: MutableMap<Int, FlowError>,
+            val toBeTerminated: Int?,
             override val deduplicationSeed: String,
             val sequenceNumber: Int,
             val lastSequenceNumberProcessed: Int,
