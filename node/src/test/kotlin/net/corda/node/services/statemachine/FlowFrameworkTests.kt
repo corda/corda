@@ -986,6 +986,7 @@ class FlowFrameworkTests {
         val clientID = UUID.randomUUID().toString()
 
         var run = 0
+        var noSecondFlowWasSpawned = 0
         val semaphore = Semaphore(0)
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
@@ -994,6 +995,8 @@ class FlowFrameworkTests {
                     run++
                     semaphore.acquire() // make flow wait on first run so it remains in the system on shutdown
                 }
+
+                noSecondFlowWasSpawned++
             }
         }
 
@@ -1013,6 +1016,7 @@ class FlowFrameworkTests {
         assertEquals(flowHandle0.id, flowHandle1.id)
         assertEquals(clientID, flowHandle1.clientID)
         assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
+        assertEquals(1, noSecondFlowWasSpawned)
     }
 
     @Test
