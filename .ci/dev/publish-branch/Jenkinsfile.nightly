@@ -11,7 +11,6 @@ pipeline {
         timestamps()
         ansiColor('xterm')
         overrideIndexTriggers(false)
-        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         timeout(time: 3, unit: 'HOURS')
     }
 
@@ -24,6 +23,7 @@ pipeline {
         // in the name
         ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish Nightly to Artifactory"
                 .replaceAll("/", " :: ")
+        DOCKER_URL = "https://index.docker.io/v1/"
     }
 
     stages {
@@ -56,6 +56,17 @@ pipeline {
                         serverId: 'R3-Artifactory',
                         buildName: env.ARTIFACTORY_BUILD_NAME
                 )
+            }
+        }
+
+        stage('Publish Nightly to Docker Hub') {
+            steps {
+                withCredentials([
+                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "./gradlew pushOfficialImages"
+                }
             }
         }
     }
