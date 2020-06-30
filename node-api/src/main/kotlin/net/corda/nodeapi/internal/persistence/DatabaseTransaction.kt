@@ -6,6 +6,7 @@ import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import java.sql.Connection
+import java.sql.SQLException
 import java.util.UUID
 import javax.persistence.EntityManager
 
@@ -79,6 +80,7 @@ class DatabaseTransaction(
         committed = true
     }
 
+    @Throws(SQLException::class)
     fun rollback() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.clear()
@@ -89,16 +91,20 @@ class DatabaseTransaction(
         clearException()
     }
 
+    @Throws(SQLException::class)
     fun close() {
-        if (sessionDelegate.isInitialized() && session.isOpen) {
-            session.close()
+        try {
+            if (sessionDelegate.isInitialized() && session.isOpen) {
+                session.close()
+            }
+            if (database.closeConnection) {
+                connection.close()
+            }
+        } finally {
+            clearException()
+            contextTransactionOrNull = outerTransaction
         }
-        if (database.closeConnection) {
-            connection.close()
-        }
-        clearException()
 
-        contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {
                 closed = true

@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransactionException
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
+import java.sql.SQLException
 import javax.persistence.OptimisticLockException
 
 /**
@@ -20,8 +21,8 @@ import javax.persistence.OptimisticLockException
  * completely aborted to avoid error loops.
  */
 class TransitionExecutorImpl(
-        val secureRandom: SecureRandom,
-        val database: CordaPersistence
+    val secureRandom: SecureRandom,
+    val database: CordaPersistence
 ) : TransitionExecutor {
     override fun forceRemoveFlow(id: StateMachineRunId) {}
 
@@ -32,33 +33,44 @@ class TransitionExecutorImpl(
     @Suppress("NestedBlockDepth", "ReturnCount")
     @Suspendable
     override fun executeTransition(
-            fiber: FlowFiber,
-            previousState: StateMachineState,
-            event: Event,
-            transition: TransitionResult,
-            actionExecutor: ActionExecutor
+        fiber: FlowFiber,
+        previousState: StateMachineState,
+        event: Event,
+        transition: TransitionResult,
+        actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
         contextDatabase = database
         for (action in transition.actions) {
             try {
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Exception) {
-                contextTransactionOrNull?.close()
+                rollbackTransactionOnError()
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
-                    // If we errored while transitioning to an error state then we cannot record the additional
-                    // error as that may result in an infinite loop, e.g. error propagation fails -> record error -> propagate fails again.
-                    // Instead we just keep around the old error state and wait for a new schedule, perhaps
-                    // triggered from a flow hospital
-                    log.warn("Error while executing $action during transition to errored state, aborting transition", exception)
-                    // CORDA-3354 - Go to the hospital with the new error that has occurred
-                    // while already in a error state (as this error could be for a different reason)
-                    return Pair(FlowContinuation.Abort, previousState.copy(isFlowResumed = false))
+                    log.warn("Error while executing $action, with error event $event, updating errored state", exception)
+
+                    val newState = previousState.copy(
+                        checkpoint = previousState.checkpoint.copy(
+                            errorState = previousState.checkpoint.errorState.addErrors(
+                                listOf(
+                                    FlowError(
+                                        secureRandom.nextLong(),
+                                        ErrorStateTransitionException(exception)
+                                    )
+                                )
+                            )
+                        ),
+                        isFlowResumed = false
+                    )
+
+                    return Pair(FlowContinuation.ProcessEvents, newState)
                 } else {
                     // Otherwise error the state manually keeping the old flow state and schedule a DoRemainingWork
                     // to trigger error propagation
-                    if(previousState.isRemoved && exception is OptimisticLockException) {
-                        log.debug("Flow has been killed and the following error is likely due to the flow's checkpoint being deleted. " +
-                                "Occurred while executing $action, with event $event", exception)
+                    if (log.isDebugEnabled && previousState.isRemoved && exception is OptimisticLockException) {
+                        log.debug(
+                            "Flow has been killed and the following error is likely due to the flow's checkpoint being deleted. " +
+                                    "Occurred while executing $action, with event $event", exception
+                        )
                     } else {
                         log.info("Error while executing $action, with event $event, erroring state", exception)
                     }
@@ -76,12 +88,12 @@ class TransitionExecutorImpl(
                         }
 
                     val newState = previousState.copy(
-                            checkpoint = previousState.checkpoint.copy(
-                                    errorState = previousState.checkpoint.errorState.addErrors(
-                                            listOf(FlowError(secureRandom.nextLong(), stateTransitionOrDatabaseTransactionException))
-                                    )
-                            ),
-                            isFlowResumed = false
+                        checkpoint = previousState.checkpoint.copy(
+                            errorState = previousState.checkpoint.errorState.addErrors(
+                                listOf(FlowError(secureRandom.nextLong(), stateTransitionOrDatabaseTransactionException))
+                            )
+                        ),
+                        isFlowResumed = false
                     )
                     fiber.scheduleEvent(Event.DoRemainingWork)
                     return Pair(FlowContinuation.ProcessEvents, newState)
@@ -89,5 +101,26 @@ class TransitionExecutorImpl(
             }
         }
         return Pair(transition.continuation, transition.newState)
+    }
+
+    private fun rollbackTransactionOnError() {
+        contextTransactionOrNull?.run {
+            try {
+                rollback()
+            } catch (rollbackException: SQLException) {
+                log.info(
+                    "Error rolling back database transaction from a previous error, continuing error handling for the original error",
+                    rollbackException
+                )
+            }
+            try {
+                close()
+            } catch (rollbackException: SQLException) {
+                log.info(
+                    "Error closing database transaction from a previous error, continuing error handling for the original error",
+                    rollbackException
+                )
+            }
+        }
     }
 }

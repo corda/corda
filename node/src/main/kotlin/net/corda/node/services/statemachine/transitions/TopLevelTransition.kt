@@ -53,7 +53,7 @@ class TopLevelTransition(
 
     private fun errorTransition(event: Event.Error): TransitionResult {
         return builder {
-            freshErrorTransition(event.exception)
+            freshErrorTransition(event.exception, event.rollback)
             FlowContinuation.ProcessEvents
         }
     }
@@ -292,9 +292,7 @@ class TopLevelTransition(
     private fun retryFlowFromSafePointTransition(startingState: StateMachineState): TransitionResult {
         return builder {
             // Need to create a flow from the prior checkpoint or flow initiation.
-            actions.add(Action.CreateTransaction)
             actions.add(Action.RetryFlowFromSafePoint(startingState))
-            actions.add(Action.CommitTransaction)
             FlowContinuation.Abort
         }
     }
