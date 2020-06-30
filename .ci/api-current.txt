@@ -7503,48 +7503,54 @@ public interface net.corda.testing.driver.DriverDSL
 public final class net.corda.testing.driver.DriverParameters extends java.lang.Object
   public <init>()
   public <init>(java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, int, kotlin.jvm.internal.DefaultConstructorMarker)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map, boolean, boolean, boolean, java.util.List, java.util.List, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map, boolean, java.util.Collection, java.nio.file.Path, java.util.List, java.util.Map, int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean)
   public final boolean component1()
   @NotNull
-  public final java.util.List<String> component10()
+  public final net.corda.testing.driver.JmxPolicy component10()
   @NotNull
-  public final net.corda.testing.driver.JmxPolicy component11()
+  public final net.corda.core.node.NetworkParameters component11()
   @NotNull
-  public final net.corda.core.node.NetworkParameters component12()
-  @NotNull
-  public final java.util.Map<String, Object> component13()
-  public final boolean component14()
+  public final java.util.Map<String, Object> component12()
+  public final boolean component13()
   @Nullable
-  public final java.util.Collection<net.corda.testing.node.TestCordapp> component15()
+  public final java.util.Collection<net.corda.testing.node.TestCordapp> component14()
+  @Nullable
+  public final java.nio.file.Path component15()
+  @NotNull
+  public final java.util.List<java.nio.file.Path> component16()
+  @NotNull
+  public final java.util.Map<String, String> component17()
   @NotNull
   public final java.nio.file.Path component2()
   @NotNull
   public final net.corda.testing.driver.PortAllocation component3()
   @NotNull
-  public final net.corda.testing.driver.PortAllocation component4()
-  @NotNull
-  public final java.util.Map<String, String> component5()
+  public final java.util.Map<String, String> component4()
+  public final boolean component5()
   public final boolean component6()
   public final boolean component7()
-  public final boolean component8()
   @NotNull
-  public final java.util.List<net.corda.testing.node.NotarySpec> component9()
+  public final java.util.List<net.corda.testing.node.NotarySpec> component8()
   @NotNull
-  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
+  public final java.util.List<String> component9()
   @NotNull
-  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
   @NotNull
-  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Set<? extends net.corda.testing.node.TestCordapp>)
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
+  @NotNull
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, java.util.Collection<? extends net.corda.testing.node.TestCordapp>, java.nio.file.Path, java.util.List<? extends java.nio.file.Path>, java.util.Map<String, String>)
+  @NotNull
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Set<? extends net.corda.testing.node.TestCordapp>)
   public boolean equals(Object)
   @Nullable
   public final java.util.Collection<net.corda.testing.node.TestCordapp> getCordappsForAllNodes()
-  @NotNull
-  public final net.corda.testing.driver.PortAllocation getDebugPortAllocation()
   @NotNull
   public final java.nio.file.Path getDriverDirectory()
   @NotNull
@@ -7571,8 +7577,6 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   public String toString()
   @NotNull
   public final net.corda.testing.driver.DriverParameters withCordappsForAllNodes(java.util.Collection<? extends net.corda.testing.node.TestCordapp>)
-  @NotNull
-  public final net.corda.testing.driver.DriverParameters withDebugPortAllocation(net.corda.testing.driver.PortAllocation)
   @NotNull
   public final net.corda.testing.driver.DriverParameters withDriverDirectory(java.nio.file.Path)
   @NotNull
