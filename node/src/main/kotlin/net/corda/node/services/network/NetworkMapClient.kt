@@ -31,7 +31,6 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
-    private val networkMapUrlV2 = URL("$compatibilityZoneURL/network-map/v2")
     private lateinit var trustRoot: X509Certificate
 
     fun start(trustRoot: X509Certificate) {
@@ -85,7 +84,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 
     fun getNodeInfos(): List<NodeInfo> {
-        val url = URL("$networkMapUrlV2/node-infos")
+        val url = URL("$networkMapUrl/node-infos")
         logger.trace { "Fetching node infos from $url." }
         val verifiedNodeInfo = url.openHttpConnection().responseAs<List<SignedNodeInfo>>().map { it.verified() }
         logger.trace { "Fetched node infos successfully. Node Infos size: ${verifiedNodeInfo.size}" }

@@ -207,7 +207,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         (allHashesFromNetworkMap - nodeInfos.map { it.serialize().sha256() }).forEach {
             logger.warn("Error encountered when downloading node info '$it', skipping...")
         }
-        networkMapCache.addOrUpdateNodes(networkMapClient!!.getNodeInfos())
+        networkMapCache.addOrUpdateNodes(nodeInfos)
     }
 
     private fun updateNodeInfosV1(allHashesFromNetworkMap: Set<SecureHash>, allNodeHashes: List<SecureHash>, networkMapClient: NetworkMapClient) {

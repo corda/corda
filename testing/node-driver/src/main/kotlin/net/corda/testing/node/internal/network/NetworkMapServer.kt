@@ -209,7 +209,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         }
 
         @GET
-        @Path("v2/node-infos")
+        @Path("node-infos")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNodeInfos(): Response =
                 Response.ok(nodeInfoMap.values.toList().serialize().bytes).build()
