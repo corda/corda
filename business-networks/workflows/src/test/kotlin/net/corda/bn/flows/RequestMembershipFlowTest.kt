@@ -31,11 +31,9 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
         val invalidNetworkId = "invalid-network-id"
 
-        // this would also fail with `MembershipNotFoundException`, however this will fail with `BusinessNetworkNotFoundException` since no
-        // membership state with `networkId` exists on `regularMember` vault yet. This can be "fixed" when we introduce flow for revocation
-        // of memberships since then we would have nodes having leftover membership states with `networkId` and their state wouldn't be
-        // present due to revocation.
-        assertFailsWith<BusinessNetworkNotFoundException> { runRequestMembershipFlow(regularMember, regularMember, networkId) }
+        val membership = runRequestAndActivateMembershipFlows(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
+        runRevokeMembershipFlow(authorisedMember, membership.linearId)
+        assertFailsWith<MembershipNotFoundException> { runRequestMembershipFlow(regularMember, regularMember, networkId) }
 
         assertFailsWith<BusinessNetworkNotFoundException> { runRequestMembershipFlow(regularMember, authorisedMember, invalidNetworkId) }
     }
