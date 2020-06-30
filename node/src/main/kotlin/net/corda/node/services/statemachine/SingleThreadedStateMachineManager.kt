@@ -24,6 +24,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -280,16 +281,17 @@ internal class SingleThreadedStateMachineManager(
                         when (flowWithClientIdStatus) {
                             is FlowWithClientIdStatus.Active -> flowWithClientIdStatus.flowStateMachineFuture
                             is FlowWithClientIdStatus.Removed -> {
-                                doneFuture(object : FlowStateMachineHandle<A> {
+                                doneFuture(object : FlowStateMachineHandle<Any> {
                                     override val logic: Nothing? = null
                                     override val id: StateMachineRunId = flowWithClientIdStatus.flowId
                                     // The following future will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
-                                    override val resultFuture: CordaFuture<A> = doneFuture(5) as CordaFuture<A>
+                                    override val resultFuture: CordaFuture<Any> = doneFuture(5)
                                     override val clientID: String? = clientID
                                 })
                             }
                         }
-                    return@startFlow future as CordaFuture<FlowStateMachine<A>>
+                    return@startFlow uncheckedCast(future)
+
                 } ?: clientIDsToFlowIds.putIfAbsent(clientID, FlowWithClientIdStatus.Active(openFuture()))
             }
 
