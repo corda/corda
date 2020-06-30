@@ -14,20 +14,20 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 /**
- * This flow is initiated by any member authorised to activate membership. Queries for the membership with [membershipId] linear ID and
- * moves it to [MembershipStatus.ACTIVE] status. Transaction is signed by all active members authorised to modify membership and stored on
- * ledgers of all members authorised to modify membership and on activated member's ledger.
+ * This flow is initiated by any member authorised to suspend membership. Queries for the membership with [membershipId] linear ID and
+ * moves it to [MembershipStatus.SUSPENDED] status. Transaction is signed by all active members authorised to modify membership and stored
+ * on ledgers of all members authorised to modify membership and on suspended member's ledger.
  *
- * If this is new onboarded member (it's membership was in pending status before activation), it will receive all "authorised to modify
+ * If this is new onboarded member (it's membership was in pending status before suspension), it will receive all "authorised to modify
  * membership" member's membership states. The new member will also receive all non revoked memberships if it is authorised to modify
  * memberships.
  *
- * @property membershipId ID of the membership to be activated.
+ * @property membershipId ID of the membership to be suspended.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
 @StartableByRPC
-class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
+class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -38,16 +38,16 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
         val auth = BNUtils.loadBNMemberAuth()
-        authorise(networkId, databaseService) { auth.canActivateMembership(it) }
+        authorise(networkId, databaseService) { auth.canSuspendMembership(it) }
 
         // fetch observers and signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId, auth).toSet()
         val observers = authorisedMemberships.map { it.state.data.identity }.toSet() + membership.state.data.identity - ourIdentity
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity }
+        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity } - membership.state.data.identity
 
         // building transaction
         val outputMembership = membership.state.data.copy(
-                status = MembershipStatus.ACTIVE,
+                status = MembershipStatus.SUSPENDED,
                 modified = serviceHub.clock.instant(),
                 participants = (observers + ourIdentity).toList()
         )
@@ -55,14 +55,14 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
                 .addOutputState(outputMembership)
-                .addCommand(MembershipContract.Commands.Activate(requiredSigners), requiredSigners)
+                .addCommand(MembershipContract.Commands.Suspend(requiredSigners), requiredSigners)
         builder.verify(serviceHub)
 
         // send info to observers whether they need to sign the transaction
         val observerSessions = observers.map { initiateFlow(it) }
         val finalisedTransaction = collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
 
-        // send authorised memberships to new activated (status moved from PENDING to ACTIVE)
+        // send authorised memberships to new suspended member (status moved from PENDING to SUSPENDED)
         // also send all non revoked memberships (ones that can be modified) if new activated member is authorised to modify them
         if (membership.state.data.isPending()) {
             onboardMembershipSync(networkId, outputMembership, authorisedMemberships, observerSessions, auth, databaseService)
@@ -72,14 +72,14 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
     }
 }
 
-@InitiatedBy(ActivateMembershipFlow::class)
-class ActivateMembershipResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+@InitiatedBy(SuspendMembershipFlow::class)
+class SuspendMembershipFlowResponder(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {
         signAndReceiveFinalisedTransaction(session) {
-            if (it.value !is MembershipContract.Commands.Activate) {
-                throw FlowException("Only Activate command is allowed")
+            if (it.value !is MembershipContract.Commands.Suspend) {
+                throw FlowException("Only Suspend command is allowed")
             }
         }
         receiveMemberships(session)
