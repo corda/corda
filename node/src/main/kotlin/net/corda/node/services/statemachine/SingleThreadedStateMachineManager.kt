@@ -171,7 +171,6 @@ internal class SingleThreadedStateMachineManager(
         }
 
         // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED -> TODO: RESULTED AND FAILED still need to be fetched
-        // populate [clientIDsToFlowIds] with done futures for -started from checkpoint- flows, as these flows have already started
         for (flow in fibers) {
             flow.fiber.clientID?.let {
                 mutex.content.clientIDsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
