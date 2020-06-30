@@ -1054,7 +1054,6 @@ class FlowFrameworkTests {
 
         assertEquals(flowHandle0.id, flowHandle1.id)
         assertEquals(clientID, flowHandle1.clientID)
-        // Unpause the flow
         aliceNode.smm.unPauseFlow(flowHandle1.id)
         assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
         assertEquals(1, noSecondFlowWasSpawned)
