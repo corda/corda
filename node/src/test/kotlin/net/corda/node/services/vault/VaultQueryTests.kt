@@ -501,7 +501,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(queriedStates).containsExactlyElementsOf(allStates)
         }
     }
-    
+
+    @Ignore
     @Test(timeout=300_000)
     fun `query with sort criteria and pagination on large volume of states should complete in time`() {
         val numberOfStates = 1000
