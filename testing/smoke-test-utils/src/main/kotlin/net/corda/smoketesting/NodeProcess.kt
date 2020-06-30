@@ -146,6 +146,7 @@ class NodeProcess(
         private fun createSchema(nodeDir: Path){
             val process = startNode(nodeDir, arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas"))
             if (!process.waitFor(3, MINUTES)) {
+                process.destroy()
                 throw SchemaCreationTimedOutError(nodeDir)
             }
             if (process.exitValue() != 0){
