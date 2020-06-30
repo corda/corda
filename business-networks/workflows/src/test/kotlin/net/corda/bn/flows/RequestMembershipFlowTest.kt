@@ -64,16 +64,6 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
     }
 
     @Test(timeout = 300_000)
-    fun `request membership flow should fail if invalid notary argument is provided`() {
-        val authorisedMember = authorisedMembers.first()
-        val regularMember = regularMembers.first()
-
-        val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
-
-        assertFailsWith<UnexpectedFlowEndException> { runRequestMembershipFlow(regularMember, authorisedMember, networkId, authorisedMember.identity()) }
-    }
-
-    @Test(timeout = 300_000)
     fun `request membership flow happy path`() {
         val authorisedMember = authorisedMembers.first()
         val regularMember = regularMembers.first()
@@ -91,7 +81,7 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             assertTrue(data is MembershipState)
             val data = data as MembershipState
             assertEquals(regularMember.identity(), data.identity.cordaIdentity)
-            assertEquals(DummyIdentity("dummy-identity"), data.identity.additionalIdentity)
+            assertEquals(DummyIdentity("dummy-identity"), data.identity.businessIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.PENDING, data.status)
         }

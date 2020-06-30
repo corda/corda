@@ -76,7 +76,7 @@ class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             assertTrue(data is MembershipState)
             val data = data as MembershipState
             assertEquals(regularMember.identity(), data.identity.cordaIdentity)
-            assertNull(data.identity.additionalIdentity)
+            assertNull(data.identity.businessIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.SUSPENDED, data.status)
         }

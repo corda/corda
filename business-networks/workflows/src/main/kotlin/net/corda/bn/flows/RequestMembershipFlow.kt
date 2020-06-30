@@ -23,7 +23,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 
 @CordaSerializable
-data class MembershipRequest(val networkId: String, val additionalIdentity: BNIdentity?, val notary: Party?)
+data class MembershipRequest(val networkId: String, val businessIdentity: BNIdentity?, val notary: Party?)
 
 /**
  * This flow is initiated by new potential member who requests membership activation from authorised Business Network member. Issues
@@ -31,7 +31,7 @@ data class MembershipRequest(val networkId: String, val additionalIdentity: BNId
  *
  * @property authorisedParty Identity of authorised member from whom the membership activation is requested.
  * @property networkId ID of the Business Network that potential new member wants to join.
- * @property additionalIdentity Custom additional identity to be given to membership.
+ * @property businessIdentity Custom business identity to be given to membership.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
@@ -39,7 +39,7 @@ data class MembershipRequest(val networkId: String, val additionalIdentity: BNId
 class RequestMembershipFlow(
         private val authorisedParty: Party,
         private val networkId: String,
-        private val additionalIdentity: BNIdentity? = null,
+        private val businessIdentity: BNIdentity? = null,
         private val notary: Party? = null
 ) : FlowLogic<SignedTransaction>() {
 
@@ -53,7 +53,7 @@ class RequestMembershipFlow(
 
         // send request to authorised member
         val authorisedPartySession = initiateFlow(authorisedParty)
-        authorisedPartySession.send(MembershipRequest(networkId, additionalIdentity, notary))
+        authorisedPartySession.send(MembershipRequest(networkId, businessIdentity, notary))
 
         // sign transaction
         val signResponder = object : SignTransactionFlow(authorisedPartySession) {
@@ -85,7 +85,7 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
     @Suspendable
     override fun call() {
         // receive network ID
-        val (networkId, additionalIdentity, notary) = session.receive<MembershipRequest>().unwrap { it }
+        val (networkId, businessIdentity, notary) = session.receive<MembershipRequest>().unwrap { it }
 
         // check whether party is authorised to activate membership
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
@@ -98,7 +98,7 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
         // build transaction
         val counterparty = session.counterparty
         val membershipState = MembershipState(
-                identity = MembershipIdentity(counterparty, additionalIdentity),
+                identity = MembershipIdentity(counterparty, businessIdentity),
                 networkId = networkId,
                 status = MembershipStatus.PENDING,
                 participants = (observers + ourIdentity + counterparty).toList()

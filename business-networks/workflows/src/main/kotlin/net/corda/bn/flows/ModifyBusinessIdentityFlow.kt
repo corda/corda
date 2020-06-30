@@ -14,20 +14,20 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
 /**
- * This flow is initiated by any member authorised to modify membership's additional identity. Queries for the membership with
- * [membershipId] linear ID and overwrites [MembershipState.identity.additionalIdentity] field with [additionalIdentity] value. Transaction
+ * This flow is initiated by any member authorised to modify membership's business identity. Queries for the membership with
+ * [membershipId] linear ID and overwrites [MembershipState.identity.businessIdentity] field with [businessIdentity] value. Transaction
  * is signed by all active members authorised to modify membership and stored on ledger of all members authorised to modify membership and
  * on modified member's ledger.
  *
- * @property membershipId ID of the membership to modify additional identity.
- * @property additionalIdentity Custom additional identity to be given to membership.
+ * @property membershipId ID of the membership to modify business identity.
+ * @property businessIdentity Custom business identity to be given to membership.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
 @StartableByRPC
-class ModifyAdditionalIdentityFlow(
+class ModifyBusinessIdentityFlow(
         private val membershipId: UniqueIdentifier,
-        private val additionalIdentity: BNIdentity,
+        private val businessIdentity: BNIdentity,
         private val notary: Party? = null
 ) : MembershipManagementFlow<SignedTransaction>() {
 
@@ -39,7 +39,7 @@ class ModifyAdditionalIdentityFlow(
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
-        authorise(networkId, databaseService) { it.canModifyAdditionalIdentity() }
+        authorise(networkId, databaseService) { it.canModifyBusinessIdentity() }
 
         // fetch observers and signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
@@ -56,7 +56,7 @@ class ModifyAdditionalIdentityFlow(
         // building transaction
         val outputMembership = membership.state.data.run {
             copy(
-                    identity = identity.copy(additionalIdentity = additionalIdentity),
+                    identity = identity.copy(businessIdentity = businessIdentity),
                     modified = serviceHub.clock.instant(),
                     participants = (observers + ourIdentity).toList()
             )
@@ -65,7 +65,7 @@ class ModifyAdditionalIdentityFlow(
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
                 .addOutputState(outputMembership)
-                .addCommand(MembershipContract.Commands.ModifyAdditionalIdentity(requiredSigners, ourIdentity), requiredSigners)
+                .addCommand(MembershipContract.Commands.ModifyBusinessIdentity(requiredSigners, ourIdentity), requiredSigners)
         builder.verify(serviceHub)
 
         val observerSessions = observers.map { initiateFlow(it) }
@@ -73,14 +73,14 @@ class ModifyAdditionalIdentityFlow(
     }
 }
 
-@InitiatedBy(ModifyAdditionalIdentityFlow::class)
-class ModifyAdditionalIdentityResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+@InitiatedBy(ModifyBusinessIdentityFlow::class)
+class ModifyBusinessIdentityResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {
         signAndReceiveFinalisedTransaction(session) {
-            if (it.value !is MembershipContract.Commands.ModifyAdditionalIdentity) {
-                throw FlowException("Only ModifyAdditionalIdentity command is allowed")
+            if (it.value !is MembershipContract.Commands.ModifyBusinessIdentity) {
+                throw FlowException("Only ModifyBusinessIdentity command is allowed")
             }
         }
     }

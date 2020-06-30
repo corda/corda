@@ -30,7 +30,7 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
     @Test(timeout = 300_000)
     fun `create business network flow happy path`() {
         val authorisedMember = authorisedMembers.first()
-        val (membership, command) = runCreateBusinessNetworkFlow(authorisedMember, additionalIdentity = DummyIdentity("dummy-identity")).run {
+        val (membership, command) = runCreateBusinessNetworkFlow(authorisedMember, businessIdentity = DummyIdentity("dummy-identity")).run {
             verifyRequiredSignatures()
             tx.outputs.single() to tx.commands.single()
         }
@@ -40,7 +40,7 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
             assertTrue(data is MembershipState)
             val data = data as MembershipState
             assertEquals(authorisedMember.identity(), data.identity.cordaIdentity)
-            assertEquals(DummyIdentity("dummy-identity"), data.identity.additionalIdentity)
+            assertEquals(DummyIdentity("dummy-identity"), data.identity.businessIdentity)
             assertEquals(MembershipStatus.ACTIVE, data.status)
 
             data.networkId
