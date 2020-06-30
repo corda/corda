@@ -1,10 +1,8 @@
 package net.corda.node.services.network
 
-import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.post
 import net.corda.core.internal.responseAs
@@ -16,7 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.utilities.registration.cacheControl
-import net.corda.node.utilities.registration.serverVersion
+import net.corda.node.utilities.registration.cordaServerVersion
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
@@ -65,7 +63,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
-        val version = connection.serverVersion
+        val version = connection.cordaServerVersion
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout, version)
     }

@@ -70,7 +70,7 @@ val HttpURLConnection.cacheControl: CacheControl
         return CacheControl.parse(Headers.of(headerFields.filterKeys { it != null }.mapValues { it.value[0] }))
     }
 
-val HttpURLConnection.serverVersion: String
+val HttpURLConnection.cordaServerVersion: String
     get() {
         return headerFields["X-Corda-Server-Version"]?.singleOrNull() ?: "1"
     }

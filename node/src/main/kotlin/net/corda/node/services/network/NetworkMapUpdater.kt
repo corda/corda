@@ -250,6 +250,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun getPrivateNetworkNodeHashes(version: String): List<SecureHash> {
+        // private networks are not supported by latest versions of Network Map
+        // for compatibility reasons, this call is still present for new nodes that communicate with old Network Map service versions
+        // but can be omitted if we know that the version of the Network Map is recent enough
         return if (version == "1") {
             extraNetworkMapKeys.flatMap {
                 try {
