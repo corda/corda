@@ -54,7 +54,7 @@ data class MembershipState(
     fun canSuspendMembership() = AdminPermission.CAN_SUSPEND_MEMBERSHIP in permissions()
     fun canRevokeMembership() = AdminPermission.CAN_REVOKE_MEMBERSHIP in permissions()
     fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
-    fun canModifyMembership() = permissions().isNotEmpty()
+    fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
 
 /**

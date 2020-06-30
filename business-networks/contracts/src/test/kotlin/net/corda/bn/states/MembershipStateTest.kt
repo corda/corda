@@ -51,13 +51,22 @@ class MembershipStateTest {
             assertFalse(canModifyMembership())
         }
 
-        val customRole = BNRole("role", setOf(AdminPermission.CAN_ACTIVATE_MEMBERSHIP, mock<BNPermission>()))
-        mockMembership(roles = setOf(customRole)).apply {
+        val adminCustomRole = BNRole("admin-role", setOf(AdminPermission.CAN_ACTIVATE_MEMBERSHIP, mock<BNPermission>()))
+        mockMembership(roles = setOf(adminCustomRole)).apply {
             assertTrue(canActivateMembership())
             assertFalse(canSuspendMembership())
             assertFalse(canRevokeMembership())
             assertFalse(canModifyRoles())
             assertTrue(canModifyMembership())
+        }
+
+        val memberCustomRole = BNRole("member-role", setOf(mock()))
+        mockMembership(roles = setOf(memberCustomRole)).apply {
+            assertFalse(canActivateMembership())
+            assertFalse(canSuspendMembership())
+            assertFalse(canRevokeMembership())
+            assertFalse(canModifyRoles())
+            assertFalse(canModifyMembership())
         }
     }
 }

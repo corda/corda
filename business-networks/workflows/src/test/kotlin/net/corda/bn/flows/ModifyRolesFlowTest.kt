@@ -32,15 +32,15 @@ class ModifyRolesFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembe
         assertFailsWith<MembershipNotFoundException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
 
         runRequestAndSuspendMembershipFlow(nonMember, authorisedMember, networkId).apply {
-            val membership = tx.outputStates.single() as MembershipState
+            val initiatorMembership = tx.outputStates.single() as MembershipState
 
             // make `nonMember` authorised to modify membership so he fetches all members to be modified
-            runModifyRolesFlow(authorisedMember, membership.linearId, setOf(BNORole()))
+            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(BNORole()))
             assertFailsWith<IllegalMembershipStatusException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
 
             // remove permissions from `nonMember` and activate membership
-            runActivateMembershipFlow(authorisedMember, membership.linearId)
-            runModifyRolesFlow(authorisedMember, membership.linearId, setOf(MemberRole()))
+            runActivateMembershipFlow(authorisedMember, initiatorMembership.linearId)
+            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(MemberRole()))
             assertFailsWith<MembershipAuthorisationException> { runModifyRolesFlow(nonMember, membership.linearId, setOf(BNORole())) }
         }
     }
