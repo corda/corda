@@ -34,6 +34,8 @@ import javax.persistence.FetchType
 import javax.persistence.Id
 import javax.persistence.OneToOne
 import javax.persistence.PrimaryKeyJoinColumn
+import javax.persistence.criteria.CriteriaBuilder
+import javax.persistence.criteria.CriteriaUpdate
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -497,6 +499,11 @@ class DBCheckpointStorage(
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
+    }
+
+    override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
+        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
+        currentDBSession().createNativeQuery(update).executeUpdate()
     }
 
     private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
