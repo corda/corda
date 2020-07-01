@@ -62,7 +62,7 @@ class NodeVaultService(
     companion object {
         private val log = contextLogger()
 
-        val MAX_SQL_IN_CLAUSE_SET = 16
+        const val DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE = 16
 
         /**
          * Establish whether a given state is relevant to a node, given the node's public keys.
@@ -870,7 +870,7 @@ private fun CriteriaBuilder.executeUpdate(
         var updatedRows = 0
         it.asSequence()
             .map { stateRef -> PersistentStateRef(stateRef.txhash.bytes.toHexString(), stateRef.index) }
-            .chunked(NodeVaultService.MAX_SQL_IN_CLAUSE_SET)
+            .chunked(NodeVaultService.DEFAULT_SOFT_LOCKING_SQL_IN_CLAUSE_SIZE)
             .forEach { persistentStateRefs ->
                 updatedRows += doUpdate(persistentStateRefs)
             }
