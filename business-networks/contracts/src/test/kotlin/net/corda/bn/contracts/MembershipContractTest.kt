@@ -1,5 +1,6 @@
 package net.corda.bn.contracts
 
+import net.corda.bn.states.BNORole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.Contract
@@ -140,6 +141,11 @@ class MembershipContractTest {
                 this `fails with` "Membership request transaction should contain output state in PENDING status"
             }
             transaction {
+                output(MembershipContract.CONTRACT_NAME, output.copy(roles = setOf(BNORole())))
+                command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), MembershipContract.Commands.Request(listOf(bnoIdentity.owningKey, memberIdentity.owningKey)))
+                this `fails with` "Membership request transaction should issue membership with empty roles set"
+            }
+            transaction {
                 output(MembershipContract.CONTRACT_NAME, output)
                 command(listOf(bnoIdentity.owningKey), MembershipContract.Commands.Request(listOf(bnoIdentity.owningKey)))
                 this `fails with` "Pending membership owner should be required signer of membership request transaction"
@@ -167,6 +173,12 @@ class MembershipContractTest {
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
                 command(bnoIdentity.owningKey, MembershipContract.Commands.Activate(listOf(bnoIdentity.owningKey)))
                 this `fails with` "Output state of membership activation transaction should be active"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.ACTIVE, roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.Activate(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership activation transaction should have same roles set"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
@@ -201,6 +213,12 @@ class MembershipContractTest {
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED, roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.Suspend(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership suspension transaction should have same roles set"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
                 command(memberIdentity.owningKey, MembershipContract.Commands.Suspend(listOf(memberIdentity.owningKey)))
                 this `fails with` "Input membership owner shouldn't be required signer of membership suspension transaction"
@@ -232,6 +250,43 @@ class MembershipContractTest {
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 command(bnoIdentity.owningKey, MembershipContract.Commands.Revoke(listOf(bnoIdentity.owningKey)))
+                verifies()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `test modify role command contract verification`() {
+        ledgerServices.ledger {
+            val input = membershipState.copy(status = MembershipStatus.ACTIVE)
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership roles modification transaction should have same status"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING))
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING, roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Membership roles modification transaction can only be performed on active or suspended state"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input)
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership roles modification transaction should have different set of roles"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
+                command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey, memberIdentity.owningKey)))
+                this `fails with` "Input membership owner shouldn't be required signer of membership roles modification transaction"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
                 verifies()
             }
         }

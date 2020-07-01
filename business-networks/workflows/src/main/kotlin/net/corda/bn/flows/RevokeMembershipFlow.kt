@@ -32,11 +32,10 @@ class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private v
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
-        val auth = BNUtils.loadBNMemberAuth()
-        authorise(networkId, databaseService) { auth.canRevokeMembership(it) }
+        authorise(networkId, databaseService) { it.canRevokeMembership() }
 
         // fetch observers and signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId, auth)
+        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
         val observers = authorisedMemberships.map { it.state.data.identity } + membership.state.data.identity - ourIdentity
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity } - membership.state.data.identity
 
