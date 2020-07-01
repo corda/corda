@@ -265,7 +265,7 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     @RPCReturnsObservables
-    fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+    fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T>
 
     /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the

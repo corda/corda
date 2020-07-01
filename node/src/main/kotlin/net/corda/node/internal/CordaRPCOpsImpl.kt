@@ -28,6 +28,8 @@ import net.corda.core.internal.sign
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowHandleWithClientId
+import net.corda.core.messaging.FlowHandleWithClientIdImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -254,9 +256,9 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+    override fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T> {
         val stateMachine = startFlow(logicType, context().withClientId(clientID), args)
-        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+        return FlowHandleWithClientIdImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture, clientID = stateMachine.clientID!!)
     }
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {

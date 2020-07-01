@@ -29,7 +29,7 @@ class FlowWithClientIdTest {
             val flowHandle = nodeA.rpc.startFlowDynamicWithClientId(clientID, ResultFlow::class.java, 5)
 
             assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
-            // TODO assert clientID returned also once define FlowHandleWithClientId
+            assertEquals(clientID, flowHandle.clientID)
         }
     }
 
@@ -51,8 +51,8 @@ class FlowWithClientIdTest {
 
             assertTrue(removed)
             assertNotEquals(flowHandle0.id, flowHandle1.id)
+            assertEquals(flowHandle0.clientID, flowHandle1.clientID)
             assertEquals(2, counter) // this asserts that 2 different flows were spawned indeed
-            // TODO assert clientID returned also once define FlowHandleWithClientId
         }
 
     }
