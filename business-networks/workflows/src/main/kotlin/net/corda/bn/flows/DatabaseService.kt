@@ -31,9 +31,9 @@ class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAs
         val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
                 .and(networkIdCriteria(networkID))
         return serviceHub.vaultService.queryBy<MembershipState>(criteria).states.isNotEmpty()
-	}
+    }
 
-	/**
+    /**
      * Queries for membership with [party] identity inside Business Network with [networkId] ID.
      *
      * @param networkId ID of the Business Network.

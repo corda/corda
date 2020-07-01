@@ -1,11 +1,13 @@
 package net.corda.bn.flows
 
+import net.corda.bn.states.BNIdentity
 import net.corda.bn.states.BNRole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
@@ -49,14 +51,25 @@ abstract class MembershipManagementFlowTest(
 
     private fun createNode(name: CordaX500Name) = mockNetwork.createNode(MockNodeParameters(legalName = name))
 
-    protected fun runCreateBusinessNetworkFlow(initiator: StartedMockNode, networkId: UniqueIdentifier = UniqueIdentifier(), notary: Party? = null): SignedTransaction {
-        val future = initiator.startFlow(CreateBusinessNetworkFlow(networkId, notary))
+    protected fun runCreateBusinessNetworkFlow(
+            initiator: StartedMockNode,
+            networkId: UniqueIdentifier = UniqueIdentifier(),
+            businessIdentity: BNIdentity? = null,
+            notary: Party? = null
+    ): SignedTransaction {
+        val future = initiator.startFlow(CreateBusinessNetworkFlow(networkId, businessIdentity, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }
 
-    protected fun runRequestMembershipFlow(initiator: StartedMockNode, authorisedNode: StartedMockNode, networkId: String, notary: Party? = null): SignedTransaction {
-        val future = initiator.startFlow(RequestMembershipFlow(authorisedNode.identity(), networkId, notary))
+    protected fun runRequestMembershipFlow(
+            initiator: StartedMockNode,
+            authorisedNode: StartedMockNode,
+            networkId: String,
+            businessIdentity: BNIdentity? = null,
+            notary: Party? = null
+    ): SignedTransaction {
+        val future = initiator.startFlow(RequestMembershipFlow(authorisedNode.identity(), networkId, businessIdentity, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }
@@ -67,8 +80,14 @@ abstract class MembershipManagementFlowTest(
         return future.getOrThrow()
     }
 
-    protected fun runRequestAndActivateMembershipFlows(initiator: StartedMockNode, authorisedNode: StartedMockNode, networkId: String, notary: Party? = null): SignedTransaction {
-        val membership = runRequestMembershipFlow(initiator, authorisedNode, networkId, notary).tx.outputStates.single() as MembershipState
+    protected fun runRequestAndActivateMembershipFlows(
+            initiator: StartedMockNode,
+            authorisedNode: StartedMockNode,
+            networkId: String,
+            businessIdentity: BNIdentity? = null,
+            notary: Party? = null
+    ): SignedTransaction {
+        val membership = runRequestMembershipFlow(initiator, authorisedNode, networkId, businessIdentity, notary).tx.outputStates.single() as MembershipState
         return runActivateMembershipFlow(authorisedNode, membership.linearId, notary)
     }
 
@@ -78,8 +97,14 @@ abstract class MembershipManagementFlowTest(
         return future.getOrThrow()
     }
 
-    protected fun runRequestAndSuspendMembershipFlow(initiator: StartedMockNode, authorisedNode: StartedMockNode, networkId: String, notary: Party? = null): SignedTransaction {
-        val membership = runRequestMembershipFlow(initiator, authorisedNode, networkId, notary).tx.outputStates.single() as MembershipState
+    protected fun runRequestAndSuspendMembershipFlow(
+            initiator: StartedMockNode,
+            authorisedNode: StartedMockNode,
+            networkId: String,
+            businessIdentity: BNIdentity? = null,
+            notary: Party? = null
+    ): SignedTransaction {
+        val membership = runRequestMembershipFlow(initiator, authorisedNode, networkId, businessIdentity, notary).tx.outputStates.single() as MembershipState
         return runSuspendMembershipFlow(authorisedNode, membership.linearId, notary)
     }
 
@@ -95,6 +120,12 @@ abstract class MembershipManagementFlowTest(
         return future.getOrThrow()
     }
 
+    protected fun runModifyBusinessIdentityFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, businessIdentity: BNIdentity, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(ModifyBusinessIdentityFlow(membershipId, businessIdentity, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
     protected fun getAllMembershipsFromVault(node: StartedMockNode, networkId: String): List<MembershipState> {
         val databaseService = node.services.cordaService(DatabaseService::class.java)
         return databaseService.getAllMembershipsWithStatus(
@@ -105,5 +136,8 @@ abstract class MembershipManagementFlowTest(
         }
     }
 }
+
+@CordaSerializable
+data class DummyIdentity(val name: String) : BNIdentity
 
 fun StartedMockNode.identity() = info.legalIdentities.single()

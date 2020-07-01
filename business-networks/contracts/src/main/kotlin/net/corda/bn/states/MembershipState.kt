@@ -15,7 +15,7 @@ import java.time.Instant
 /**
  * Represents a membership on the ledger.
  *
- * @property identity Corda Identity of a member.
+ * @property identity Identity of a member.
  * @property networkId Unique identifier of a Business Network membership belongs to.
  * @property status Status of the state (i.e. PENDING, ACTIVE, SUSPENDED).
  * @property roles Set of all the roles associated to the membership.
@@ -24,7 +24,7 @@ import java.time.Instant
  */
 @BelongsToContract(MembershipContract::class)
 data class MembershipState(
-        val identity: Party,
+        val identity: MembershipIdentity,
         val networkId: String,
         val status: MembershipStatus,
         val roles: Set<BNRole> = emptySet(),
@@ -36,7 +36,7 @@ data class MembershipState(
 
     override fun generateMappedObject(schema: MappedSchema) = when (schema) {
         is MembershipStateSchemaV1 -> MembershipStateSchemaV1.PersistentMembershipState(
-                cordaIdentity = identity,
+                cordaIdentity = identity.cordaIdentity,
                 networkId = networkId,
                 status = status
         )
@@ -54,8 +54,26 @@ data class MembershipState(
     fun canSuspendMembership() = AdminPermission.CAN_SUSPEND_MEMBERSHIP in permissions()
     fun canRevokeMembership() = AdminPermission.CAN_REVOKE_MEMBERSHIP in permissions()
     fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
+    fun canModifyBusinessIdentity() = AdminPermission.CAN_MODIFY_BUSINESS_IDENTITY in permissions()
     fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
+
+/**
+ * Represents identity addition associated with Business Network membership. Every custom Business Network related additional identity
+ * should implement this interface.
+ */
+@CordaSerializable
+interface BNIdentity
+
+/**
+ * Represents identity associated with Business Network membership made up of 2 components: required Corda identity and optional custom
+ * defined business identity.
+ *
+ * @property cordaIdentity Required Corda X509 identity associated with membership.
+ * @property businessIdentity Optional custom defined identity associated with same membership.
+ */
+@CordaSerializable
+data class MembershipIdentity(val cordaIdentity: Party, val businessIdentity: BNIdentity? = null)
 
 /**
  * Statuses that membership can go through.
@@ -132,5 +150,10 @@ enum class AdminPermission : BNPermission {
     /**
      * Enables member to modify memberships' roles.
      */
-    CAN_MODIFY_ROLE
+    CAN_MODIFY_ROLE,
+
+    /**
+     * Enables member to modify memberships' business identity.
+     */
+    CAN_MODIFY_BUSINESS_IDENTITY
 }
