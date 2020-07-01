@@ -286,11 +286,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
         openThreadLocalWormhole()
         setLoggingContext()
-        initialiseFlow()
 
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
+        var initialised = false
         val resultOrError = try {
+
+            initialiseFlow()
+            initialised = true
 
             // This sets the Cordapp classloader on the contextClassLoader of the current thread.
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
@@ -312,14 +315,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.FlowFinish(resultOrError.value, softLocksId)
             }
             is Try.Failure -> {
-                Event.Error(resultOrError.exception)
+                Event.Error(resultOrError.exception, initialised)
             }
         }
         // Immediately process the last event. This is to make sure the transition can assume that it has an open
         // database transaction.
         val continuation = processEventImmediately(
                 finalEvent,
-                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnEntry = initialised,
                 isDbTransactionOpenOnExit = false
         )
         if (continuation == FlowContinuation.ProcessEvents) {
@@ -337,8 +340,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun initialiseFlow() {
         processEventsUntilFlowIsResumed(
-                isDbTransactionOpenOnEntry = false,
-                isDbTransactionOpenOnExit = true
+            isDbTransactionOpenOnEntry = false,
+            isDbTransactionOpenOnExit = true
         )
     }
 

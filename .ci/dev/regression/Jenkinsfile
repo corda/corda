@@ -37,12 +37,12 @@ pipeline {
     agent { label 'k8s' }
     options {
         timestamps()
-        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         timeout(time: 3, unit: 'HOURS')
     }
 
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
+        DOCKER_URL = "https://index.docker.io/v1/"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
@@ -147,6 +147,20 @@ pipeline {
                         serverId: 'R3-Artifactory',
                         buildName: env.ARTIFACTORY_BUILD_NAME
                 )
+            }
+        }
+
+        stage('Publish Release to Docker Hub') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                withCredentials([
+                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "./gradlew pushOfficialImages"
+                }
             }
         }
     }
