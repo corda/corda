@@ -38,9 +38,11 @@ object ConfigHelper {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    val DEFAULT_CONFIG_FILENAME = "node.conf"
+
     @Suppress("LongParameterList")
     fun loadConfig(baseDirectory: Path,
-                   configFile: Path = baseDirectory / "node.conf",
+                   configFile: Path = baseDirectory / DEFAULT_CONFIG_FILENAME,
                    allowMissingConfig: Boolean = false,
                    configOverrides: Config = ConfigFactory.empty()): Config
         = loadConfig(baseDirectory,
@@ -50,12 +52,16 @@ object ConfigHelper {
             rawSystemOverrides = ConfigFactory.systemProperties(),
             rawEnvironmentOverrides = ConfigFactory.systemEnvironment())
 
+    /**
+     * Internal equivalent of [loadConfig] which allows the system and environment
+     * overrides to be provided from a test.
+     */
     @Suppress("LongParameterList")
     @VisibleForTesting
-    fun loadConfig(baseDirectory: Path,
-                   configFile: Path = baseDirectory / "node.conf",
-                   allowMissingConfig: Boolean = false,
-                   configOverrides: Config = ConfigFactory.empty(),
+    internal fun loadConfig(baseDirectory: Path,
+                   configFile: Path,
+                   allowMissingConfig: Boolean,
+                   configOverrides: Config,
                    rawSystemOverrides: Config,
                    rawEnvironmentOverrides: Config
     ): Config {

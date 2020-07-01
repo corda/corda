@@ -3,6 +3,7 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.delete
+import net.corda.core.internal.div
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -69,7 +70,9 @@ class ConfigHelperTests {
         return baseDir?.let {
             ConfigHelper.loadConfig(
                     baseDirectory = it,
+                    configFile = it / ConfigHelper.DEFAULT_CONFIG_FILENAME,
                     allowMissingConfig = true,
+                    configOverrides = ConfigFactory.empty(),
                     rawSystemOverrides = ConfigFactory.empty(),
                     rawEnvironmentOverrides = ConfigFactory.empty().plus(
                             mapOf(*environmentVariables)
