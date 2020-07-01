@@ -1,6 +1,5 @@
 package net.corda.bn.flows
 
-import net.corda.bn.flows.extensions.BNMemberAuth
 import net.corda.bn.schemas.MembershipStateSchemaV1
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
@@ -88,12 +87,11 @@ class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAs
      *
      * @return List of state and ref pairs of authorised members' membership states.
      */
-    fun getMembersAuthorisedToModifyMembership(networkId: String, auth: BNMemberAuth): List<StateAndRef<MembershipState>> = getAllMembershipsWithStatus(
+    fun getMembersAuthorisedToModifyMembership(networkId: String): List<StateAndRef<MembershipState>> = getAllMembershipsWithStatus(
             networkId,
             MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED
     ).filter {
-        val membership = it.state.data
-        auth.run { canActivateMembership(membership) || canSuspendMembership(membership) || canRevokeMembership(membership) }
+        it.state.data.canModifyMembership()
     }
 
     private fun networkIdCriteria(networkID: String) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::networkId.equal(networkID) })

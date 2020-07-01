@@ -1,5 +1,6 @@
 package net.corda.bn.flows
 
+import net.corda.bn.states.BNRole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
@@ -84,6 +85,12 @@ abstract class MembershipManagementFlowTest(
 
     protected fun runRevokeMembershipFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, notary: Party? = null): SignedTransaction {
         val future = initiator.startFlow(RevokeMembershipFlow(membershipId, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
+    protected fun runModifyRolesFlow(initiator: StartedMockNode, membershipId: UniqueIdentifier, roles: Set<BNRole>, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(ModifyRolesFlow(membershipId, roles, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }

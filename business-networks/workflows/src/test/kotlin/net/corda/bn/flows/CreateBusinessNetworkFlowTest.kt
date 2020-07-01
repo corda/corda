@@ -44,7 +44,7 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
 
             data.networkId
         }
-        assertTrue(command.value is MembershipContract.Commands.Activate)
+        assertTrue(command.value is MembershipContract.Commands.ModifyRoles)
 
         // also check ledger
         getAllMembershipsFromVault(authorisedMember, networkId).single().apply {
