@@ -29,9 +29,13 @@ internal class ErrorReporterImpl(private val resourceLocation: String,
         return "[$codeMessage $urlMessage]"
     }
 
-    override fun report(error: ErrorCode<*>, logger: Logger) {
+    override fun report(error: ErrorCode<*>, logger: Logger, messagePrefix: String?, messagePostfix: String?) {
         val errorResource = ErrorResource.fromErrorCode(error, resourceLocation, locale)
-        val message = "${errorResource.getErrorMessage(error.parameters.toTypedArray())} ${getErrorInfo(error)}"
+
+        val message = (messagePrefix ?: "") +
+                "${errorResource.getErrorMessage(error.parameters.toTypedArray())} ${getErrorInfo(error)}" +
+                (messagePostfix ?: "")
+
         if (error is Exception) {
             logger.error(message, error)
         } else {

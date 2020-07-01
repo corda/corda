@@ -134,4 +134,22 @@ class ErrorReporterImplTest {
         testReporter.report(error, loggerMock)
         assertEquals(listOf("This is the fourth test message [Code: test-case4 URL: $TEST_URL/en-US]", error), logs)
     }
+
+    @Test(timeout = 300_000)
+    fun `error code with prefix and postfix printed correctly`() {
+        val error = TEST_ERROR_3
+        val testReporter = createReporterImpl("en-US")
+        val prefix = "DummyPrefix "
+        val postfix = " DummyPostfix"
+        testReporter.report(error, loggerMock, prefix, postfix)
+        assertEquals(listOf("${prefix}This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US]${postfix}"), logs)
+    }
+
+    @Test(timeout = 300_000)
+    fun `error code with no prefix and postfix provided printed correctly`() {
+        val error = TEST_ERROR_3
+        val testReporter = createReporterImpl("en-US")
+        testReporter.report(error, loggerMock, null, null)
+        assertEquals(listOf("This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US]"), logs)
+    }
 }
