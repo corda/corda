@@ -2,6 +2,8 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
+import net.corda.bn.states.BNIdentity
+import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.flows.CollectSignaturesFlow
@@ -21,7 +23,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 
 @CordaSerializable
-data class MembershipRequest(val networkId: String, val notary: Party?)
+data class MembershipRequest(val networkId: String, val businessIdentity: BNIdentity?, val notary: Party?)
 
 /**
  * This flow is initiated by new potential member who requests membership activation from authorised Business Network member. Issues
@@ -29,11 +31,17 @@ data class MembershipRequest(val networkId: String, val notary: Party?)
  *
  * @property authorisedParty Identity of authorised member from whom the membership activation is requested.
  * @property networkId ID of the Business Network that potential new member wants to join.
+ * @property businessIdentity Custom business identity to be given to membership.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
 @StartableByRPC
-class RequestMembershipFlow(private val authorisedParty: Party, private val networkId: String, private val notary: Party? = null) : FlowLogic<SignedTransaction>() {
+class RequestMembershipFlow(
+        private val authorisedParty: Party,
+        private val networkId: String,
+        private val businessIdentity: BNIdentity? = null,
+        private val notary: Party? = null
+) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -45,7 +53,7 @@ class RequestMembershipFlow(private val authorisedParty: Party, private val netw
 
         // send request to authorised member
         val authorisedPartySession = initiateFlow(authorisedParty)
-        authorisedPartySession.send(MembershipRequest(networkId, notary))
+        authorisedPartySession.send(MembershipRequest(networkId, businessIdentity, notary))
 
         // sign transaction
         val signResponder = object : SignTransactionFlow(authorisedPartySession) {
@@ -56,7 +64,7 @@ class RequestMembershipFlow(private val authorisedParty: Party, private val netw
                 }
 
                 val membershipState = stx.tx.outputs.single().data as MembershipState
-                if (ourIdentity != membershipState.identity) {
+                if (ourIdentity != membershipState.identity.cordaIdentity) {
                     throw IllegalArgumentException("Membership identity does not match the one of the initiator")
                 }
 
@@ -77,7 +85,7 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
     @Suspendable
     override fun call() {
         // receive network ID
-        val (networkId, notary) = session.receive<MembershipRequest>().unwrap { it }
+        val (networkId, businessIdentity, notary) = session.receive<MembershipRequest>().unwrap { it }
 
         // check whether party is authorised to activate membership
         val databaseService = serviceHub.cordaService(DatabaseService::class.java)
@@ -85,12 +93,12 @@ class RequestMembershipFlowResponder(private val session: FlowSession) : Members
 
         // fetch observers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val observers = (authorisedMemberships.map { it.state.data.identity } - ourIdentity).toSet()
+        val observers = (authorisedMemberships.map { it.state.data.identity.cordaIdentity } - ourIdentity).toSet()
 
         // build transaction
         val counterparty = session.counterparty
         val membershipState = MembershipState(
-                identity = counterparty,
+                identity = MembershipIdentity(counterparty, businessIdentity),
                 networkId = networkId,
                 status = MembershipStatus.PENDING,
                 participants = (observers + ourIdentity + counterparty).toList()

@@ -60,7 +60,7 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
 
-        assertFailsWith<UnexpectedFlowEndException> { runRequestMembershipFlow(regularMember, authorisedMember, networkId, authorisedMember.identity()) }
+        assertFailsWith<UnexpectedFlowEndException> { runRequestMembershipFlow(regularMember, authorisedMember, networkId, notary = authorisedMember.identity()) }
     }
 
     @Test(timeout = 300_000)
@@ -70,7 +70,7 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
 
-        val (membership, command) = runRequestMembershipFlow(regularMember, authorisedMember, networkId).run {
+        val (membership, command) = runRequestMembershipFlow(regularMember, authorisedMember, networkId, DummyIdentity("dummy-identity")).run {
             assertTrue(tx.inputs.isEmpty())
             verifyRequiredSignatures()
             tx.outputs.single() to tx.commands.single()
@@ -80,7 +80,8 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
             assertEquals(MembershipContract.CONTRACT_NAME, contract)
             assertTrue(data is MembershipState)
             val data = data as MembershipState
-            assertEquals(regularMember.identity(), data.identity)
+            assertEquals(regularMember.identity(), data.identity.cordaIdentity)
+            assertEquals(DummyIdentity("dummy-identity"), data.identity.businessIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.PENDING, data.status)
         }
@@ -89,11 +90,11 @@ class RequestMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         // also check ledgers
         getAllMembershipsFromVault(authorisedMember, networkId).apply {
             assertEquals(2, size)
-            assertTrue(any { it.identity == authorisedMember.identity() })
-            assertTrue(any { it.identity == regularMember.identity() })
+            assertTrue(any { it.identity.cordaIdentity == authorisedMember.identity() })
+            assertTrue(any { it.identity.cordaIdentity == regularMember.identity() })
         }
         getAllMembershipsFromVault(regularMember, networkId).single().apply {
-            assertEquals(regularMember.identity(), identity)
+            assertEquals(regularMember.identity(), identity.cordaIdentity)
         }
     }
 }

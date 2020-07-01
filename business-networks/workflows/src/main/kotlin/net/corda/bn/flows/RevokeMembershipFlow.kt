@@ -36,8 +36,8 @@ class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private v
 
         // fetch observers and signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val observers = authorisedMemberships.map { it.state.data.identity } + membership.state.data.identity - ourIdentity
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity } - membership.state.data.identity
+        val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity } + membership.state.data.identity.cordaIdentity - ourIdentity
+        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
 
         // building transaction
         val requiredSigners = signers.map { it.owningKey }
