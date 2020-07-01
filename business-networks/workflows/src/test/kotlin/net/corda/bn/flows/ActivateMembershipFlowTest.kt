@@ -9,6 +9,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorisedMembers = 1, numberOfRegularMembers = 2) {
@@ -74,7 +75,8 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
             assertEquals(MembershipContract.CONTRACT_NAME, contract)
             assertTrue(data is MembershipState)
             val data = data as MembershipState
-            assertEquals(regularMember.identity(), data.identity)
+            assertEquals(regularMember.identity(), data.identity.cordaIdentity)
+            assertNull(data.identity.businessIdentity)
             assertEquals(networkId, data.networkId)
             assertEquals(MembershipStatus.ACTIVE, data.status)
         }
@@ -84,8 +86,8 @@ class ActivateMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthoris
         listOf(authorisedMember, regularMember).forEach { member ->
             getAllMembershipsFromVault(member, networkId).apply {
                 assertEquals(2, size, "Vault size assertion failed for ${member.identity()}")
-                assertTrue(any { it.identity == authorisedMember.identity() }, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
-                assertTrue(any { it.identity == regularMember.identity() }, "Expected to have ${regularMember.identity()} in ${member.identity()} vault")
+                assertTrue(any { it.identity.cordaIdentity == authorisedMember.identity() }, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
+                assertTrue(any { it.identity.cordaIdentity == regularMember.identity() }, "Expected to have ${regularMember.identity()} in ${member.identity()} vault")
             }
         }
     }

@@ -44,7 +44,7 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
             throw IllegalMembershipStatusException("Membership owned by $ourIdentity is not active")
         }
         if (!authorisationMethod(ourMembership)) {
-            throw MembershipAuthorisationException("$ourIdentity is not authorised to activate membership")
+            throw MembershipAuthorisationException("$ourIdentity is not authorised to run $this")
         }
     }
 
@@ -114,7 +114,7 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
             observerSessions: List<FlowSession>,
             databaseService: DatabaseService
     ) {
-        val activatedMemberSession = observerSessions.single { it.counterparty == receivingMembership.identity }
+        val activatedMemberSession = observerSessions.single { it.counterparty == receivingMembership.identity.cordaIdentity }
         val pendingAndSuspendedMemberships =
                 if (receivingMembership.canModifyMembership()) {
                     databaseService.getAllMembershipsWithStatus(networkId, MembershipStatus.PENDING, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED)
