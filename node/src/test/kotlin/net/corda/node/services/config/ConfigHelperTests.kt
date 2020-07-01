@@ -23,8 +23,8 @@ class ConfigHelperTests {
         baseDir?.delete()
     }
 
-    @Test(timeout = 5_000)
-    fun `config is overriden by underscore variable`() {
+    @Test(timeout = 300_000)
+    fun `config is overridden by underscore variable`() {
         val sshPort: Long = 9000
 
         // Verify the port isn't set when not provided
@@ -35,22 +35,22 @@ class ConfigHelperTests {
         Assert.assertEquals(sshPort, config?.getLong("sshd.port"))
     }
 
-    @Test(timeout = 5_000)
-    fun `config is overriden by case insensitive underscore variable`() {
+    @Test(timeout = 300_000)
+    fun `config is overridden by case insensitive underscore variable`() {
         val sshPort: Long = 10000
         val config = loadConfig("CORDA_sshd_port" to sshPort)
         Assert.assertEquals(sshPort, config?.getLong("sshd.port"))
     }
 
-    @Test(timeout = 5_000)
-    fun `config is overriden by case insensitive dot variable`() {
+    @Test(timeout = 300_000)
+    fun `config is overridden by case insensitive dot variable`() {
         val sshPort: Long = 11000
         val config = loadConfig("CORDA.sshd.port" to sshPort,
                 "corda.devMode" to true.toString())
         Assert.assertEquals(sshPort, config?.getLong("sshd.port"))
     }
 
-    @Test(timeout = 5_000, expected = ShadowingException::class)
+    @Test(timeout = 300_000, expected = ShadowingException::class)
     fun `shadowing is forbidden`() {
         val sshPort: Long = 12000
         loadConfig("CORDA_sshd_port" to sshPort.toString(),
