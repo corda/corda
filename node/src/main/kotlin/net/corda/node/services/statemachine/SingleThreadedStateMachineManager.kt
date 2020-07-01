@@ -272,26 +272,27 @@ internal class SingleThreadedStateMachineManager(
 
         val clientID = context.clientID
         if (clientID != null) {
+            var future: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
             mutex.locked {
-                clientIDsToFlowIds[clientID]?.let { flowWithClientIdStatus ->
-                    // if clientID exists in clientIDsToFlowIds then the flow is already present in the system, just return its future here and don't go any further down
-                    val future =
-                        when (flowWithClientIdStatus) {
-                            is FlowWithClientIdStatus.Active -> flowWithClientIdStatus.flowStateMachineFuture
+                clientIDsToFlowIds.compute(clientID) { _, flowWithClientIdStatus ->
+                    flowWithClientIdStatus?.let {
+                        future = when (it) {
+                            is FlowWithClientIdStatus.Active -> it.flowStateMachineFuture
                             is FlowWithClientIdStatus.Removed -> {
                                 doneFuture(object : FlowStateMachineHandle<Any> {
                                     override val logic: Nothing? = null
-                                    override val id: StateMachineRunId = flowWithClientIdStatus.flowId
+                                    override val id: StateMachineRunId = it.flowId
                                     // The following future will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
                                     override val resultFuture: CordaFuture<Any> = doneFuture(5)
                                     override val clientID: String? = clientID
                                 })
                             }
                         }
-                    return@startFlow uncheckedCast(future)
-
-                } ?: clientIDsToFlowIds.putIfAbsent(clientID, FlowWithClientIdStatus.Active(openFuture()))
+                        it
+                    } ?: FlowWithClientIdStatus.Active(openFuture())
+                }
             }
+            if (future != null) return uncheckedCast(future)
 
             // (testing) client id exists but is not present in the map
             onClientIDNotFound?.invoke()
