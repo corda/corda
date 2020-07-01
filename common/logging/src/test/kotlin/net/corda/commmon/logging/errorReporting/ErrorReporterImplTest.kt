@@ -139,10 +139,10 @@ class ErrorReporterImplTest {
     fun `error code with prefix and postfix printed correctly`() {
         val error = TEST_ERROR_3
         val testReporter = createReporterImpl("en-US")
-        val prefix = "DummyPrefix "
-        val postfix = " DummyPostfix"
+        val prefix = "DummyPrefix"
+        val postfix = "DummyPostfix"
         testReporter.report(error, loggerMock, prefix, postfix)
-        assertEquals(listOf("${prefix}This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US]${postfix}"), logs)
+        assertEquals(listOf("$prefix This is the third test message [Code: test-case-3 URL: $TEST_URL/en-US] $postfix"), logs)
     }
 
     @Test(timeout = 300_000)
