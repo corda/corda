@@ -930,8 +930,21 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `flow's result is freed upon acknowledgement`() {
-        // TODO upon implementing API
+    fun `flow's client id mapping gets removed upon request`() {
+        val clientID = UUID.randomUUID().toString()
+        var counter = 0
+        ResultFlow.hook = { counter++ }
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        flowHandle0.resultFuture.getOrThrow(20.seconds)
+        val removed = aliceNode.smm.removeClientId(clientID)
+        // On new request with clientID, after the same clientID was removed, a brand new flow will start with that clientID
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        flowHandle1.resultFuture.getOrThrow(20.seconds)
+
+        assertTrue(removed)
+        assertNotEquals(flowHandle0.id, flowHandle1.id)
+        assertEquals(flowHandle0.clientID, flowHandle1.clientID)
+        assertEquals(2, counter)
     }
 
     @Test

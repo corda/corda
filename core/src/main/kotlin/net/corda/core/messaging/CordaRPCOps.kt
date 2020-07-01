@@ -281,6 +281,13 @@ interface CordaRPCOps : RPCOps {
      */
     fun killFlow(id: StateMachineRunId): Boolean
 
+    /**
+     * Removes a flow's [clientID] to result/ exception mapping.
+     *
+     * @return whether the mapping was removed.
+     */
+    fun removeClientId(clientID: String): Boolean
+
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
