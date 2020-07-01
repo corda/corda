@@ -8,8 +8,10 @@ import org.slf4j.Logger
  * Doing this allows the error reporting framework to find the corresponding resources for the error and pick the correct locale.
  *
  * @param error The error that has occurred.
- * @param messagePrefix An optional string that will be prepended to the message
- * @param messagePostfix An optional string that will be appended to the message
+ * @param messagePrefix An optional string that will be prepended to the message,
+ * a trailing whitespace will be appended automatically if the prefix is defined.
+ * @param messagePostfix An optional string that will be appended to the message,
+ * a leading whitespace will be appended automatically if the postfix is defined.
  */
 fun Logger.report(error: ErrorCode<*>, messagePrefix: String? = null, messagePostfix: String? = null)
         = ErrorReporting().getReporter().report(error, this, messagePrefix, messagePostfix)
