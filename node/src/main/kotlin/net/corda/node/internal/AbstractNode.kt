@@ -1269,7 +1269,11 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 // TODO Move this into its own file
-class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory, private val maxClientIdLength: Int) : FlowStarter {
+class FlowStarterImpl(
+    private val smm: StateMachineManager,
+    private val flowLogicRefFactory: FlowLogicRefFactory,
+    private val maxClientIdLength: Int
+) : FlowStarter {
     override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineHandle<T>> {
         val clientID = event.context.clientID
         if (clientID != null && clientID.length > maxClientIdLength) {
