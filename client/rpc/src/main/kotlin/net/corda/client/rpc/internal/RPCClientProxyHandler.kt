@@ -538,7 +538,7 @@ internal class RPCClientProxyHandler(
         val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
 
         fun shouldRetry(reconnectAttempt: Int) =
-                if (maxReconnectCount > 0) reconnectAttempt <= maxReconnectCount else true
+                if (maxReconnectCount < 0) true else reconnectAttempt <= maxReconnectCount
 
         while (shouldRetry(reconnectAttempt)) {
             val transport = serverLocator.staticTransportConfigurations.let { it[(reconnectAttempt - 1) % it.size] }
@@ -571,7 +571,7 @@ internal class RPCClientProxyHandler(
             break
         }
 
-        val maxReconnectReached = maxReconnectCount > 0 && reconnectAttempt > maxReconnectCount
+        val maxReconnectReached = !shouldRetry(reconnectAttempt)
         if (maxReconnectReached || sessionFactory == null) {
             val errMessage = "Could not reconnect to the RPC server after trying $reconnectAttempt times." +
                     if (sessionFactory != null) "" else " It was never possible to to establish connection with any of the endpoints."

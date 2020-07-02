@@ -159,7 +159,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
 
         /**
          * Maximum reconnect attempts on failover or disconnection.
-         * Any non-positive value would mean that there will be an infinite number of reconnect attempts.
+         * Any negative value would mean that there will be an infinite number of reconnect attempts.
          */
         open val maxReconnectAttempts: Int = unlimitedReconnectAttempts,
 
