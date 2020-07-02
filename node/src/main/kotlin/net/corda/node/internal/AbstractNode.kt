@@ -180,7 +180,7 @@ import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -190,8 +190,6 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import javax.persistence.PersistenceException
-import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -1166,6 +1164,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
+        @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
             return database.transaction(useErrorHandler = false) {
                 session.flush()
@@ -1180,7 +1179,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                 connection.rollback(savepoint)
                             }
                         }
-                    } catch (e: PersistenceException) {
+                    } catch (e: Exception) {
                         if (manager.transaction.rollbackOnly) {
                             connection.rollback(savepoint)
                         }
