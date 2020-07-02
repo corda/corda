@@ -865,7 +865,12 @@ internal class SingleThreadedStateMachineManager(
 
     override fun removeClientId(clientID: String): Boolean {
         return mutex.locked {
-            clientIDsToFlowIds.remove(clientID) != null
+            val existingStatus = clientIDsToFlowIds[clientID]
+            if (existingStatus != null && existingStatus is FlowWithClientIdStatus.Removed) {
+                clientIDsToFlowIds.remove(clientID) != null
+            } else {
+                false
+            }
         }
     }
 }

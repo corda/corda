@@ -948,6 +948,36 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun `flow's client id mapping can only get removed once the flow gets removed`() {
+        val clientID = UUID.randomUUID().toString()
+        var tries = 0
+        val maxTries = 10
+        var failedRemovals = 0
+        val semaphore = Semaphore(0)
+        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                semaphore.acquire()
+            }
+        }
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+
+        var removed = false
+        while (!removed) {
+            removed = aliceNode.smm.removeClientId(clientID)
+            if (!removed) ++failedRemovals
+            ++tries
+            if (tries >= maxTries) {
+                semaphore.release()
+                flowHandle0.resultFuture.getOrThrow(20.seconds)
+            }
+        }
+
+        assertTrue(removed)
+        assertEquals(maxTries, failedRemovals)
+    }
+
+    @Test
     fun `only one flow starts upon concurrent requests with the same client id`() {
         val requests = 2
         val counter = AtomicInteger(0)
