@@ -94,6 +94,12 @@ sealed class Action {
     data class RemoveSessionBindings(val sessionIds: Set<SessionId>) : Action()
 
     /**
+     * Signal session ended at the messaging layer.
+     * @property sessionId the session ID of this side.
+     */
+    data class SignalSessionHasEnded(val sessionId: SessionId, val lastSenderDedupInfo: SenderDeduplicationInfo, val shardId: String): Action()
+
+    /**
      * Signal that the flow corresponding to [flowId] is considered started.
      */
     data class SignalFlowHasStarted(val flowId: StateMachineRunId) : Action()

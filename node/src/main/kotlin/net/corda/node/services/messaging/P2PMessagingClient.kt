@@ -28,6 +28,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SenderDeduplicationInfo
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -546,6 +547,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }
+    }
+
+    @Suspendable
+    override fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
+        deduplicator.signalSessionEnd(sessionId, shardId, lastSenderDedupInfo)
     }
 
     override fun resolveTargetToArtemisQueue(address: MessageRecipients): String {

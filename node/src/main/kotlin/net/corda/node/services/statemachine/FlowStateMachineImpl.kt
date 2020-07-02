@@ -39,7 +39,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
@@ -192,7 +191,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     FlowContinuation.Abort -> abortFiber()
                 }
             }
-        } finally {
+        } catch (e: java.lang.Exception) {
+            log.error("Error when processing event ${e.javaClass.name}", e)
+            throw e
+        }
+        finally {
             checkDbTransaction(isDbTransactionOpenOnExit)
             openThreadLocalWormhole()
         }
@@ -477,7 +480,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
             setLoggingContext()
-            logger.trace { "Suspended on $ioRequest" }
+            logger.info("Suspended on $ioRequest")
 
             // Will skip checkpoint if there are any idempotent flows in the subflow stack.
             val skipPersistingCheckpoint = containsIdempotentFlows() || maySkipCheckpoint

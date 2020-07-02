@@ -96,6 +96,7 @@ class TopLevelTransition(
 
     private fun softShutdownTransition(): TransitionResult {
         val lastState = startingState.copy(isRemoved = true)
+        // TODO: need to check whether we actually need to signal session end at this point.
         return TransitionResult(
                 newState = lastState,
                 actions = listOf(
@@ -198,15 +199,27 @@ class TopLevelTransition(
                         isFlowResumed = false
                 )
             } else {
+                val newSessions = LinkedHashMap(currentState.checkpoint.checkpointState.sessions)
+                val signalSessionEndActions = currentState.checkpoint.checkpointState.sessions.mapNotNull { (sessionId, sessionState) ->
+                    if (sessionState is SessionState.Initiated && sessionState.initiatedState is InitiatedSessionState.Ended && !sessionState.initiatedState.signalled) {
+                        newSessions[sessionId] = sessionState.copy(initiatedState = sessionState.initiatedState.copy(signalled = true))
+                        Action.SignalSessionHasEnded(sessionId, sessionState.lastDedupInfo, sessionState.shardId)
+                    } else {
+                        null
+                    }
+                }
                 actions.addAll(arrayOf(
                         Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
-                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers)
+                ))
+                actions.addAll(signalSessionEndActions)
+                actions.addAll(arrayOf(
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
+                        checkpoint = newCheckpoint.setSessions(newSessions),
                         pendingDeduplicationHandlers = emptyList(),
                         isFlowResumed = false,
                         isAnyCheckpointPersisted = true
@@ -222,10 +235,22 @@ class TopLevelTransition(
             when (checkpoint.errorState) {
                 ErrorState.Clean -> {
                     val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
+                    val newSessions = LinkedHashMap(currentState.checkpoint.checkpointState.sessions)
+
+                    val signalSessionEndActions = currentState.checkpoint.checkpointState.sessions.mapNotNull { (sessionId, sessionState) ->
+                        if (sessionState is SessionState.Initiated && sessionState.initiatedState is InitiatedSessionState.Ended && !sessionState.initiatedState.signalled) {
+                            newSessions[sessionId] = sessionState.copy(initiatedState = sessionState.initiatedState.copy(signalled = true))
+                            Action.SignalSessionHasEnded(sessionId, sessionState.lastDedupInfo, sessionState.shardId)
+                        } else {
+                            null
+                        }
+                    }
+
                     currentState = currentState.copy(
                             checkpoint = checkpoint.copy(
                                 checkpointState = checkpoint.checkpointState.copy(
-                                        numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
+                                        numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1,
+                                        sessions = newSessions
                                 ),
                                 flowState = FlowState.Completed,
                                 result = event.returnValue,
@@ -240,8 +265,11 @@ class TopLevelTransition(
                         actions.add(Action.RemoveCheckpoint(context.id))
                     }
                     actions.addAll(arrayOf(
-                        Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
-                            Action.ReleaseSoftLocks(event.softLocksId),
+                            Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
+                            Action.ReleaseSoftLocks(event.softLocksId)
+                    ))
+                    actions.addAll(signalSessionEndActions)
+                    actions.addAll(arrayOf(
                             Action.CommitTransaction,
                             Action.AcknowledgeMessages(pendingDeduplicationHandlers),
                             Action.RemoveSessionBindings(allSourceSessionIds),

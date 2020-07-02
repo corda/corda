@@ -66,15 +66,26 @@ class KilledFlowTransition(
             if (startingState.isAnyCheckpointPersisted) {
                 actions.add(Action.RemoveCheckpoint(context.id))
             }
+            val signalFlowEndActions = currentState.checkpoint.checkpointState.sessions.mapNotNull { (sessionId, sessionState) ->
+                if (sessionState is SessionState.Initiated) {
+                    Action.SignalSessionHasEnded(sessionId, sessionState.lastDedupInfo, sessionState.shardId)
+                } else {
+                    null
+                }
+            }
             actions.addAll(
                 arrayOf(
                     Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                    Action.ReleaseSoftLocks(context.id.uuid),
+                    Action.ReleaseSoftLocks(context.id.uuid)
+                )
+            )
+            actions.addAll(signalFlowEndActions)
+            actions.addAll(arrayOf(
                     Action.CommitTransaction,
                     Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                     Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
-                )
-            )
+            ))
+
 
             currentState = currentState.copy(
                 pendingDeduplicationHandlers = emptyList(),

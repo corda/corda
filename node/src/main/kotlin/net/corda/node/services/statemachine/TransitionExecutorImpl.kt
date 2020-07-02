@@ -39,6 +39,7 @@ class TransitionExecutorImpl(
         contextDatabase = database
         for (action in transition.actions) {
             try {
+                log.info("Executing action: $action")
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Exception) {
                 contextTransactionOrNull?.run {

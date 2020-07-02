@@ -51,3 +51,5 @@ data class DeduplicationId(val toString: String) {
  * null if the flow is trying to replay messages and doesn't want an optimisation to ignore the deduplication ID.
  */
 data class SenderDeduplicationId(val messageIdentifier: MessageIdentifier, val senderUUID: String?)
+
+data class SenderDeduplicationInfo(val senderUUID: String?, val senderSequenceNumber: Long?)

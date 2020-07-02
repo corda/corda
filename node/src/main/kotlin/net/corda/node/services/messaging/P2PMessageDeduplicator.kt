@@ -1,12 +1,16 @@
 package net.corda.node.services.messaging
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.MessageIdentifier
+import net.corda.node.services.statemachine.SenderDeduplicationInfo
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.Column
@@ -29,13 +33,15 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
                 cacheFactory = cacheFactory,
                 name = "P2PMessageDeduplicator_processedMessages",
                 toPersistentEntityKey = { it.toString },
-                fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo)) },
+                fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo, it.lastSeqNo, it.version)) },
                 toPersistentEntity = { key: DeduplicationId, value: MessageMeta ->
                     ProcessedMessage().apply {
                         id = key.toString
                         insertionTime = value.insertionTime
                         hash = value.senderHash
                         seqNo = value.senderSeqNo
+                        lastSeqNo = value.lastSeqNo
+                        version = 1
                     }
                 },
                 persistentEntityClass = ProcessedMessage::class.java
@@ -66,7 +72,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         // We don't want a mix of nulls and values so we ensure that here.
         val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) senderHash(SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)) else null
         val senderSeqNo: Long? = if (senderHash != null) msg.senderSeqNo else null
-        beingProcessedMessages[msg.uniqueMessageId.toDeduplicationId()] = MessageMeta(Instant.now(), senderHash, senderSeqNo)
+        beingProcessedMessages[msg.uniqueMessageId.toDeduplicationId()] = MessageMeta(Instant.now(), senderHash, senderSeqNo, null, 1)
     }
 
     /**
@@ -84,6 +90,35 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         beingProcessedMessages.remove(deduplicationId)
     }
 
+    /**
+     * Called inside a DB transaction to update entry for corresponding session.
+     */
+    @Suspendable
+    fun signalSessionEnd(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
+        if (lastSenderDedupInfo.senderSequenceNumber != null && lastSenderDedupInfo.senderUUID != null) {
+            val messageIdentifierForInit = MessageIdentifier("XI", shardId, sessionId, 0)
+            val existingEntry = processedMessages[messageIdentifierForInit.toDeduplicationId()]
+            if (existingEntry != null) {
+                val newEntry = existingEntry.copy(lastSeqNo = lastSenderDedupInfo.senderSequenceNumber)
+                processedMessages.addOrUpdate(messageIdentifierForInit.toDeduplicationId(), newEntry) { k, v ->
+                    update(k, v)
+                }
+            }
+        }
+    }
+
+    private fun update(key: DeduplicationId, value: MessageMeta): Boolean {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaUpdate = criteriaBuilder.createCriteriaUpdate(ProcessedMessage::class.java)
+        val queryRoot = criteriaUpdate.from(ProcessedMessage::class.java)
+        criteriaUpdate.set(ProcessedMessage::lastSeqNo.name, value.lastSeqNo)
+        criteriaUpdate.where(criteriaBuilder.equal(queryRoot.get<String>(ProcessedMessage::id.name), key.toString))
+        val update = session.createQuery(criteriaUpdate)
+        val rowsUpdated = update.executeUpdate()
+        return rowsUpdated != 0
+    }
+
     @Entity
     @Suppress("MagicNumber") // database column width
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
@@ -99,10 +134,16 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
             var hash: String? = "",
 
             @Column(name = "sequence_number", nullable = true)
-            var seqNo: Long? = null
+            var seqNo: Long? = null,
+
+            @Column(name = "last_sequence_number", nullable = true)
+            var lastSeqNo: Long? = null,
+
+            @Column(name = "version", nullable = false)
+            var version: Int = 1
     )
 
-    private data class MessageMeta(val insertionTime: Instant, val senderHash: String?, val senderSeqNo: Long?)
+    private data class MessageMeta(val insertionTime: Instant, val senderHash: String?, val senderSeqNo: Long?, val lastSeqNo: Long?, val version: Int)
 
     private data class SenderKey(val senderUUID: String, val peer: CordaX500Name, val isSessionInit: Boolean)
 }

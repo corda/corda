@@ -58,6 +58,7 @@ internal class ActionExecutorImpl(
             is Action.AddSessionBinding -> executeAddSessionBinding(action)
             is Action.RemoveSessionBindings -> executeRemoveSessionBindings(action)
             is Action.SignalFlowHasStarted -> executeSignalFlowHasStarted(action)
+            is Action.SignalSessionHasEnded -> executeSignalSessionHasEnded(action)
             is Action.RemoveFlow -> executeRemoveFlow(action)
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
@@ -199,6 +200,11 @@ internal class ActionExecutorImpl(
     @Suspendable
     private fun executeSignalFlowHasStarted(action: Action.SignalFlowHasStarted) {
         stateMachineManager.signalFlowHasStarted(action.flowId)
+    }
+
+    @Suspendable
+    private fun executeSignalSessionHasEnded(action: Action.SignalSessionHasEnded) {
+        flowMessaging.sessionEnded(action.sessionId.toLong, action.shardId, action.lastSenderDedupInfo)
     }
 
     @Suspendable

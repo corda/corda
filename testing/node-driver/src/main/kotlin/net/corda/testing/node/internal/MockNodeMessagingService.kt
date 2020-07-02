@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -17,6 +18,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SenderDeduplicationInfo
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.lifecycle.ServiceStateHelper
 import net.corda.nodeapi.internal.lifecycle.ServiceStateSupport
@@ -166,6 +168,11 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         for ((message, target, sequenceKey) in addressedMessages) {
             send(message, target, sequenceKey)
         }
+    }
+
+    @Suspendable
+    override fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
+        // nothing to do here.
     }
 
     override fun close() {

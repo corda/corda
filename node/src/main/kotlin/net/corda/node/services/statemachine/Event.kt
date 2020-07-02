@@ -34,6 +34,7 @@ sealed class Event {
     data class DeliverSessionMessage(
             val sessionMessage: ExistingSessionMessage,
             val messageIdentifier: MessageIdentifier,
+            val senderDeduplicationInfo: SenderDeduplicationInfo,
             override val deduplicationHandler: DeduplicationHandler,
             val sender: Party
     ) : Event(), GeneratedByExternalEvent

@@ -81,15 +81,26 @@ class ErrorFlowTransition(
             if (!currentState.isRemoved) {
                 val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
 
+                val signalFlowEndActions = currentState.checkpoint.checkpointState.sessions.mapNotNull { (sessionId, sessionState) ->
+                    if (sessionState is SessionState.Initiated) {
+                        Action.SignalSessionHasEnded(sessionId, sessionState.lastDedupInfo, sessionState.shardId)
+                    } else {
+                        null
+                    }
+                }.toList()
                 actions.addAll(arrayOf(
                         Action.CreateTransaction,
                         Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                        Action.ReleaseSoftLocks(context.id.uuid),
+                        Action.ReleaseSoftLocks(context.id.uuid)
+                ))
+                actions.addAll(signalFlowEndActions)
+                actions.addAll(arrayOf(
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                         Action.RemoveSessionBindings(currentState.checkpoint.checkpointState.sessions.keys)
                 ))
+
 
                 currentState = currentState.copy(
                         checkpoint = newCheckpoint,

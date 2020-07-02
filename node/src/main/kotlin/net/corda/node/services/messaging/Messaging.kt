@@ -13,6 +13,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.MessageIdentifier
 import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SenderDeduplicationInfo
 import net.corda.nodeapi.internal.lifecycle.ServiceLifecycleSupport
 import java.time.Instant
 import javax.annotation.concurrent.ThreadSafe
@@ -92,6 +93,16 @@ interface MessagingService : ServiceLifecycleSupport {
      */
     @Suspendable
     fun sendAll(addressedMessages: List<AddressedMessage>)
+
+    /**
+     * @param lastSenderDedupInfo the sender dedup info of the last message seen from the counterparty on this session.
+     *                      if the session ended due to a message by the other side (session-end), this will be the info of this message.
+     *                      if the session was closed by this side (e.g. via the session.close API), this wil be the dedup info of the last message received when close was called.
+     *
+     * Note: not supposed to be called for sessions that were never initialised (e.g. rejected by counterparty)
+     */
+    @Suspendable
+    fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.

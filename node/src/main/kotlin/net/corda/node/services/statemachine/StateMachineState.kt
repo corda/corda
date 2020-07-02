@@ -234,11 +234,11 @@ sealed class SessionState {
     data class Initiating(
             val peerParty: Party,
             val bufferedMessages: List<Pair<MessageIdentifier, ExistingSessionMessagePayload>>,
-            val rejectionError: FlowError?,
+            val rejectionError: ErrorWithDedupInfo?,
             override val deduplicationSeed: String,
             val sequenceNumber: Int,
-            val receivedMessages: MutableMap<Int, DataSessionMessage>,
-            val errors: MutableMap<Int, FlowError>,
+            val receivedMessages: MutableMap<Int, MessageWithDedupInfo>,
+            val errors: MutableMap<Int, ErrorWithDedupInfo>,
             val shardId: String
     ) : SessionState()
 
@@ -252,20 +252,30 @@ sealed class SessionState {
      *           In case of session initiation, there are two different cases:
      *            * an empty session-init, where this field is set to 0 (processing corresponds to session initiation).
      *            * a session-init with a payload, where this field is set to -1, so that the embedded data message is buffered & processed separately.
+     * @property lastDedupInfo the sender deduplication information of the last message that was seen form the other side.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: MutableMap<Int, DataSessionMessage>,
+            val receivedMessages: TreeMap<Int, MessageWithDedupInfo>,
             val initiatedState: InitiatedSessionState,
-            val errors: MutableMap<Int, FlowError>,
-            val toBeTerminated: Int?,
+            val errors: TreeMap<Int, ErrorWithDedupInfo>,
+            val toBeTerminated: TerminationWithMetadata?,
             override val deduplicationSeed: String,
             val sequenceNumber: Int,
             val lastSequenceNumberProcessed: Int,
-            val shardId: String
+            val shardId: String,
+            val lastDedupInfo: SenderDeduplicationInfo
     ) : SessionState()
 }
+
+typealias MessageWithDedupInfo = Pair<DataSessionMessage, SenderDeduplicationInfo>
+typealias ErrorWithDedupInfo = Pair<FlowError, SenderDeduplicationInfo>
+
+/**
+ * the first field corresponds to the sequence number of the session end message and the second field corresponds to its sender dedup info.
+ */
+typealias TerminationWithMetadata = Pair<Int, SenderDeduplicationInfo>
 
 typealias SessionMap = Map<SessionId, SessionState>
 
@@ -276,7 +286,7 @@ typealias SessionMap = Map<SessionId, SessionState>
  */
 sealed class InitiatedSessionState {
     data class Live(val peerSinkSessionId: SessionId) : InitiatedSessionState()
-    object Ended : InitiatedSessionState() { override fun toString() = "Ended" }
+    data class Ended(val peerSinkSessionId: SessionId, val signalled: Boolean) : InitiatedSessionState() { override fun toString() = "Ended:signalled=$signalled" }
 }
 
 /**
@@ -297,7 +307,8 @@ sealed class FlowStart {
             val initiatingMessage: InitialSessionMessage,
             val senderCoreFlowVersion: Int?,
             val initiatedFlowInfo: FlowInfo,
-            val shardId: String
+            val shardId: String,
+            val senderDedupInfo: SenderDeduplicationInfo
     ) : FlowStart() { override fun toString() = "Initiated" }
 }
 

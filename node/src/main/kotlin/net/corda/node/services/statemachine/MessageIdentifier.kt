@@ -2,6 +2,9 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
 
+/**
+ * @property sessionIdentifier the session identifier of the sink (the side where this message is destined to).
+ */
 data class MessageIdentifier(
     val prefix: String,
     val shardIdentifier: String,

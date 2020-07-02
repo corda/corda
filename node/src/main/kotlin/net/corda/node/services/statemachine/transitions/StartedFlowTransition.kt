@@ -8,6 +8,8 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.statemachine.*
 import java.lang.IllegalStateException
+import java.util.*
+import kotlin.collections.LinkedHashMap
 
 /**
  * This transition describes what should happen with a specific [FlowIORequest]. Note that at this time the request
@@ -32,7 +34,7 @@ class StartedFlowTransition(
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        val sessionsToBeTerminated = findSessionsToBeTerminated(flowIORequest, startingState)
+        val sessionsToBeTerminated = findSessionsToBeTerminated(startingState)
         return if (sessionsToBeTerminated.isNotEmpty()) {
             terminateSessions(sessionsToBeTerminated)
         }
@@ -51,21 +53,23 @@ class StartedFlowTransition(
         }
     }
 
-    private fun findSessionsToBeTerminated(flowIORequest: FlowIORequest<*>, startingState: StateMachineState): SessionMap {
+    private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
         return startingState.checkpoint.checkpointState.sessions
                 .filter { (_, sessionState) ->
                     sessionState is SessionState.Initiated &&
                             sessionState.initiatedState is InitiatedSessionState.Live &&
                             sessionState.toBeTerminated != null &&
-                            sessionState.toBeTerminated == sessionState.lastSequenceNumberProcessed + 1
+                            sessionState.toBeTerminated.first == sessionState.lastSequenceNumberProcessed + 1
                 }
     }
 
     private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
         return builder {
             val sessionsToRemove = sessionsToBeTerminated.keys
+            // Note: when session.close has been integrated, then we'll remove sessions and add pending items for signalling the session end
+            //       for now, the same can be done by filtering sessions with Ended state.
             sessionsToBeTerminated.forEach { sessionId, sessionState ->
-                val newSessionState = (sessionState as SessionState.Initiated).copy(initiatedState = InitiatedSessionState.Ended)
+                val newSessionState = (sessionState as SessionState.Initiated).copy(initiatedState = InitiatedSessionState.Ended((sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId,false))
                 currentState = currentState.copy(
                         checkpoint = currentState.checkpoint.addSession(sessionId to newSessionState)
                 )
@@ -231,10 +235,10 @@ class StartedFlowTransition(
                         val nextSequenceNumber = sessionState.lastSequenceNumberProcessed + 1
                         if (messages.containsKey(nextSequenceNumber)) {
                             val newMessage = messages[nextSequenceNumber]
-                            val newMessages = LinkedHashMap(messages)
+                            val newMessages = TreeMap(messages)
                             newMessages.remove(nextSequenceNumber)
                             newSessionStates[sessionId] = sessionState.copy(receivedMessages = newMessages, lastSequenceNumberProcessed = nextSequenceNumber)
-                            resultMessages[sessionId] = newMessage!!.payload
+                            resultMessages[sessionId] = newMessage!!.first.payload
                         } else {
                             someNotFound = true
                         }
@@ -371,13 +375,13 @@ class StartedFlowTransition(
                     if (sessionState.rejectionError == null) {
                         emptyList()
                     } else {
-                        listOf(sessionState.rejectionError.exception)
+                        listOf(sessionState.rejectionError.first.exception)
                     }
                 }
                 is SessionState.Initiated -> {
                     val nextSequenceNumber = sessionState.lastSequenceNumberProcessed + 1
                     if (sessionState.errors.containsKey(nextSequenceNumber)) {
-                        return listOf(sessionState.errors[nextSequenceNumber]!!.exception)
+                        return listOf(sessionState.errors[nextSequenceNumber]!!.first.exception)
                     } else {
                         emptyList()
                     }
@@ -388,7 +392,7 @@ class StartedFlowTransition(
 
     private fun collectErroredInitiatingSessionErrors(checkpoint: Checkpoint): List<Throwable> {
         return checkpoint.checkpointState.sessions.values.mapNotNull { sessionState ->
-            (sessionState as? SessionState.Initiating)?.rejectionError?.exception
+            (sessionState as? SessionState.Initiating)?.rejectionError?.first?.exception
         }
     }
 
@@ -397,7 +401,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState === InitiatedSessionState.Ended) {
+                    if (sessionState.initiatedState is InitiatedSessionState.Ended) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId",
                                 cause = null,
@@ -417,7 +421,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState === InitiatedSessionState.Ended &&
+                    if (sessionState.initiatedState is InitiatedSessionState.Ended &&
                             sessionState.receivedMessages.isEmpty()) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId with empty buffer",
