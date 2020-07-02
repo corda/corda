@@ -49,6 +49,8 @@ class NetworkMapServer(private val pollInterval: Duration,
     private val service = InMemoryNetworkMapService()
     private var parametersUpdate: ParametersUpdate? = null
     private var nextNetworkParameters: NetworkParameters? = null
+    // version toggle allowing to easily test behaviour of different version without spinning up a whole new server
+    var version: String = "1"
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
@@ -173,7 +175,7 @@ class NetworkMapServer(private val pollInterval: Duration,
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
             return Response.ok(signedNetworkMap.serialize().bytes)
                     .header("Cache-Control", "max-age=${pollInterval.seconds}")
-                    .header("X-Corda-Server-Version", 2)
+                    .apply { if (version != "1") this.header("X-Corda-Server-Version", version)}
                     .build()
         }
 

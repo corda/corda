@@ -3,13 +3,16 @@ package net.corda.node.services.network
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.atLeast
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sha256
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -381,6 +384,60 @@ class NetworkMapUpdaterTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(bobInfo.serialize().hash)
         assertThat(networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes).containsExactly(aliceHash)
         assertEquals(aliceInfo, networkMapClient.getNodeInfo(aliceHash))
+    }
+
+    @Test(timeout=300_000)
+    fun `update nodes is successful for network map supporting bulk operations but with only a few nodes requested`() {
+        server.version = "2"
+        setUpdater()
+        val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("info1")
+        val nodeInfoHash1 = nodeInfo1.serialize().sha256()
+        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("info2")
+        val nodeInfoHash2 = nodeInfo2.serialize().sha256()
+        networkMapClient.publish(signedNodeInfo1)
+        networkMapClient.publish(signedNodeInfo2)
+
+        startUpdater()
+        Thread.sleep(2L * cacheExpiryMs)
+
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo1))
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo2))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2)
+    }
+
+    @Test(timeout=300_000)
+    fun `update nodes is successful for network map supporting bulk operations when high number of nodes is requested`() {
+        server.version = "2"
+        setUpdater()
+        val nodeInfos = (1..51).map { createNodeInfoAndSigned("info$it")
+                .also { nodeInfoAndSigned ->  networkMapClient.publish(nodeInfoAndSigned.signed) }
+                .nodeInfo
+        }
+        val nodeInfoHashes = nodeInfos.map { it.serialize().sha256() }
+
+        startUpdater()
+        Thread.sleep(2L * cacheExpiryMs)
+
+        verify(networkMapCache, times(1)).addOrUpdateNodes(nodeInfos)
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
+    }
+
+    @Test(timeout=300_000)
+    fun `update nodes is successful for network map not supporting bulk operations`() {
+        setUpdater()
+        val nodeInfos = (1..51).map { createNodeInfoAndSigned("info$it")
+                .also { nodeInfoAndSigned ->  networkMapClient.publish(nodeInfoAndSigned.signed) }
+                .nodeInfo
+        }
+        val nodeInfoHashes = nodeInfos.map { it.serialize().sha256() }
+
+        startUpdater()
+        Thread.sleep(2L * cacheExpiryMs)
+
+        // we can't be sure about the number of requests (and updates), as it depends on the machine and the threads created
+        // but if they are more than 1 it's enough to deduct that the parallel way was favored
+        verify(networkMapCache, atLeast(2)).addOrUpdateNodes(any())
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(*(nodeInfoHashes.toTypedArray()))
     }
 
     @Test(timeout=300_000)

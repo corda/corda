@@ -74,6 +74,7 @@ class NetworkMapClientTest {
 
     @Test(timeout=300_000)
     fun `registered node is added to the network map v2`() {
+        server.version = "2"
         val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         networkMapClient.publish(signedNodeInfo)
