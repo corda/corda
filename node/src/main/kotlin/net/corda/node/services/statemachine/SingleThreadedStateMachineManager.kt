@@ -272,11 +272,11 @@ internal class SingleThreadedStateMachineManager(
 
         val clientID = context.clientID
         if (clientID != null) {
-            var future: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
+            var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
             mutex.locked {
-                clientIDsToFlowIds.compute(clientID) { _, flowWithClientIdStatus ->
-                    flowWithClientIdStatus?.let {
-                        future = when (it) {
+                clientIDsToFlowIds.compute(clientID) { _, existingStatus ->
+                    existingStatus?.let {
+                        existingFuture = when (it) {
                             is FlowWithClientIdStatus.Active -> it.flowStateMachineFuture
                             is FlowWithClientIdStatus.Removed -> {
                                 doneFuture(object : FlowStateMachineHandle<Any> {
@@ -292,7 +292,7 @@ internal class SingleThreadedStateMachineManager(
                     } ?: FlowWithClientIdStatus.Active(openFuture())
                 }
             }
-            if (future != null) return uncheckedCast(future)
+            if (existingFuture != null) return uncheckedCast(existingFuture)
 
             // (testing) client id exists but is not present in the map
             onClientIDNotFound?.invoke()
