@@ -8,7 +8,6 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -406,6 +405,7 @@ class NetworkMapUpdaterTest {
     }
 
     @Test(timeout=300_000)
+    @SuppressWarnings("SpreadOperator")
     fun `update nodes is successful for network map supporting bulk operations when high number of nodes is requested`() {
         server.version = "2"
         setUpdater()
@@ -423,6 +423,7 @@ class NetworkMapUpdaterTest {
     }
 
     @Test(timeout=300_000)
+    @SuppressWarnings("SpreadOperator")
     fun `update nodes is successful for network map not supporting bulk operations`() {
         setUpdater()
         val nodeInfos = (1..51).map { createNodeInfoAndSigned("info$it")
