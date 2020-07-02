@@ -80,7 +80,8 @@ constructor(private val initSerEnv: Boolean,
                 "-jar",
                 "corda.jar",
                 "run-migration-scripts",
-                "--core-schemas"
+                "--core-schemas",
+                "--app-schemas"
         )
 
         private const val LOGS_DIR_NAME = "logs"
