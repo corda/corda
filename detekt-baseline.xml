@@ -1598,6 +1598,7 @@
     <ID>TooGenericExceptionCaught:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:SerializationOutputTests.kt$SerializationOutputTests$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:ShutdownManager.kt$ShutdownManager$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:SimpleAMQPClient.kt$SimpleAMQPClient$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SimpleMQClient.kt$SimpleMQClient$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$ex: Exception</ID>
