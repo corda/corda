@@ -275,21 +275,23 @@ internal class SingleThreadedStateMachineManager(
             var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
             mutex.locked {
                 clientIDsToFlowIds.compute(clientID) { _, existingStatus ->
-                    existingStatus?.let {
-                        existingFuture = when (it) {
-                            is FlowWithClientIdStatus.Active -> it.flowStateMachineFuture
+                    if (existingStatus != null) {
+                        existingFuture = when (existingStatus) {
+                            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
                             is FlowWithClientIdStatus.Removed -> {
                                 doneFuture(object : FlowStateMachineHandle<Any> {
                                     override val logic: Nothing? = null
-                                    override val id: StateMachineRunId = it.flowId
+                                    override val id: StateMachineRunId = existingStatus.flowId
                                     // The following future will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
                                     override val resultFuture: CordaFuture<Any> = doneFuture(5)
                                     override val clientID: String? = clientID
                                 })
                             }
                         }
-                        it
-                    } ?: FlowWithClientIdStatus.Active(openFuture())
+                        existingStatus
+                    } else {
+                        FlowWithClientIdStatus.Active(openFuture())
+                    }
                 }
             }
             if (existingFuture != null) return uncheckedCast(existingFuture)
