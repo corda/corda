@@ -15,6 +15,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.node.internal.cordappForClasses
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
@@ -32,7 +33,7 @@ import kotlin.test.assertFailsWith
  * check authentication/authorization of RPC connections.
  */
 @RunWith(Parameterized::class)
-class AuthDBTests : NodeBasedTest() {
+class AuthDBTests : NodeBasedTest(cordappPackages = CORDAPPS) {
     private lateinit var node: NodeWithInfo
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
@@ -43,6 +44,9 @@ class AuthDBTests : NodeBasedTest() {
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
         fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
+
+        @Suppress("SpreadOperator")
+        private val CORDAPPS = setOf(cordappForClasses(*AuthDBTests::class.nestedClasses.map { it.java }.toTypedArray()))
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
