@@ -123,6 +123,7 @@ import net.corda.nodeapi.internal.config.User as InternalUser
 
 class DriverDSLImpl(
         val portAllocation: PortAllocation,
+        val debugPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
         val useTestClock: Boolean,
@@ -218,6 +219,10 @@ class DriverDSLImpl(
         }
     }
 
+    /**
+     * @param pollInterval the interval to wait between attempting to connect, if
+     * a connection attempt fails.
+     */
     private fun establishRpc(config: NodeConfig,
                              processDeathFuture: CordaFuture<out Process>,
                              pollInterval: Duration = DEFAULT_CONNECT_POLL_INTERVAL): CordaFuture<CordaRPCOps> {
@@ -393,7 +398,7 @@ class DriverDSLImpl(
 
     @Suppress("DEPRECATION")
     override fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle> {
-        val debugPort = if (isDebug) portAllocation.nextPort() else null
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startWebserver(handle as NodeHandleInternal, debugPort, maximumHeapSize)
         shutdownManager.registerProcessShutdown(process)
         val webReadyFuture = addressMustBeBoundFuture(executorService, handle.webAddress, process)
@@ -622,7 +627,7 @@ class DriverDSLImpl(
      * terminate the node.
      */
     private fun startOutOfProcessMiniNode(config: NodeConfig, extraCmdLineFlag: Array<String> = emptyArray()): CordaFuture<Unit> {
-        val debugPort = if (isDebug) portAllocation.nextPort() else null
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
                 quasarJarPath,
@@ -694,7 +699,7 @@ class DriverDSLImpl(
             }
             nodeFuture
         } else {
-            val debugPort = if (isDebug) portAllocation.nextPort() else null
+            val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val process = startOutOfProcessNode(
                     config,
                     quasarJarPath,
@@ -1231,6 +1236,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                 portAllocation = defaultParameters.portAllocation,
+                debugPortAllocation = defaultParameters.debugPortAllocation,
                 systemProperties = defaultParameters.systemProperties,
                 driverDirectory = defaultParameters.driverDirectory.toAbsolutePath(),
                 useTestClock = defaultParameters.useTestClock,
@@ -1329,6 +1335,7 @@ fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
         driverDirectory: Path = DriverParameters().driverDirectory,
         portAllocation: PortAllocation = DriverParameters().portAllocation,
+        debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
@@ -1349,6 +1356,7 @@ fun <A> internalDriver(
     return genericDriver(
             driverDsl = DriverDSLImpl(
                 portAllocation = portAllocation,
+                debugPortAllocation = debugPortAllocation,
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,

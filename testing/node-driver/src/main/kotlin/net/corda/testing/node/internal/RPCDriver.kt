@@ -100,11 +100,16 @@ data class RpcServerHandle(
 val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
+// Use a global pool so that we can run RPC tests in parallel
+private val globalPortAllocation = incrementalPortAllocation()
+private val globalDebugPortAllocation = incrementalPortAllocation()
+
 @Suppress("LongParameterList")
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getTimestampAsDirectoryName(),
-        portAllocation: PortAllocation = incrementalPortAllocation(),
+        portAllocation: PortAllocation = globalPortAllocation,
+        debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
@@ -126,6 +131,7 @@ fun <A> rpcDriver(
             driverDsl = RPCDriverDSL(
                     DriverDSLImpl(
                             portAllocation = portAllocation,
+                            debugPortAllocation = debugPortAllocation,
                             systemProperties = systemProperties,
                             driverDirectory = driverDirectory.toAbsolutePath(),
                             useTestClock = useTestClock,

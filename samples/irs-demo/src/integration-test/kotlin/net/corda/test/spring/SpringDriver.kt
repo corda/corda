@@ -42,7 +42,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
      * TODO:  Rather then expecting a given clazz to contain main method which start Spring app our own simple class can do this
      */
     fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
-        val debugPort = if (driverDSL.isDebug) driverDSL.portAllocation.nextPort() else null
+        val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)
         driverDSL.shutdownManager.registerProcessShutdown(process)
         val webReadyFuture = addressMustBeBoundFuture(driverDSL.executorService, (handle as NodeHandleInternal).webAddress, process)
