@@ -247,7 +247,7 @@ internal class RPCClientProxyHandler(
         try {
             sessionFactory = serverLocator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            throw (RPCException("Cannot connect to server(s). Tried with all available servers.", e))
+            throw RPCException("Cannot connect to server(s). Tried with all available servers.", e)
         }
         // Depending on how the client is constructed, connection failure is treated differently
         if (serverLocator.staticTransportConfigurations.size == 1) {
@@ -537,8 +537,11 @@ internal class RPCClientProxyHandler(
         var retryInterval = rpcConfiguration.connectionRetryInterval
         val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
 
-        while (if (maxReconnectCount > 0) reconnectAttempt < maxReconnectCount else true) {
-            val transport = serverLocator.staticTransportConfigurations.let { it[reconnectAttempt % it.size] }
+        fun shouldRetry(reconnectAttempt: Int) =
+                if (maxReconnectCount > 0) reconnectAttempt <= maxReconnectCount else true
+
+        while (shouldRetry(reconnectAttempt)) {
+            val transport = serverLocator.staticTransportConfigurations.let { it[(reconnectAttempt - 1) % it.size] }
 
             log.debug { "Trying to connect using ${transport.params}" }
             try {
@@ -568,10 +571,10 @@ internal class RPCClientProxyHandler(
             break
         }
 
-        val maxReconnectReached = maxReconnectCount > 0 && reconnectAttempt >= maxReconnectCount
+        val maxReconnectReached = maxReconnectCount > 0 && reconnectAttempt > maxReconnectCount
         if (maxReconnectReached || sessionFactory == null) {
-            val errMessage = "Could not reconnect to the RPC server after trying $reconnectAttempt times. Session factory was " +
-                    if (sessionFactory == null) "NOT " else "" + "present"
+            val errMessage = "Could not reconnect to the RPC server after trying $reconnectAttempt times." +
+                    if (sessionFactory != null) "" else " It was never possible to to establish connection with any of the endpoints."
             log.error(errMessage)
         }
     }
