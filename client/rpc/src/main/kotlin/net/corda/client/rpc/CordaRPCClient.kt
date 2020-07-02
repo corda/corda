@@ -158,7 +158,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         open val connectionRetryIntervalMultiplier: Double = 1.5,
 
         /**
-         * Maximum reconnect attempts on failover or disconnection. The default is -1 which means unlimited.
+         * Maximum reconnect attempts on failover or disconnection.
+         * Any non-positive value would mean that there will be an infinite number of reconnect attempts.
          */
         open val maxReconnectAttempts: Int = unlimitedReconnectAttempts,
 
