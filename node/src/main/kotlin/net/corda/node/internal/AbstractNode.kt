@@ -1274,14 +1274,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
         // check clientID early, so that we don't get further down if it can't be saved in the database
         val clientID = event.context.clientID
         if (clientID != null && clientID.length > maxClientIdLength) {
-            event.wireUpFuture(doneFuture(object : FlowStateMachineHandle<T> {
-                override val logic: Nothing? = null
-                override val id: StateMachineRunId = event.flowId
-                override val resultFuture = openFuture<T>().also {
-                    it.setException(IllegalArgumentException("clientID cannot be longer than $maxClientIdLength characters"))
-                }
-                override val clientID: String? = clientID
-            }))
+            throw IllegalArgumentException("clientID cannot be longer than $maxClientIdLength characters")
         } else {
             smm.deliverExternalEvent(event)
         }
