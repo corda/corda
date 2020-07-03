@@ -1080,16 +1080,26 @@ class FlowFrameworkTests {
     @Test
     fun `on node restart -paused- flows with client id are hook-able`() {
         val clientID = UUID.randomUUID().toString()
-
-        var run = 0
         var noSecondFlowWasSpawned = 0
-        val semaphore = Semaphore(0)
+        var firstRun = true
+        var firstFiber: Fiber<out Any?>? = null
+        val flowIsRunning = Semaphore(0)
+        val waitUntilFlowIsRunning = Semaphore(0)
+
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                if (run == 0) {
-                    run++
-                    semaphore.acquire() // make flow wait on first run so it remains in the system on shutdown
+                if (firstRun) {
+                    firstFiber = Fiber.currentFiber()
+                    firstRun = false
+                }
+
+                waitUntilFlowIsRunning.release()
+                try {
+                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
+                } catch (e: InterruptedException) {
+                    flowIsRunning.release()
+                    throw e
                 }
 
                 noSecondFlowWasSpawned++
@@ -1097,6 +1107,7 @@ class FlowFrameworkTests {
         }
 
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        waitUntilFlowIsRunning.acquire()
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         // Pause the flow on node restart
         val aliceNode = mockNet.restartNode(aliceNode,
@@ -1105,7 +1116,10 @@ class FlowFrameworkTests {
                     doReturn(StateMachineManager.StartMode.Safe).whenever(it).smmStartMode
                 }
             ))
+        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
+        firstFiber!!.interrupt()
 
+        // Re-hook a paused flow
         val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
 
         assertEquals(flowHandle0.id, flowHandle1.id)
