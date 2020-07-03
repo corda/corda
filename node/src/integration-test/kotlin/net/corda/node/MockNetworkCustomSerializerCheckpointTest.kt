@@ -46,6 +46,32 @@ class MockNetworkCustomSerializerCheckpointTest{
         val actualReference = node.startFlow(TestFlowCheckingReferencesWork(expectedReference)).get()
 
         Assertions.assertThat(actualReference).isSameAs(expectedReference)
+        Assertions.assertThat(actualReference["one"]).isEqualTo(1)
+    }
+
+    @Test(timeout = 300_000)
+    @Suspendable
+    fun `check serilization of interfaces`() {
+        val node = mockNetwork.createPartyNode()
+        val result = node.startFlow(TestFlowWithDifficultToSerializeLocalVariableAsInterface(5)).get()
+        Assertions.assertThat(result).isEqualTo(5)
+    }
+
+    @StartableByRPC
+    class TestFlowWithDifficultToSerializeLocalVariableAsInterface(private val purchase: Int) : FlowLogic<Int>() {
+        @Suspendable
+        override fun call(): Int {
+
+            // This object is difficult to serialize with Kryo
+            val difficultToSerialize: BrokenMapInterface<String, Int> = BrokenMapSerializedByInterfaceImpl()
+            difficultToSerialize.putAll(mapOf("foo" to purchase))
+
+            // Force a checkpoint
+            sleep(Duration.ofSeconds(0))
+
+            // Return value from deserialized object
+            return difficultToSerialize["foo"] ?: 0
+        }
     }
 
     // Flows
@@ -68,12 +94,12 @@ class MockNetworkCustomSerializerCheckpointTest{
     }
 
     @StartableByRPC
-    class TestFlowCheckingReferencesWork<T>(private val reference: T) : FlowLogic<T>() {
+    class TestFlowCheckingReferencesWork(private val reference: BrokenMap<String, Int>) : FlowLogic<BrokenMap<String, Int>>() {
 
         private val referenceField = reference
 
         @Suspendable
-        override fun call(): T {
+        override fun call(): BrokenMap<String, Int> {
 
             val ref = referenceField
 
@@ -92,7 +118,7 @@ class MockNetworkCustomSerializerCheckpointTest{
     // Broken Map
     // This map breaks the rules for the put method. Making the normal map serializer fail.
 
-    class BrokenMap<K,V> : MutableMap<K,V>{
+    open class BrokenMapImpl<K,V> : MutableMap<K,V>{
         private val map = HashMap<K,V>()
 
         override val size: Int
@@ -114,10 +140,31 @@ class MockNetworkCustomSerializerCheckpointTest{
         override fun remove(key: K): V? = map.remove(key)
     }
 
+    // A class to test custom serializers applied to implementations
+    class BrokenMap<K,V> : BrokenMapImpl<K, V>()
+
+    // An interface and implementation to test custom serializers applied to interface types
+    interface BrokenMapInterface<K, V> : MutableMap<K, V>
+    class BrokenMapSerializedByInterfaceImpl<K,V> : BrokenMapImpl<K, V>(), BrokenMapInterface<K, V>
+
     // Custom serializers
 
     @Suppress("unused")
-    class TestSerializer :
+    class TestInterfaceSerializer :
+            CheckpointCustomSerializer<BrokenMapInterface<Any, Any>, HashMap<Any, Any>> {
+
+        override fun toProxy(obj: BrokenMapInterface<Any, Any>): HashMap<Any, Any> {
+            val proxy = HashMap<Any, Any>()
+            return obj.toMap(proxy)
+        }
+
+        override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMapInterface<Any, Any> {
+            return BrokenMapSerializedByInterfaceImpl<Any, Any>().also { it.putAll(proxy) }
+        }
+    }
+
+    @Suppress("unused")
+    class TestClassSerializer :
             CheckpointCustomSerializer<BrokenMap<Any, Any>, HashMap<Any, Any>> {
 
         override fun toProxy(obj: BrokenMap<Any, Any>): HashMap<Any, Any> {
