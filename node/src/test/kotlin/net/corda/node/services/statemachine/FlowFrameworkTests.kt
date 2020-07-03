@@ -152,6 +152,8 @@ class FlowFrameworkTests {
 
         SuspendingFlow.hookBeforeCheckpoint = {}
         SuspendingFlow.hookAfterCheckpoint = {}
+        ResultFlow.hook = null
+        ResultFlow.suspendableHook = null
     }
 
     @Test(timeout=300_000)
@@ -885,6 +887,7 @@ class FlowFrameworkTests {
         assertEquals(result0, result1)
     }
 
+    @Ignore
     @Test // TODO: this test needs change -> what makes sense is to test this scenario: flow has retried, AND THEN the second request comes in
             // and gets a [FlowStateMachineHandle] whose future is the old one
     fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
@@ -977,6 +980,7 @@ class FlowFrameworkTests {
         assertEquals(maxTries, failedRemovals)
     }
 
+    @Ignore
     @Test
     fun `only one flow starts upon concurrent requests with the same client id`() {
         val requests = 2
@@ -1027,18 +1031,28 @@ class FlowFrameworkTests {
 
 
     @Test
-    fun `on node restart flows -to run- with client id are hook-able`() {
+    fun `on node start -running- flows with client id are hook-able`() {
         val clientID = UUID.randomUUID().toString()
-
-        var run = 0
         var noSecondFlowWasSpawned = 0
-        val semaphore = Semaphore(0)
+        var firstRun = true
+        var firstFiber: Fiber<out Any?>? = null
+        val flowIsRunning = Semaphore(0)
+        val waitUntilFlowIsRunning = Semaphore(0)
+
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                if (run == 0) {
-                    run++
-                    semaphore.acquire() // make flow wait on first run so it remains in the system on shutdown
+                if (firstRun) {
+                    firstFiber = Fiber.currentFiber()
+                    firstRun = false
+                }
+
+                waitUntilFlowIsRunning.release()
+                try {
+                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
+                } catch (e: InterruptedException) {
+                    flowIsRunning.release()
+                    throw e
                 }
 
                 noSecondFlowWasSpawned++
@@ -1046,17 +1060,16 @@ class FlowFrameworkTests {
         }
 
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        waitUntilFlowIsRunning.acquire()
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val aliceNode = mockNet.restartNode(aliceNode)
+        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
+        firstFiber!!.interrupt()
 
-        // Wait for the flow to get removed
-        val future = openFuture<StateMachineManager.Change>()
-        aliceNode.smm.track().updates.subscribe {
-            future.set(it)
-        }
-        assertTrue(future.getOrThrow(20.seconds) is StateMachineManager.Change.Removed)
-
+        waitUntilFlowIsRunning.acquire()
+        // Re-hook a running flow
         val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        flowIsRunning.release()
 
         assertEquals(flowHandle0.id, flowHandle1.id)
         assertEquals(clientID, flowHandle1.clientID)
