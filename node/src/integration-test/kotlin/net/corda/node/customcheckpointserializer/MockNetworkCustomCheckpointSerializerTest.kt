@@ -64,4 +64,12 @@ class MockNetworkCustomCheckpointSerializerTest {
         val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsFinal(5)).get()
         Assertions.assertThat(result).isEqualTo(5)
     }
+
+    @Test(timeout = 300_000)
+    @Suspendable
+    fun `check PublicKey serializer has not been overridden`() {
+        val node = mockNetwork.createPartyNode()
+        val result = node.startFlow(TestCorDapp.TestFlowCheckingPublicKeySerializer()).get()
+        Assertions.assertThat(result.encoded).isEqualTo(node.info.legalIdentities.first().owningKey.encoded)
+    }
 }

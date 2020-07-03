@@ -1,12 +1,14 @@
 package net.corda.node.customcheckpointserializer
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions
+import java.security.PublicKey
 import java.time.Duration
 
 /**
@@ -109,6 +111,23 @@ class TestCorDapp {
         }
     }
 
+
+    @StartableByRPC
+    class TestFlowCheckingPublicKeySerializer :
+            FlowLogic<PublicKey>() {
+
+        @Suspendable
+        override fun call(): PublicKey {
+            val ref = ourIdentity.owningKey
+
+            // Force a checkpoint
+            sleep(Duration.ofSeconds(0))
+
+            // Return deserialized object
+            return ref
+        }
+    }
+
     // Custom serializers
 
     @Suppress("unused")
@@ -164,6 +183,18 @@ class TestCorDapp {
         override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapFinal<Any, Any> {
             return DifficultToSerialize.BrokenMapFinal<Any, Any>()
                     .also { it.putAll(proxy) }
+        }
+    }
+
+    @Suppress("unused")
+    class BrokenPublicKeySerializer :
+            CheckpointCustomSerializer<PublicKey, String> {
+        override fun toProxy(obj: PublicKey): String {
+            throw FlowException("Broken on purpose")
+        }
+
+        override fun fromProxy(proxy: String): PublicKey {
+            throw FlowException("Broken on purpose")
         }
     }
 }

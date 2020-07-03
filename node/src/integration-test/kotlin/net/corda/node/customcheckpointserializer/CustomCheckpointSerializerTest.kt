@@ -2,6 +2,7 @@ package net.corda.node.customcheckpointserializer
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
@@ -46,7 +47,8 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
                 TestCorDapp.TestAbstractClassSerializer(),
                 TestCorDapp.TestClassSerializer(),
                 TestCorDapp.TestInterfaceSerializer(),
-                TestCorDapp.TestFinalClassSerializer()
+                TestCorDapp.TestFinalClassSerializer(),
+                TestCorDapp.BrokenPublicKeySerializer()
         ))
     }
 
@@ -69,6 +71,20 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
     fun `test custom checkpoint serialization using final class`() {
         testBrokenMapSerialization(DifficultToSerialize.BrokenMapFinal())
     }
+
+    @Test(timeout=300_000)
+    fun `test PublicKey serializer has not been overridden`() {
+
+        val publicKey = generateKeyPair().public
+
+        // Serialize/deserialize
+        val checkpoint = publicKey.checkpointSerialize(context)
+        val deserializedCheckpoint = checkpoint.checkpointDeserialize(context)
+
+        // Check the elements are as expected
+        Assert.assertArrayEquals(publicKey.encoded, deserializedCheckpoint.encoded)
+    }
+
 
     private fun testBrokenMapSerialization(brokenMap : MutableMap<String, String>): MutableMap<String, String> {
         // Add elements to the map
