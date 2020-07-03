@@ -99,7 +99,8 @@ data class Checkpoint(
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
                 subFlowVersion: SubFlowVersion,
-                isEnabledTimedFlow: Boolean
+                isEnabledTimedFlow: Boolean,
+                timestamp: Instant
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion, isEnabledTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
@@ -108,7 +109,8 @@ data class Checkpoint(
                         ourIdentity,
                         emptyMap(),
                         listOf(topLevelSubFlow),
-                        numberOfSuspends = 0
+                        numberOfSuspends = 0,
+                        suspensionTime = timestamp
                     ),
                     errorState = ErrorState.Clean,
                     flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
@@ -196,6 +198,7 @@ data class Checkpoint(
  * @param sessions map of source session ID to session state.
  * @param subFlowStack the stack of currently executing subflows.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
+ * @param suspensionTime the time of the last suspension. This is supposed to serve as an original timestamp in case of replays.
  */
 @CordaSerializable
 data class CheckpointState(
@@ -203,7 +206,8 @@ data class CheckpointState(
     val ourIdentity: Party,
     val sessions: SessionMap, // This must preserve the insertion order!
     val subFlowStack: List<SubFlow>,
-    val numberOfSuspends: Int
+    val numberOfSuspends: Int,
+    val suspensionTime: Instant
 )
 
 /**

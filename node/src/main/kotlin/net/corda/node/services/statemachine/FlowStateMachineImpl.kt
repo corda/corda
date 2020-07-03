@@ -145,7 +145,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val stateMachine = getTransientField(TransientValues::stateMachine)
         val oldState = transientState!!.value
         val actionExecutor = getTransientField(TransientValues::actionExecutor)
-        val transition = stateMachine.transition(event, oldState)
+        val transition = stateMachine.transition(event, oldState, serviceHub.clock.instant())
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
         // Ensure that the next state that is being written to the transient state maintains the [isKilled] flag
         // This condition can be met if a flow is killed during [TransitionExecutor.executeTransition]

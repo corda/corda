@@ -25,6 +25,7 @@ import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -76,7 +77,7 @@ class P2PMessagingTest {
     private fun InProcess.respondWith(message: Any) {
         internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0)
+            val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
             val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes, SenderDeduplicationId(messageIdentifier, null))
             internalServices.networkService.send(response, request.replyTo)
             handler.afterDatabaseTransaction()
@@ -88,7 +89,7 @@ class P2PMessagingTest {
         internalServices.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0)
+        val messageIdentifier = MessageIdentifier("XD", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
         internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target, SenderDeduplicationId(messageIdentifier, null))
         return response
     }

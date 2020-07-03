@@ -171,7 +171,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
     }
 
     @Suspendable
-    override fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
+    override fun sessionEnded(sessionId: Long, lastSenderDedupInfo: SenderDeduplicationInfo) {
         // nothing to do here.
     }
 

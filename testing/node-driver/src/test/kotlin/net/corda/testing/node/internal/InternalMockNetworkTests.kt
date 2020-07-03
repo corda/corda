@@ -9,6 +9,7 @@ import net.corda.node.services.statemachine.SenderDeduplicationId
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
+import java.time.Clock
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -41,7 +42,7 @@ class InternalMockNetworkTests {
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0, Clock.systemUTC().instant())
         node1.network.send(node1.network.createMessage("test.topic", data = bits, deduplicationId =  SenderDeduplicationId(messageIdentifier, null)) , node2.network.myAddress)
 
         mockNet.runNetwork(rounds = 1)
@@ -61,7 +62,7 @@ class InternalMockNetworkTests {
 
         var counter = 0
         listOf(node1, node2, node3).forEach { it.network.addMessageHandler("test.topic") { _, _, _ -> counter++ } }
-        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0, Clock.systemUTC().instant())
         node1.network.send(node2.network.createMessage("test.topic", data = bits, deduplicationId = SenderDeduplicationId(messageIdentifier, null)), rigorousMock<AllPossibleRecipients>())
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
@@ -83,7 +84,7 @@ class InternalMockNetworkTests {
             received++
         }
 
-        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", "00000000", 12, 0, Clock.systemUTC().instant())
         val invalidMessage = node2.network.createMessage("invalid_message", data = ByteArray(1), deduplicationId = SenderDeduplicationId(messageIdentifier, null))
         val validMessage = node2.network.createMessage("valid_message", data = ByteArray(1), deduplicationId = SenderDeduplicationId(messageIdentifier, null))
         node2.network.send(invalidMessage, node1.network.myAddress)

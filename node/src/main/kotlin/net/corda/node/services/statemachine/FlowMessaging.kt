@@ -32,7 +32,7 @@ interface FlowMessaging {
     fun sendSessionMessages(messageData: List<Message>)
 
     @Suspendable
-    fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo)
+    fun sessionEnded(sessionId: Long, lastSenderDedupInfo: SenderDeduplicationInfo)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -71,8 +71,8 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     @Suspendable
-    override fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
-        serviceHub.networkService.sessionEnded(sessionId, shardId, lastSenderDedupInfo)
+    override fun sessionEnded(sessionId: Long, lastSenderDedupInfo: SenderDeduplicationInfo) {
+        serviceHub.networkService.sessionEnded(sessionId, lastSenderDedupInfo)
     }
 
     private fun createMessage(destination: Destination, message: SessionMessage, deduplicationId: SenderDeduplicationId): MessagingService.AddressedMessage {

@@ -38,6 +38,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.subjects.PublishSubject
 import java.net.ServerSocket
+import java.time.Clock
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -145,7 +146,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `client should be able to send message to itself`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
-        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
         val message = messagingClient.createMessage(TOPIC, "first msg".toByteArray(), SenderDeduplicationId(messageIdentifier, null))
         messagingClient.send(message, messagingClient.myAddress)
 
@@ -157,7 +158,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `client should fail if message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
-        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
         val message = messagingClient.createMessage(TOPIC, ByteArray(MAX_MESSAGE_SIZE), SenderDeduplicationId(messageIdentifier, null))
         messagingClient.send(message, messagingClient.myAddress)
 
@@ -177,7 +178,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
-        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
         val message = messagingClient.createMessage(TOPIC, ByteArray(50_000), SenderDeduplicationId(messageIdentifier, null))
         messagingClient.send(message, messagingClient.myAddress)
 
@@ -196,7 +197,7 @@ class ArtemisMessagingTest {
     @Test(timeout=300_000)
 	fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
-        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, 12, 0, Clock.systemUTC().instant())
         val message = messagingClient.createMessage(TOPIC, "first msg".toByteArray(), SenderDeduplicationId(messageIdentifier, null))
         messagingClient.send(message, messagingClient.myAddress)
 

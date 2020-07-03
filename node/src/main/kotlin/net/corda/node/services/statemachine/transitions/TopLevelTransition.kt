@@ -177,10 +177,11 @@ class TopLevelTransition(
                 val newCheckpointState = if (checkpointState.invocationContext.arguments.isNotEmpty()) {
                     checkpointState.copy(
                         invocationContext = checkpointState.invocationContext.copy(arguments = emptyList()),
-                        numberOfSuspends = checkpointState.numberOfSuspends + 1
+                        numberOfSuspends = checkpointState.numberOfSuspends + 1,
+                        suspensionTime = context.time
                     )
                 } else {
-                    checkpointState.copy(numberOfSuspends = checkpointState.numberOfSuspends + 1)
+                    checkpointState.copy(numberOfSuspends = checkpointState.numberOfSuspends + 1, suspensionTime = context.time)
                 }
                 copy(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
@@ -250,7 +251,8 @@ class TopLevelTransition(
                             checkpoint = checkpoint.copy(
                                 checkpointState = checkpoint.checkpointState.copy(
                                         numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1,
-                                        sessions = newSessions
+                                        sessions = newSessions,
+                                        suspensionTime = context.time
                                 ),
                                 flowState = FlowState.Completed,
                                 result = event.returnValue,
@@ -292,7 +294,7 @@ class TopLevelTransition(
         val sendEndMessageActions = currentState.checkpoint.checkpointState.sessions.values.mapIndexed { _, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
-                val messageIdentifier = MessageIdentifier("XE", state.shardId, state.initiatedState.peerSinkSessionId.toLong, state.sequenceNumber)
+                val messageIdentifier = MessageIdentifier("XE", state.shardId, state.initiatedState.peerSinkSessionId.toLong, state.sequenceNumber, currentState.checkpoint.checkpointState.suspensionTime)
                 val newSessionState = state.copy(sequenceNumber = state.sequenceNumber + 1)
                 val newSessions = LinkedHashMap(currentState.checkpoint.checkpointState.sessions)
                 newSessions[state.initiatedState.peerSinkSessionId] = newSessionState

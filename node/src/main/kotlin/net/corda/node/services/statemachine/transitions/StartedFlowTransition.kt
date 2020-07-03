@@ -281,7 +281,7 @@ class StartedFlowTransition(
                     shardId = shardId
             )
             val otherSideSession = sourceSessionId.toLong + 1
-            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSession, sessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSession, sessionState.sequenceNumber, startingState.checkpoint.checkpointState.suspensionTime)
             actions.add(Action.SendInitial(sessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID)))
             newSessions[sourceSessionId] = newSessionState
         }
@@ -331,14 +331,14 @@ class StartedFlowTransition(
                     shardId = shardId
             )
             val otherSideSessionId = sourceSessionId.toLong + 1
-            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSessionId, uninitiatedSessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XI", shardId, otherSideSessionId, uninitiatedSessionState.sequenceNumber, startingState.checkpoint.checkpointState.suspensionTime)
             Action.SendInitial(uninitiatedSessionState.destination, initialMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
         } ?: emptyList()
         messagesByType[SessionState.Initiating::class]?.forEach { (sourceSessionId, sessionState, message) ->
             val initiatingSessionState = sessionState as SessionState.Initiating
             val sessionMessage = DataSessionMessage(message)
             val otherSideSessionId = sourceSessionId.toLong + 1
-            val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, otherSideSessionId, sessionState.sequenceNumber)
+            val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, otherSideSessionId, sessionState.sequenceNumber, startingState.checkpoint.checkpointState.suspensionTime)
             val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(messageIdentifier, sessionMessage)
             newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages, sequenceNumber = sessionState.sequenceNumber + 1)
         }
@@ -350,7 +350,7 @@ class StartedFlowTransition(
                 val sessionMessage = DataSessionMessage(message)
                 val sinkSessionId = initiatedSessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, sinkSessionId.toLong, initiatedSessionState.sequenceNumber)
+                val messageIdentifier = MessageIdentifier("XD", sessionState.shardId, sinkSessionId.toLong, initiatedSessionState.sequenceNumber, checkpoint.checkpointState.suspensionTime)
                 newSessions[sessionId] = initiatedSessionState.copy(sequenceNumber = initiatedSessionState.sequenceNumber + 1)
                 Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(messageIdentifier, startingState.senderUUID))
             }

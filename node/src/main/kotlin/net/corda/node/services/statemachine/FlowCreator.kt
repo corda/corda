@@ -104,7 +104,8 @@ class FlowCreator(
             frozenFlowLogic,
             ourIdentity,
             flowCorDappVersion,
-            flowLogic.isEnabledTimedFlow()
+            flowLogic.isEnabledTimedFlow(),
+            serviceHub.clock.instant()
         ).getOrThrow()
 
         val state = createStateMachineState(

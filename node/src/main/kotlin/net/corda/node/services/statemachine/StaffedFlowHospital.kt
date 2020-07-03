@@ -148,7 +148,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
 
         log.info("Sending session initiation error back to $sender", error)
 
-        val messageIdentifier = MessageIdentifier("XR", event.receivedMessage.uniqueMessageId.shardIdentifier, sessionMessage.initiatorSessionId.toLong, 0)
+        // there's no flow checkpoint, so we use the timestamp of the original message for determinism.
+        val messageIdentifier = MessageIdentifier("XR", event.receivedMessage.uniqueMessageId.shardIdentifier, sessionMessage.initiatorSessionId.toLong, 0, event.receivedMessage.uniqueMessageId.timestamp)
         flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(messageIdentifier, ourSenderUUID))
         event.deduplicationHandler.afterDatabaseTransaction()
     }

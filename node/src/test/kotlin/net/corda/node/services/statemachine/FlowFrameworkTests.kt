@@ -1019,7 +1019,7 @@ internal fun TestStartedNode.sendSessionMessage(message: InitialSessionMessage, 
     val STATIC_SHARD_ID = "00000000"
     services.networkService.apply {
         val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
-        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, message.initiatorSessionId.toLong, 0)
+        val messageIdentifier = MessageIdentifier("XI", STATIC_SHARD_ID, message.initiatorSessionId.toLong, 0, Clock.systemUTC().instant())
         send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes, SenderDeduplicationId(messageIdentifier, ourSenderUUID)), address)
     }
 }

@@ -71,7 +71,7 @@ class UnstartedFlowTransition(
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
-        val messageIdentifier = MessageIdentifier("XC", flowStart.shardId, initiatingMessage.initiatorSessionId.toLong, 0)
+        val messageIdentifier = MessageIdentifier("XC", flowStart.shardId, initiatingMessage.initiatorSessionId.toLong, 0, startingState.checkpoint.checkpointState.suspensionTime)
         currentState = currentState.copy(
                 checkpoint = currentState.checkpoint.setSessions(mapOf(flowStart.initiatedSessionId to initiatedState))
         )

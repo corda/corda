@@ -465,6 +465,7 @@ internal class SingleThreadedStateMachineManager(
     }
 
     private fun onSessionMessage(event: ExternalEvent.ExternalMessageEvent) {
+        logger.info("State machine recipient timestamp: ${event.receivedMessage.debugTimestamp}")
         val peer = event.receivedMessage.peer
         val sessionMessage = try {
             event.receivedMessage.data.deserialize<SessionMessage>()

@@ -40,7 +40,7 @@ class KilledFlowTransition(
                     val sessionId = (sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId
                     var currentSequenceNumber = sessionState.sequenceNumber
                     val errorsWithId = errorMessages.map { error ->
-                        val result = Pair(MessageIdentifier("XX", sessionState.shardId, sessionId.toLong, currentSequenceNumber), error)
+                        val result = Pair(MessageIdentifier("XX", sessionState.shardId, sessionId.toLong, currentSequenceNumber, startingState.checkpoint.checkpointState.suspensionTime), error)
                         currentSequenceNumber++
                         result
                     }.toList()
@@ -55,6 +55,7 @@ class KilledFlowTransition(
             actions.add(
                 Action.PropagateErrors(
                     errorsPerSession,
+                    startingState.checkpoint.checkpointState.suspensionTime,
                     startingState.senderUUID
                 )
             )
@@ -132,7 +133,7 @@ class KilledFlowTransition(
                 var currentSequenceNumber = sessionState.sequenceNumber
                 val errorMessagesWithDeduplication = errorMessages.map {
                     val otherSideSessionId = sourceSessionId.toLong + 1
-                    (MessageIdentifier("XX", sessionState.shardId, otherSideSessionId, currentSequenceNumber) to it).also { currentSequenceNumber++ }
+                    (MessageIdentifier("XX", sessionState.shardId, otherSideSessionId, currentSequenceNumber, startingState.checkpoint.checkpointState.suspensionTime) to it).also { currentSequenceNumber++ }
                 }
                 sessionState.copy(bufferedMessages =  sessionState.bufferedMessages + errorMessagesWithDeduplication, sequenceNumber = sessionState.sequenceNumber + errorMessages.size)
             } else {

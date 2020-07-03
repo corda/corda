@@ -80,6 +80,7 @@ sealed class Action {
      */
     data class PropagateErrors(
             val errorsPerSession: Map<SessionState.Initiated, List<Pair<MessageIdentifier, ErrorSessionMessage>>>,
+            val messageTimestamp: Instant,
             val senderUUID: String?
     ) : Action()
 

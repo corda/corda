@@ -118,7 +118,7 @@
     <ID>ComplexMethod:CordaRPCClient.kt$CordaRPCClientConfiguration$override fun equals(other: Any?): Boolean</ID>
     <ID>ComplexMethod:CordaRPCClientTest.kt$CordaRPCClientTest$@Test(timeout=300_000) fun `shutdown command stops the node`()</ID>
     <ID>ComplexMethod:CustomSerializerRegistry.kt$CachingCustomSerializerRegistry$private fun doFindCustomSerializer(clazz: Class&lt;*&gt;, declaredType: Type): AMQPSerializer&lt;Any&gt;?</ID>
-    <ID>ComplexMethod:DeliverSessionMessageTransition.kt$DeliverSessionMessageTransition$private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage, messageIdentifier: MessageIdentifier)</ID>
+    <ID>ComplexMethod:DeliverSessionMessageTransition.kt$DeliverSessionMessageTransition$private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage, messageIdentifier: MessageIdentifier, senderDeduplicationInfo: SenderDeduplicationInfo)</ID>
     <ID>ComplexMethod:DeserializationInput.kt$DeserializationInput$fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any</ID>
     <ID>ComplexMethod:DriverDSLImpl.kt$DriverDSLImpl$override fun start()</ID>
     <ID>ComplexMethod:Expect.kt$ fun &lt;S, E : Any&gt; S.genericExpectEvents( isStrict: Boolean = true, stream: S.((E) -&gt; Unit) -&gt; Unit, expectCompose: () -&gt; ExpectCompose&lt;E&gt; )</ID>
@@ -449,6 +449,7 @@
     <ID>ForbiddenComment:SwapData.kt$SwapData$// TODO: Fix below to be correct - change tenor and reference data</ID>
     <ID>ForbiddenComment:SwapDataView.kt$// TODO: Should be able to display an array ?</ID>
     <ID>ForbiddenComment:ThrowableSerializer.kt$ThrowableSerializer$// TODO: This will need reworking when we have multiple class loaders</ID>
+    <ID>ForbiddenComment:TopLevelTransition.kt$TopLevelTransition$// TODO: need to check whether we actually need to signal session end at this point.</ID>
     <ID>ForbiddenComment:TransactionBuilder.kt$TransactionBuilder$// TODO: Add support for making recursive resolution optional if it becomes an issue.</ID>
     <ID>ForbiddenComment:TransactionBuilder.kt$TransactionBuilder$//TODO: add link to docsite page, when there is one.</ID>
     <ID>ForbiddenComment:TransactionState.kt$TransactionState$// TODO: Implement the contract sandbox loading of the contract attachments</ID>
@@ -698,7 +699,7 @@
     <ID>LongParameterList:ServiceHubInternal.kt$ServiceHubInternal.Companion$(statesToRecord: StatesToRecord, txs: Collection&lt;SignedTransaction&gt;, validatedTransactions: WritableTransactionStorage, stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage, vaultService: VaultServiceInternal, database: CordaPersistence)</ID>
     <ID>LongParameterList:SignatureConstraintVersioningTests.kt$SignatureConstraintVersioningTests$( cordapp: CustomCordapp, newCordapp: CustomCordapp, whiteListedCordapps: Map&lt;ContractClassName, List&lt;CustomCordapp&gt;&gt;, systemProperties: Map&lt;String, String&gt;, startNodesInProcess: Boolean, minimumPlatformVersion: Int = 4, specifyExistingConstraint: Boolean = false, addAnotherAutomaticConstraintState: Boolean = false )</ID>
     <ID>LongParameterList:SinglePartyNotaryService.kt$SinglePartyNotaryService$( inputs: List&lt;StateRef&gt;, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; )</ID>
-    <ID>LongParameterList:StateMachineState.kt$Checkpoint.Companion$( invocationContext: InvocationContext, flowStart: FlowStart, flowLogicClass: Class&lt;FlowLogic&lt;*&gt;&gt;, frozenFlowLogic: SerializedBytes&lt;FlowLogic&lt;*&gt;&gt;, ourIdentity: Party, subFlowVersion: SubFlowVersion, isEnabledTimedFlow: Boolean )</ID>
+    <ID>LongParameterList:StateMachineState.kt$Checkpoint.Companion$( invocationContext: InvocationContext, flowStart: FlowStart, flowLogicClass: Class&lt;FlowLogic&lt;*&gt;&gt;, frozenFlowLogic: SerializedBytes&lt;FlowLogic&lt;*&gt;&gt;, ourIdentity: Party, subFlowVersion: SubFlowVersion, isEnabledTimedFlow: Boolean, timestamp: Instant )</ID>
     <ID>LongParameterList:TLSAuthenticationTests.kt$TLSAuthenticationTests$( rootCAScheme: SignatureScheme, intermediateCAScheme: SignatureScheme, client1CAScheme: SignatureScheme, client1TLSScheme: SignatureScheme, client2CAScheme: SignatureScheme, client2TLSScheme: SignatureScheme )</ID>
     <ID>LongParameterList:TLSAuthenticationTests.kt$TLSAuthenticationTests$( serverSocketFactory: SSLServerSocketFactory, clientSocketFactory: SSLSocketFactory, serverPort: Int = 0, // Use 0 to get first free socket. clientPort: Int = 0, // Use 0 to get first free socket. cipherSuitesServer: Array&lt;String&gt; = CORDA_TLS_CIPHER_SUITES, cipherSuitesClient: Array&lt;String&gt; = CORDA_TLS_CIPHER_SUITES )</ID>
     <ID>LongParameterList:TransactionDSLInterpreter.kt$TransactionDSLInterpreter$(contractClassName: ContractClassName, label: String?, notary: Party, encumbrance: Int?, attachmentConstraint: AttachmentConstraint, contractState: ContractState)</ID>
@@ -907,12 +908,14 @@
     <ID>MagicNumber:MessageIdentifier.kt$8</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier$16</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier$8</ID>
-    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$11</ID>
-    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$12</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$16</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$19</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$20</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$28</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$29</ID>
     <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$3</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$45</ID>
+    <ID>MagicNumber:MessageIdentifier.kt$MessageIdentifier.Companion$46</ID>
     <ID>MagicNumber:MessageSizeChecksInterceptor.kt$ArtemisMessageSizeChecksInterceptor$4</ID>
     <ID>MagicNumber:MigrationNamedCacheFactory.kt$MigrationNamedCacheFactory$1024L</ID>
     <ID>MagicNumber:MockContractAttachment.kt$113</ID>

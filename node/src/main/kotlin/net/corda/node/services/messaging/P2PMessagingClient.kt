@@ -404,6 +404,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     internal fun deliver(artemisMessage: ClientMessage) {
+        log.info("Recipient timestamp: ${artemisMessage.timestamp}")
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (cordaMessage.isSessionInit) {
                 if (!deduplicator.isDuplicate(cordaMessage)) {
@@ -447,11 +448,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
             get() = this
 
         override fun insideDatabaseTransaction() {
-            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId.toDeduplicationId())
+            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId)
         }
 
         override fun afterDatabaseTransaction() {
-            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId.toDeduplicationId())
+            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId)
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 
@@ -550,8 +551,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     @Suspendable
-    override fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo) {
-        deduplicator.signalSessionEnd(sessionId, shardId, lastSenderDedupInfo)
+    override fun sessionEnded(sessionId: Long, lastSenderDedupInfo: SenderDeduplicationInfo) {
+        deduplicator.signalSessionEnd(sessionId, lastSenderDedupInfo)
     }
 
     override fun resolveTargetToArtemisQueue(address: MessageRecipients): String {

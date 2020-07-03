@@ -46,6 +46,7 @@ class MessagingExecutor(
     fun send(message: Message, target: MessageRecipients) {
         val mqAddress = resolver.resolveTargetToArtemisQueue(target)
         val artemisMessage = cordaToArtemisMessage(message)
+        log.info("Sender timestamp: ${artemisMessage?.timestamp}")
         log.trace {
             "Send to: $mqAddress topic: ${message.topic} " +
                     "sessionID: ${message.topic} id: ${message.uniqueMessageId}"
@@ -81,6 +82,7 @@ class MessagingExecutor(
                 putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString(ourSenderUUID))
                 putLongProperty(P2PMessagingHeaders.senderSeqNo, ourSenderSeqNo.getAndIncrement())
             }
+            timestamp = System.currentTimeMillis()
             // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
             if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
                 putLongProperty(org.apache.activemq.artemis.api.core.Message.HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)

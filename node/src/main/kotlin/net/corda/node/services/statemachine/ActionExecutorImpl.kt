@@ -204,7 +204,7 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSignalSessionHasEnded(action: Action.SignalSessionHasEnded) {
-        flowMessaging.sessionEnded(action.sessionId.toLong, action.shardId, action.lastSenderDedupInfo)
+        flowMessaging.sessionEnded(action.sessionId.toLong, action.lastSenderDedupInfo)
     }
 
     @Suspendable

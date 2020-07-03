@@ -907,7 +907,8 @@ class DBCheckpointStorageTests {
             frozenLogic,
             ALICE,
             SubFlowVersion.CoreFlow(version),
-            false
+            false,
+            Clock.systemUTC().instant()
         )
             .getOrThrow()
         return id to checkpoint

@@ -54,7 +54,7 @@ class ErrorFlowTransition(
                             val sessionId = (sessionState.initiatedState as InitiatedSessionState.Live).peerSinkSessionId
                             var currentSequenceNumber = sessionState.sequenceNumber
                             val errorsWithSequenceNumber = errorMessages.map { error ->
-                                val result = Pair(MessageIdentifier("XX", sessionState.shardId, sessionId.toLong, currentSequenceNumber), error)
+                                val result = Pair(MessageIdentifier("XX", sessionState.shardId, sessionId.toLong, currentSequenceNumber, startingState.checkpoint.checkpointState.suspensionTime), error)
                                 currentSequenceNumber++
                                 result
                             }.toList()
@@ -69,7 +69,7 @@ class ErrorFlowTransition(
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
 
-                actions.add(Action.PropagateErrors(errorsPerSession, startingState.senderUUID))
+                actions.add(Action.PropagateErrors(errorsPerSession, startingState.checkpoint.checkpointState.suspensionTime, startingState.senderUUID))
             }
 
             // If we're errored but not propagating keep processing events.
@@ -79,7 +79,8 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
-                val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+                val newCheckpointState = startingState.checkpoint.checkpointState.copy(suspensionTime = context.time)
+                val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED, checkpointState = newCheckpointState)
 
                 val signalFlowEndActions = currentState.checkpoint.checkpointState.sessions.mapNotNull { (sessionId, sessionState) ->
                     if (sessionState is SessionState.Initiated) {
@@ -144,7 +145,7 @@ class ErrorFlowTransition(
                 var currentSequenceNumber = sessionState.sequenceNumber
                 val errorMessagesWithDeduplication = errorMessages.map {
                     val otherSideSessionId = sourceSessionId.toLong + 1
-                    (MessageIdentifier("XX", sessionState.shardId, otherSideSessionId, currentSequenceNumber) to it).also { currentSequenceNumber++ }
+                    (MessageIdentifier("XX", sessionState.shardId, otherSideSessionId, currentSequenceNumber, startingState.checkpoint.checkpointState.suspensionTime) to it).also { currentSequenceNumber++ }
                 }
                 sessionState.copy(bufferedMessages =  sessionState.bufferedMessages + errorMessagesWithDeduplication, sequenceNumber = sessionState.sequenceNumber + errorMessages.size)
             } else {

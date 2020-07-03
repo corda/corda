@@ -102,7 +102,7 @@ interface MessagingService : ServiceLifecycleSupport {
      * Note: not supposed to be called for sessions that were never initialised (e.g. rejected by counterparty)
      */
     @Suspendable
-    fun sessionEnded(sessionId: Long, shardId: String, lastSenderDedupInfo: SenderDeduplicationInfo)
+    fun sessionEnded(sessionId: Long, lastSenderDedupInfo: SenderDeduplicationInfo)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
