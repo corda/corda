@@ -275,7 +275,7 @@ allprojects {
         toolVersion = "0.8.3"
     }
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
@@ -287,7 +287,7 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
@@ -302,7 +302,7 @@ allprojects {
         task.dependsOn tasks.withType(AbstractCompile)
     }
 
-    tasks.withType(Jar) { task ->
+    tasks.withType(Jar).configureEach { task ->
         // Includes War and Ear
         manifest {
             attributes('Corda-Release-Version': corda_release_version)
@@ -314,7 +314,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         forkEvery = 10
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
@@ -339,7 +339,7 @@ allprojects {
         systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
@@ -520,7 +520,7 @@ tasks.register('detektBaseline', JavaExec) {
     args(params)
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
@@ -626,7 +626,7 @@ dependxiesModule {
     skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi) {
+tasks.register('generateApi', net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
 
