@@ -9,7 +9,6 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
-import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
@@ -26,6 +25,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.QuasarWhitelist
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.encodingNotPermittedFormat
+import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
@@ -71,12 +71,12 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     private fun Kryo.addCustomSerializers(context: CheckpointSerializationContext) {
         for (customSerializer in cordappSerializers) {
             val typeName = customSerializer.cordappType.typeName.substringBefore('<')
-            val clazz = context.deserializationClassLoader.loadClass(typeName)
+            val clazz: Class<*> = context.deserializationClassLoader.loadClass(typeName)
 
-            if (clazz.isInterface || clazz.isAbstractClass) {
-                addDefaultSerializer(clazz, customSerializer)
-            } else {
+            if (Modifier.isFinal(clazz.modifiers)) {
                 register(clazz, customSerializer)
+            } else {
+                addDefaultSerializer(clazz, customSerializer)
             }
         }
     }
