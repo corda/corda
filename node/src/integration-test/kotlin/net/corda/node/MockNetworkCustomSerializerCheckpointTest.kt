@@ -41,7 +41,7 @@ class MockNetworkCustomSerializerCheckpointTest{
     @Test(timeout = 300_000)
     fun `check references are restored correctly`() {
         val node = mockNetwork.createPartyNode()
-        val expectedReference = BrokenMap<String, Int>()
+        val expectedReference = BrokenMapClass<String, Int>()
         expectedReference.putAll(mapOf("one" to 1))
         val actualReference = node.startFlow(TestFlowCheckingReferencesWork(expectedReference)).get()
 
@@ -57,13 +57,23 @@ class MockNetworkCustomSerializerCheckpointTest{
         Assertions.assertThat(result).isEqualTo(5)
     }
 
+    @Test(timeout = 300_000)
+    @Suspendable
+    fun `check serilization of abstract classes`() {
+        val node = mockNetwork.createPartyNode()
+        val result = node.startFlow(TestFlowWithDifficultToSerializeLocalVariableAsAbstract(5)).get()
+        Assertions.assertThat(result).isEqualTo(5)
+    }
+
+    // Flows
+
     @StartableByRPC
-    class TestFlowWithDifficultToSerializeLocalVariableAsInterface(private val purchase: Int) : FlowLogic<Int>() {
+    class TestFlowWithDifficultToSerializeLocalVariableAsAbstract(private val purchase: Int) : FlowLogic<Int>() {
         @Suspendable
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: BrokenMapInterface<String, Int> = BrokenMapSerializedByInterfaceImpl()
+            val difficultToSerialize: BrokenMapAbstract<String, Int> = BrokenMapAbstractImpl()
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
@@ -74,7 +84,23 @@ class MockNetworkCustomSerializerCheckpointTest{
         }
     }
 
-    // Flows
+
+    @StartableByRPC
+    class TestFlowWithDifficultToSerializeLocalVariableAsInterface(private val purchase: Int) : FlowLogic<Int>() {
+        @Suspendable
+        override fun call(): Int {
+
+            // This object is difficult to serialize with Kryo
+            val difficultToSerialize: BrokenMapInterface<String, Int> = BrokenMapInterfaceImpl()
+            difficultToSerialize.putAll(mapOf("foo" to purchase))
+
+            // Force a checkpoint
+            sleep(Duration.ofSeconds(0))
+
+            // Return value from deserialized object
+            return difficultToSerialize["foo"] ?: 0
+        }
+    }
 
     @StartableByRPC
     class TestFlowWithDifficultToSerializeLocalVariable(private val purchase: Int) : FlowLogic<Int>() {
@@ -82,7 +108,7 @@ class MockNetworkCustomSerializerCheckpointTest{
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: BrokenMap<String, Int> = BrokenMap()
+            val difficultToSerialize: BrokenMapClass<String, Int> = BrokenMapClass()
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
@@ -94,12 +120,12 @@ class MockNetworkCustomSerializerCheckpointTest{
     }
 
     @StartableByRPC
-    class TestFlowCheckingReferencesWork(private val reference: BrokenMap<String, Int>) : FlowLogic<BrokenMap<String, Int>>() {
+    class TestFlowCheckingReferencesWork(private val reference: BrokenMapClass<String, Int>) : FlowLogic<BrokenMapClass<String, Int>>() {
 
         private val referenceField = reference
 
         @Suspendable
-        override fun call(): BrokenMap<String, Int> {
+        override fun call(): BrokenMapClass<String, Int> {
 
             val ref = referenceField
 
@@ -118,7 +144,7 @@ class MockNetworkCustomSerializerCheckpointTest{
     // Broken Map
     // This map breaks the rules for the put method. Making the normal map serializer fail.
 
-    open class BrokenMapImpl<K,V> : MutableMap<K,V>{
+    open class BrokenMapBaseImpl<K,V> : MutableMap<K,V>{
         private val map = HashMap<K,V>()
 
         override val size: Int
@@ -141,11 +167,16 @@ class MockNetworkCustomSerializerCheckpointTest{
     }
 
     // A class to test custom serializers applied to implementations
-    class BrokenMap<K,V> : BrokenMapImpl<K, V>()
+    class BrokenMapClass<K,V> : BrokenMapBaseImpl<K, V>()
 
     // An interface and implementation to test custom serializers applied to interface types
     interface BrokenMapInterface<K, V> : MutableMap<K, V>
-    class BrokenMapSerializedByInterfaceImpl<K,V> : BrokenMapImpl<K, V>(), BrokenMapInterface<K, V>
+    class BrokenMapInterfaceImpl<K,V> : BrokenMapBaseImpl<K, V>(), BrokenMapInterface<K, V>
+
+    // An abstract class and implementation to test custom serializers applied to interface types
+    abstract class BrokenMapAbstract<K, V> : BrokenMapBaseImpl<K, V>(), MutableMap<K, V>
+    class BrokenMapAbstractImpl<K,V> : BrokenMapAbstract<K, V>()
+
 
     // Custom serializers
 
@@ -159,21 +190,36 @@ class MockNetworkCustomSerializerCheckpointTest{
         }
 
         override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMapInterface<Any, Any> {
-            return BrokenMapSerializedByInterfaceImpl<Any, Any>().also { it.putAll(proxy) }
+            return BrokenMapInterfaceImpl<Any, Any>().also { it.putAll(proxy) }
         }
     }
 
     @Suppress("unused")
     class TestClassSerializer :
-            CheckpointCustomSerializer<BrokenMap<Any, Any>, HashMap<Any, Any>> {
+            CheckpointCustomSerializer<BrokenMapClass<Any, Any>, HashMap<Any, Any>> {
 
-        override fun toProxy(obj: BrokenMap<Any, Any>): HashMap<Any, Any> {
+        override fun toProxy(obj: BrokenMapClass<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
         }
 
-        override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMap<Any, Any> {
-            return BrokenMap<Any, Any>().also { it.putAll(proxy) }
+        override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMapClass<Any, Any> {
+            return BrokenMapClass<Any, Any>().also { it.putAll(proxy) }
         }
     }
+
+    @Suppress("unused")
+    class TestAbstractClassSerializer :
+            CheckpointCustomSerializer<BrokenMapAbstract<Any, Any>, HashMap<Any, Any>> {
+
+        override fun toProxy(obj: BrokenMapAbstract<Any, Any>): HashMap<Any, Any> {
+            val proxy = HashMap<Any, Any>()
+            return obj.toMap(proxy)
+        }
+
+        override fun fromProxy(proxy: HashMap<Any, Any>): BrokenMapAbstract<Any, Any> {
+            return BrokenMapAbstractImpl<Any, Any>().also { it.putAll(proxy) }
+        }
+    }
+
 }
