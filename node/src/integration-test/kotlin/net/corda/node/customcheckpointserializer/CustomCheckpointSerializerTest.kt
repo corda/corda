@@ -1,0 +1,82 @@
+package net.corda.node.customcheckpointserializer
+
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.coretesting.internal.rigorousMock
+import net.corda.nodeapi.internal.serialization.kryo.KryoCheckpointSerializer
+import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.CheckpointSerializationContextImpl
+import net.corda.serialization.internal.CordaSerializationEncoding
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+
+@RunWith(Parameterized::class)
+class CustomCheckpointSerializerTest(private val compression: CordaSerializationEncoding?) {
+    companion object {
+        @Parameterized.Parameters(name = "{0}")
+        @JvmStatic
+        fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
+    }
+
+    @get:Rule
+    val serializationRule = CheckpointSerializationEnvironmentRule(inheritable = true)
+    private lateinit var context: CheckpointSerializationContext
+
+    @Before
+    fun setup() {
+        context = CheckpointSerializationContextImpl(
+                deserializationClassLoader = javaClass.classLoader,
+                whitelist = AllWhitelist,
+                properties = emptyMap(),
+                objectReferencesEnabled = true,
+                encoding = compression,
+                encodingWhitelist = rigorousMock<EncodingWhitelist>().also {
+                    if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
+                })
+        KryoCheckpointSerializer.addCordappSerializers(listOf(
+                TestCorDapp.TestAbstractClassSerializer(),
+                TestCorDapp.TestClassSerializer(),
+                TestCorDapp.TestInterfaceSerializer()
+        ))
+    }
+
+    @Test(timeout=300_000)
+    fun `test custom checkpoint serialization`() {
+        testBrokenMapSerialization(DifficultToSerialize.BrokenMapClass())
+    }
+
+    @Test(timeout=300_000)
+    fun `test custom checkpoint serialization using interface`() {
+        testBrokenMapSerialization(DifficultToSerialize.BrokenMapInterfaceImpl())
+    }
+
+    @Test(timeout=300_000)
+    fun `test custom checkpoint serialization using abstract class`() {
+        testBrokenMapSerialization(DifficultToSerialize.BrokenMapAbstractImpl())
+    }
+
+    private fun testBrokenMapSerialization(brokenMap : MutableMap<String, String>): MutableMap<String, String> {
+        // Add elements to the map
+        brokenMap.putAll(mapOf("key" to "value"))
+
+        // Serialize/deserialize
+        val checkpoint = brokenMap.checkpointSerialize(context)
+        val deserializedCheckpoint = checkpoint.checkpointDeserialize(context)
+
+        // Check the elements are as expected
+        Assert.assertEquals(1, deserializedCheckpoint.size)
+        Assert.assertEquals("value", deserializedCheckpoint.get("key"))
+
+        // Return map for extra checks
+        return deserializedCheckpoint
+    }
+}
