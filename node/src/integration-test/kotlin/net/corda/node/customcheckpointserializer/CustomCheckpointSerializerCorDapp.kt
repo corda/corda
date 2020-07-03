@@ -22,7 +22,7 @@ class CustomCheckpointSerializerCorDapp {
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstract<String, Int> = MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstractImpl()
+            val difficultToSerialize: DifficultToSerialize.BrokenMapAbstract<String, Int> = DifficultToSerialize.BrokenMapAbstractImpl()
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
@@ -40,7 +40,7 @@ class CustomCheckpointSerializerCorDapp {
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: MockNetworkCustomCheckpointSerializerTest.BrokenMapInterface<String, Int> = MockNetworkCustomCheckpointSerializerTest.BrokenMapInterfaceImpl()
+            val difficultToSerialize: DifficultToSerialize.BrokenMapInterface<String, Int> = DifficultToSerialize.BrokenMapInterfaceImpl()
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
@@ -57,7 +57,7 @@ class CustomCheckpointSerializerCorDapp {
         override fun call(): Int {
 
             // This object is difficult to serialize with Kryo
-            val difficultToSerialize: MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<String, Int> = MockNetworkCustomCheckpointSerializerTest.BrokenMapClass()
+            val difficultToSerialize: DifficultToSerialize.BrokenMapClass<String, Int> = DifficultToSerialize.BrokenMapClass()
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
@@ -70,11 +70,12 @@ class CustomCheckpointSerializerCorDapp {
     }
 
     @StartableByRPC
-    class TestFlowCheckingReferencesWork(private val reference: MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<String, Int>) : FlowLogic<MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<String, Int>>() {
+    class TestFlowCheckingReferencesWork(private val reference: DifficultToSerialize.BrokenMapClass<String, Int>) :
+            FlowLogic<DifficultToSerialize.BrokenMapClass<String, Int>>() {
 
         private val referenceField = reference
         @Suspendable
-        override fun call(): MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<String, Int> {
+        override fun call(): DifficultToSerialize.BrokenMapClass<String, Int> {
 
             val ref = referenceField
 
@@ -95,14 +96,14 @@ class CustomCheckpointSerializerCorDapp {
 
     @Suppress("unused")
     class TestInterfaceSerializer :
-            CheckpointCustomSerializer<MockNetworkCustomCheckpointSerializerTest.BrokenMapInterface<Any, Any>, HashMap<Any, Any>> {
+            CheckpointCustomSerializer<DifficultToSerialize.BrokenMapInterface<Any, Any>, HashMap<Any, Any>> {
 
-        override fun toProxy(obj: MockNetworkCustomCheckpointSerializerTest.BrokenMapInterface<Any, Any>): HashMap<Any, Any> {
+        override fun toProxy(obj: DifficultToSerialize.BrokenMapInterface<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
         }
-        override fun fromProxy(proxy: HashMap<Any, Any>): MockNetworkCustomCheckpointSerializerTest.BrokenMapInterface<Any, Any> {
-            return MockNetworkCustomCheckpointSerializerTest.BrokenMapInterfaceImpl<Any, Any>()
+        override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapInterface<Any, Any> {
+            return DifficultToSerialize.BrokenMapInterfaceImpl<Any, Any>()
                     .also { it.putAll(proxy) }
         }
 
@@ -110,14 +111,14 @@ class CustomCheckpointSerializerCorDapp {
 
     @Suppress("unused")
     class TestClassSerializer :
-            CheckpointCustomSerializer<MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<Any, Any>, HashMap<Any, Any>> {
+            CheckpointCustomSerializer<DifficultToSerialize.BrokenMapClass<Any, Any>, HashMap<Any, Any>> {
 
-        override fun toProxy(obj: MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<Any, Any>): HashMap<Any, Any> {
+        override fun toProxy(obj: DifficultToSerialize.BrokenMapClass<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
         }
-        override fun fromProxy(proxy: HashMap<Any, Any>): MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<Any, Any> {
-            return MockNetworkCustomCheckpointSerializerTest.BrokenMapClass<Any, Any>()
+        override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapClass<Any, Any> {
+            return DifficultToSerialize.BrokenMapClass<Any, Any>()
                     .also { it.putAll(proxy) }
         }
 
@@ -125,16 +126,15 @@ class CustomCheckpointSerializerCorDapp {
 
     @Suppress("unused")
     class TestAbstractClassSerializer :
-            CheckpointCustomSerializer<MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstract<Any, Any>, HashMap<Any, Any>> {
+            CheckpointCustomSerializer<DifficultToSerialize.BrokenMapAbstract<Any, Any>, HashMap<Any, Any>> {
 
-        override fun toProxy(obj: MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstract<Any, Any>): HashMap<Any, Any> {
+        override fun toProxy(obj: DifficultToSerialize.BrokenMapAbstract<Any, Any>): HashMap<Any, Any> {
             val proxy = HashMap<Any, Any>()
             return obj.toMap(proxy)
         }
-        override fun fromProxy(proxy: HashMap<Any, Any>): MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstract<Any, Any> {
-            return MockNetworkCustomCheckpointSerializerTest.BrokenMapAbstractImpl<Any, Any>()
+        override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapAbstract<Any, Any> {
+            return DifficultToSerialize.BrokenMapAbstractImpl<Any, Any>()
                     .also { it.putAll(proxy) }
         }
-
     }
 }
