@@ -807,12 +807,12 @@ internal class SingleThreadedStateMachineManager(
         require(lastState.isRemoved) { "Flow must be in removable state before removal" }
         require(lastState.checkpoint.checkpointState.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
-        flow.resultFuture.set(removalReason.flowReturnValue)
         flow.fiber.clientID?.let {
             val oldClientIdFlowStatus = clientIDsToFlowIds[it]
             require (oldClientIdFlowStatus != null && oldClientIdFlowStatus is FlowWithClientIdStatus.Active)
             clientIDsToFlowIds[it] = FlowWithClientIdStatus.Removed(flow.fiber.id, FlowWithClientIdStatus.Removed.Status.SUCCEEDED)
         }
+        flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
     }
@@ -823,6 +823,11 @@ internal class SingleThreadedStateMachineManager(
             lastState: StateMachineState
     ) {
         drainFlowEventQueue(flow)
+        flow.fiber.clientID?.let {
+            val oldClientIdFlowStatus = clientIDsToFlowIds[it]
+            require (oldClientIdFlowStatus != null && oldClientIdFlowStatus is FlowWithClientIdStatus.Active)
+            clientIDsToFlowIds[it] = FlowWithClientIdStatus.Removed(flow.fiber.id, FlowWithClientIdStatus.Removed.Status.FAILED)
+        }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
