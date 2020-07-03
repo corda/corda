@@ -60,7 +60,7 @@ class MockNetworkCustomSerializerCheckpointTest{
             difficultToSerialize.putAll(mapOf("foo" to purchase))
 
             // Force a checkpoint
-            sleep(Duration.ofSeconds(0), maySkipCheckpoint = false)
+            sleep(Duration.ofSeconds(0))
 
             // Return value from deserialized object
             return difficultToSerialize["foo"] ?: 0
@@ -78,7 +78,7 @@ class MockNetworkCustomSerializerCheckpointTest{
             val ref = referenceField
 
             // Force a checkpoint
-            sleep(Duration.ofSeconds(0), maySkipCheckpoint = false)
+            sleep(Duration.ofSeconds(0))
 
             // Check all objects refer to same object
             Assertions.assertThat(reference).isSameAs(referenceField)
