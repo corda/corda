@@ -14,7 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Duration
 
-class MockNetworkCustomSerializerCheckpointTest{
+class MockNetworkCustomCheckpointSerializerTest {
     private lateinit var mockNetwork: MockNetwork
 
     @Before
