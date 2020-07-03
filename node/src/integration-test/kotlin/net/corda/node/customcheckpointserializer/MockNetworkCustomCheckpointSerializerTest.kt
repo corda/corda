@@ -21,8 +21,6 @@ class MockNetworkCustomCheckpointSerializerTest {
         mockNetwork.stopNodes()
     }
 
-    // Tests
-
     @Test(timeout = 300_000)
     fun `flow suspend with custom kryo serializer`() {
         val node = mockNetwork.createPartyNode()
