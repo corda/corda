@@ -60,9 +60,8 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.repo
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.node.services.statemachine.ErrorState
-import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.ExistingSessionMessagePayload
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -380,15 +379,14 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private class ActiveSession(
             val peer: Party,
             val ourSessionId: SessionId,
-            val receivedMessages: List<DataSessionMessage>,
-            val errors: List<FlowError>,
+            val receivedMessages: List<ExistingSessionMessagePayload>,
             val peerFlowInfo: FlowInfo,
             val peerSessionId: SessionId?
     )
 
     private fun SessionState.toActiveSession(sessionId: SessionId): ActiveSession? {
         return if (this is SessionState.Initiated) {
-            ActiveSession(peerParty, sessionId, receivedMessages, errors, peerFlowInfo, peerSinkSessionId)
+            ActiveSession(peerParty, sessionId, receivedMessages, peerFlowInfo, peerSinkSessionId)
         } else {
             null
         }

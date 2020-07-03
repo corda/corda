@@ -194,31 +194,12 @@ abstract class FlowSession {
 
     /**
      * Closes this session and performs cleanup of any resources tied to this session.
-     * This method **should** be invoked from the side that performs the last [receive] operation.
      *
      * Note that sessions are closed automatically when the corresponding top-level flow terminates.
      * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
      * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the session is not going to be used anymore.
      * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
      * When a session is closed, the other side is informed and the session is closed there too eventually.
-     * This is the reason this method only needs to be invoked by the side that performs the last [receive].
-     * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
-     *
-     * @param maySkipCheckpoint setting it to true indicates to the platform that it may optimise away the checkpoint.
-     */
-    @Suspendable
-    abstract fun close(maySkipCheckpoint: Boolean)
-
-    /**
-     * Closes this session and performs cleanup of any resources tied to this session.
-     * This method **should** be invoked from the side that performs the last [receive] operation.
-     *
-     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
-     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
-     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the session is not going to be used anymore.
-     * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
-     * When a session is closed, the other side is informed and the session is closed there too eventually.
-     * This is the reason this method only needs to be invoked by the side that performs the last [receive].
      * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
      */
     @Suspendable

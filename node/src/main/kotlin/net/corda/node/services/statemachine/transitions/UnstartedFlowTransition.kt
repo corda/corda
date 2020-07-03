@@ -54,8 +54,6 @@ class UnstartedFlowTransition(
                 } else {
                     listOf(DataSessionMessage(initiatingMessage.firstPayload))
                 },
-                toBeTerminated = false,
-                errors = emptyList(),
                 deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}"
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)

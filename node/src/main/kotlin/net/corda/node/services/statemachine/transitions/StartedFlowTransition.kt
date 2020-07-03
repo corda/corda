@@ -1,8 +1,11 @@
 package net.corda.node.services.statemachine.transitions
 
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.identity.Party
+import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
@@ -39,7 +42,7 @@ class StartedFlowTransition(
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        val sessionsToBeTerminated = findSessionsToBeTerminated(flowIORequest, startingState)
+        val sessionsToBeTerminated = findSessionsToBeTerminated(startingState)
         // if there are sessions to be closed, we close them as part of this transition and normal processing will continue on the next transition.
         return if (sessionsToBeTerminated.isNotEmpty()) {
             terminateSessions(sessionsToBeTerminated)
@@ -59,28 +62,13 @@ class StartedFlowTransition(
         }
     }
 
-    private fun findSessionsToBeTerminated(flowIORequest: FlowIORequest<*>, startingState: StateMachineState): SessionMap {
-        val initialisedSessions = startingState.checkpoint.checkpointState.sessions
-                .filter { (_, sessionState) -> sessionState is SessionState.Initiated }
-
-        return initialisedSessions.filter { (sessionId, sessionState ) ->
-            val suspendedOnThisSessionOp = when(flowIORequest) {
-                is FlowIORequest.Send -> {
-                    flowIORequest.sessionToMessage.keys.any { sessionToSessionId(it) == sessionId }
+    private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
+        return startingState.checkpoint.checkpointState.sessions
+                .filter { (_, sessionState) ->
+                    sessionState is SessionState.Initiated &&
+                    sessionState.receivedMessages.isNotEmpty() &&
+                    sessionState.receivedMessages.first() is EndSessionMessage
                 }
-                is FlowIORequest.Receive -> {
-                    flowIORequest.sessions.any { sessionToSessionId(it) == sessionId }
-                }
-                is FlowIORequest.SendAndReceive -> {
-                    flowIORequest.sessionToMessage.keys.any { sessionToSessionId(it) == sessionId }
-                }
-                is FlowIORequest.GetFlowInfo -> {
-                    flowIORequest.sessions.any { sessionToSessionId(it) == sessionId }
-                }
-                else -> false
-            }
-            !suspendedOnThisSessionOp && (sessionState as SessionState.Initiated).toBeTerminated
-        }
     }
 
     private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
@@ -276,7 +264,8 @@ class StartedFlowTransition(
                         someNotFound = true
                     } else {
                         newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toList())
-                        resultMessages[sessionId] = messages[0].payload
+                        // at this point, we've already checked for errors and session ends, so it's guaranteed that the first message will be a data message.
+                        resultMessages[sessionId] = (messages[0] as DataSessionMessage).payload
                     }
                 }
                 else -> {
@@ -390,9 +379,36 @@ class StartedFlowTransition(
                                 listOf(sessionState.rejectionError.exception)
                             }
                         }
-                        is SessionState.Initiated -> sessionState.errors.map(FlowError::exception)
+                        is SessionState.Initiated -> {
+                            if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is ErrorSessionMessage) {
+                                val errorMessage = sessionState.receivedMessages.first() as ErrorSessionMessage
+                                val exception = convertErrorMessageToException(errorMessage, sessionState.peerParty)
+                                listOf(exception)
+                            } else {
+                                emptyList()
+                            }
+                        }
                     }
                 }
+    }
+
+    private fun convertErrorMessageToException(errorMessage: ErrorSessionMessage, peer: Party): Throwable {
+        val exception: Throwable = if (errorMessage.flowException == null) {
+            UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = errorMessage.errorId)
+        } else {
+            errorMessage.flowException.originalErrorId = errorMessage.errorId
+            errorMessage.flowException
+        }
+        when (exception) {
+            // reflection used to access private field
+            is UnexpectedFlowEndException -> DeclaredField<Party?>(
+                    UnexpectedFlowEndException::class.java,
+                    "peer",
+                    exception
+            ).value = peer
+            is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = peer
+        }
+        return exception
     }
 
     private fun collectUncloseableSessions(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {

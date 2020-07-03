@@ -1,9 +1,6 @@
 package net.corda.node.services.statemachine.transitions
 
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
-import net.corda.core.identity.Party
-import net.corda.core.internal.DeclaredField
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.statemachine.Action
@@ -65,7 +62,7 @@ class DeliverSessionMessageTransition(
                     is DataSessionMessage -> dataMessageTransition(existingSession, payload)
                     is ErrorSessionMessage -> errorMessageTransition(existingSession, payload)
                     is RejectSessionMessage -> rejectMessageTransition(existingSession, payload)
-                    is EndSessionMessage -> endMessageTransition()
+                    is EndSessionMessage -> endMessageTransition(payload)
                 }
             }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
@@ -91,9 +88,7 @@ class DeliverSessionMessageTransition(
                         peerParty = event.sender,
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyList(),
-                        toBeTerminated = false,
                         peerSinkSessionId = message.initiatedSessionId,
-                        errors = emptyList(),
                         deduplicationSeed = sessionState.deduplicationSeed
                 )
                 val newCheckpoint = currentState.checkpoint.addSession(
@@ -131,28 +126,11 @@ class DeliverSessionMessageTransition(
     }
 
     private fun TransitionBuilder.errorMessageTransition(sessionState: SessionState, payload: ErrorSessionMessage) {
-        val exception: Throwable = if (payload.flowException == null) {
-            UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = payload.errorId)
-        } else {
-            payload.flowException.originalErrorId = payload.errorId
-            payload.flowException
-        }
-
         return when (sessionState) {
             is SessionState.Initiated -> {
-                when (exception) {
-                    // reflection used to access private field
-                    is UnexpectedFlowEndException -> DeclaredField<Party?>(
-                        UnexpectedFlowEndException::class.java,
-                        "peer",
-                        exception
-                    ).value = sessionState.peerParty
-                    is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = sessionState.peerParty
-                }
                 val checkpoint = currentState.checkpoint
                 val sessionId = event.sessionMessage.recipientSessionId
-                val flowError = FlowError(payload.errorId, exception)
-                val newSessionState = sessionState.copy(errors = sessionState.errors + flowError)
+                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages + payload)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.addSession(sessionId to newSessionState)
                 )
@@ -181,7 +159,7 @@ class DeliverSessionMessageTransition(
         }
     }
 
-    private fun TransitionBuilder.endMessageTransition() {
+    private fun TransitionBuilder.endMessageTransition(payload: EndSessionMessage) {
 
         val sessionId = event.sessionMessage.recipientSessionId
         val sessions = currentState.checkpoint.checkpointState.sessions
@@ -194,9 +172,7 @@ class DeliverSessionMessageTransition(
                 if (flowState !is FlowState.Started)
                     return freshErrorTransition(UnexpectedEventInState())
 
-                val newSessionState = sessionState.copy(
-                        toBeTerminated = true
-                )
+                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages + payload)
                 currentState = currentState.copy(
                         checkpoint = currentState.checkpoint.addSession(
                                 event.sessionMessage.recipientSessionId to newSessionState

@@ -201,6 +201,16 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
+    fun `other side ends before doing expected send`() {
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow() }
+        val resultFuture = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
+        mockNet.runNetwork()
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
+            resultFuture.getOrThrow()
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `FlowMonitor flow suspends on a FlowIORequest`() { // alice flow only, suspends on a FlowIORequest
         monitorFlows { aliceFlowMonitor, bobFlowMonitor ->
             val terminationSignal = Semaphore(0)
@@ -213,8 +223,8 @@ class FlowFrameworkTests {
             // continue bob's NoOpFlow, it will send an EndSessionMessage to alice
             terminationSignal.release()
             mockNet.runNetwork()
-            // alice's ReceiveFlow is not finished because bob sent an EndSessionMessage, but it's blocked waiting on a receive
-            assertEquals(1, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
+            // alice's ReceiveFlow is not finished because bob sent an EndSessionMessage, check that flow is no longer waiting
+            assertEquals(0, aliceFlowMonitor.waitingFlowDurations(Duration.ZERO).toSet().size)
         }
     }
 
@@ -859,7 +869,6 @@ class FlowFrameworkTests {
             // ... then pause this one until it's received the session-end message from the other side
             receivedOtherFlowEnd.acquire()
 
-            sleep(Duration.ofSeconds(1))
             session.sendAndReceive<Int>(2)
         }
     }

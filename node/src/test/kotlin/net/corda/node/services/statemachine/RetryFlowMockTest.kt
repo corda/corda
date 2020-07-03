@@ -188,10 +188,6 @@ class RetryFlowMockTest {
                 TODO("Not yet implemented")
             }
 
-            override fun close(maySkipCheckpoint: Boolean) {
-                TODO("Not yet implemented")
-            }
-
         }), nodeA.services.newContext()).get()
         records.next()
         // Killing it should remove it.
