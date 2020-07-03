@@ -43,7 +43,7 @@ class MockNetworkCustomCheckpointSerializerTest {
 
     @Test(timeout = 300_000)
     @Suspendable
-    fun `check serilization of interfaces`() {
+    fun `check serialization of interfaces`() {
         val node = mockNetwork.createPartyNode()
         val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsInterface(5)).get()
         Assertions.assertThat(result).isEqualTo(5)
@@ -51,9 +51,17 @@ class MockNetworkCustomCheckpointSerializerTest {
 
     @Test(timeout = 300_000)
     @Suspendable
-    fun `check serilization of abstract classes`() {
+    fun `check serialization of abstract classes`() {
         val node = mockNetwork.createPartyNode()
         val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsAbstract(5)).get()
+        Assertions.assertThat(result).isEqualTo(5)
+    }
+
+    @Test(timeout = 300_000)
+    @Suspendable
+    fun `check serialization of final classes`() {
+        val node = mockNetwork.createPartyNode()
+        val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsFinal(5)).get()
         Assertions.assertThat(result).isEqualTo(5)
     }
 }

@@ -45,7 +45,8 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
         KryoCheckpointSerializer.addCordappSerializers(listOf(
                 TestCorDapp.TestAbstractClassSerializer(),
                 TestCorDapp.TestClassSerializer(),
-                TestCorDapp.TestInterfaceSerializer()
+                TestCorDapp.TestInterfaceSerializer(),
+                TestCorDapp.TestFinalClassSerializer()
         ))
     }
 
@@ -62,6 +63,11 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
     @Test(timeout=300_000)
     fun `test custom checkpoint serialization using abstract class`() {
         testBrokenMapSerialization(DifficultToSerialize.BrokenMapAbstractImpl())
+    }
+
+    @Test(timeout=300_000)
+    fun `test custom checkpoint serialization using final class`() {
+        testBrokenMapSerialization(DifficultToSerialize.BrokenMapFinal())
     }
 
     private fun testBrokenMapSerialization(brokenMap : MutableMap<String, String>): MutableMap<String, String> {

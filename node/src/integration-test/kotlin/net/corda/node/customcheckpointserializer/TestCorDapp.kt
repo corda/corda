@@ -34,9 +34,25 @@ class TestCorDapp {
             // Return value from deserialized object
             return difficultToSerialize["foo"] ?: 0
         }
-
-
     }
+
+    @StartableByRPC
+    class TestFlowWithDifficultToSerializeLocalVariableAsFinal(private val purchase: Int) : FlowLogic<Int>() {
+        @Suspendable
+        override fun call(): Int {
+
+            // This object is difficult to serialize with Kryo
+            val difficultToSerialize: DifficultToSerialize.BrokenMapFinal<String, Int> = DifficultToSerialize.BrokenMapFinal()
+            difficultToSerialize.putAll(mapOf("foo" to purchase))
+
+            // Force a checkpoint
+            sleep(Duration.ofSeconds(0))
+
+            // Return value from deserialized object
+            return difficultToSerialize["foo"] ?: 0
+        }
+    }
+
     @StartableByRPC
     class TestFlowWithDifficultToSerializeLocalVariableAsInterface(private val purchase: Int) : FlowLogic<Int>() {
         @Suspendable
@@ -52,8 +68,8 @@ class TestCorDapp {
             // Return value from deserialized object
             return difficultToSerialize["foo"] ?: 0
         }
-
     }
+
     @StartableByRPC
     class TestFlowWithDifficultToSerializeLocalVariable(private val purchase: Int) : FlowLogic<Int>() {
         @Suspendable
@@ -69,7 +85,6 @@ class TestCorDapp {
             // Return value from deserialized object
             return difficultToSerialize["foo"] ?: 0
         }
-
     }
 
     @StartableByRPC
@@ -92,7 +107,6 @@ class TestCorDapp {
             // Return deserialized object
             return ref
         }
-
     }
 
     // Custom serializers
@@ -109,7 +123,6 @@ class TestCorDapp {
             return DifficultToSerialize.BrokenMapInterfaceImpl<Any, Any>()
                     .also { it.putAll(proxy) }
         }
-
     }
 
     @Suppress("unused")
@@ -124,7 +137,6 @@ class TestCorDapp {
             return DifficultToSerialize.BrokenMapClass<Any, Any>()
                     .also { it.putAll(proxy) }
         }
-
     }
 
     @Suppress("unused")
@@ -137,6 +149,20 @@ class TestCorDapp {
         }
         override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapAbstract<Any, Any> {
             return DifficultToSerialize.BrokenMapAbstractImpl<Any, Any>()
+                    .also { it.putAll(proxy) }
+        }
+    }
+
+    @Suppress("unused")
+    class TestFinalClassSerializer :
+            CheckpointCustomSerializer<DifficultToSerialize.BrokenMapFinal<Any, Any>, HashMap<Any, Any>> {
+
+        override fun toProxy(obj: DifficultToSerialize.BrokenMapFinal<Any, Any>): HashMap<Any, Any> {
+            val proxy = HashMap<Any, Any>()
+            return obj.toMap(proxy)
+        }
+        override fun fromProxy(proxy: HashMap<Any, Any>): DifficultToSerialize.BrokenMapFinal<Any, Any> {
+            return DifficultToSerialize.BrokenMapFinal<Any, Any>()
                     .also { it.putAll(proxy) }
         }
     }

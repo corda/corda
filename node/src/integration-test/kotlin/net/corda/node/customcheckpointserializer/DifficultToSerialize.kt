@@ -39,4 +39,7 @@ class DifficultToSerialize {
     // An abstract class and implementation to test custom serializers applied to interface types
     abstract class BrokenMapAbstract<K, V> : BrokenMapBaseImpl<K, V>(), MutableMap<K, V>
     class BrokenMapAbstractImpl<K,V> : BrokenMapAbstract<K, V>()
+
+    // A final class
+    final class BrokenMapFinal<K, V>: BrokenMapBaseImpl<K, V>()
 }
