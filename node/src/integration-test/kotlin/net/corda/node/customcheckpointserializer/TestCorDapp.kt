@@ -9,7 +9,10 @@ import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions
 import java.time.Duration
 
-class CustomCheckpointSerializerCorDapp {
+/**
+ * Contains all the flows and custom serializers for testing custom checkpoint serializers
+ */
+class TestCorDapp {
 
     companion object {
         fun getCorDapp(): CustomCordapp = enclosedCordapp()

@@ -13,7 +13,7 @@ class MockNetworkCustomCheckpointSerializerTest {
 
     @Before
     fun setup() {
-        mockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(CustomCheckpointSerializerCorDapp.getCorDapp())))
+        mockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(TestCorDapp.getCorDapp())))
     }
 
     @After
@@ -25,7 +25,7 @@ class MockNetworkCustomCheckpointSerializerTest {
     fun `flow suspend with custom kryo serializer`() {
         val node = mockNetwork.createPartyNode()
         val expected = 5
-        val actual = node.startFlow(CustomCheckpointSerializerCorDapp.TestFlowWithDifficultToSerializeLocalVariable(5)).get()
+        val actual = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariable(5)).get()
 
         Assertions.assertThat(actual).isEqualTo(expected)
     }
@@ -35,7 +35,7 @@ class MockNetworkCustomCheckpointSerializerTest {
         val node = mockNetwork.createPartyNode()
         val expectedReference = DifficultToSerialize.BrokenMapClass<String, Int>()
         expectedReference.putAll(mapOf("one" to 1))
-        val actualReference = node.startFlow(CustomCheckpointSerializerCorDapp.TestFlowCheckingReferencesWork(expectedReference)).get()
+        val actualReference = node.startFlow(TestCorDapp.TestFlowCheckingReferencesWork(expectedReference)).get()
 
         Assertions.assertThat(actualReference).isSameAs(expectedReference)
         Assertions.assertThat(actualReference["one"]).isEqualTo(1)
@@ -45,7 +45,7 @@ class MockNetworkCustomCheckpointSerializerTest {
     @Suspendable
     fun `check serilization of interfaces`() {
         val node = mockNetwork.createPartyNode()
-        val result = node.startFlow(CustomCheckpointSerializerCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsInterface(5)).get()
+        val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsInterface(5)).get()
         Assertions.assertThat(result).isEqualTo(5)
     }
 
@@ -53,7 +53,7 @@ class MockNetworkCustomCheckpointSerializerTest {
     @Suspendable
     fun `check serilization of abstract classes`() {
         val node = mockNetwork.createPartyNode()
-        val result = node.startFlow(CustomCheckpointSerializerCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsAbstract(5)).get()
+        val result = node.startFlow(TestCorDapp.TestFlowWithDifficultToSerializeLocalVariableAsAbstract(5)).get()
         Assertions.assertThat(result).isEqualTo(5)
     }
 }
