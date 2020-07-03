@@ -210,6 +210,10 @@ fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostA
     }
 }
 
+/**
+ * @param pollInterval the interval running the background task.
+ * @param warnCount number of iterations to poll before printing a warning message.
+ */
 fun <A> poll(
         executorService: ScheduledExecutorService,
         pollName: String,
