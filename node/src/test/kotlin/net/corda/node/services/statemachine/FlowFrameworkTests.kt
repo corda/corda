@@ -154,6 +154,8 @@ class FlowFrameworkTests {
         SuspendingFlow.hookAfterCheckpoint = {}
         ResultFlow.hook = null
         ResultFlow.suspendableHook = null
+        SingleThreadedStateMachineManager.beforeClientIDCheck = null
+        SingleThreadedStateMachineManager.onClientIDNotFound = null
     }
 
     @Test(timeout=300_000)
@@ -887,7 +889,6 @@ class FlowFrameworkTests {
         assertEquals(result0, result1)
     }
 
-    @Ignore
     @Test // TODO: this test needs change -> what makes sense is to test this scenario: flow has retried, AND THEN the second request comes in
             // and gets a [FlowStateMachineHandle] whose future is the old one
     fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
@@ -980,7 +981,6 @@ class FlowFrameworkTests {
         assertEquals(maxTries, failedRemovals)
     }
 
-    @Ignore
     @Test
     fun `only one flow starts upon concurrent requests with the same client id`() {
         val requests = 2
