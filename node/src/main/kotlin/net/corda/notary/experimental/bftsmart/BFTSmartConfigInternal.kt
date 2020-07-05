@@ -13,6 +13,7 @@ import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
+@Deprecated("Deprecated with no replacement, the BFT notary has been removed")
 data class BFTSmartConfig(
         /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
         val replicaId: Int,

@@ -11,7 +11,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
 import java.lang.reflect.InvocationTargetException
 import java.security.PublicKey
@@ -36,8 +35,7 @@ class NotaryLoader(
             // Using a built-in notary
             when {
                 config.bftSMaRt != null -> {
-                    builtInNotary = VirtualCordapp.generateBFTSmartNotary(versionInfo)
-                    BFTSmartNotaryService::class.java
+                    throw UnsupportedOperationException("BFT notary is no longer supported")
                 }
                 config.raft != null -> {
                     builtInNotary = VirtualCordapp.generateRaftNotary(versionInfo)

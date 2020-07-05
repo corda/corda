@@ -164,6 +164,7 @@ data class NotaryConfig(
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null,
         val raft: RaftConfig? = null,
+        @Deprecated("BFT notary is no longer supported")
         val bftSMaRt: BFTSmartConfig? = null
 )
 
