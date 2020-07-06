@@ -50,8 +50,8 @@ class DBCheckpointStorage(
         private const val HMAC_SIZE_BYTES = 16
 
         @VisibleForTesting
-        const val MAX_STACKTRACE_LENGTH = 4000
-        private const val MAX_EXC_MSG_LENGTH = 4000
+        const val MAX_STACKTRACE_LENGTH = 2000
+        private const val MAX_EXC_MSG_LENGTH = 2000
         private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
