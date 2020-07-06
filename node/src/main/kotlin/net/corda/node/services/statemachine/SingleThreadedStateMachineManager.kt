@@ -270,6 +270,8 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<out FlowStateMachineHandle<A>> {
         beforeClientIDCheck?.invoke()
 
+        var newFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
+
         val clientID = context.clientID
         if (clientID != null) {
             var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
@@ -290,7 +292,7 @@ internal class SingleThreadedStateMachineManager(
                         }
                         existingStatus
                     } else {
-                        FlowWithClientIdStatus.Active(openFuture())
+                        FlowWithClientIdStatus.Active(openFuture()).also { newFuture = it.flowStateMachineFuture }
                     }
                 }
             }
@@ -309,9 +311,7 @@ internal class SingleThreadedStateMachineManager(
             deduplicationHandler = deduplicationHandler
         ).also {
             if (clientID != null) {
-                // wire up this future to the clientIDsToFlowIds[clientID] future
-                val active = mutex.content.clientIDsToFlowIds[clientID] as? FlowWithClientIdStatus.Active
-                (active?.flowStateMachineFuture as? OpenFuture<FlowStateMachine<*>>)?.captureLater(it)
+                (newFuture as? OpenFuture<FlowStateMachine<*>>)?.captureLater(it)
                     ?: throw java.lang.IllegalStateException("Flow's $flowId client id mapping is in an inconsistent state")
             }
         }
