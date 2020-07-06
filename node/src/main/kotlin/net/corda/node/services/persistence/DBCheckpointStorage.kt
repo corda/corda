@@ -499,6 +499,11 @@ class DBCheckpointStorage(
         }
     }
 
+    override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
+        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
+        currentDBSession().createNativeQuery(update).executeUpdate()
+    }
+
     private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()

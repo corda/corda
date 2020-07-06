@@ -110,6 +110,20 @@ abstract class StatemachineErrorHandlingTest {
     }
 
     @StartableByRPC
+    class ThrowAnErrorFlow : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            throwException()
+            return "cant get here"
+        }
+
+        private fun throwException() {
+            logger.info("Throwing exception in flow")
+            throw IllegalStateException("throwing exception in flow")
+        }
+    }
+
+    @StartableByRPC
     class GetNumberOfUncompletedCheckpointsFlow : FlowLogic<Long>() {
         override fun call(): Long {
             val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"

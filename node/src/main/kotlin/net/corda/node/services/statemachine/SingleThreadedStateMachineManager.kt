@@ -38,7 +38,6 @@ import net.corda.node.services.statemachine.interceptors.FiberDeserializationChe
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -83,7 +82,7 @@ internal class SingleThreadedStateMachineManager(
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
         ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
     )
-    // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
+    // How many Fibers are running (this includes suspended flows). If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -146,13 +145,8 @@ internal class SingleThreadedStateMachineManager(
 
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            if (throwable is VirtualMachineError) {
-                errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
-            } else {
-                (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
-            }
-        }
+
+        setFlowDefaultUncaughtExceptionHandler()
 
         val pausedFlows = restoreNonResidentFlowsFromPausedCheckpoints()
         innerState.withLock {
@@ -173,6 +167,17 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
         }
+    }
+
+    private fun setFlowDefaultUncaughtExceptionHandler() {
+        Fiber.setDefaultUncaughtExceptionHandler(
+            FlowDefaultUncaughtExceptionHandler(
+                flowHospital,
+                checkpointStorage,
+                database,
+                scheduledFutureExecutor
+            )
+        )
     }
 
     override fun snapshot(): Set<FlowStateMachineImpl<*>> = innerState.flows.values.map { it.fiber }.toSet()
@@ -437,7 +442,7 @@ internal class SingleThreadedStateMachineManager(
                     ?.map { it.exception }
                     ?.plus(e) ?: emptyList()
             logger.info("Failed to retry flow $flowId, keeping in for observation and aborting")
-            flowHospital.forceIntoOvernightObservation(flowId, exceptions)
+            flowHospital.forceIntoOvernightObservation(currentState, exceptions)
             throw e
         }
     }

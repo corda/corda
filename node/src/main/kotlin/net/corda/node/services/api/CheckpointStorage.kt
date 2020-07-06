@@ -65,4 +65,6 @@ interface CheckpointStorage {
      * This method does not fetch [Checkpoint.Serialized.serializedFlowState] to save memory.
      */
     fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }
