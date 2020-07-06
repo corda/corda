@@ -34,9 +34,6 @@ class NotaryLoader(
         builtInServiceClass = if (config.className.isNullOrBlank()) {
             // Using a built-in notary
             when {
-                config.bftSMaRt != null -> {
-                    throw UnsupportedOperationException("BFT notary is no longer supported")
-                }
                 config.raft != null -> {
                     builtInNotary = VirtualCordapp.generateRaftNotary(versionInfo)
                     RaftNotaryService::class.java
