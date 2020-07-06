@@ -133,7 +133,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState!!.value.isKilled
     override val clientID: String?
-        get() = transientState?.value?.checkpoint!!.checkpointState.invocationContext.clientID
+        get() = transientState!!.value.checkpoint.checkpointState.invocationContext.clientID
 
     internal val softLockedStates = mutableSetOf<StateRef>()
 
