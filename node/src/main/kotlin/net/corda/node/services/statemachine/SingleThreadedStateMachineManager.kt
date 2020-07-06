@@ -38,7 +38,6 @@ import net.corda.node.services.statemachine.interceptors.FiberDeserializationChe
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.errorAndTerminate
 import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence

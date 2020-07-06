@@ -34,8 +34,6 @@ import javax.persistence.FetchType
 import javax.persistence.Id
 import javax.persistence.OneToOne
 import javax.persistence.PrimaryKeyJoinColumn
-import javax.persistence.criteria.CriteriaBuilder
-import javax.persistence.criteria.CriteriaUpdate
 
 /**
  * Simple checkpoint key value storage in DB.
