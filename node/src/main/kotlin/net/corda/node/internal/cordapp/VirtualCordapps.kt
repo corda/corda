@@ -87,10 +87,4 @@ internal object VirtualCordapp {
                 isLoaded = false
         )
     }
-
-    /** A Cordapp for the built-in BFT-Smart notary service implementation. */
-    @Deprecated("Deprecated with no direct replacement, the HA notary should not be used in place of BFT notary")
-    fun generateBFTSmartNotary(versionInfo: VersionInfo): CordappImpl {
-        throw UnsupportedOperationException()
-    }
 }
