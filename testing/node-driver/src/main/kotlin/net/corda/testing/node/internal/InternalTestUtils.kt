@@ -38,6 +38,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
+import java.io.File
 import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
@@ -173,18 +174,20 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
 
 fun nodeMustBeStartedFuture(
     executorService: ScheduledExecutorService,
-    hostAndPort: NetworkHostAndPort,
-    listenProcess: Process? = null,
+    logFile: File,
+    listenProcess: Process,
     exception: () -> NodeListenProcessDeathException
 ): CordaFuture<Unit> {
-    return poll(executorService, "address $hostAndPort to bind") {
-        if (listenProcess != null && !listenProcess.isAlive) {
+    return poll(executorService, "process $listenProcess is running") {
+        if (!listenProcess.isAlive) {
             throw exception()
         }
-        try {
-            Socket(hostAndPort.host, hostAndPort.port).close()
+        if (logFile.readLines().
+                filter { line ->
+                    line.contains("Running P2PMessaging loop") }.
+                count() > 0) {
             Unit
-        } catch (_exception: SocketException) {
+        } else {
             null
         }
     }

@@ -94,6 +94,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
@@ -729,7 +730,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = nodeMustBeStartedFuture(
                 executorService,
-                effectiveP2PAddress,
+                File("${config.corda.baseDirectory}").resolve("net.corda.node.Corda.${identifier}.stdout.log"),
                 process
             ) {
                 NodeListenProcessDeathException(
