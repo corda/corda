@@ -78,7 +78,7 @@ internal class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: S
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic?.let { it.track()?.updates } ?: Observable.empty()
+                progress = stateMachine.logic?.track()?.updates ?: Observable.empty()
         )
     }
 
