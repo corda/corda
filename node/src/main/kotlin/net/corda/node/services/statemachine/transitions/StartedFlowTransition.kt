@@ -207,7 +207,7 @@ class StartedFlowTransition(
 
                 currentState = currentState.copy(checkpoint = currentState.checkpoint.removeSessions(existingSessionsToRemove.keys))
                 actions.add(Action.RemoveSessionBindings(sessionIdsToRemove))
-                actions.addAll(sendEndMessageActions)
+                actions.add(Action.SendMultiple(emptyList(), sendEndMessageActions))
             }
 
             resumeFlowLogic(Unit)
