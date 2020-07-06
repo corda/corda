@@ -35,7 +35,7 @@ class NodeProcess(
     companion object {
         const val CORDAPPS_DIR_NAME = "cordapps"
         private val log = contextLogger()
-        private val schemaCreationTimeOutSeconds: Long = 180
+        private const val schemaCreationTimeOutSeconds: Long = 180
     }
 
     fun connect(user: User): CordaRPCConnection {
