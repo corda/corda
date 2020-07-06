@@ -50,6 +50,7 @@ import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
+import rx.exceptions.OnErrorNotImplementedException
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -455,10 +456,17 @@ internal class RPCClientProxyHandler(
         val observablesMap = observableContext.observableMap.asMap()
         observablesMap.keys.forEach { key ->
             observationExecutorPool.run(key) {
-                try {
-                    observablesMap[key]?.onError(ConnectionFailureException())
-                } catch (e: Exception) {
-                    log.error("Unexpected exception when RPC connection failure handling", e)
+                val observable: UnicastSubject<Notification<*>>? = observablesMap[key]
+                // Notify listeners of the observables that the connection is being terminated.
+                observable?.also {
+                    try {
+                        it.onError(ConnectionFailureException())
+                    } catch(ex: OnErrorNotImplementedException) {
+                        // Indicates the observer does not have any error handling.
+                        log.debug("Closed connection on observable $observable whose observers have no error handling.")
+                    } catch (ex: Exception) {
+                        log.error("Unexpected exception when RPC connection failure handling", ex)
+                    }
                 }
             }
         }
