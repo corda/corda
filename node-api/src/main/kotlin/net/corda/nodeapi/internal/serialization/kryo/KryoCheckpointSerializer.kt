@@ -55,31 +55,51 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 serializer.kryo.apply {
                     field.set(this, classResolver)
 
-                    addCustomSerializers(context)
+                    val classToSerializer = mapInputClassToCustomSerializer(context)
+                    addSpecificClassCustomSerializers(this, classToSerializer)
 
                     // don't allow overriding the public key serializer for checkpointing
                     DefaultKryoCustomizer.customize(this)
                     addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
                     register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
                     classLoader = it.second
+
+                    addDefaultCustomSerializers(this, classToSerializer)
                 }
             }.build()
 
         }
     }
 
-    private fun Kryo.addCustomSerializers(context: CheckpointSerializationContext) {
-        for (customSerializer in cordappSerializers) {
-            val typeName = customSerializer.cordappType.typeName.substringBefore('<')
-            val clazz: Class<*> = context.deserializationClassLoader.loadClass(typeName)
+    /**
+     * Returns a list of pairs where the first element is the input class of the custom serializer and the second element is the
+     * custom serializer.
+     */
+    private fun mapInputClassToCustomSerializer(context: CheckpointSerializationContext) =
+            cordappSerializers
+                    .map { customSerializer -> context.deserializationClassLoader.loadClass(customSerializer.cordappType.typeName.substringBefore('<')) to customSerializer }
 
-            if (Modifier.isFinal(clazz.modifiers)) {
-                register(clazz, customSerializer)
-            } else {
-                addDefaultSerializer(clazz, customSerializer)
-            }
-        }
-    }
+    /**
+     * Register all custom serializers with input classes that are final as specific, this class only, registrations.
+     *
+     * Serializers registered here will replace previous registrations for the same class. This needs to run before registrations we
+     * want to keep otherwise it may replace them.
+     */
+    private fun addSpecificClassCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<out Any?, out Any?>>>) =
+            classToSerializer
+                    .filter { (clazz, _) -> Modifier.isFinal(clazz.modifiers) }
+                    .forEach { (clazz, customSerializer) -> kryo.register(clazz, customSerializer) }
+
+    /**
+     * Register all custom serializers with input classes that are NOT final as default, this class + subclass, registrations.
+     *
+     * Serializers registered before this will take priority. This needs to run after registrations we want to keep otherwise it may
+     * replace them.
+     */
+    private fun addDefaultCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<out Any?, out Any?>>>) =
+            classToSerializer
+                    .filter { (clazz, _) -> !Modifier.isFinal(clazz.modifiers) }
+                    .forEach { (clazz, customSerializer) -> kryo.addDefaultSerializer(clazz, customSerializer) }
 
     private fun <T : Any> CheckpointSerializationContext.kryo(task: Kryo.() -> T): T {
         return getPool(this).run { kryo ->
