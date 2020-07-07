@@ -35,13 +35,14 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.time.Duration
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.math.absoluteValue
-import kotlin.math.max
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.currentStackTrace
@@ -54,13 +55,17 @@ import kotlin.test.currentStackTrace
 class RpcReconnectTests {
 
     companion object {
-        // this many flows take ~5 minutes
-        const val NUMBER_OF_FLOWS_TO_RUN = 100
+        // this many flows take ~2 minutes
+        const val NUMBER_OF_FLOWS_TO_RUN = 50
+
+        const val nodeRunningTimeVariability = 6000
+        const val nodeRunningTimeLowerBound = 6000
 
         private val log = contextLogger()
     }
 
     private val portAllocator = incrementalPortAllocation()
+    private val randomSource = Random(202007061645L)
 
     private lateinit var proxy: RandomFailingProxy
     private lateinit var node: NodeHandle
@@ -76,10 +81,8 @@ class RpcReconnectTests {
      * Also the RPC connection is made through a proxy that introduces random latencies and is also periodically killed.
      */
     @Suppress("ComplexMethod")
-    @Test(timeout=420_000)
+    @Test(timeout=260_000)
 	fun `test that the RPC client is able to reconnect and proceed after node failure, restart, or connection reset`() {
-        val nodeRunningTime = { Random().nextInt(12000) + 8000 }
-
         val demoUser = User("demo", "demo", setOf(Permissions.all()))
 
         // When this reaches 0 - the test will end.
@@ -124,14 +127,14 @@ class RpcReconnectTests {
 
             var numDisconnects = 0
             var numReconnects = 0
-            val maxStackOccurrences = AtomicInteger()
+            val reconnectionOnErrorOccurrences = ConcurrentLinkedQueue<Int>()
 
             val addressesForRpc = addresses.map { it.proxyAddress }
             // DOCSTART rpcReconnectingRPC
             val onReconnect = {
                 numReconnects++
                 // We only expect to see a single reconnectOnError in the stack trace.  Otherwise we're in danger of stack overflow recursion
-                maxStackOccurrences.set(max(maxStackOccurrences.get(), currentStackTrace().count { it.methodName == "reconnectOnError" }))
+                reconnectionOnErrorOccurrences.add(currentStackTrace().count { it.methodName == "reconnectOnError" })
                 Unit
             }
             val reconnect = GracefulReconnect(onDisconnect = { numDisconnects++ }, onReconnect = onReconnect)
@@ -169,15 +172,14 @@ class RpcReconnectTests {
             thread(name = "Node killer") {
                 while (true) {
                     if (flowsCountdownLatch.count == 0L) break
+                    val nodeRunningTime = Duration.ofMillis((randomSource.nextInt(nodeRunningTimeVariability) + nodeRunningTimeLowerBound).toLong())
 
                     // Let the node run for a random time interval.
-                    nodeRunningTime().also { ms ->
-                        log.info("Running node for ${ms / 1000} s.")
-                        Thread.sleep(ms.toLong())
-                    }
+                    log.info("Running node for ${nodeRunningTime.seconds} s.")
+                    Thread.sleep(nodeRunningTime.toMillis())
 
                     if (flowsCountdownLatch.count == 0L) break
-                    when (Random().nextInt().rem(7).absoluteValue) {
+                    when (randomSource.nextInt().rem(7).absoluteValue) {
                         0 -> {
                             log.info("Forcefully killing node and proxy.")
                             (node as OutOfProcessImpl).onStopCallback()
@@ -202,7 +204,7 @@ class RpcReconnectTests {
                         3, 4 -> {
                             log.info("Killing proxy.")
                             proxy.stop()
-                            Thread.sleep(Random().nextInt(5000).toLong())
+                            Thread.sleep(randomSource.nextInt(5000).toLong())
                             proxy.start()
                         }
                         5 -> {
@@ -269,7 +271,7 @@ class RpcReconnectTests {
                 )
                 // DOCEND rpcReconnectingRPCFlowStarting
 
-                Thread.sleep(Random().nextInt(250).toLong())
+                Thread.sleep(randomSource.nextInt(250).toLong())
             }
 
             log.info("Started all flows")
@@ -293,7 +295,7 @@ class RpcReconnectTests {
             // We should get one disconnect and one reconnect for each failure
             assertThat(numDisconnects).isEqualTo(numReconnects)
             assertThat(numReconnects).isLessThanOrEqualTo(nrFailures)
-            assertThat(maxStackOccurrences.get()).isLessThan(2)
+            assertThat(reconnectionOnErrorOccurrences.toList().max() ?: 0).isLessThan(2)
 
             // Query the vault and check that states were created for all flows.
             fun readCashStates() = bankAReconnectingRpc
