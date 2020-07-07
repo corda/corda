@@ -85,7 +85,7 @@ class CreateGroupFlow(
         sendMemberships(additionalParticipantsMemberships + ourMembership, observerSessions, observerSessions)
 
         // sync memberships' participants according to new participants of the groups member is part of
-        syncMembershipsParticipants(networkId, additionalParticipantsMemberships.toList(), signers, databaseService, notary)
+        syncMembershipsParticipants(networkId, (additionalParticipantsMemberships + ourMembership).toList(), signers, databaseService, notary)
 
         return finalisedTransaction
     }
