@@ -1,7 +1,5 @@
 package net.corda.bn.flows
 
-import net.corda.bn.states.BNORole
-import net.corda.bn.states.MemberRole
 import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.UniqueIdentifier
 import org.junit.Test
@@ -26,20 +24,16 @@ class RevokeMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorised
         val nonMember = regularMembers[1]
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
-        val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
+        val membership = runRequestAndActivateMembershipFlows(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
 
         assertFailsWith<MembershipNotFoundException> { runRevokeMembershipFlow(nonMember, membership.linearId) }
 
         runRequestAndSuspendMembershipFlow(nonMember, authorisedMember, networkId).apply {
             val initiatorMembership = tx.outputStates.single() as MembershipState
 
-            // make `nonMember` authorised to modify membership so he fetches all members to be modified
-            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(BNORole()))
             assertFailsWith<IllegalMembershipStatusException> { runRevokeMembershipFlow(nonMember, membership.linearId) }
 
-            // remove permissions from `nonMember` and activate membership
             runActivateMembershipFlow(authorisedMember, initiatorMembership.linearId)
-            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(MemberRole()))
             assertFailsWith<MembershipAuthorisationException> { runRevokeMembershipFlow(nonMember, membership.linearId) }
         }
     }
@@ -73,6 +67,11 @@ class RevokeMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorised
         listOf(authorisedMember, regularMember).forEach { member ->
             getAllMembershipsFromVault(member, networkId).single().apply {
                 assertEquals(authorisedMember.identity(), identity.cordaIdentity, "Expected to have ${authorisedMember.identity()} in ${member.identity()} vault")
+                assertEquals(setOf(authorisedMember.identity()), participants.toSet())
+            }
+
+            getAllGroupsFromVault(member, networkId).single().apply {
+                assertEquals(setOf(authorisedMember.identity()), participants.toSet())
             }
         }
     }

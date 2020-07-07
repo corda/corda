@@ -2,8 +2,10 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
+import net.corda.bn.contracts.GroupContract
 import net.corda.bn.states.BNIdentity
 import net.corda.bn.states.BNORole
+import net.corda.bn.states.GroupState
 import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
@@ -20,26 +22,30 @@ import net.corda.core.transactions.TransactionBuilder
 
 /**
  * Self issues [MembershipState] for the flow initiator creating new Business Network as consequence. Every node in Compatibility Zone can
- * initiate this flow.
+ * initiate this flow. Also creates initial Business Network group in form of [GroupState].
  *
  * @property networkId Custom ID to be given to the new Business Network. If not specified, randomly selected one will be used.
  * @property businessIdentity Custom business identity to be given to membership.
+ * @property groupId Custom ID to be given to the initial Business Network group. If not specified, randomly selected one will be used.
+ * @property groupName Optional name to be given to Business Network group.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  *
  * @throws DuplicateBusinessNetworkException If Business Network with [networkId] ID already exists.
+ * @throws DuplicateBusinessNetworkGroupException If Business Network Group with [groupId] ID already exists.
  */
 @InitiatingFlow
 @StartableByRPC
 class CreateBusinessNetworkFlow(
         private val networkId: UniqueIdentifier = UniqueIdentifier(),
         private val businessIdentity: BNIdentity? = null,
+        private val groupId: UniqueIdentifier = UniqueIdentifier(),
+        private val groupName: String? = null,
         private val notary: Party? = null
 ) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
-    private fun createMembershipRequest(): SignedTransaction {
+    private fun createMembershipRequest(databaseService: DatabaseService): SignedTransaction {
         // check if business network with networkId already exists
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
         if (databaseService.businessNetworkExists(networkId.toString())) {
             throw DuplicateBusinessNetworkException("Business Network with $networkId ID already exists")
         }
@@ -85,14 +91,43 @@ class CreateBusinessNetworkFlow(
     }
 
     @Suspendable
+    private fun createBusinessNetworkGroup(databaseService: DatabaseService): SignedTransaction {
+        // check if business network group with groupId already exists
+        if (databaseService.businessNetworkGroupExists(groupId)) {
+            throw DuplicateBusinessNetworkGroupException("Business Network Group with $groupId already exists.")
+        }
+
+        val group = GroupState(networkId = networkId.toString(), name = groupName, linearId = groupId, participants = listOf(ourIdentity))
+        val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
+                .addOutputState(group)
+                .addCommand(GroupContract.Commands.Create(listOf(ourIdentity.owningKey)), ourIdentity.owningKey)
+        builder.verify(serviceHub)
+
+        val stx = serviceHub.signInitialTransaction(builder)
+        return subFlow(FinalityFlow(stx, emptyList()))
+    }
+
+    @Suspendable
     override fun call(): SignedTransaction {
+        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
         // first issue membership with PENDING status
-        val pendingMembership = createMembershipRequest().tx.outRefsOfType(MembershipState::class.java).single()
+        val pendingMembership = createMembershipRequest(databaseService).tx.outRefsOfType(MembershipState::class.java).single()
         // after that activate the membership
         val activeMembership = activateMembership(pendingMembership).tx.outRefsOfType(MembershipState::class.java).single()
-        // in the end give all permissions to the membership
-        return authoriseMembership(activeMembership)
+        // give all administrative permissions to the membership
+        return authoriseMembership(activeMembership).apply {
+            // in the end create initial business network group
+            createBusinessNetworkGroup(databaseService)
+        }
     }
 }
 
+/**
+ * Exception thrown whenever Business Network with [MembershipState.networkId] already exists.
+ */
 class DuplicateBusinessNetworkException(message: String) : FlowException(message)
+
+/**
+ * Exception thrown whenever Business Network Group with [GroupState.linearId] already exists.
+ */
+class DuplicateBusinessNetworkGroupException(message: String) : FlowException(message)

@@ -2,7 +2,6 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.CollectSignaturesFlow
@@ -34,18 +33,18 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
      */
     @Suppress("ThrowsCount")
     @Suspendable
-    protected fun authorise(networkId: String, databaseService: DatabaseService, authorisationMethod: (MembershipState) -> Boolean) {
+    protected fun authorise(networkId: String, databaseService: DatabaseService, authorisationMethod: (MembershipState) -> Boolean): StateAndRef<MembershipState> {
         if (!databaseService.businessNetworkExists(networkId)) {
             throw BusinessNetworkNotFoundException("Business Network with $networkId doesn't exist")
         }
-        val ourMembership = databaseService.getMembership(networkId, ourIdentity)?.state?.data
-                ?: throw MembershipNotFoundException("$ourIdentity is not member of a business network")
-        if (!ourMembership.isActive()) {
-            throw IllegalMembershipStatusException("Membership owned by $ourIdentity is not active")
-        }
-        if (!authorisationMethod(ourMembership)) {
-            throw MembershipAuthorisationException("$ourIdentity is not authorised to run $this")
-        }
+        return databaseService.getMembership(networkId, ourIdentity)?.apply {
+            if (!state.data.isActive()) {
+                throw IllegalMembershipStatusException("Membership owned by $ourIdentity is not active")
+            }
+            if (!authorisationMethod(state.data)) {
+                throw MembershipAuthorisationException("$ourIdentity is not authorised to run $this")
+            }
+        } ?: throw MembershipNotFoundException("$ourIdentity is not member of a business network")
     }
 
     /**
@@ -97,50 +96,28 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
     }
 
     /**
-     * Sends memberships of all members authorised to modify memberships to [receivingMembership] member. It also sends all non revoked
-     * memberships to [receivingMembership] member if it is authorised to modify memberships.
-     *
-     * @param networkId ID of the Business Network from which we query for memberships to be sent.
-     * @param receivingMembership Member to which mentioned memberships are sent.
-     * @param authorisedMemberships Set of memberships of all members authorised to modify memberships.
-     * @param observerSessions Sessions of all observers who get finalised transaction.
-     * @param databaseService Service used to query vault for memberships.
-     */
-    @Suspendable
-    protected fun syncMembershipList(
-            networkId: String,
-            receivingMembership: MembershipState,
-            authorisedMemberships: Set<StateAndRef<MembershipState>>,
-            observerSessions: List<FlowSession>,
-            databaseService: DatabaseService
-    ) {
-        val activatedMemberSession = observerSessions.single { it.counterparty == receivingMembership.identity.cordaIdentity }
-        val pendingAndSuspendedMemberships =
-                if (receivingMembership.canModifyMembership()) {
-                    databaseService.getAllMembershipsWithStatus(networkId, MembershipStatus.PENDING, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED)
-                } else emptyList()
-        sendMemberships(authorisedMemberships + pendingAndSuspendedMemberships, observerSessions, activatedMemberSession)
-    }
-
-    /**
-     * Helper methods used to send membership states' transactions to [destinationSession].
+     * Helper methods used to send membership states' transactions to [destinationSessions].
      *
      * @param memberships Collection of all memberships to be sent.
      * @param observerSessions Sessions of all observers who get finalised transaction.
-     * @param destinationSession Session to which [memberships] will be sent.
+     * @param destinationSessions Session to which [memberships] will be sent.
      */
     @Suspendable
-    private fun sendMemberships(
+    protected fun sendMemberships(
             memberships: Collection<StateAndRef<MembershipState>>,
             observerSessions: List<FlowSession>,
-            destinationSession: FlowSession
+            destinationSessions: List<FlowSession>
     ) {
         val membershipsTransactions = memberships.map {
             serviceHub.validatedTransactions.getTransaction(it.ref.txhash)
                     ?: throw FlowException("Transaction for membership with ${it.state.data.linearId} ID doesn't exist")
         }
-        observerSessions.forEach { it.send(if (it.counterparty == destinationSession.counterparty) membershipsTransactions.size else 0) }
-        membershipsTransactions.forEach { subFlow(SendTransactionFlow(destinationSession, it)) }
+        observerSessions.forEach { it.send(if (it in destinationSessions) membershipsTransactions.size else 0) }
+        destinationSessions.forEach { session ->
+            membershipsTransactions.forEach { stx ->
+                subFlow(SendTransactionFlow(session, stx))
+            }
+        }
     }
 
     /**
@@ -152,6 +129,35 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
         val txNumber = session.receive<Int>().unwrap { it }
         repeat(txNumber) {
             subFlow(ReceiveTransactionFlow(session, true, StatesToRecord.ALL_VISIBLE))
+        }
+    }
+
+    /**
+     * Takes collection of [MembershipState]s and modifies their participants to be all the participants of groups it is part of.
+     *
+     * @param networkId ID of the Business Network.
+     * @param memberships Collection of memberships which participants are modified.
+     * @param signers Parties that need to sign participant modification transaction.
+     * @param databaseService Service used to query vault for groups.
+     * @param notary Identity of the notary to be used for transactions notarisation.
+     */
+    @Suspendable
+    protected fun syncMembershipsParticipants(
+            networkId: String,
+            memberships: Collection<StateAndRef<MembershipState>>,
+            signers: List<Party>,
+            databaseService: DatabaseService,
+            notary: Party?
+    ) {
+        val allGroups = databaseService.getAllBusinessNetworkGroups(networkId).map { it.state.data }
+        memberships.forEach { membership ->
+            val newParticipants = allGroups.filter {
+                membership.state.data.identity.cordaIdentity in it.participants
+            }.flatMap {
+                it.participants
+            }.toSet()
+
+            subFlow(ModifyParticipantsFlow(membership, newParticipants.toList(), signers, notary))
         }
     }
 }
@@ -175,3 +181,23 @@ class IllegalMembershipStatusException(message: String) : FlowException(message)
  * Exception thrown by any [MembershipManagementFlow] whenever membership fails role based authorisation.
  */
 class MembershipAuthorisationException(message: String) : FlowException(message)
+
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever Business Network group with provided [GroupState.linearId] doesn't exist.
+ */
+class BusinessNetworkGroupNotFoundException(message: String) : FlowException(message)
+
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever member remains without participation in any Business Network Group.
+ */
+class MembershipMissingGroupParticipationException(message: String) : FlowException(message)
+
+/**
+ * [MembershipManagementFlow] version of [IllegalArgumentException]
+ */
+class IllegalFlowArgumentException(message: String) : FlowException(message)
+
+/**
+ * Exception thrown by any [MembershipManagementFlow] whenever group ends up in illegal state.
+ */
+class IllegalBusinessNetworkGroupStateException(message: String) : FlowException(message)
