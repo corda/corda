@@ -33,7 +33,6 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -1275,9 +1274,9 @@ class FlowStarterImpl(
     private val maxClientIdLength: Int
 ) : FlowStarter {
     override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineHandle<T>> {
-        val clientID = event.context.clientID
-        if (clientID != null && clientID.length > maxClientIdLength) {
-            throw IllegalArgumentException("clientID cannot be longer than $maxClientIdLength characters")
+        val clientId = event.context.clientId
+        if (clientId != null && clientId.length > maxClientIdLength) {
+            throw IllegalArgumentException("clientId cannot be longer than $maxClientIdLength characters")
         } else {
             smm.deliverExternalEvent(event)
         }

@@ -17,7 +17,7 @@ interface FlowStateMachineHandle<FLOWRETURN> {
     val logic: FlowLogic<FLOWRETURN>?
     val id: StateMachineRunId
     val resultFuture: CordaFuture<FLOWRETURN>
-    val clientID: String?
+    val clientId: String?
 }
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */

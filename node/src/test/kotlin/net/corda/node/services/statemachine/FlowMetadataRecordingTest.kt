@@ -90,10 +90,10 @@ class FlowMetadataRecordingTest {
                     metadata = metadataFromHook
                 }
 
-            val clientID = UUID.randomUUID().toString()
+            val clientId = UUID.randomUUID().toString()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlowDynamicWithClientId(
-                    clientID,
+                    clientId,
                     MyFlow::class.java,
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
@@ -106,7 +106,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(flowId!!.uuid.toString(), it.flowId)
                 assertEquals(MyFlow::class.java.name, it.flowName)
                 // Should be changed when [userSuppliedIdentifier] gets filled in future changes
-                assertEquals(clientID, it.userSuppliedIdentifier)
+                assertEquals(clientId, it.userSuppliedIdentifier)
                 assertEquals(DBCheckpointStorage.StartReason.RPC, it.startType)
                 assertEquals(
                     listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
@@ -400,13 +400,13 @@ class FlowMetadataRecordingTest {
 
     @Test
     fun `assert that flow started with longer client id than MAX_CLIENT_ID_LENGTH fails`() {
-        val clientID = "1".repeat(513) // DBCheckpointStorage.MAX_CLIENT_ID_LENGTH == 512
+        val clientId = "1".repeat(513) // DBCheckpointStorage.MAX_CLIENT_ID_LENGTH == 512
         driver(DriverParameters(startNodesInProcess = true)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             val rpc = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).proxy
 
-            assertFailsWith<CordaRuntimeException>("clientID cannot be longer than ${DBCheckpointStorage.MAX_CLIENT_ID_LENGTH} characters") {
-                rpc.startFlowDynamicWithClientId(clientID, EmptyFlow::class.java).returnValue.getOrThrow()
+            assertFailsWith<CordaRuntimeException>("clientId cannot be longer than ${DBCheckpointStorage.MAX_CLIENT_ID_LENGTH} characters") {
+                rpc.startFlowDynamicWithClientId(clientId, EmptyFlow::class.java).returnValue.getOrThrow()
             }
         }
     }

@@ -14,7 +14,7 @@ internal fun InvocationContext.pushToLoggingContext() {
     externalTrace?.pushToLoggingContext("external_")
     impersonatedActor?.pushToLoggingContext("impersonating_")
 
-    clientID?.let {
+    clientId?.let {
         MDC.getMDCAdapter().apply {
             put("client_id", it)
         }

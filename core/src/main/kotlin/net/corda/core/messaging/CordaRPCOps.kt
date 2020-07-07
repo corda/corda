@@ -265,14 +265,14 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
-     * Start the given flow with the given arguments and a [clientID]. [logicType] must be annotated
+     * Start the given flow with the given arguments and a [clientId]. [logicType] must be annotated
      * with [net.corda.core.flows.StartableByRPC]. The flow's result/ exception will be available for the client to
      * re-connect and retrieve them even after the flow's lifetime, by re-calling [startFlowDynamicWithClientId] with the same
-     * [clientID]. Upon calling [removeClientId], the node's resources holding the result/ exception will be freed
+     * [clientId]. Upon calling [removeClientId], the node's resources holding the result/ exception will be freed
      * and the result/ exception will no longer be available.
      */
     @RPCReturnsObservables
-    fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T>
+    fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T>
 
     /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
@@ -289,13 +289,13 @@ interface CordaRPCOps : RPCOps {
     fun killFlow(id: StateMachineRunId): Boolean
 
     /**
-     * Removes a flow's [clientID] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
+     * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
      *
      * See [startFlowDynamicWithClientId] for more information.
      *
      * @return whether the mapping was removed.
      */
-    fun removeClientId(clientID: String): Boolean
+    fun removeClientId(clientId: String): Boolean
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo

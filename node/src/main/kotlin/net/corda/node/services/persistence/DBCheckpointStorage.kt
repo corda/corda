@@ -514,7 +514,7 @@ class DBCheckpointStorage(
             // Truncate the flow name to fit into the database column
             // Flow names are unlikely to be this long
             flowName = flowInfo.flowClass.name.take(MAX_FLOW_NAME_LENGTH),
-            userSuppliedIdentifier = context.clientID,
+            userSuppliedIdentifier = context.clientId,
             startType = context.getStartedType(),
             initialParameters = context.getFlowParameters().storageSerialize().bytes,
             launchingCordapp = (flowInfo.subFlowVersion as? SubFlowVersion.CorDappFlow)?.corDappName ?: "Core flow",

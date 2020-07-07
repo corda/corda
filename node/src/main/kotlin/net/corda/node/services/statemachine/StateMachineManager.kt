@@ -101,11 +101,11 @@ interface StateMachineManager {
     fun snapshot(): Set<FlowStateMachineImpl<*>>
 
     /**
-     * Removes a flow's [clientID] to result/ exception mapping.
+     * Removes a flow's [clientId] to result/ exception mapping.
      *
      * @return whether the mapping was removed.
      */
-    fun removeClientId(clientID: String): Boolean
+    fun removeClientId(clientId: String): Boolean
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call

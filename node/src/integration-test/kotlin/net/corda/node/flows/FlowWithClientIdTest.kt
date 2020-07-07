@@ -23,35 +23,35 @@ class FlowWithClientIdTest {
 
     @Test(timeout=300_000)
     fun `start flow with client id`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
-            val flowHandle = nodeA.rpc.startFlowDynamicWithClientId(clientID, ResultFlow::class.java, 5)
+            val flowHandle = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
 
             assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
-            assertEquals(clientID, flowHandle.clientID)
+            assertEquals(clientId, flowHandle.clientId)
         }
     }
 
     @Test(timeout=300_000)
     fun `remove client id`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         var counter = 0
         ResultFlow.hook = { counter++ }
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
 
-            val flowHandle0 = nodeA.rpc.startFlowDynamicWithClientId(clientID, ResultFlow::class.java, 5)
+            val flowHandle0 = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
             flowHandle0.returnValue.getOrThrow(20.seconds)
 
-            val removed = nodeA.rpc.removeClientId(clientID)
+            val removed = nodeA.rpc.removeClientId(clientId)
 
-            val flowHandle1 = nodeA.rpc.startFlowDynamicWithClientId(clientID, ResultFlow::class.java, 5)
+            val flowHandle1 = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
             flowHandle1.returnValue.getOrThrow(20.seconds)
 
             assertTrue(removed)
             assertNotEquals(flowHandle0.id, flowHandle1.id)
-            assertEquals(flowHandle0.clientID, flowHandle1.clientID)
+            assertEquals(flowHandle0.clientId, flowHandle1.clientId)
             assertEquals(2, counter) // this asserts that 2 different flows were spawned indeed
         }
 

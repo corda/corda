@@ -19,7 +19,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentTrustInfo
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
@@ -173,7 +172,7 @@ internal class CordaRPCOpsImpl(
 
     override fun killFlow(id: StateMachineRunId): Boolean = smm.killFlow(id)
 
-    override fun removeClientId(clientID: String): Boolean = smm.removeClientId(clientID)
+    override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
 
@@ -256,9 +255,9 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientID: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T> {
-        val stateMachine = startFlow(logicType, context().withClientId(clientID), args)
-        return FlowHandleWithClientIdImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture, clientID = stateMachine.clientID!!)
+    override fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T> {
+        val stateMachine = startFlow(logicType, context().withClientId(clientId), args)
+        return FlowHandleWithClientIdImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture, clientId = stateMachine.clientId!!)
     }
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {
@@ -475,5 +474,5 @@ internal class CordaRPCOpsImpl(
         require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
 
-    private fun InvocationContext.withClientId(clientID: String) = copy(clientID = clientID)
+    private fun InvocationContext.withClientId(clientId: String) = copy(clientId = clientId)
 }

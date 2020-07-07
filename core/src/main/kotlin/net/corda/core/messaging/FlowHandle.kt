@@ -31,9 +31,9 @@ interface FlowHandle<A> : AutoCloseable {
 interface FlowHandleWithClientId<A> : FlowHandle<A> {
 
     /**
-     * The [clientID] with which the client has started the flow.
+     * The [clientId] with which the client has started the flow.
      */
-    val clientID: String
+    val clientId: String
 }
 
 /**
@@ -78,7 +78,7 @@ data class FlowHandleImpl<A>(
 data class FlowHandleWithClientIdImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>,
-        override val clientID: String) : FlowHandleWithClientId<A> {
+        override val clientId: String) : FlowHandleWithClientId<A> {
 
     // Remember to add @Throws to FlowHandle.close() if this throws an exception.
     override fun close() {

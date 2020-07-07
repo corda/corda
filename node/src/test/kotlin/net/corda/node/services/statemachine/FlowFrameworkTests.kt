@@ -849,26 +849,26 @@ class FlowFrameworkTests {
     fun `no new flow starts if the client id provided pre exists`() {
         var counter = 0
         ResultFlow.hook = { counter++ }
-        val clientID = UUID.randomUUID().toString()
-        aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
-        aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         assertEquals(1, counter)
     }
 
     @Test
     fun `flow's result is retrievable after flow's lifetime, when flow is started with a client id - different parameters are ignored`() {
-        val clientID = UUID.randomUUID().toString()
-        val handle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
-        val clientID0 = handle0.clientID
+        val clientId = UUID.randomUUID().toString()
+        val handle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val clientId0 = handle0.clientId
         val flowId0 = handle0.id
         val result0 = handle0.resultFuture.getOrThrow()
 
-        val handle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(10))
-        val clientID1 = handle1.clientID
+        val handle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10))
+        val clientId1 = handle1.clientId
         val flowId1 = handle1.id
         val result1 = handle1.resultFuture.getOrThrow()
 
-        assertEquals(clientID0, clientID1)
+        assertEquals(clientId0, clientId1)
         assertEquals(flowId0, flowId1)
         assertEquals(result0, result1)
     }
@@ -883,9 +883,9 @@ class FlowFrameworkTests {
             }
         }
 
-        val clientID = UUID.randomUUID().toString()
-        val result0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
-        val result1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+        val clientId = UUID.randomUUID().toString()
+        val result0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        val result1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         assertEquals(result0, result1)
     }
 
@@ -907,9 +907,9 @@ class FlowFrameworkTests {
         }
 
         var result1 = 0
-        val clientID = UUID.randomUUID().toString()
-        val handle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
-        val t = thread { result1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow() }
+        val clientId = UUID.randomUUID().toString()
+        val handle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val t = thread { result1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow() }
 
         Thread.sleep(1000)
         semaphore.release()
@@ -922,38 +922,38 @@ class FlowFrameworkTests {
     @Test
     fun `flow's exception is available after flow's lifetime if flow is started with a client id`() {
         ResultFlow.hook = { throw IllegalStateException() }
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
 
         assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         }
 
         assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         }
     }
 
     @Test
     fun `flow's client id mapping gets removed upon request`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         var counter = 0
         ResultFlow.hook = { counter++ }
-        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle0.resultFuture.getOrThrow(20.seconds)
-        val removed = aliceNode.smm.removeClientId(clientID)
-        // On new request with clientID, after the same clientID was removed, a brand new flow will start with that clientID
-        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val removed = aliceNode.smm.removeClientId(clientId)
+        // On new request with clientId, after the same clientId was removed, a brand new flow will start with that clientId
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowHandle1.resultFuture.getOrThrow(20.seconds)
 
         assertTrue(removed)
         assertNotEquals(flowHandle0.id, flowHandle1.id)
-        assertEquals(flowHandle0.clientID, flowHandle1.clientID)
+        assertEquals(flowHandle0.clientId, flowHandle1.clientId)
         assertEquals(2, counter)
     }
 
     @Test
     fun `flow's client id mapping can only get removed once the flow gets removed`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         var tries = 0
         val maxTries = 10
         var failedRemovals = 0
@@ -964,11 +964,11 @@ class FlowFrameworkTests {
                 semaphore.acquire()
             }
         }
-        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
 
         var removed = false
         while (!removed) {
-            removed = aliceNode.smm.removeClientId(clientID)
+            removed = aliceNode.smm.removeClientId(clientId)
             if (!removed) ++failedRemovals
             ++tries
             if (tries >= maxTries) {
@@ -989,11 +989,11 @@ class FlowFrameworkTests {
         ResultFlow.hook = { counter.incrementAndGet() }
         //(aliceNode.smm as SingleThreadedStateMachineManager).concurrentRequests = true
 
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         val threads = arrayOfNulls<Thread>(requests)
         for (i in 0 until requests) {
             threads[i] = Thread {
-                val result = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5)).resultFuture.getOrThrow()
+                val result = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
                 resultsCounter.addAndGet(result)
             }
         }
@@ -1001,14 +1001,14 @@ class FlowFrameworkTests {
         val semaphore = Semaphore(0)
         val allThreadsBlocked = Semaphore(0)
         SingleThreadedStateMachineManager.onClientIDNotFound = {
-            // Make all threads wait after client id not found on clientIDsToFlowIds
+            // Make all threads wait after client id not found on clientIdsToFlowIds
             allThreadsBlocked.release()
             semaphore.acquire()
         }
 
         val beforeCount = AtomicInteger(0)
         SingleThreadedStateMachineManager.beforeClientIDCheck = {
-            // Make all threads wait after client id not found on clientIDsToFlowIds
+            // Make all threads wait after client id not found on clientIdsToFlowIds
             beforeCount.incrementAndGet()
         }
 
@@ -1032,7 +1032,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `on node start -running- flows with client id are hook-able`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         var noSecondFlowWasSpawned = 0
         var firstRun = true
         var firstFiber: Fiber<out Any?>? = null
@@ -1059,7 +1059,7 @@ class FlowFrameworkTests {
             }
         }
 
-        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         waitUntilFlowIsRunning.acquire()
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val aliceNode = mockNet.restartNode(aliceNode)
@@ -1068,18 +1068,18 @@ class FlowFrameworkTests {
 
         waitUntilFlowIsRunning.acquire()
         // Re-hook a running flow
-        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         flowIsRunning.release()
 
         assertEquals(flowHandle0.id, flowHandle1.id)
-        assertEquals(clientID, flowHandle1.clientID)
+        assertEquals(clientId, flowHandle1.clientId)
         assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
         assertEquals(1, noSecondFlowWasSpawned)
     }
 
     @Test
     fun `on node restart -paused- flows with client id are hook-able`() {
-        val clientID = UUID.randomUUID().toString()
+        val clientId = UUID.randomUUID().toString()
         var noSecondFlowWasSpawned = 0
         var firstRun = true
         var firstFiber: Fiber<out Any?>? = null
@@ -1106,7 +1106,7 @@ class FlowFrameworkTests {
             }
         }
 
-        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         waitUntilFlowIsRunning.acquire()
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         // Pause the flow on node restart
@@ -1120,10 +1120,10 @@ class FlowFrameworkTests {
         firstFiber!!.interrupt()
 
         // Re-hook a paused flow
-        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientID, ResultFlow(5))
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
 
         assertEquals(flowHandle0.id, flowHandle1.id)
-        assertEquals(clientID, flowHandle1.clientID)
+        assertEquals(clientId, flowHandle1.clientId)
         aliceNode.smm.unPauseFlow(flowHandle1.id)
         assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
         assertEquals(1, noSecondFlowWasSpawned)
