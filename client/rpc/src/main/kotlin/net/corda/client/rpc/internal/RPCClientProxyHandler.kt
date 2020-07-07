@@ -143,6 +143,19 @@ internal class RPCClientProxyHandler(
                 }
             }
         }
+
+        @Suppress("TooGenericExceptionCaught")
+        private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
+            // Notify listeners of the observables that the connection is being terminated.
+            try {
+                observable.onError(ConnectionFailureException())
+            } catch (ex: OnErrorNotImplementedException) {
+                // Indicates the observer does not have any error handling.
+                log.warn("Closed connection on observable $observable whose observers have no error handling.")
+            } catch (ex: Exception) {
+                log.error("Unexpected exception when RPC connection failure handling", ex)
+            }
+        }
     }
 
     // Used for reaping
@@ -453,11 +466,9 @@ internal class RPCClientProxyHandler(
         }
 
         reaperScheduledFuture?.cancel(false)
-        observableContext.observableMap.asMap().forEach { (key, value) ->
+        observableContext.observableMap.asMap().forEach { (key, observable) ->
             observationExecutorPool.run(key) {
-                value?.also {
-                    closeObservable(it)
-                }
+                observable?.also(Companion::closeObservable)
             }
         }
         observableContext.observableMap.invalidateAll()
@@ -476,19 +487,6 @@ internal class RPCClientProxyHandler(
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
         lifeCycle.justTransition(State.FINISHED)
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
-        // Notify listeners of the observables that the connection is being terminated.
-        try {
-            observable.onError(ConnectionFailureException())
-        } catch (ex: OnErrorNotImplementedException) {
-            // Indicates the observer does not have any error handling.
-            log.debug("Closed connection on observable $observable whose observers have no error handling.")
-        } catch (ex: Exception) {
-            log.error("Unexpected exception when RPC connection failure handling", ex)
-        }
     }
 
     /**
