@@ -261,14 +261,9 @@ internal class SingleThreadedStateMachineManager(
                 unfinishedFibers.countDown()
 
                 val state = flow.fiber.transientState
-                return@withLock if (state != null) {
-                    state.isKilled = true
-                    flow.fiber.scheduleEvent(Event.DoRemainingWork)
-                    true
-                } else {
-                    logger.info("Flow $id has not been initialised correctly and cannot be killed")
-                    false
-                }
+                state.isKilled = true
+                flow.fiber.scheduleEvent(Event.DoRemainingWork)
+                true
             } else {
                 // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
                 database.transaction { checkpointStorage.removeCheckpoint(id) }
