@@ -3,6 +3,7 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.testing.driver.DriverParameters
@@ -26,7 +27,7 @@ class FlowWithClientIdTest {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
-            val flowHandle = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
 
             assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
             assertEquals(clientId, flowHandle.clientId)
@@ -41,12 +42,12 @@ class FlowWithClientIdTest {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
 
-            val flowHandle0 = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
+            val flowHandle0 = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
             flowHandle0.returnValue.getOrThrow(20.seconds)
 
             val removed = nodeA.rpc.removeClientId(clientId)
 
-            val flowHandle1 = nodeA.rpc.startFlowDynamicWithClientId(clientId, ResultFlow::class.java, 5)
+            val flowHandle1 = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
             flowHandle1.returnValue.getOrThrow(20.seconds)
 
             assertTrue(removed)
