@@ -15,7 +15,6 @@ import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.doOnComplete
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
