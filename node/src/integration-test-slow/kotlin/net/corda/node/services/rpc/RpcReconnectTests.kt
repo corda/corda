@@ -58,8 +58,8 @@ class RpcReconnectTests {
         // this many flows take ~2 minutes
         const val NUMBER_OF_FLOWS_TO_RUN = 50
 
-        const val nodeRunningTimeVariability = 6000
-        const val nodeRunningTimeLowerBound = 6000
+        const val nodeRunningTimeVariability = 12000
+        const val nodeRunningTimeLowerBound = 8000
 
         private val log = contextLogger()
     }
