@@ -171,6 +171,7 @@ internal class SingleThreadedStateMachineManager(
         }
 
         // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED -> TODO: RESULTED AND FAILED still need to be fetched
+        //  + Handle incompatible checkpoints upon implementing CORDA-3897
         for (flow in fibers) {
             flow.fiber.clientId?.let {
                 mutex.content.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
