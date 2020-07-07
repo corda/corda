@@ -90,7 +90,7 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
 }

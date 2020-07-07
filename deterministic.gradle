@@ -16,7 +16,7 @@ ext {
     deterministic_rt_jar = jdk8uDeterministic.rt_jar
 }
 
-tasks.withType(AbstractCompile) {
+tasks.withType(AbstractCompile).configureEach {
     dependsOn jdkTask
 
     // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
@@ -29,7 +29,7 @@ tasks.withType(AbstractCompile) {
     }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
     sourceCompatibility = VERSION_1_8
     targetCompatibility = VERSION_1_8

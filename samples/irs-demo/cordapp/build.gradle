@@ -153,7 +153,7 @@ task integrationTest(type: Test, dependsOn: []) {
 
 // This fixes the "line too long" error when running this demo with windows CLI
 // TODO: Automatically apply to all projects via a plugin
-tasks.withType(CreateStartScripts).each { task ->
+tasks.withType(CreateStartScripts).configureEach { task ->
     task.doLast {
         String text = task.windowsScript.text
         // Replaces the per file classpath (which are all jars in "lib") with a wildcard on lib

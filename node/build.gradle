@@ -243,12 +243,12 @@ dependencies {
     testCompile project(':testing:cordapps:dbfailure:dbfworkflows')
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     if (JavaVersion.current() == JavaVersion.VERSION_11) {
         jvmArgs '-Djdk.attach.allowAttachSelf=true'
     }
