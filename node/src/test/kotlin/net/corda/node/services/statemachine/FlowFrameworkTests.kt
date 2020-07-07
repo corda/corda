@@ -26,6 +26,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.declaredField
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
@@ -177,7 +178,8 @@ class FlowFrameworkTests {
             Exception("Thrown during suspend"),
             fiber.transientValues.actionExecutor
         )
-        fiber.transientValues = fiber.transientValues.copy(actionExecutor = throwingActionExecutor)
+        fiber.declaredField<TransientReference<FlowStateMachineImpl.TransientValues>>("transientValuesReference").value =
+            TransientReference(fiber.transientValues.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
         fiber.resultFuture.getOrThrow()
         assertThat(aliceNode.smm.allStateMachines).isEmpty()

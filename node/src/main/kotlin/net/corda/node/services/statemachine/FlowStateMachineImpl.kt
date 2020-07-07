@@ -103,7 +103,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // After the flow has been created, the transient values should never be null
         get() = transientValuesReference!!.value
         set(values) {
-            check(transientValuesReference?.value == null) { "The transient values should only be set once" }
+            check(transientValuesReference?.value == null) { "The transient values should only be set once when initialising a flow" }
             transientValuesReference = TransientReference(values)
         }
 
