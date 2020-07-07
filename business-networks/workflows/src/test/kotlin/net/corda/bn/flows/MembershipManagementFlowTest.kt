@@ -135,6 +135,20 @@ abstract class MembershipManagementFlowTest(
         return future.getOrThrow()
     }
 
+    @Suppress("LongParameterList")
+    protected fun runCreateGroupFlow(
+            initiator: StartedMockNode,
+            networkId: String,
+            groupId: UniqueIdentifier = UniqueIdentifier(),
+            groupName: String? = null,
+            additionalParticipants: Set<UniqueIdentifier> = emptySet(),
+            notary: Party? = null
+    ): SignedTransaction {
+        val future = initiator.startFlow(CreateGroupFlow(networkId, groupId, groupName, additionalParticipants, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
     protected fun runModifyGroupFlow(
             initiator: StartedMockNode,
             groupId: UniqueIdentifier,
@@ -143,6 +157,12 @@ abstract class MembershipManagementFlowTest(
             notary: Party? = null
     ): SignedTransaction {
         val future = initiator.startFlow(ModifyGroupFlow(groupId, name, participants, notary))
+        mockNetwork.runNetwork()
+        return future.getOrThrow()
+    }
+
+    protected fun runDeleteGroupFlow(initiator: StartedMockNode, groupId: UniqueIdentifier, notary: Party? = null): SignedTransaction {
+        val future = initiator.startFlow(DeleteGroupFlow(groupId, notary))
         mockNetwork.runNetwork()
         return future.getOrThrow()
     }
