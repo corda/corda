@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
@@ -30,21 +31,9 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
      * No pass through the hospital is recorded. As the flow is marked as `isRemoved`.
      */
     @Test(timeout = 300_000)
-    fun `error during transition due to an InterruptedException (killFlow) will terminate the flow`() {
+    fun `error during transition due to killing a flow will terminate the flow`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
-
-            val rules = """
-                RULE Increment terminal counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ TERMINAL
-                IF true
-                DO traceln("Byteman test - terminal")
-                ENDRULE
-            """.trimIndent()
-
-            submitBytemanRules(rules, port)
+            val alice = createNode(ALICE_NAME)
 
             val flow = alice.rpc.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::SleepFlow)
 
@@ -56,14 +45,10 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(20.seconds) }
-
-            val output = getBytemanOutput(alice)
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(20.seconds) }
 
             assertTrue(flowKilled)
-            val numberOfTerminalDiagnoses = output.filter { it.contains("Byteman test - terminal") }.size
-            assertEquals(1, numberOfTerminalDiagnoses)
-            alice.rpc.assertHospitalCounts(propagated = 1)
+            alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             alice.rpc.assertNumberOfCheckpoints(0)
         }
@@ -97,7 +82,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 }
             }
 
-            assertFailsWith<TimeoutException> { flow.returnValue.getOrThrow(30.seconds) }
+            assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(30.seconds) }
 
             assertTrue(flowKilled)
             alice.rpc.assertHospitalCountsAllZero()
@@ -124,15 +109,15 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
             val rules = """
                 RULE Create Counter
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSendInitial action
+                RULE Throw exception on executeSendMultiple action
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")

@@ -4,18 +4,25 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.transitions.TopLevelTransition
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import org.junit.Test
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
 class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
+
+    private companion object {
+        val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    }
 
     /**
      * Throws an exception when performing an [Action.SendInitial] action.
@@ -34,15 +41,15 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             val rules = """
                 RULE Create Counter
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSendInitial action
+                RULE Throw exception on executeSendMultiple action
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
@@ -86,15 +93,15 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             val rules = """
                 RULE Create Counter
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
                 DO traceln("Counter created")
                 ENDRULE
 
-                RULE Throw exception on executeSendInitial action
+                RULE Throw exception on executeSendMultiple action
                 CLASS ${ActionExecutorImpl::class.java.name}
-                METHOD executeSendInitial
+                METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
@@ -461,6 +468,134 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             alice.rpc.assertNumberOfCheckpoints(1)
+        }
+    }
+
+    /**
+     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted
+     * state).
+     *
+     * The exception is thrown 3 times.
+     *
+     * An exception is also thrown from [CheckpointStorage.getCheckpoint].
+     *
+     * This test is to prevent a regression, where a transient database connection error can be thrown retrieving a flow's checkpoint when
+     * retrying the flow after it failed to commit it's original checkpoint.
+     *
+     * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
+     * succeeds and the flow finishes.
+     */
+    @Test(timeout = 300_000)
+    fun `flow can be retried when there is a transient connection error to the database`() {
+        startDriver {
+            val charlie = createNode(CHARLIE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+
+            val rules = """
+                RULE Create Counter
+                CLASS ${ActionExecutorImpl::class.java.name}
+                METHOD executeCommitTransaction
+                AT ENTRY
+                IF createCounter("counter", $counter) 
+                DO traceln("Counter created")
+                ENDRULE
+
+                RULE Throw exception on executeCommitTransaction action
+                CLASS ${ActionExecutorImpl::class.java.name}
+                METHOD executeCommitTransaction
+                AT ENTRY
+                IF readCounter("counter") < 3
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+                
+                RULE Throw exception on getCheckpoint
+                INTERFACE ${CheckpointStorage::class.java.name}
+                METHOD getCheckpoint
+                AT ENTRY
+                IF true
+                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            alice.rpc.startFlow(
+                StateMachineErrorHandlingTest::SendAMessageFlow,
+                charlie.nodeInfo.singleIdentity()
+            ).returnValue.getOrThrow(
+                30.seconds
+            )
+
+            alice.rpc.assertHospitalCounts(
+                discharged = 3,
+                observation = 0
+            )
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(0, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+        }
+    }
+
+    /**
+     * Throws an exception when performing an [Action.CommitTransaction] event before the flow has suspended (remains in an unstarted
+     * state).
+     *
+     * The exception is thrown 4 times.
+     *
+     * An exception is also thrown from [CheckpointStorage.getCheckpoint].
+     *
+     * This test is to prevent a regression, where a transient database connection error can be thrown retrieving a flow's checkpoint when
+     * retrying the flow after it failed to commit it's original checkpoint.
+     *
+     * This causes the transition to be discharged from the hospital 3 times (retries 3 times). On the final retry the transition
+     * fails and is kept for in for observation.
+     */
+    @Test(timeout = 300_000)
+    fun `flow can be retried when there is a transient connection error to the database goes to observation if error persists`() {
+        startDriver {
+            val charlie = createNode(CHARLIE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+
+            val rules = """
+                RULE Create Counter
+                CLASS ${ActionExecutorImpl::class.java.name}
+                METHOD executeCommitTransaction
+                AT ENTRY
+                IF createCounter("counter", $counter) 
+                DO traceln("Counter created")
+                ENDRULE
+
+                RULE Throw exception on executeCommitTransaction action
+                CLASS ${ActionExecutorImpl::class.java.name}
+                METHOD executeCommitTransaction
+                AT ENTRY
+                IF readCounter("counter") < 4
+                DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
+                ENDRULE
+                
+                RULE Throw exception on getCheckpoint
+                INTERFACE ${CheckpointStorage::class.java.name}
+                METHOD getCheckpoint
+                AT ENTRY
+                IF true
+                DO traceln("Throwing exception getting checkpoint"); throw new java.sql.SQLTransientConnectionException("Connection is not available")
+                ENDRULE
+            """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            executor.execute {
+                alice.rpc.startFlow(StateMachineErrorHandlingTest::SendAMessageFlow, charlie.nodeInfo.singleIdentity())
+            }
+
+            // flow is not signaled as started calls to [getOrThrow] will hang, sleeping instead
+            Thread.sleep(30.seconds.toMillis())
+
+            alice.rpc.assertHospitalCounts(
+                discharged = 3,
+                observation = 1
+            )
+            assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(0, alice.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 
