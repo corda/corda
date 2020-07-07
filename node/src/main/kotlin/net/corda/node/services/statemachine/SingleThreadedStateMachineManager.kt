@@ -849,21 +849,21 @@ internal class SingleThreadedStateMachineManager(
     }
 
     private fun InnerState.setClientIdAsSucceeded(clientId: String, id: StateMachineRunId) {
-        setClientIdAsRemoved(clientId, id, FlowWithClientIdStatus.Removed.Status.SUCCEEDED)
+        setClientIdAsRemoved(clientId, id, true)
     }
 
     private fun InnerState.setClientIdAsFailed(clientId: String, id: StateMachineRunId) {
-        setClientIdAsRemoved(clientId, id, FlowWithClientIdStatus.Removed.Status.FAILED)
+        setClientIdAsRemoved(clientId, id, false)
     }
 
     private fun InnerState.setClientIdAsRemoved(
         clientId: String,
         id: StateMachineRunId,
-        nextStatus: FlowWithClientIdStatus.Removed.Status
+        succeeded: Boolean
     ) {
         clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
             require(existingStatus != null && existingStatus is FlowWithClientIdStatus.Active)
-            FlowWithClientIdStatus.Removed(id, nextStatus)
+            FlowWithClientIdStatus.Removed(id, succeeded)
         }
     }
 

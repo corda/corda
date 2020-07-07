@@ -386,7 +386,5 @@ sealed class SubFlowVersion {
 
 sealed class FlowWithClientIdStatus {
     data class Active(val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>) : FlowWithClientIdStatus()
-    data class Removed(val flowId: StateMachineRunId, val removedStatus: Status) : FlowWithClientIdStatus() {
-        enum class Status { SUCCEEDED, FAILED }
-    }
+    data class Removed(val flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus()
 }
