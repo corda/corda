@@ -232,9 +232,10 @@ interface FlowStarter {
      * [logicType] or [args].
      */
     fun <T> invokeFlowAsync(
-            logicType: Class<out FlowLogic<T>>,
-            context: InvocationContext,
-            vararg args: Any?): CordaFuture<out FlowStateMachineHandle<T>>
+        logicType: Class<out FlowLogic<T>>,
+        context: InvocationContext,
+        vararg args: Any?
+    ): CordaFuture<out FlowStateMachineHandle<T>>
 }
 
 interface StartedNodeServices : ServiceHubInternal, FlowStarter
