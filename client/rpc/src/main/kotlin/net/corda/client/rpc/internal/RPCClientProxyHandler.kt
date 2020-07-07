@@ -10,7 +10,6 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -35,6 +34,7 @@ import net.corda.nodeapi.internal.DeduplicationChecker
 import net.corda.nodeapi.internal.rpc.client.CallSite
 import net.corda.nodeapi.internal.rpc.client.CallSiteMap
 import net.corda.nodeapi.internal.rpc.client.ObservableContext
+import net.corda.nodeapi.internal.rpc.client.RpcClientObservableDeSerializer
 import net.corda.nodeapi.internal.rpc.client.RpcObservableMap
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -453,20 +453,10 @@ internal class RPCClientProxyHandler(
         }
 
         reaperScheduledFuture?.cancel(false)
-        val observablesMap = observableContext.observableMap.asMap()
-        observablesMap.keys.forEach { key ->
+        observableContext.observableMap.asMap().forEach { (key, value) ->
             observationExecutorPool.run(key) {
-                val observable: UnicastSubject<Notification<*>>? = observablesMap[key]
-                // Notify listeners of the observables that the connection is being terminated.
-                observable?.also {
-                    try {
-                        it.onError(ConnectionFailureException())
-                    } catch(ex: OnErrorNotImplementedException) {
-                        // Indicates the observer does not have any error handling.
-                        log.debug("Closed connection on observable $observable whose observers have no error handling.")
-                    } catch (ex: Exception) {
-                        log.error("Unexpected exception when RPC connection failure handling", ex)
-                    }
+                value?.also {
+                    closeObservable(it)
                 }
             }
         }
@@ -486,6 +476,19 @@ internal class RPCClientProxyHandler(
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
         lifeCycle.justTransition(State.FINISHED)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun closeObservable(observable: UnicastSubject<Notification<*>>) {
+        // Notify listeners of the observables that the connection is being terminated.
+        try {
+            observable.onError(ConnectionFailureException())
+        } catch (ex: OnErrorNotImplementedException) {
+            // Indicates the observer does not have any error handling.
+            log.debug("Closed connection on observable $observable whose observers have no error handling.")
+        } catch (ex: Exception) {
+            log.error("Unexpected exception when RPC connection failure handling", ex)
+        }
     }
 
     /**
