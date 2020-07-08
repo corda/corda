@@ -207,10 +207,18 @@ artifacts {
     publish file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
 }
 
+tasks.named('sourceJar', Jar) {
+    from 'README.md'
+    include 'README.md'
+}
+
+tasks.named('javadocJar', Jar) {
+    from 'README.md'
+    include 'README.md'
+}
+
 publish {
     dependenciesFrom configurations.deterministicArtifacts
-    publishSources = false
-    publishJavadoc = false
     name jarBaseName
 }
 
