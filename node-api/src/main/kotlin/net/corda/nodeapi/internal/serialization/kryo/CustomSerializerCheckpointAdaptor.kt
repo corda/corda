@@ -10,11 +10,26 @@ import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 
+/**
+ * Adapts CheckpointCustomSerializer for use in Kryo
+ */
 class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer : CheckpointCustomSerializer<OBJ, PROXY>) : Serializer<OBJ>() {
 
+    /**
+     * The class name of the serializer we are adapting.
+     */
     val serializerName: String = userSerializer.javaClass.name
+
+    /**
+     * The input type of this custom serializer.
+     */
     val cordappType: Type
 
+    /**
+     * Check we have access to the types specified on the CheckpointCustomSerializer interface.
+     *
+     * Throws UnableToDetermineSerializerTypesException if the types are missing.
+     */
     init {
         val types: List<Type> = userSerializer::class
                 .supertypes
@@ -32,11 +47,17 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
         cordappType = types[CORDAPP_TYPE]
     }
 
+    /**
+     * Serialize obj to the Kryo stream.
+     */
     override fun write(kryo: Kryo, output: Output, obj: OBJ) {
         val proxy = userSerializer.toProxy(obj)
         kryo.writeClassAndObject(output, proxy)
     }
 
+    /**
+     * Deserialize an object from the Kryo stream.
+     */
     override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
         @Suppress("UNCHECKED_CAST")
         val proxy = kryo.readClassAndObject(input) as PROXY
@@ -44,4 +65,7 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
     }
 }
 
-class UnableToDetermineSerializerTypesException(message: String) : java.lang.Exception(message)
+/**
+ * Thrown when the input/output types are missing from the custom serializer.
+ */
+class UnableToDetermineSerializerTypesException(message: String) : RuntimeException(message)
