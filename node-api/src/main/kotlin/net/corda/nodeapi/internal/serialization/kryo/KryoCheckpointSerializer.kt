@@ -73,6 +73,9 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
     }
 
+    /**
+     * Set the custom checkpoint serializers to use in checkpointing
+     */
     fun setCordappSerializers(customSerializers: Iterable<CheckpointCustomSerializer<*,*>>) {
         cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
     }
@@ -84,11 +87,17 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     private fun mapInputClassToCustomSerializer(context: CheckpointSerializationContext, cordappSerializers: List<CustomSerializerCheckpointAdaptor<*,*>>) =
             cordappSerializers.map { getInputClassForCustomSerializer(context, it) to it }
 
+    /**
+     * Returns the Class object for the serializers input type.
+     */
     private fun getInputClassForCustomSerializer(context: CheckpointSerializationContext, cordappSerializer: CustomSerializerCheckpointAdaptor<*,*>): Class<*> {
         val typeNameWithoutGenerics = cordappSerializer.cordappType.typeName.substringBefore('<')
         return context.deserializationClassLoader.loadClass(typeNameWithoutGenerics)
     }
 
+    /**
+     * Emit a warning if two or more custom serializers are found for the same input type.
+     */
     private fun warnAboutDuplicateSerializers(cordappSerializers: Iterable<CustomSerializerCheckpointAdaptor<*,*>>) =
             cordappSerializers
                     .groupBy { it.cordappType }
