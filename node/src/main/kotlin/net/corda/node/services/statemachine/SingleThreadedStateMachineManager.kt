@@ -299,10 +299,7 @@ internal class SingleThreadedStateMachineManager(
             ourIdentity = ourIdentity ?: ourFirstIdentity,
             deduplicationHandler = deduplicationHandler
         ).also {
-            if (clientId != null) {
-                (newFuture as? OpenFuture<FlowStateMachine<*>>)?.captureLater(it)
-                    ?: throw java.lang.IllegalStateException("Flow's $flowId client id mapping is in an inconsistent state")
-            }
+            newFuture?.captureLater(uncheckedCast(it))
         }
     }
 
