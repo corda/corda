@@ -13,10 +13,10 @@
                 <constraints nullable="false"/>
             </column>
             <column name="sender" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="sequence_number" type="BIGINT">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="last_sequence_number" type="BIGINT">
                 <constraints nullable="true"/>
