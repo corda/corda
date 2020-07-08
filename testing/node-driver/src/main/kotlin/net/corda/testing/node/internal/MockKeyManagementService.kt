@@ -41,8 +41,8 @@ class MockKeyManagementService(
 
     override fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
 
-    override fun start(initialKeyPairs: Set<KeyPair>) {
-        initialKeyPairs.forEach { keyStore[it.public] = it.private }
+    override fun start(initialKeyAliasPairs: Set<Pair<PublicKey, String>>) {
+        throw NotImplementedError()
     }
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
