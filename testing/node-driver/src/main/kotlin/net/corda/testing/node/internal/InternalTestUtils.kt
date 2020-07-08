@@ -11,6 +11,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.readText
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentFixup
@@ -38,12 +39,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
-import java.io.File
 import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
+import java.nio.file.Path
 import java.sql.DriverManager
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
@@ -173,19 +175,21 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
 }
 
 fun nodeMustBeStartedFuture(
-    executorService: ScheduledExecutorService,
-    logFile: File,
-    listenProcess: Process,
-    exception: () -> NodeListenProcessDeathException
+        executorService: ScheduledExecutorService,
+        logFile: Path,
+        listenProcess: Process,
+        exception: () -> NodeListenProcessDeathException
 ): CordaFuture<Unit> {
+    val stopPolling = Instant.now().plusSeconds(20)
     return poll(executorService, "process $listenProcess is running") {
         if (!listenProcess.isAlive) {
             throw exception()
         }
-        if (logFile.readLines().
-                filter { line ->
-                    line.contains("Running P2PMessaging loop") }.
-                count() > 0) {
+        if (logFile.readText().contains("Running P2PMessaging loop")) {
+            Unit
+        } else if (Instant.now().isAfter(stopPolling)) {
+            // Waited for 20 seconds and the log file did not indicate that the PWP loop is running.
+            // This could be because the log is disabled, so lets try to create a client anyway.
             Unit
         } else {
             null
