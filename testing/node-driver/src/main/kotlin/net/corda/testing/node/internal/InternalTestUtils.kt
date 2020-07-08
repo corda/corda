@@ -46,6 +46,7 @@ import java.nio.file.Path
 import java.sql.DriverManager
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.TemporalAmount
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
@@ -81,6 +82,8 @@ val FINANCE_CORDAPPS: Set<TestCordappImpl> = setOf(FINANCE_CONTRACTS_CORDAPP, FI
  */
 @JvmField
 val DUMMY_CONTRACTS_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.testing.contracts")
+
+private val WAIT_FOR_P2P_DURATION: TemporalAmount = Duration.ofSeconds(20)
 
 fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 
@@ -180,19 +183,23 @@ fun nodeMustBeStartedFuture(
         listenProcess: Process,
         exception: () -> NodeListenProcessDeathException
 ): CordaFuture<Unit> {
-    val stopPolling = Instant.now().plusSeconds(20)
+    val stopPolling = Instant.now().plus(WAIT_FOR_P2P_DURATION)
     return poll(executorService, "process $listenProcess is running") {
         if (!listenProcess.isAlive) {
             throw exception()
         }
-        if (logFile.readText().contains("Running P2PMessaging loop")) {
-            Unit
-        } else if (Instant.now().isAfter(stopPolling)) {
-            // Waited for 20 seconds and the log file did not indicate that the PWP loop is running.
-            // This could be because the log is disabled, so lets try to create a client anyway.
-            Unit
-        } else {
-            null
+        when {
+            logFile.readText().contains("Running P2PMessaging loop") -> {
+                Unit
+            }
+            Instant.now().isAfter(stopPolling) -> {
+                // Waited for 20 seconds and the log file did not indicate that the PWP loop is running.
+                // This could be because the log is disabled, so lets try to create a client anyway.
+                Unit
+            }
+            else -> {
+                null
+            }
         }
     }
 }
