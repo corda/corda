@@ -78,7 +78,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      * Set the custom checkpoint serializers to use in checkpointing
      */
     fun setCordappSerializers(customSerializers: Iterable<CheckpointCustomSerializer<*,*>>) {
-        cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
+        cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }.sortedBy { it.serializerName }
     }
 
     /**
