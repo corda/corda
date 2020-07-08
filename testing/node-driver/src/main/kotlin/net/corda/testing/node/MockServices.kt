@@ -199,11 +199,11 @@ open class MockServices private constructor(
             val aliasedMoreKeys = moreKeys.mapIndexed { index, keyPair ->
                 val alias = "Extra key $index"
                 aliasKeyMap[alias] = keyPair
-                KeyPair(keyPair.public, AliasPrivateKey(alias))
+                keyPair.public to alias
             }.toSet()
             val identityAlias = "${initialIdentity.name} private key"
             aliasKeyMap[identityAlias] = initialIdentity.keyPair
-            val aliasedIdentityKey = KeyPair(initialIdentity.publicKey, AliasPrivateKey(identityAlias))
+            val aliasedIdentityKey = initialIdentity.publicKey to identityAlias
             val keyManagementService = BasicHSMKeyManagementService(
                     TestingNamedCacheFactory(),
                     identityService,
