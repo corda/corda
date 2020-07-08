@@ -101,9 +101,9 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      */
     private fun warnAboutDuplicateSerializers(cordappSerializers: Iterable<CustomSerializerCheckpointAdaptor<*,*>>) =
             cordappSerializers
-                    .groupBy { it.cordappType }
-                    .filter { (_, cordappSerializers) -> cordappSerializers.size > 1 }
-                    .forEach { (inputType, cordappSerializers) -> loggerFor<KryoCheckpointSerializer>().warn("Duplicate custom checkpoint serializer for type $inputType. Serializers: ${cordappSerializers.map { it.serializerName }.joinToString(", ")}") }
+                    .groupBy({ it.cordappType }, { it.serializerName })
+                    .filter { (_, serializerNames) -> serializerNames.distinct().size > 1 }
+                    .forEach { (inputType, serializerNames) -> loggerFor<KryoCheckpointSerializer>().warn("Duplicate custom checkpoint serializer for type $inputType. Serializers: ${serializerNames.joinToString(", ")}") }
 
     /**
      * Register all custom serializers with input classes that are final as specific, this class only, registrations.
