@@ -48,9 +48,9 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
             assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(20.seconds) }
 
             assertTrue(flowKilled)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -85,9 +85,9 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
             assertFailsWith<KilledFlowException> { flow.returnValue.getOrThrow(30.seconds) }
 
             assertTrue(flowKilled)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCountsAllZero()
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -108,7 +108,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -116,7 +116,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeSendMultiple action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeSendMultiple
                 AT ENTRY
                 IF readCounter("counter") < 4
@@ -132,12 +132,12 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             alice.rpc.killFlow(flow.id)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 

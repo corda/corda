@@ -45,7 +45,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -53,7 +53,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 3
@@ -70,9 +70,9 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -117,9 +117,9 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ).returnValue.getOrThrow(30.seconds)
             }
 
+            alice.rpc.assertNumberOfCheckpoints(failed = 1)
             alice.rpc.assertHospitalCounts(propagated = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -139,7 +139,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -147,7 +147,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") == 0
@@ -170,9 +170,9 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -192,7 +192,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -200,7 +200,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") == 0
@@ -223,9 +223,9 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 charlie.nodeInfo.singleIdentity()
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(discharged = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -247,7 +247,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -255,7 +255,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 4
@@ -272,17 +272,17 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             // flow is not signaled as started calls to [getOrThrow] will hang, sleeping instead
             Thread.sleep(30.seconds.toMillis())
 
+            alice.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             alice.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
             val terminated = (alice as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
             val (alice2, _) = createBytemanNode(ALICE_NAME)
-            Thread.sleep(10.seconds.toMillis())
-            alice2.rpc.assertNumberOfCheckpoints(0)
+            Thread.sleep(20.seconds.toMillis())
+            alice2.rpc.assertNumberOfCheckpointsAllZero()
         }
     }
 
@@ -303,7 +303,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Throw exception on executeCommitTransaction action after first suspend + commit
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF !flagged("commit_exception_flag")
@@ -311,7 +311,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on retry
-                CLASS ${SingleThreadedStateMachineManager::class.java.name}
+                CLASS $stateMachineManagerClassName
                 METHOD onExternalStartFlow
                 AT ENTRY
                 IF flagged("commit_exception_flag") && !flagged("retry_exception_flag")
@@ -328,12 +328,12 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 discharged = 1,
                 dischargedRetry = 1
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -356,7 +356,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -364,7 +364,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 3
@@ -381,9 +381,9 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpointsAllZero()
             charlie.rpc.assertHospitalCounts(discharged = 3)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -405,7 +405,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -413,7 +413,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 4
@@ -430,20 +430,20 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
             // flow is not signaled as started calls to [getOrThrow] will hang, sleeping instead
             Thread.sleep(30.seconds.toMillis())
 
+            alice.rpc.assertNumberOfCheckpoints(runnable = 1)
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(1)
-            charlie.rpc.assertNumberOfCheckpoints(0)
             val terminated = (charlie as OutOfProcessImpl).stop(60.seconds)
             assertTrue(terminated, "The node must be shutdown before it can be restarted")
             val (charlie2, _) = createBytemanNode(CHARLIE_NAME)
             Thread.sleep(10.seconds.toMillis())
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie2.rpc.assertNumberOfCheckpoints(0)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie2.rpc.assertNumberOfCheckpointsAllZero()
         }
     }
 
@@ -469,7 +469,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -477,7 +477,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 3
@@ -502,13 +502,13 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 30.seconds
             )
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 0
             )
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
-            assertEquals(0, charlie.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 
@@ -534,7 +534,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter) 
@@ -542,7 +542,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ENDRULE
 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF readCounter("counter") < 4
@@ -569,13 +569,13 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 )
             }
 
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            assertEquals(0, charlie.rpc.startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
         }
     }
 }

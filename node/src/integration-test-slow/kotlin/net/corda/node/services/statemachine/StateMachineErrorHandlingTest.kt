@@ -127,9 +127,20 @@ abstract class StateMachineErrorHandlingTest {
 
     internal fun CordaRPCOps.assertHospitalCountsAllZero() = assertHospitalCounts()
 
-    internal fun CordaRPCOps.assertNumberOfCheckpoints(number: Long) {
-        assertEquals(number, startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.get())
+    internal fun CordaRPCOps.assertNumberOfCheckpoints(
+        runnable: Int = 0,
+        failed: Int = 0,
+        completed: Int = 0,
+        hospitalized: Int = 0
+    ) {
+        val counts = startFlow(StateMachineErrorHandlingTest::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+        assertEquals(runnable, counts.runnable, "There should be $runnable runnable checkpoints")
+        assertEquals(failed, counts.failed, "There should be $failed failed checkpoints")
+        assertEquals(completed, counts.completed, "There should be $completed completed checkpoints")
+        assertEquals(hospitalized, counts.hospitalized, "There should be $hospitalized hospitalized checkpoints")
     }
+
+    internal fun CordaRPCOps.assertNumberOfCheckpointsAllZero() = assertNumberOfCheckpoints()
 
     @StartableByRPC
     @InitiatingFlow
@@ -181,44 +192,37 @@ abstract class StateMachineErrorHandlingTest {
     }
 
     @StartableByRPC
-    class ThrowAnErrorFlow : FlowLogic<String>() {
-        @Suspendable
-        override fun call(): String {
-            throwException()
-            return "cant get here"
-        }
+    class GetNumberOfCheckpointsFlow : FlowLogic<NumberOfCheckpoints>() {
+        override fun call() = NumberOfCheckpoints(
+            runnable = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.RUNNABLE),
+            failed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.FAILED),
+            completed = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.COMPLETED),
+            hospitalized = getNumberOfCheckpointsWithStatus(Checkpoint.FlowStatus.HOSPITALIZED)
+        )
 
-        private fun throwException() {
-            logger.info("Throwing exception in flow")
-            throw IllegalStateException("throwing exception in flow")
-        }
-    }
-
-    @StartableByRPC
-    class GetNumberOfUncompletedCheckpointsFlow : FlowLogic<Long>() {
-        override fun call(): Long {
-            val sqlStatement = "select count(*) from node_checkpoints where status not in (${Checkpoint.FlowStatus.COMPLETED.ordinal})"
-            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
-                ps.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
+        private fun getNumberOfCheckpointsWithStatus(status: Checkpoint.FlowStatus): Int {
+            return serviceHub.jdbcSession()
+                .prepareStatement("select count(*) from node_checkpoints where status = ? and flow_id != ?")
+                .apply {
+                    setInt(1, status.ordinal)
+                    setString(2, runId.uuid.toString())
                 }
-            }
+                .use { ps ->
+                    ps.executeQuery().use { rs ->
+                        rs.next()
+                        rs.getLong(1)
+                    }
+                }.toInt()
         }
     }
 
-    @StartableByRPC
-    class GetNumberOfHospitalizedCheckpointsFlow : FlowLogic<Long>() {
-        override fun call(): Long {
-            val sqlStatement = "select count(*) from node_checkpoints where status in (${Checkpoint.FlowStatus.HOSPITALIZED.ordinal})"
-            return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
-                ps.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
-                }
-            }
-        }
-    }
+    @CordaSerializable
+    data class NumberOfCheckpoints(
+        val runnable: Int = 0,
+        val failed: Int = 0,
+        val completed: Int = 0,
+        val hospitalized: Int = 0
+    )
 
     // Internal use for testing only!!
     @StartableByRPC

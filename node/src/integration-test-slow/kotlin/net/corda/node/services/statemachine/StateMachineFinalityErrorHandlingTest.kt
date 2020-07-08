@@ -77,11 +77,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(observation = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -139,11 +139,11 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(observation = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 
@@ -201,11 +201,14 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
+            // This sleep is a bit suspect...
+            Thread.sleep(1000)
+
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpointsAllZero()
             charlie.rpc.assertHospitalCounts(discharged = 3)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(0)
-            charlie.rpc.assertNumberOfCheckpoints(0)
         }
     }
 
@@ -268,14 +271,14 @@ class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ).returnValue.getOrThrow(30.seconds)
             }
 
+            alice.rpc.assertNumberOfCheckpoints(runnable = 1)
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
             charlie.rpc.assertHospitalCounts(
                 discharged = 3,
                 observation = 1
             )
             assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
             assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
-            alice.rpc.assertNumberOfCheckpoints(1)
-            charlie.rpc.assertNumberOfCheckpoints(1)
         }
     }
 }
