@@ -20,6 +20,11 @@ ext {
     jolokia_version = constants.getProperty('jolokiaAgentVersion')
 }
 
+evaluationDependsOn(':core-deterministic')
+evaluationDependsOn(':serialization-deterministic')
+evaluationDependsOn(':serialization-djvm:deserializers')
+evaluationDependsOn(':node:djvm')
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -256,13 +261,13 @@ tasks.withType(Test).configureEach {
     systemProperty 'deterministic-sources.path', configurations.deterministic.asPath
 }
 
-task integrationTest(type: Test) {
+tasks.register('integrationTest', Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     maxParallelForks = (System.env.CORDA_NODE_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_INT_TESTING_FORKS".toInteger()
 }
 
-task slowIntegrationTest(type: Test) {
+tasks.register('slowIntegrationTest', Test) {
     testClassesDirs = sourceSets.slowIntegrationTest.output.classesDirs
     classpath = sourceSets.slowIntegrationTest.runtimeClasspath
     maxParallelForks = 1
@@ -320,7 +325,7 @@ publish {
     name jar.baseName
 }
 
-test {
+tasks.named('test', Test) {
     maxHeapSize = "3g"
     maxParallelForks = (System.env.CORDA_NODE_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_NODE_TESTING_FORKS".toInteger()
 }
