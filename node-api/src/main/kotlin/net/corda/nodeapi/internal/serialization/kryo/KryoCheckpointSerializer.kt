@@ -17,6 +17,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
@@ -43,7 +44,7 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
 
 object KryoCheckpointSerializer : CheckpointSerializer {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
-    private var cordappSerializers: List<CustomSerializerCheckpointAdaptor<out Any?, out Any?>> = listOf()
+    private var cordappSerializers: List<CustomSerializerCheckpointAdaptor<*,*>> = listOf()
 
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
@@ -55,7 +56,8 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 serializer.kryo.apply {
                     field.set(this, classResolver)
 
-                    val classToSerializer = mapInputClassToCustomSerializer(context)
+                    warnAboutDuplicateSerializers(cordappSerializers)
+                    val classToSerializer = mapInputClassToCustomSerializer(context, cordappSerializers)
                     addSpecificClassCustomSerializers(this, classToSerializer)
 
                     // don't allow overriding the public key serializer for checkpointing
@@ -71,13 +73,27 @@ object KryoCheckpointSerializer : CheckpointSerializer {
         }
     }
 
+    fun setCordappSerializers(customSerializers: Iterable<CheckpointCustomSerializer<*,*>>) {
+        cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
+    }
+
     /**
      * Returns a list of pairs where the first element is the input class of the custom serializer and the second element is the
      * custom serializer.
      */
-    private fun mapInputClassToCustomSerializer(context: CheckpointSerializationContext) =
+    private fun mapInputClassToCustomSerializer(context: CheckpointSerializationContext, cordappSerializers: List<CustomSerializerCheckpointAdaptor<*,*>>) =
+            cordappSerializers.map { getInputClassForCustomSerializer(context, it) to it }
+
+    private fun getInputClassForCustomSerializer(context: CheckpointSerializationContext, cordappSerializer: CustomSerializerCheckpointAdaptor<*,*>): Class<*> {
+        val typeNameWithoutGenerics = cordappSerializer.cordappType.typeName.substringBefore('<')
+        return context.deserializationClassLoader.loadClass(typeNameWithoutGenerics)
+    }
+
+    private fun warnAboutDuplicateSerializers(cordappSerializers: Iterable<CustomSerializerCheckpointAdaptor<*,*>>) =
             cordappSerializers
-                    .map { customSerializer -> context.deserializationClassLoader.loadClass(customSerializer.cordappType.typeName.substringBefore('<')) to customSerializer }
+                    .groupBy { it.cordappType }
+                    .filter { (_, cordappSerializers) -> cordappSerializers.size > 1 }
+                    .forEach { (inputType, cordappSerializers) -> contextLogger().warn("Duplicate custom checkpoint serializer for type $inputType in CorDapps [${cordappSerializers.map { it.serializerName }.joinToString(",")}]") }
 
     /**
      * Register all custom serializers with input classes that are final as specific, this class only, registrations.
@@ -85,7 +101,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      * Serializers registered here will replace previous registrations for the same class. This needs to run before registrations we
      * want to keep otherwise it may replace them.
      */
-    private fun addSpecificClassCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<out Any?, out Any?>>>) =
+    private fun addSpecificClassCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<*, *>>>) =
             classToSerializer
                     .filter { (clazz, _) -> Modifier.isFinal(clazz.modifiers) }
                     .forEach { (clazz, customSerializer) -> kryo.register(clazz, customSerializer) }
@@ -96,7 +112,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      * Serializers registered before this will take priority. This needs to run after registrations we want to keep otherwise it may
      * replace them.
      */
-    private fun addDefaultCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<out Any?, out Any?>>>) =
+    private fun addDefaultCustomSerializers(kryo: Kryo, classToSerializer: Iterable<Pair<Class<*>, CustomSerializerCheckpointAdaptor<*, *>>>) =
             classToSerializer
                     .filter { (clazz, _) -> !Modifier.isFinal(clazz.modifiers) }
                     .forEach { (clazz, customSerializer) -> kryo.addDefaultSerializer(clazz, customSerializer) }
@@ -158,10 +174,6 @@ object KryoCheckpointSerializer : CheckpointSerializer {
                 }
             })
         }
-    }
-
-    fun addCordappSerializers(customSerializers: Collection<CheckpointCustomSerializer<*, *>>) {
-        cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }
     }
 }
 

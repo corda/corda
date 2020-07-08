@@ -43,7 +43,7 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
                 encodingWhitelist = rigorousMock<EncodingWhitelist>().also {
                     if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
                 })
-        KryoCheckpointSerializer.addCordappSerializers(listOf(
+        KryoCheckpointSerializer.setCordappSerializers(listOf(
                 TestCorDapp.TestAbstractClassSerializer(),
                 TestCorDapp.TestClassSerializer(),
                 TestCorDapp.TestInterfaceSerializer(),

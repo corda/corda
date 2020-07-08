@@ -12,6 +12,7 @@ import kotlin.reflect.jvm.jvmErasure
 
 class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer : CheckpointCustomSerializer<OBJ, PROXY>) : Serializer<OBJ>() {
 
+    val serializerName: String = userSerializer.javaClass.name
     val cordappType: Type
 
     init {
