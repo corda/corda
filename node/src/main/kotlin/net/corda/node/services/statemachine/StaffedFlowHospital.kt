@@ -355,7 +355,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
 
         fun timesResuscitated(currentState: StateMachineState): Int {
-            val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
+            val lastAdmittanceSuspendCount = currentState.checkpoint.checkpointState.numberOfSuspends
             return records.count { ResuscitationSpecialist in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
@@ -392,9 +392,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         }
     }
 
-    enum class Outcome(val event: Event?) {
+    enum class Outcome(val event: Event) {
         DISCHARGE(Event.RetryFlowFromSafePoint),
-        OVERNIGHT_OBSERVATION(null),
+        OVERNIGHT_OBSERVATION(Event.OvernightObservation),
         UNTREATABLE(Event.StartErrorPropagation)
     }
 
