@@ -98,11 +98,11 @@ class FlowClientIdTests {
         Assert.assertEquals(result0, result1)
     }
 
-    @Test // TODO: this test needs change -> what makes sense is to test this scenario: flow has retried, AND THEN the second request comes in
-    // and gets a [FlowStateMachineHandle] whose future is the old one
+    @Test
     fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
         var firstRun = true
-        val semaphore = Semaphore(0)
+        val waitForSecondRequest = Semaphore(0)
+        val waitUntilFlowHasRetried = Semaphore(0)
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
@@ -110,7 +110,8 @@ class FlowClientIdTests {
                     firstRun = false
                     throw SQLTransientConnectionException("connection is not available")
                 } else {
-                    semaphore.acquire()
+                    waitUntilFlowHasRetried.release()
+                    waitForSecondRequest.acquire()
                 }
             }
         }
@@ -118,10 +119,11 @@ class FlowClientIdTests {
         var result1 = 0
         val clientId = UUID.randomUUID().toString()
         val handle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        waitUntilFlowHasRetried.acquire()
         val t = thread { result1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow() }
 
         Thread.sleep(1000)
-        semaphore.release()
+        waitForSecondRequest.release()
         val result0 = handle0.resultFuture.getOrThrow()
         t.join()
         Assert.assertEquals(result0, result1)
