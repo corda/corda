@@ -13,6 +13,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
+import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
@@ -50,6 +51,11 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
                 TestCorDapp.TestFinalClassSerializer(),
                 TestCorDapp.BrokenPublicKeySerializer()
         ))
+    }
+
+    @After
+    fun tearDown() {
+        KryoCheckpointSerializer.setCordappSerializers(emptyList())
     }
 
     @Test(timeout=300_000)
@@ -102,3 +108,4 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
         return deserializedCheckpoint
     }
 }
+

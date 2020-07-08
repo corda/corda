@@ -18,6 +18,7 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
 import net.corda.serialization.internal.CheckpointSerializationContextImpl
@@ -102,7 +103,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
             cordappSerializers
                     .groupBy { it.cordappType }
                     .filter { (_, cordappSerializers) -> cordappSerializers.size > 1 }
-                    .forEach { (inputType, cordappSerializers) -> contextLogger().warn("Duplicate custom checkpoint serializer for type $inputType in CorDapps [${cordappSerializers.map { it.serializerName }.joinToString(",")}]") }
+                    .forEach { (inputType, cordappSerializers) -> loggerFor<KryoCheckpointSerializer>().warn("Duplicate custom checkpoint serializer for type $inputType. Serializers: ${cordappSerializers.map { it.serializerName }.joinToString(", ")}") }
 
     /**
      * Register all custom serializers with input classes that are final as specific, this class only, registrations.
