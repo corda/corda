@@ -27,13 +27,12 @@ interface SerializationCustomSerializer<OBJ, PROXY> {
 }
 
 /**
- * Allows CorDapps to provide custom serializers for third party libraries where those libraries cannot
- * be recompiled with the -parameters flag rendering their classes natively serializable by Corda. In this case
- * a proxy serializer can be written that extends this type whose purpose is to move between those an
+ * Allows CorDapps to provide custom serializers for classes that do not serialize successfully during a checkpoint.
+ * In this case, a proxy serializer can be written that implements this interface whose purpose is to move between
  * unserializable types and an intermediate representation.
  *
- * NOTE: The proxy object should be specified as a separate class. However, this can be defined within the
- * scope of the custom serializer.
+ * NOTE: Only implement this interface if you have a class that triggers an error during normal checkpoint
+ * serialization/deserialization.
  */
 @KeepForDJVM
 interface CheckpointCustomSerializer<OBJ, PROXY> {
@@ -48,5 +47,4 @@ interface CheckpointCustomSerializer<OBJ, PROXY> {
      * unserializable type
      */
     fun fromProxy(proxy: PROXY): OBJ
-
 }
