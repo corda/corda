@@ -39,6 +39,7 @@ import kotlin.math.pow
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
  */
+@Suppress("TooManyFunctions")
 class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
                           private val clock: Clock,
                           private val ourSenderUUID: String) : Closeable {
