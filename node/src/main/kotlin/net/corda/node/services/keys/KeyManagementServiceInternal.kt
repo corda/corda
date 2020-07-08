@@ -4,7 +4,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import org.bouncycastle.operator.ContentSigner
-import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
@@ -12,7 +11,7 @@ interface KeyManagementServiceInternal : KeyManagementService {
 
     val identityService: IdentityService
 
-    fun start(initialKeyPairs: Set<KeyPair>)
+    fun start(initialKeyAliasPairs: Set<Pair<PublicKey, String>>)
 
     fun freshKeyInternal(externalId: UUID?): PublicKey
 
