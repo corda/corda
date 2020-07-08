@@ -843,8 +843,6 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    // TODO: We set a new clientId (in StateMachineManager.addAndStartFlow) much later than we check if it exists; What will happen
-    //  if two concurrent requests come in with the same client id (these two actions need to be done in one place).
     @Test
     fun `no new flow starts if the client id provided pre exists`() {
         var counter = 0
