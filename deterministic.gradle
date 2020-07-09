@@ -11,7 +11,7 @@ evaluationDependsOn(':jdk8u-deterministic')
 def jdk8uDeterministic = project(':jdk8u-deterministic')
 
 ext {
-    jdkTask = jdk8uDeterministic.assemble
+    jdkTask = jdk8uDeterministic.tasks.named('assemble')
     deterministic_jdk_home = jdk8uDeterministic.jdk_home
     deterministic_rt_jar = jdk8uDeterministic.rt_jar
 }
