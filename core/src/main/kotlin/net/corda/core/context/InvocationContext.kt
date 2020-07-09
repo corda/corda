@@ -117,7 +117,7 @@ data class InvocationContext(
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
             clientId = clientId,
-            arguments = arguments
+            arguments = this.arguments
         )
     }
 }
