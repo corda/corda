@@ -76,14 +76,16 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        services.validatedTransactions.trackTransactionWithNoWarning(action.hash).thenMatch(
-                success = { transaction ->
-                    fiber.scheduleEvent(Event.TransactionCommitted(transaction))
-                },
-                failure = { exception ->
-                    fiber.scheduleEvent(Event.Error(exception))
-                }
+        val future = services.validatedTransactions.trackTransactionWithNoWarning(action.hash)
+        future.thenMatch(
+            success = { transaction ->
+                fiber.scheduleEvent(Event.TransactionCommitted(transaction))
+            },
+            failure = { exception ->
+                fiber.scheduleEvent(Event.Error(exception))
+            }
         )
+        action.currentState.future = future
     }
 
     @Suspendable
@@ -236,19 +238,20 @@ internal class ActionExecutorImpl(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
+    @Suppress("TooGenericExceptionCaught")
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {
-            val operationFuture = action.operation.execute(action.deduplicationId)
-            operationFuture.thenMatch(
-                    success = { result ->
-                        fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
-                    },
-                    failure = { exception ->
-                        fiber.scheduleEvent(Event.AsyncOperationThrows(exception))
-                    }
+            val future = action.operation.execute(action.deduplicationId)
+            future.thenMatch(
+                success = { result ->
+                    fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
+                },
+                failure = { exception ->
+                    fiber.scheduleEvent(Event.AsyncOperationThrows(exception))
+                }
             )
+            action.currentState.future = future
         } catch (e: Exception) {
             // Catch and wrap any unexpected exceptions from the async operation
             // Wrapping the exception allows it to be better handled by the flow hospital

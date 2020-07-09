@@ -31,24 +31,6 @@ internal class FlowSleepScheduler(private val innerState: StateMachineInnerState
         currentState.future = setAlarmClock(fiber, duration)
     }
 
-    /**
-     * Cancel a sleeping flow's future. Note, this does not cause the flow to wake up.
-     *
-     * @param currentState The current [StateMachineState]
-     */
-    fun cancel(currentState: StateMachineState) {
-        (currentState.checkpoint.flowState as? FlowState.Started)?.let { flowState ->
-            if (currentState.isWaitingForFuture && flowState.flowIORequest is FlowIORequest.Sleep) {
-                (currentState.future as? ScheduledFuture)?.run {
-                    log.debug { "Cancelling the sleep scheduled future for flow ${currentState.flowLogic.runId}" }
-                    cancelIfRunning()
-                    currentState.future = null
-                }
-            }
-
-        }
-    }
-
     private fun Future<*>.cancelIfRunning() {
         if (!isDone) cancel(true)
     }

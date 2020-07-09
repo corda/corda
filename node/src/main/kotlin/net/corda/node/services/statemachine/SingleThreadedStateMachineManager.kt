@@ -53,6 +53,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -316,7 +317,9 @@ internal class SingleThreadedStateMachineManager(
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         innerState.withLock {
             flowTimeoutScheduler.cancel(flowId)
-            flowSleepScheduler.cancel(lastState)
+//            flowSleepScheduler.cancel(lastState)
+            lastState.future?.cancelIfRunning()
+            lastState.future = null
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -382,9 +385,18 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
+    private fun Future<*>.cancelIfRunning() {
+        if (!isDone) {
+            logger.info("Cancelling future")
+            cancel(true)
+        }
+    }
+
     @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
-        flowSleepScheduler.cancel(currentState)
+//        flowSleepScheduler.cancel(currentState)
+        currentState.future?.cancelIfRunning()
+        currentState.future = null
         // Get set of external events
         val flowId = currentState.flowLogic.runId
         val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
