@@ -12,6 +12,7 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.toNonEmptySet
@@ -42,7 +43,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, false, false).returnValue.getOrThrow() }
+                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, null, false).returnValue.getOrThrow() }
                         .isInstanceOf(CordaRuntimeException::class.java)
                         .hasMessageContaining(PrematureSessionClose::class.java.name)
                         .hasMessageContaining("The following session was closed before it was initialised")
@@ -58,11 +59,14 @@ class FlowSessionCloseTest {
                     startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             ).transpose().getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, true, false).returnValue.getOrThrow() }
-                        .isInstanceOf(UnexpectedFlowEndException::class.java)
-                        .hasMessageContaining("Tried to access ended session")
+            InitiatorFlow.SessionAPI.values().forEach { sessionAPI ->
+                CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                    assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, sessionAPI, false).returnValue.getOrThrow() }
+                            .isInstanceOf(UnexpectedFlowEndException::class.java)
+                            .hasMessageContaining("Tried to access ended session")
+                }
             }
+
         }
     }
 
@@ -75,7 +79,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, false).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, null, false).returnValue.getOrThrow()
             }
         }
     }
@@ -89,7 +93,7 @@ class FlowSessionCloseTest {
             ).transpose().getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, false, true).returnValue.getOrThrow()
+                it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), false, null, true).returnValue.getOrThrow()
             }
         }
     }
@@ -146,8 +150,17 @@ class FlowSessionCloseTest {
     @InitiatingFlow
     @StartableByRPC
     class InitiatorFlow(val party: Party, private val prematureClose: Boolean = false,
-                        private val accessClosedSession: Boolean = false,
+                        private val accessClosedSessionWithApi: SessionAPI? = null,
                         private val retryClose: Boolean = false): FlowLogic<Unit>() {
+
+        @CordaSerializable
+        enum class SessionAPI {
+            SEND,
+            SEND_AND_RECEIVE,
+            RECEIVE,
+            GET_FLOW_INFO
+        }
+
         @Suspendable
         override fun call() {
             val session = initiateFlow(party)
@@ -159,8 +172,13 @@ class FlowSessionCloseTest {
             session.send(retryClose)
             sleep(1.seconds)
 
-            if (accessClosedSession) {
-                session.receive<String>()
+            if (accessClosedSessionWithApi != null) {
+                when(accessClosedSessionWithApi) {
+                    SessionAPI.SEND -> session.send("dummy payload ")
+                    SessionAPI.RECEIVE -> session.receive<String>()
+                    SessionAPI.SEND_AND_RECEIVE -> session.sendAndReceive<String>("dummy payload")
+                    SessionAPI.GET_FLOW_INFO -> session.getCounterpartyFlowInfo()
+                }
             }
         }
     }

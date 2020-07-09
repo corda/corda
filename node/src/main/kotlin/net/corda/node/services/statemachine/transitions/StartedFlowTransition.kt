@@ -460,7 +460,8 @@ class StartedFlowTransition(
                 collectErroredSessionErrors(checkpoint.checkpointState.sessions.keys, checkpoint)
             }
             is FlowIORequest.GetFlowInfo -> {
-                collectErroredSessionErrors(flowIORequest.sessions.map(this::sessionToSessionId), checkpoint)
+                val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)
+                collectErroredSessionErrors(sessionIds, checkpoint) + collectEndedSessionErrors(sessionIds, checkpoint)
             }
             is FlowIORequest.CloseSessions -> {
                 val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)

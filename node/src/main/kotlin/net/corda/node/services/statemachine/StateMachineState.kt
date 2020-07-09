@@ -256,7 +256,11 @@ sealed class SessionState {
             val receivedMessages: List<ExistingSessionMessagePayload>,
             val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
-    ) : SessionState()
+    ) : SessionState() {
+        fun hasPendingReceivedError(): Boolean {
+            return receivedMessages.any { it is ErrorSessionMessage }
+        }
+    }
 }
 
 typealias SessionMap = Map<SessionId, SessionState>
