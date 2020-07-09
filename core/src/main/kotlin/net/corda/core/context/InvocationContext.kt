@@ -24,8 +24,8 @@ data class InvocationContext(
     val actor: Actor?,
     val externalTrace: Trace? = null,
     val impersonatedActor: Actor? = null,
-    val clientId: String? = null,
-    val arguments: List<Any?> = emptyList()
+    val arguments: List<Any?> = emptyList(),
+    val clientId: String? = null
 ) {
 
     constructor(
@@ -34,7 +34,7 @@ data class InvocationContext(
         actor: Actor?,
         externalTrace: Trace? = null,
         impersonatedActor: Actor? = null
-    ) : this(origin, trace, actor, externalTrace, impersonatedActor, null, emptyList())
+    ) : this(origin, trace, actor, externalTrace, impersonatedActor, emptyList())
 
     companion object {
         /**
@@ -50,9 +50,9 @@ data class InvocationContext(
             actor: Actor? = null,
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
-            clientId: String? = null,
-            arguments: List<Any?> = emptyList()
-        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, clientId, arguments)
+            arguments: List<Any?> = emptyList(),
+            clientId: String? = null
+        ) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor, arguments, clientId)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
@@ -66,7 +66,7 @@ data class InvocationContext(
             externalTrace: Trace? = null,
             impersonatedActor: Actor? = null,
             arguments: List<Any?> = emptyList()
-        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, null, arguments)
+        ): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor, arguments)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
