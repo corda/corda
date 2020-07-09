@@ -1,0 +1,69 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+import java.nio.file.Files
+
+apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'kotlin'
+
+dependencies {
+    compile rootProject
+}
+
+def internalPackagePrefixes(sourceDirs) {
+    def prefixes = []
+    // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
+    sourceDirs.collect { sourceDir ->
+        sourceDir.traverse(type: groovy.io.FileType.DIRECTORIES) {
+            if (it.name == 'internal') {
+                prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
+            }
+        }
+    }
+    prefixes
+}
+
+ext {
+    // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
+    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
+            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+    internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
+}
+
+dokka {
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
+}
+
+task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+    outputFormat = "javadoc"
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
+}
+
+[dokka, dokkaJavadoc].collect {
+    it.configure {
+        moduleName = 'corda'
+        processConfigurations = ['compile']
+        sourceDirs = dokkaSourceDirs
+        includes = ['packages.md']
+        jdkVersion = 8
+        externalDocumentationLink {
+            url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.9/")
+        }
+        externalDocumentationLink {
+            url = new URL("https://docs.oracle.com/javafx/2/api/")
+        }
+        externalDocumentationLink {
+            url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+        }
+        internalPackagePrefixes.collect { packagePrefix ->
+            packageOptions {
+                prefix = packagePrefix
+                suppress = true
+            }
+        }
+    }
+}
+
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc']) {
+    group "Documentation"
+    description "Build API documentation"
+}
