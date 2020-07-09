@@ -41,7 +41,7 @@ sealed class Event {
      * Signal that an error has happened. This may be due to an uncaught exception in the flow or some external error.
      * @param exception the exception itself.
      */
-    data class Error(val exception: Throwable) : Event()
+    data class Error(val exception: Throwable, val rollback: Boolean = true) : Event()
 
     /**
      * Signal that a ledger transaction has committed. This is an event completing a [FlowIORequest.WaitForLedgerCommit]
