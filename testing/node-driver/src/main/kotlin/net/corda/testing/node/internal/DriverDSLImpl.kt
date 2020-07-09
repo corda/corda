@@ -15,7 +15,6 @@ import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.doOnComplete
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.flatMap
@@ -260,7 +259,7 @@ class DriverDSLImpl(
         val config = createConfig(name, parameters, p2pAddress)
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            createSchema(config, false).doOnComplete { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
+            createSchema(config, false).flatMap { startNodeRegistration(it, compatibilityZone.rootCert, compatibilityZone.config()) }
         } else {
             doneFuture(config)
         }
@@ -536,7 +535,7 @@ class DriverDSLImpl(
     ): CordaFuture<Pair<NodeConfig,NotaryInfo>> {
         val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
-        return createSchema(createConfig(spec.name, parameters), false).doOnComplete { config ->
+        return createSchema(createConfig(spec.name, parameters), false).flatMap { config ->
             startNodeRegistration(config, rootCert, compatibilityZone.config())}.flatMap { config ->
                 // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
                 // startup or when the node is told to just generate its node info file. We do that here.

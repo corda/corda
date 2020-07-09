@@ -84,7 +84,8 @@ class NodeRegistrationTest {
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                notaryCustomOverrides = mapOf("devMode" to false)
+                notaryCustomOverrides = mapOf("devMode" to false),
+                allowHibernateToManageAppSchema = false
         ) {
             startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)).getOrThrow()
 
