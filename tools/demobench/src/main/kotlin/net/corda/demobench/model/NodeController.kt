@@ -61,6 +61,9 @@ class NodeController(
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath).toTypedArray()
 
+    private val schemaSetupArgs = arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas")
+    private val schemaSetupCommand = jvm.commandFor(cordaPath, *schemaSetupArgs).toTypedArray()
+
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private var notaryIdentity: Party? = null
     private var networkParametersCopier: NetworkParametersCopier? = null
@@ -155,6 +158,7 @@ class NodeController(
                 jvm.setCapsuleCacheDir(this)
             }
             (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
+            pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString())
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true
