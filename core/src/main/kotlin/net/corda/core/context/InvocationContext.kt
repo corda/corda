@@ -107,8 +107,7 @@ data class InvocationContext(
         trace: Trace = this.trace,
         actor: Actor? = this.actor,
         externalTrace: Trace? = this.externalTrace,
-        impersonatedActor: Actor? = this.impersonatedActor,
-        clientId: String? = this.clientId
+        impersonatedActor: Actor? = this.impersonatedActor
     ): InvocationContext {
         return copy(
             origin = origin,
@@ -116,8 +115,8 @@ data class InvocationContext(
             actor = actor,
             externalTrace = externalTrace,
             impersonatedActor = impersonatedActor,
-            clientId = clientId,
-            arguments = arguments
+            arguments = arguments,
+            clientId = clientId
         )
     }
 }
