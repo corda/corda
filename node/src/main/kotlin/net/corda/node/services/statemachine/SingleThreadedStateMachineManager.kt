@@ -86,6 +86,9 @@ internal class SingleThreadedStateMachineManager(
         var beforeClientIDCheck: (() -> Unit)? = null
         @VisibleForTesting
         var onClientIDNotFound: (() -> Unit)? = null
+        @VisibleForTesting
+        var onCallingStartFlowInternal: (() -> Unit)? = null
+
     }
 
     private val innerState = StateMachineInnerStateImpl()
@@ -291,15 +294,20 @@ internal class SingleThreadedStateMachineManager(
             onClientIDNotFound?.invoke()
         }
 
-        return startFlowInternal(
-            flowId,
-            invocationContext = context,
-            flowLogic = flowLogic,
-            flowStart = FlowStart.Explicit,
-            ourIdentity = ourIdentity ?: ourFirstIdentity,
-            deduplicationHandler = deduplicationHandler
-        ).also {
-            newFuture?.captureLater(uncheckedCast(it))
+        return try {
+            startFlowInternal(
+                flowId,
+                invocationContext = context,
+                flowLogic = flowLogic,
+                flowStart = FlowStart.Explicit,
+                ourIdentity = ourIdentity ?: ourFirstIdentity,
+                deduplicationHandler = deduplicationHandler
+            ).also {
+                newFuture?.captureLater(uncheckedCast(it))
+            }
+        } catch (t: Throwable) {
+            mutex.locked { clientIdsToFlowIds.remove(clientId) }
+            throw t
         }
     }
 
@@ -648,6 +656,8 @@ internal class SingleThreadedStateMachineManager(
             ourIdentity: Party,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
+
+        onCallingStartFlowInternal?.invoke()
 
         val existingFlow = innerState.withLock { flows[flowId] }
         val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {

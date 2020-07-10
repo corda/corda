@@ -23,9 +23,10 @@ import org.junit.Ignore
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -338,6 +339,30 @@ class FlowClientIdTests {
         aliceNode.smm.unPauseFlow(flowHandle1.id)
         Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
         Assert.assertEquals(1, noSecondFlowWasSpawned)
+    }
+
+    @Test
+    fun `On 'startFlowInternal' throwing subsequent request with same client id does not get de-duplicated and starts a new flow`() {
+        val clientId = UUID.randomUUID().toString()
+        var firstRequest = true
+        SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
+            if (firstRequest) {
+                firstRequest = false
+                throw IllegalStateException("Yet another one")
+            }
+        }
+        var counter = 0
+        ResultFlow.hook = { counter++ }
+
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        }
+
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle1.resultFuture.getOrThrow(20.seconds)
+
+        assertEquals(clientId, flowHandle1.clientId)
+        assertEquals(1, counter)
     }
 }
 
