@@ -22,6 +22,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
+import javax.swing.JOptionPane
 import kotlin.math.max
 
 class NodeController(
@@ -158,6 +159,7 @@ class NodeController(
                 jvm.setCapsuleCacheDir(this)
             }
             (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
+            @Suppress("SpreadOperator")
             val schemaSetupCommand = jvm.commandFor(cordaPath, *schemaSetupArgs).let {
                 if (allowHibernateToManageAppSchema.value) {
                     it + "--allow-hibernate-to-manage-app-schema"
@@ -166,20 +168,22 @@ class NodeController(
                 }
             }.toTypedArray()
             if (pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString()) != 0) {
-                throw RunSetupError("Failed to set up database schema for node [${config.nodeConfig.myLegalName}]")
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Failed to set up database schema for node [${config.nodeConfig.myLegalName}]\n" +
+                                "Please check logfiles!",
+                        "DB Setup Failure",
+                        0)
+                return false
             }
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true
         } catch (e: Exception) {
             log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
-            if (e is RunSetupError)
-                throw e
             return false
         }
     }
-
-    class RunSetupError(message: String) : Exception(message)
 
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
         val identity = getNotaryIdentity(config)
