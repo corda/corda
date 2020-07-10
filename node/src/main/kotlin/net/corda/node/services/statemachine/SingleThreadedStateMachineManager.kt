@@ -88,7 +88,8 @@ internal class SingleThreadedStateMachineManager(
         var onClientIDNotFound: (() -> Unit)? = null
         @VisibleForTesting
         var onCallingStartFlowInternal: (() -> Unit)? = null
-
+        @VisibleForTesting
+        var onStartFlowInternalThrewAndAboutToRemove: (() -> Unit)? = null
     }
 
     private val innerState = StateMachineInnerStateImpl()
@@ -306,7 +307,11 @@ internal class SingleThreadedStateMachineManager(
                 newFuture?.captureLater(uncheckedCast(it))
             }
         } catch (t: Throwable) {
-            mutex.locked { clientIdsToFlowIds.remove(clientId) }
+            onStartFlowInternalThrewAndAboutToRemove?.invoke()
+            mutex.locked {
+                clientIdsToFlowIds.remove(clientId)
+                newFuture?.setException(t)
+            }
             throw t
         }
     }
@@ -508,7 +513,7 @@ internal class SingleThreadedStateMachineManager(
                     is ExternalEvent.ExternalStartFlowEvent<*> -> onExternalStartFlow(event)
                 }
             }
-        }
+        //}
     }
 
     private fun <T> onExternalStartFlow(event: ExternalEvent.ExternalStartFlowEvent<T>) {
