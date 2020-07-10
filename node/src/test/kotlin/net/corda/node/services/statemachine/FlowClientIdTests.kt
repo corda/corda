@@ -366,7 +366,7 @@ class FlowClientIdTests {
     }
 
 //    @Test
-//    fun `On 'startFlowInternal' throwing subsequent request with same client hits the time window in which previous request was about to remove the client id mapping, will not start a new flow but will not hang either`() {
+//    fun `On 'startFlowInternal' throwing subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
 //        val clientId = UUID.randomUUID().toString()
 //        var firstRequest = true
 //        SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
@@ -395,6 +395,7 @@ class FlowClientIdTests {
 //        waitForFirstRequest.acquire()
 //        wait.release()
 //        assertFailsWith<IllegalStateException> {
+//            // the subsequent request will not hang on a never ending future, as the previous request upon failing, will complete the future exceptionally
 //            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
 //        }
 //
