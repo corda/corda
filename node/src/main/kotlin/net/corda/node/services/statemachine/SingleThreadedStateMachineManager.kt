@@ -47,13 +47,11 @@ import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import java.security.SecureRandom
-import java.time.Duration
+import java.util.ArrayList
 import java.util.HashSet
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -89,7 +87,7 @@ internal class SingleThreadedStateMachineManager(
     private val metrics = serviceHub.monitoringService.metrics
     private val sessionToFlow = ConcurrentHashMap<SessionId, StateMachineRunId>()
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
-    private val flowSleepScheduler = FlowSleepScheduler(innerState, scheduledFutureExecutor)
+    private val actionFutureExecutor = ActionFutureExecutor(innerState, serviceHub, scheduledFutureExecutor)
     private val flowTimeoutScheduler = FlowTimeoutScheduler(innerState, scheduledFutureExecutor, serviceHub)
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
@@ -317,9 +315,7 @@ internal class SingleThreadedStateMachineManager(
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         innerState.withLock {
             flowTimeoutScheduler.cancel(flowId)
-//            flowSleepScheduler.cancel(lastState)
-            lastState.future?.cancelIfRunning()
-            lastState.future = null
+            lastState.cancelFutureIfRunning()
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -385,18 +381,9 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun Future<*>.cancelIfRunning() {
-        if (!isDone) {
-            logger.info("Cancelling future")
-            cancel(true)
-        }
-    }
-
     @Suppress("TooGenericExceptionCaught", "ComplexMethod", "MaxLineLength") // this is fully intentional here, see comment in the catch clause
     override fun retryFlowFromSafePoint(currentState: StateMachineState) {
-//        flowSleepScheduler.cancel(currentState)
-        currentState.future?.cancelIfRunning()
-        currentState.future = null
+        currentState.cancelFutureIfRunning()
         // Get set of external events
         val flowId = currentState.flowLogic.runId
         val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
@@ -646,10 +633,6 @@ internal class SingleThreadedStateMachineManager(
         flowTimeoutScheduler.cancel(flowId)
     }
 
-    override fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration) {
-        flowSleepScheduler.sleep(fiber, currentState, duration)
-    }
-
     private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
         return try {
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
@@ -707,11 +690,12 @@ internal class SingleThreadedStateMachineManager(
 
     private fun makeActionExecutor(checkpointSerializationContext: CheckpointSerializationContext): ActionExecutor {
         return ActionExecutorImpl(
-                serviceHub,
-                checkpointStorage,
-                flowMessaging,
-                this,
-                checkpointSerializationContext
+            serviceHub,
+            checkpointStorage,
+            flowMessaging,
+            this,
+            actionFutureExecutor,
+            checkpointSerializationContext
         )
     }
 
@@ -791,6 +775,14 @@ internal class SingleThreadedStateMachineManager(
                     logger.warn("Unhandled event $event due to flow shutting down")
                 }
             }
+        }
+    }
+
+    private fun StateMachineState.cancelFutureIfRunning() {
+        future?.run {
+            logger.debug { "Cancelling future for flow ${flowLogic.runId}" }
+            if (!isDone) cancel(true)
+            future = null
         }
     }
 }

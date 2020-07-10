@@ -110,7 +110,6 @@ internal interface StateMachineManagerInternal {
     fun retryFlowFromSafePoint(currentState: StateMachineState)
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
-    fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration)
 }
 
 /**
