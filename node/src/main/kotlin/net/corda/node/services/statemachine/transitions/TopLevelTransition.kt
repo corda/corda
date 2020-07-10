@@ -178,7 +178,7 @@ class TopLevelTransition(
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
         return builder {
             val newCheckpoint = currentState.checkpoint.run {
-                val newCheckpointState = if (checkpointState.invocationContext.arguments.isNotEmpty()) {
+                val newCheckpointState = if (checkpointState.invocationContext.arguments!!.isNotEmpty()) {
                     checkpointState.copy(
                         invocationContext = checkpointState.invocationContext.copy(arguments = emptyList()),
                         numberOfSuspends = checkpointState.numberOfSuspends + 1

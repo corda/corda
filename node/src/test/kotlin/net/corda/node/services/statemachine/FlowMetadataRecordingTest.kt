@@ -197,7 +197,7 @@ class FlowMetadataRecordingTest {
 
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
-                uncheckedCast<Any?, Array<Any?>>(context!!.arguments[1]).toList()
+                uncheckedCast<Any?, Array<Any?>>(context!!.arguments!![1]).toList()
             )
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
