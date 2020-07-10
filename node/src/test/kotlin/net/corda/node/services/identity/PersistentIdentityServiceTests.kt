@@ -67,8 +67,7 @@ class PersistentIdentityServiceTests {
                 identityService::wellKnownPartyFromAnonymous
         )
         identityService.database = database
-        identityService.ourParty = alice.party
-        identityService.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+        identityService.start(DEV_ROOT_CA.certificate, alice.identity, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     }
 
@@ -215,7 +214,7 @@ class PersistentIdentityServiceTests {
         // Create new identity service mounted onto same DB
         val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
-            it.start(DEV_ROOT_CA.certificate, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
+            it.start(DEV_ROOT_CA.certificate, Companion.alice.identity, pkToIdCache = PublicKeyToOwningIdentityCacheImpl(database, cacheFactory))
         }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())

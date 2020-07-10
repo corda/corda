@@ -2,7 +2,6 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -21,7 +20,7 @@ import javax.persistence.*
 import kotlin.collections.LinkedHashSet
 
 /**
- * A persistent implementation of [KeyManagementService] to support CryptoService for initial keys and
+ * A persistent implementation of [KeyManagementServiceInternal] to support CryptoService for initial keys and
  * database storage for anonymous fresh keys.
  *
  * This is not the long-term implementation.  See the list of items in the above class.
@@ -74,8 +73,8 @@ class BasicHSMKeyManagementService(
     // A map for anonymous keys.
     private val keysMap = createKeyMap(cacheFactory)
 
-    override fun start(initialKeyAliasPairs: Set<Pair<PublicKey, String>>) {
-        initialKeyAliasPairs.forEach {
+    override fun start(initialKeysAndAliases: List<Pair<PublicKey, String>>) {
+        initialKeysAndAliases.forEach {
             originalKeysMap[Crypto.toSupportedPublicKey(it.first)] = it.second
         }
     }

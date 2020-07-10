@@ -160,6 +160,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private lateinit var _trustAnchor: TrustAnchor
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
+    private lateinit var ourParty: Party
+
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
     @Volatile
     private var notaryIdentityCache = HashSet<Party>()
@@ -175,14 +177,17 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     fun start(
             trustRoot: X509Certificate,
-            caCertificates: List<X509Certificate> = emptyList(),
+            ourIdentity: PartyAndCertificate,
             notaryIdentities: List<Party> = emptyList(),
             pkToIdCache: WritablePublicKeyToOwningIdentityCache
     ) {
         _trustRoot = trustRoot
         _trustAnchor = TrustAnchor(trustRoot, null)
-        _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
+        // Extract Node CA certificate from node identity certificate path
+        val certificates = setOf(ourIdentity.certificate, ourIdentity.certPath.certificates[1], trustRoot)
+        _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(certificates))
         _pkToIdCache = pkToIdCache
+        ourParty = ourIdentity.party
         notaryIdentityCache.addAll(notaryIdentities)
     }
 
@@ -325,8 +330,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party,
             anonymousParty) }
-
-    lateinit var ourParty: Party
 
     override fun registerKey(publicKey: PublicKey, party: Party, externalId: UUID?) {
         return database.transaction {

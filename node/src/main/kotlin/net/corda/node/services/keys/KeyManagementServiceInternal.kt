@@ -11,7 +11,7 @@ interface KeyManagementServiceInternal : KeyManagementService {
 
     val identityService: IdentityService
 
-    fun start(initialKeyAliasPairs: Set<Pair<PublicKey, String>>)
+    fun start(initialKeysAndAliases: List<Pair<PublicKey, String>>)
 
     fun freshKeyInternal(externalId: UUID?): PublicKey
 

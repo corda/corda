@@ -46,18 +46,11 @@ private fun NodeConfiguration.validateKeyStores(): X509Certificate {
         "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
     }
 
-    // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
-    require(X509Utilities.CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
-        "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
-    }
-
-    // Step 5. Check all cert paths chain to the trusted root.
+    // Step 4. Check tls cert paths chain to the trusted root.
     val trustRoot = certStores.trustStore[X509Utilities.CORDA_ROOT_CA]
     val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
-    val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
 
     require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
-    require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
 
     return trustRoot
 }
