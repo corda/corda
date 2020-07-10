@@ -632,6 +632,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return predicateSet
     }
 
+    @Suppress("SpreadOperator")
     override fun parse(criteria: QueryCriteria, sorting: Sort?): Collection<Predicate> {
         val predicateSet = criteria.visit(this)
 
