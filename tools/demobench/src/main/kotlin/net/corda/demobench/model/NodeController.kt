@@ -1,11 +1,17 @@
 package net.corda.demobench.model
 
 import javafx.application.Application.Parameters
+import javafx.application.Platform
 import javafx.beans.binding.IntegerExpression
 import javafx.beans.property.SimpleBooleanProperty
+import javafx.scene.control.Alert
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.writeText
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -22,7 +28,6 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
-import javax.swing.JOptionPane
 import kotlin.math.max
 
 class NodeController(
@@ -168,12 +173,12 @@ class NodeController(
                 }
             }.toTypedArray()
             if (pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString()) != 0) {
-                JOptionPane.showMessageDialog(
-                        null,
-                        "Failed to set up database schema for node [${config.nodeConfig.myLegalName}]\n" +
-                                "Please check logfiles!",
-                        "DB Setup Failure",
-                        0)
+                Platform.runLater {
+                    Alert(
+                            Alert.AlertType.ERROR,
+                            "Failed to set up database schema for node [${config.nodeConfig.myLegalName}]\n" +
+                                    "Please check logfiles!").showAndWait()
+                }
                 return false
             }
             pty.run(command, cordaEnv, config.nodeDir.toString())
