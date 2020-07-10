@@ -36,6 +36,7 @@ import tornadofx.*
 import java.awt.Dimension
 import java.net.URI
 import java.util.logging.Level
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 class NodeTerminalView : Fragment() {
@@ -90,27 +91,31 @@ class NodeTerminalView : Fragment() {
             val r3pty = R3Pty(config.nodeConfig.myLegalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
-            if (nodeController.runCorda(r3pty, config)) {
-                swingTerminal.content = r3pty.terminal
+            try {
+                if (nodeController.runCorda(r3pty, config)) {
+                    swingTerminal.content = r3pty.terminal
 
-                configureDatabaseButton(config.nodeConfig)
-                configureExplorerButton(config)
-                configureWebButton(config)
+                    configureDatabaseButton(config.nodeConfig)
+                    configureExplorerButton(config)
+                    configureWebButton(config)
 
-                /*
+                    /*
                  * Start RPC client that will update node statistics on UI.
                  */
-                rpc = launchRPC(config)
+                    rpc = launchRPC(config)
 
-                /*
+                    /*
                  * Check whether the PTY has exited unexpectedly,
                  * and close the RPC client if it has.
                  */
-                if (!r3pty.isConnected) {
-                    log.severe("Node '${config.nodeConfig.myLegalName}' has failed to start.")
-                    swingTerminal.content = null
-                    rpc?.close()
+                    if (!r3pty.isConnected) {
+                        log.severe("Node '${config.nodeConfig.myLegalName}' has failed to start.")
+                        swingTerminal.content = null
+                        rpc?.close()
+                    }
                 }
+            } catch (e: NodeController.RunSetupError) {
+                JOptionPane.showMessageDialog(null, "${e.message}\nPlease check log files!", "Setup Failure", 0)
             }
         }
     }

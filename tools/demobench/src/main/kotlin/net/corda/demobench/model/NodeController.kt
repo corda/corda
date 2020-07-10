@@ -52,6 +52,7 @@ class NodeController(
     }
 
     val djvmEnabled = SimpleBooleanProperty(djvmEnabled)
+    val allowHibernateToManageAppSchema = SimpleBooleanProperty(false)
 
     private val jvm by inject<JVMConfig>()
     private val cordappController by inject<CordappController>()
@@ -62,7 +63,6 @@ class NodeController(
     private val command = jvm.commandFor(cordaPath).toTypedArray()
 
     private val schemaSetupArgs = arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas")
-    private val schemaSetupCommand = jvm.commandFor(cordaPath, *schemaSetupArgs).toTypedArray()
 
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private var notaryIdentity: Party? = null
@@ -158,15 +158,28 @@ class NodeController(
                 jvm.setCapsuleCacheDir(this)
             }
             (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
-            pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString())
+            val schemaSetupCommand = jvm.commandFor(cordaPath, *schemaSetupArgs).let {
+                if (allowHibernateToManageAppSchema.value) {
+                    it + "--allow-hibernate-to-manage-app-schema"
+                } else {
+                    it
+                }
+            }.toTypedArray()
+            if (pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString()) != 0) {
+                throw RunSetupError("Failed to set up database schema for node [${config.nodeConfig.myLegalName}]")
+            }
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true
         } catch (e: Exception) {
             log.log(Level.SEVERE, "Failed to launch Corda: ${e.message}", e)
+            if (e is RunSetupError)
+                throw e
             return false
         }
     }
+
+    class RunSetupError(message: String) : Exception(message)
 
     private fun makeNetworkParametersCopier(config: NodeConfigWrapper): NetworkParametersCopier {
         val identity = getNotaryIdentity(config)
