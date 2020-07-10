@@ -35,7 +35,6 @@ import java.util.*
 import javax.persistence.Tuple
 import javax.persistence.criteria.*
 
-
 abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: BaseQueryCriteriaParser<Q, P, S>, in S: BaseSort> : BaseQueryCriteriaParser<Q, P, S> {
 
     abstract val criteriaBuilder: CriteriaBuilder
@@ -647,10 +646,24 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 else
                     aggregateExpressions
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates).plus(joinPredicates)
-        criteriaQuery.where(*combinedPredicates.toTypedArray())
+        val combinedPredicates = commonPredicates.values.plus(predicateSet)
+                .plus(constraintPredicates)
+                .plus(joinPredicates)
+
+        criteriaQuery.where(*combinedPredicates.toTypedArray(), *joinStateRefPredicate().toTypedArray())
 
         return predicateSet
+    }
+
+    private fun joinStateRefPredicate(): Set<Predicate> {
+        val returnSet = mutableSetOf<Predicate>()
+
+        rootEntities.values.forEach {
+            if (it != vaultStates) {
+                returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<PersistentStateRef>("stateRef")))
+            }
+        }
+        return returnSet
     }
 
     override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
