@@ -19,12 +19,39 @@ open class GroupContract : Contract {
         const val CONTRACT_NAME = "net.corda.bn.contracts.GroupContract"
     }
 
+    /**
+     * Each new [GroupContract] command must be wrapped and extend this class.
+     *
+     * @property requiredSigners List of all required public keys of command's signers.
+     */
     open class Commands(val requiredSigners: List<PublicKey>) : CommandData {
+        /**
+         * Command responsible for [GroupState] issuance.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Create(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for [GroupState] modification.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Modify(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for [GroupState] exit.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Exit(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
     }
 
+    /**
+     * Ensures [GroupState] transition makes sense. Throws exception if there is a problem that should prevent the transition.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     */
     @Suppress("ComplexMethod")
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands>()
@@ -63,16 +90,44 @@ open class GroupContract : Contract {
         }
     }
 
+    /**
+     * Each contract extending [GroupContract] must override this method providing associated contract name.
+     */
     open fun contractName() = CONTRACT_NAME
 
+    /**
+     * Contract verification check specific to [Commands.Create] command. Each contract extending [GroupContract] can override this method
+     * to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about group creation command.
+     * @param outputGroup Output [GroupState] of the transaction.
+     */
     open fun verifyCreate(tx: LedgerTransaction, command: CommandWithParties<Commands>, outputGroup: GroupState) = requireThat {
         "Membership request transaction shouldn't contain any inputs" using (tx.inputs.isEmpty())
     }
 
+    /**
+     * Contract verification check specific to [Commands.Modify] command. Each contract extending [GroupContract] can override this method
+     * to implement their own custom modify command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about group modification command.
+     * @param inputGroup Input [GroupState] of the transaction.
+     * @param outputGroup Output [GroupState] of the transaction.
+     */
     open fun verifyModify(tx: LedgerTransaction, command: CommandWithParties<Commands>, inputGroup: GroupState, outputGroup: GroupState) = requireThat {
         "Input and output states of group modification transaction should have different name or participants field" using (inputGroup.name != outputGroup.name || inputGroup.participants.toSet() != outputGroup.participants.toSet())
     }
 
+    /**
+     * Contract verification check specific to [Commands.Exit] command. Each contract extending [GroupContract] can override this method
+     * to implement their own custom exit command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about group exit command.
+     * @param inputGroup Input [GroupState] of the transaction.
+     */
     open fun verifyExit(tx: LedgerTransaction, command: CommandWithParties<Commands>, inputGroup: GroupState) = requireThat {
         "Membership revocation transaction shouldn't contain any outputs" using (tx.outputs.isEmpty())
     }

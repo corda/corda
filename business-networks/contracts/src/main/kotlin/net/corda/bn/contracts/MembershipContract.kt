@@ -1,5 +1,6 @@
 package net.corda.bn.contracts
 
+import net.corda.bn.states.GroupState
 import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.CommandWithParties
@@ -20,16 +21,70 @@ open class MembershipContract : Contract {
         const val CONTRACT_NAME = "net.corda.bn.contracts.MembershipContract"
     }
 
+    /**
+     * Each new [MembershipContract] command must be wrapped and extend this class.
+     *
+     * @property requiredSigners List of all required public keys of command's signers.
+     */
     open class Commands(val requiredSigners: List<PublicKey>) : CommandData {
+        /**
+         * Command responsible for pending [MembershipState] issuance.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Request(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for [MembershipState] activation.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         * @property bnCreation Flag indicating whether this command is part of transaction creating new Business Network.
+         */
         class Activate(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for [MembershipState] suspension.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Suspend(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for [MembershipState] revocation.
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class Revoke(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for modification of [MembershipState.roles].
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         * @property bnCreation Flag indicating whether this command is part of transaction creating new Business Network.
+         */
         class ModifyRoles(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for modification of [MembershipState.identity.businessIdentity].
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         * @property initiator Identity of the party building the transaction.
+         */
         class ModifyBusinessIdentity(requiredSigners: List<PublicKey>, val initiator: Party) : Commands(requiredSigners)
+
+        /**
+         * Command responsible for modification of [MembershipState.participants].
+         *
+         * @param requiredSigners List of all required public keys of command's signers.
+         */
         class ModifyParticipants(requiredSigners: List<PublicKey>) : Commands(requiredSigners)
     }
 
+    /**
+     * Ensures [MembershipState] transition makes sense. Throws exception if there is a problem that should prevent the transition.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     */
     @Suppress("ComplexMethod")
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands>()
@@ -74,8 +129,19 @@ open class MembershipContract : Contract {
         }
     }
 
+    /**
+     * Each contract extending [MembershipContract] must override this method providing associated contract name.
+     */
     open fun contractName() = CONTRACT_NAME
 
+    /**
+     * Contract verification check specific to [Commands.Request] command. Each contract extending [MembershipContract] can override this
+     * method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership creation command.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifyRequest(tx: LedgerTransaction, command: CommandWithParties<Commands>, outputMembership: MembershipState) = requireThat {
         "Membership request transaction shouldn't contain any inputs" using (tx.inputs.isEmpty())
         "Membership request transaction should contain output state in PENDING status" using (outputMembership.isPending())
@@ -83,6 +149,15 @@ open class MembershipContract : Contract {
         "Pending membership owner should be required signer of membership request transaction" using (outputMembership.identity.cordaIdentity.owningKey in command.value.requiredSigners)
     }
 
+    /**
+     * Contract verification check specific to [Commands.Activate] command. Each contract extending [MembershipContract] can override this
+     * method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership activation command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifyActivate(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
@@ -99,6 +174,15 @@ open class MembershipContract : Contract {
         }
     }
 
+    /**
+     * Contract verification check specific to [Commands.Suspend] command. Each contract extending [MembershipContract] can override this
+     * method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership suspension command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifySuspend(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
@@ -113,6 +197,14 @@ open class MembershipContract : Contract {
         "Input membership owner shouldn't be required signer of membership suspension transaction" using (inputMembership.identity.cordaIdentity.owningKey !in command.value.requiredSigners)
     }
 
+    /**
+     * Contract verification check specific to [Commands.Revoke] command. Each contract extending [MembershipContract] can override this
+     * method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership revocation command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     */
     open fun verifyRevoke(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
@@ -122,6 +214,15 @@ open class MembershipContract : Contract {
         "Input membership owner shouldn't be required signer of membership revocation transaction" using (inputMembership.identity.cordaIdentity.owningKey !in command.value.requiredSigners)
     }
 
+    /**
+     * Contract verification check specific to [Commands.ModifyRoles] command. Each contract extending [MembershipContract] can override
+     * this method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership role modification command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifyModifyRoles(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
@@ -138,6 +239,15 @@ open class MembershipContract : Contract {
         }
     }
 
+    /**
+     * Contract verification check specific to [Commands.ModifyBusinessIdentity] command. Each contract extending [MembershipContract] can
+     * override this method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership business identity modification command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifyModifyBusinessIdentity(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
@@ -157,6 +267,15 @@ open class MembershipContract : Contract {
         }
     }
 
+    /**
+     * Contract verification check specific to [Commands.ModifyParticipants] command. Each contract extending [MembershipContract] can
+     * override this method to implement their own custom create command verification logic.
+     *
+     * @param tx Ledger transaction over which contract performs verification.
+     * @param command Command with parties data about membership participants modification command.
+     * @param inputMembership Input [GroupState] of the transaction.
+     * @param outputMembership Output [GroupState] of the transaction.
+     */
     open fun verifyModifyParticipants(
             tx: LedgerTransaction,
             command: CommandWithParties<Commands>,
