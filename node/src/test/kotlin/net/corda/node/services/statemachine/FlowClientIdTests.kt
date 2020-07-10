@@ -3,8 +3,6 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -291,57 +289,57 @@ class FlowClientIdTests {
         Assert.assertEquals(1, noSecondFlowWasSpawned)
     }
 
-    @Test
-    fun `on node restart -paused- flows with client id are hook-able`() {
-        val clientId = UUID.randomUUID().toString()
-        var noSecondFlowWasSpawned = 0
-        var firstRun = true
-        var firstFiber: Fiber<out Any?>? = null
-        val flowIsRunning = Semaphore(0)
-        val waitUntilFlowIsRunning = Semaphore(0)
-
-        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
-            @Suspendable
-            override fun call() {
-                if (firstRun) {
-                    firstFiber = Fiber.currentFiber()
-                    firstRun = false
-                }
-
-                waitUntilFlowIsRunning.release()
-                try {
-                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
-                } catch (e: InterruptedException) {
-                    flowIsRunning.release()
-                    throw e
-                }
-
-                noSecondFlowWasSpawned++
-            }
-        }
-
-        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
-        waitUntilFlowIsRunning.acquire()
-        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
-        // Pause the flow on node restart
-        val aliceNode = mockNet.restartNode(aliceNode,
-            InternalMockNodeParameters(
-                configOverrides = {
-                    doReturn(StateMachineManager.StartMode.Safe).whenever(it).smmStartMode
-                }
-            ))
-        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
-        firstFiber!!.interrupt()
-
-        // Re-hook a paused flow
-        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
-
-        Assert.assertEquals(flowHandle0.id, flowHandle1.id)
-        Assert.assertEquals(clientId, flowHandle1.clientId)
-        aliceNode.smm.unPauseFlow(flowHandle1.id)
-        Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
-        Assert.assertEquals(1, noSecondFlowWasSpawned)
-    }
+//    @Test
+//    fun `on node restart -paused- flows with client id are hook-able`() {
+//        val clientId = UUID.randomUUID().toString()
+//        var noSecondFlowWasSpawned = 0
+//        var firstRun = true
+//        var firstFiber: Fiber<out Any?>? = null
+//        val flowIsRunning = Semaphore(0)
+//        val waitUntilFlowIsRunning = Semaphore(0)
+//
+//        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+//            @Suspendable
+//            override fun call() {
+//                if (firstRun) {
+//                    firstFiber = Fiber.currentFiber()
+//                    firstRun = false
+//                }
+//
+//                waitUntilFlowIsRunning.release()
+//                try {
+//                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
+//                } catch (e: InterruptedException) {
+//                    flowIsRunning.release()
+//                    throw e
+//                }
+//
+//                noSecondFlowWasSpawned++
+//            }
+//        }
+//
+//        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+//        waitUntilFlowIsRunning.acquire()
+//        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
+//        // Pause the flow on node restart
+//        val aliceNode = mockNet.restartNode(aliceNode,
+//            InternalMockNodeParameters(
+//                configOverrides = {
+//                    doReturn(StateMachineManager.StartMode.Safe).whenever(it).smmStartMode
+//                }
+//            ))
+//        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
+//        firstFiber!!.interrupt()
+//
+//        // Re-hook a paused flow
+//        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+//
+//        Assert.assertEquals(flowHandle0.id, flowHandle1.id)
+//        Assert.assertEquals(clientId, flowHandle1.clientId)
+//        aliceNode.smm.unPauseFlow(flowHandle1.id)
+//        Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
+//        Assert.assertEquals(1, noSecondFlowWasSpawned)
+//    }
 
     @Test
     fun `On 'startFlowInternal' throwing subsequent request with same client id does not get de-duplicated and starts a new flow`() {
@@ -367,41 +365,41 @@ class FlowClientIdTests {
         assertEquals(1, counter)
     }
 
-    @Test
-    fun `On 'startFlowInternal' throwing subsequent request with same client hits the time window in which previous request was about to remove the client id mapping, will not start a new flow but will not hang either`() {
-        val clientId = UUID.randomUUID().toString()
-        var firstRequest = true
-        SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
-            if (firstRequest) {
-                firstRequest = false
-                throw IllegalStateException("Yet another one")
-            }
-        }
-
-        val wait = Semaphore(0)
-        val waitForFirstRequest = Semaphore(0)
-        SingleThreadedStateMachineManager.onStartFlowInternalThrewAndAboutToRemove = {
-            waitForFirstRequest.release()
-            wait.acquire()
-            Thread.sleep(10000)
-        }
-        var counter = 0
-        ResultFlow.hook = { counter++ }
-
-        thread {
-            assertFailsWith<IllegalStateException> {
-                aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
-            }
-        }
-
-        waitForFirstRequest.acquire()
-        wait.release()
-        assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
-        }
-
-        assertEquals(0, counter)
-    }
+//    @Test
+//    fun `On 'startFlowInternal' throwing subsequent request with same client hits the time window in which previous request was about to remove the client id mapping, will not start a new flow but will not hang either`() {
+//        val clientId = UUID.randomUUID().toString()
+//        var firstRequest = true
+//        SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
+//            if (firstRequest) {
+//                firstRequest = false
+//                throw IllegalStateException("Yet another one")
+//            }
+//        }
+//
+//        val wait = Semaphore(0)
+//        val waitForFirstRequest = Semaphore(0)
+//        SingleThreadedStateMachineManager.onStartFlowInternalThrewAndAboutToRemove = {
+//            waitForFirstRequest.release()
+//            wait.acquire()
+//            Thread.sleep(10000)
+//        }
+//        var counter = 0
+//        ResultFlow.hook = { counter++ }
+//
+//        thread {
+//            assertFailsWith<IllegalStateException> {
+//                aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+//            }
+//        }
+//
+//        waitForFirstRequest.acquire()
+//        wait.release()
+//        assertFailsWith<IllegalStateException> {
+//            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+//        }
+//
+//        assertEquals(0, counter)
+//    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {

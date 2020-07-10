@@ -178,13 +178,13 @@ internal class SingleThreadedStateMachineManager(
         //  + Handle incompatible checkpoints upon implementing CORDA-3897
         for (flow in fibers) {
             flow.fiber.clientId?.let {
-                mutex.content.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
             }
         }
 
         for (pausedFlow in pausedFlows) {
             pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
-                mutex.content.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
                     doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
                 )
             }
@@ -270,12 +270,12 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<out FlowStateMachineHandle<A>> {
         beforeClientIDCheck?.invoke()
 
-        var newFuture: OpenFuture<out FlowStateMachineHandle<out Any?>>? = null
+        var newFuture: OpenFuture<out FlowStateMachineHandle<A>>? = null
 
         val clientId = context.clientId
         if (clientId != null) {
             var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
-            mutex.locked {
+            innerState.withLock {
                 clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
                     if (existingStatus != null) {
                         existingFuture = when (existingStatus) {
@@ -308,7 +308,7 @@ internal class SingleThreadedStateMachineManager(
             }
         } catch (t: Throwable) {
             onStartFlowInternalThrewAndAboutToRemove?.invoke()
-            mutex.locked {
+            innerState.withLock {
                 clientIdsToFlowIds.remove(clientId)
                 newFuture?.setException(t)
             }
@@ -513,7 +513,7 @@ internal class SingleThreadedStateMachineManager(
                     is ExternalEvent.ExternalStartFlowEvent<*> -> onExternalStartFlow(event)
                 }
             }
-        //}
+        }
     }
 
     private fun <T> onExternalStartFlow(event: ExternalEvent.ExternalStartFlowEvent<T>) {
@@ -828,11 +828,6 @@ internal class SingleThreadedStateMachineManager(
         lastState.flowLogic.progressTracker?.endWithError(exception)
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
-        flow.fiber.clientID?.let {
-            val oldClientIdFlowStatus = clientIDsToFlowIds[it]
-            require (oldClientIdFlowStatus != null && oldClientIdFlowStatus is FlowWithClientIdStatus.Active)
-            clientIDsToFlowIds[it] = FlowWithClientIdStatus.Removed(flow.fiber.id, FlowWithClientIdStatus.Removed.Status.FAILED)
-        }
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }
 
@@ -861,15 +856,15 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun InnerState.setClientIdAsSucceeded(clientId: String, id: StateMachineRunId) {
+    private fun StateMachineInnerState.setClientIdAsSucceeded(clientId: String, id: StateMachineRunId) {
         setClientIdAsRemoved(clientId, id, true)
     }
 
-    private fun InnerState.setClientIdAsFailed(clientId: String, id: StateMachineRunId) {
+    private fun StateMachineInnerState.setClientIdAsFailed(clientId: String, id: StateMachineRunId) {
         setClientIdAsRemoved(clientId, id, false)
     }
 
-    private fun InnerState.setClientIdAsRemoved(
+    private fun StateMachineInnerState.setClientIdAsRemoved(
         clientId: String,
         id: StateMachineRunId,
         succeeded: Boolean
@@ -899,7 +894,7 @@ internal class SingleThreadedStateMachineManager(
 
     override fun removeClientId(clientId: String): Boolean {
         var removed = false
-        mutex.locked {
+        innerState.withLock {
             clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
                 if (existingStatus != null && existingStatus is FlowWithClientIdStatus.Removed) {
                     removed = true
