@@ -260,6 +260,7 @@ internal class CordaRPCOpsImpl(
         return FlowHandleWithClientIdImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture, clientId = stateMachine.clientId!!)
     }
 
+    @Suppress("SpreadOperator")
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, context: InvocationContext, args: Array<out Any?>): FlowStateMachineHandle<T> {
         if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {

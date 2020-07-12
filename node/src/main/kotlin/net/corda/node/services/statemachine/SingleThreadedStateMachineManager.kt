@@ -262,6 +262,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun <A> startFlow(
             flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
