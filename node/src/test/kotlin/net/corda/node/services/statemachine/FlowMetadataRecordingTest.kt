@@ -398,7 +398,7 @@ class FlowMetadataRecordingTest {
         }
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `assert that flow started with longer client id than MAX_CLIENT_ID_LENGTH fails`() {
         val clientId = "1".repeat(513) // DBCheckpointStorage.MAX_CLIENT_ID_LENGTH == 512
         driver(DriverParameters(startNodesInProcess = true)) {

@@ -55,7 +55,7 @@ class FlowClientIdTests {
         SingleThreadedStateMachineManager.onStartFlowInternalThrewAndAboutToRemove = null
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `no new flow starts if the client id provided pre exists`() {
         var counter = 0
         ResultFlow.hook = { counter++ }
@@ -65,7 +65,7 @@ class FlowClientIdTests {
         Assert.assertEquals(1, counter)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's result is retrievable after flow's lifetime, when flow is started with a client id - different parameters are ignored`() {
         val clientId = UUID.randomUUID().toString()
         val handle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
@@ -83,7 +83,7 @@ class FlowClientIdTests {
         Assert.assertEquals(result0, result1)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's result is available if reconnect after flow had retried from previous checkpoint, when flow is started with a client id`() {
         var firstRun = true
         ResultFlow.hook = {
@@ -99,7 +99,7 @@ class FlowClientIdTests {
         Assert.assertEquals(result0, result1)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's result is available if reconnect during flow's retrying from previous checkpoint, when flow is started with a client id`() {
         var firstRun = true
         val waitForSecondRequest = Semaphore(0)
@@ -131,7 +131,7 @@ class FlowClientIdTests {
     }
 
     @Ignore // this is to be unignored upon implementing CORDA-3681
-    @Test
+    @Test(timeout=300_000)
     fun `flow's exception is available after flow's lifetime if flow is started with a client id`() {
         ResultFlow.hook = { throw IllegalStateException() }
         val clientId = UUID.randomUUID().toString()
@@ -145,7 +145,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's client id mapping gets removed upon request`() {
         val clientId = UUID.randomUUID().toString()
         var counter = 0
@@ -163,7 +163,7 @@ class FlowClientIdTests {
         Assert.assertEquals(2, counter)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's client id mapping can only get removed once the flow gets removed`() {
         val clientId = UUID.randomUUID().toString()
         var tries = 0
@@ -193,7 +193,7 @@ class FlowClientIdTests {
         Assert.assertEquals(maxTries, failedRemovals)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `only one flow starts upon concurrent requests with the same client id`() {
         val requests = 2
         val counter = AtomicInteger(0)
@@ -241,7 +241,7 @@ class FlowClientIdTests {
     }
 
 
-    @Test
+    @Test(timeout=300_000)
     fun `on node start -running- flows with client id are hook-able`() {
         val clientId = UUID.randomUUID().toString()
         var noSecondFlowWasSpawned = 0
@@ -288,7 +288,7 @@ class FlowClientIdTests {
         Assert.assertEquals(1, noSecondFlowWasSpawned)
     }
 
-//    @Test
+//    @Test(timeout=300_000)
 //    fun `on node restart -paused- flows with client id are hook-able`() {
 //        val clientId = UUID.randomUUID().toString()
 //        var noSecondFlowWasSpawned = 0
@@ -340,7 +340,7 @@ class FlowClientIdTests {
 //        Assert.assertEquals(1, noSecondFlowWasSpawned)
 //    }
 
-    @Test
+    @Test(timeout=300_000)
     fun `On 'startFlowInternal' throwing, subsequent request with same client id does not get de-duplicated and starts a new flow`() {
         val clientId = UUID.randomUUID().toString()
         var firstRequest = true
@@ -364,7 +364,7 @@ class FlowClientIdTests {
         assertEquals(1, counter)
     }
 
-//    @Test
+//    @Test(timeout=300_000)
 //    fun `On 'startFlowInternal' throwing, subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
 //        val clientId = UUID.randomUUID().toString()
 //        var firstRequest = true
