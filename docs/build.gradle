@@ -1,14 +1,9 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 apply plugin: 'org.jetbrains.dokka'
-apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
-
-dependencies {
-    compile rootProject
-}
 
 def internalPackagePrefixes(sourceDirs) {
     def prefixes = []
@@ -25,7 +20,7 @@ def internalPackagePrefixes(sourceDirs) {
 
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
-    dokkaSourceDirs = files('../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../client/jackson/src/main/kotlin',
+    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
             '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
     archivedApiDocsBaseFilename = 'api-docs'
@@ -65,7 +60,10 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     }
 }
 
-task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc']) {
+    group "Documentation"
+    description "Build API documentation"
+}
 
 task makeHTMLDocs(type: Exec){
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
@@ -96,18 +94,16 @@ task archiveApiDocs(type: Tar) {
 
 publishing {
     publications {
-        if (System.getProperty('publishApiDocs') != null) {
-            apiDocs(MavenPublication) {
-                artifact archiveApiDocs {
-                    artifactId archivedApiDocsBaseFilename
-                }
+        archivedApiDocs(MavenPublication) {
+            artifact archiveApiDocs {
+                artifactId archivedApiDocsBaseFilename
             }
         }
     }
 }
 
 artifactoryPublish {
-    publications('apiDocs')
+    publications('archivedApiDocs')
     version = version.replaceAll('-SNAPSHOT', '')
     publishPom = false
 }
@@ -116,8 +112,7 @@ artifactory {
     publish {
         contextUrl = artifactory_contextUrl
         repository {
-//            repoKey = 'corda-dependencies-dev'
-            repoKey = 'testing-ci-uploads-release-local'
+            repoKey = 'corda-dependencies-dev'
             username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
