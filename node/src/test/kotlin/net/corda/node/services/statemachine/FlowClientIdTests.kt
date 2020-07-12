@@ -220,7 +220,6 @@ class FlowClientIdTests {
 
         val beforeCount = AtomicInteger(0)
         SingleThreadedStateMachineManager.beforeClientIDCheck = {
-            // Make all threads wait after client id not found on clientIdsToFlowIds
             beforeCount.incrementAndGet()
         }
 
