@@ -14,7 +14,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
-import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
@@ -661,7 +660,6 @@ internal class SingleThreadedStateMachineManager(
             ourIdentity: Party,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
-
         onCallingStartFlowInternal?.invoke()
 
         val existingFlow = innerState.withLock { flows[flowId] }

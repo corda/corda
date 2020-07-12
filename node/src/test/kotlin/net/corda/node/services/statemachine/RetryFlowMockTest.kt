@@ -11,7 +11,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.KilledFlowException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.UntrustworthyData
