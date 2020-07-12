@@ -210,17 +210,17 @@ class FlowClientIdTests {
             }
         }
 
+        val beforeCount = AtomicInteger(0)
+        SingleThreadedStateMachineManager.beforeClientIDCheck = {
+            beforeCount.incrementAndGet()
+        }
+
         val semaphore = Semaphore(0)
         val allThreadsBlocked = Semaphore(0)
         SingleThreadedStateMachineManager.onClientIDNotFound = {
             // Make all threads wait after client id not found on clientIdsToFlowIds
             allThreadsBlocked.release()
             semaphore.acquire()
-        }
-
-        val beforeCount = AtomicInteger(0)
-        SingleThreadedStateMachineManager.beforeClientIDCheck = {
-            beforeCount.incrementAndGet()
         }
 
         for (i in 0 until requests) {
