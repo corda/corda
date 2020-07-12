@@ -394,7 +394,7 @@ class FlowClientIdTests {
 //        waitForFirstRequest.acquire()
 //        wait.release()
 //        assertFailsWith<IllegalStateException> {
-//            // the subsequent request will not hang on a never ending future, as the previous request upon failing, will complete the future exceptionally
+//            // the subsequent request will not hang on a never ending future, because the previous request ,upon failing, will also complete the future exceptionally
 //            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
 //        }
 //
