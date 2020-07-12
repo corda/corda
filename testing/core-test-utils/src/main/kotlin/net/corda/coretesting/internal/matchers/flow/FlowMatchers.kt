@@ -2,15 +2,14 @@ package net.corda.coretesting.internal.matchers.flow
 
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.coretesting.internal.matchers.*
 
 /**
  * Matches a Flow that succeeds with a result matched by the given matcher
  */
-fun <T> willReturn(): Matcher<FlowStateMachine<T>> = net.corda.coretesting.internal.matchers.future.willReturn<T>()
-        .extrude(FlowStateMachine<T>::resultFuture)
+fun <T> willReturn(): Matcher<FlowStateMachineHandle<T>> = net.corda.coretesting.internal.matchers.future.willReturn<T>()
+        .extrude(FlowStateMachineHandle<T>::resultFuture)
         .redescribe { "is a flow that will return" }
 
 fun <T> willReturn(expected: T): Matcher<FlowStateMachineHandle<T>> = willReturn(equalTo(expected))
