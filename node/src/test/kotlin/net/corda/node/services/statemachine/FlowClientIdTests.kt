@@ -341,7 +341,7 @@ class FlowClientIdTests {
 //    }
 
     @Test
-    fun `On 'startFlowInternal' throwing subsequent request with same client id does not get de-duplicated and starts a new flow`() {
+    fun `On 'startFlowInternal' throwing, subsequent request with same client id does not get de-duplicated and starts a new flow`() {
         val clientId = UUID.randomUUID().toString()
         var firstRequest = true
         SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
@@ -365,7 +365,7 @@ class FlowClientIdTests {
     }
 
 //    @Test
-//    fun `On 'startFlowInternal' throwing subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
+//    fun `On 'startFlowInternal' throwing, subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
 //        val clientId = UUID.randomUUID().toString()
 //        var firstRequest = true
 //        SingleThreadedStateMachineManager.onCallingStartFlowInternal = {
