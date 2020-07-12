@@ -627,6 +627,7 @@ class DBCheckpointStorage(
         }
     }
 
+    @Suppress("MagicNumber")
     private fun InvocationContext.getFlowParameters(): List<Any?> {
         // Only RPC flows have parameters which are found in index 1 or index 2 (if called with client id)
         return if (arguments!!.isNotEmpty()) {

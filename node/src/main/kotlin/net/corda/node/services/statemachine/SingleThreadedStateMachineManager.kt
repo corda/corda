@@ -173,8 +173,10 @@ internal class SingleThreadedStateMachineManager(
             }
         }
 
-        // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED -> TODO: RESULTED AND FAILED still need to be fetched
-        //  + Handle incompatible checkpoints upon implementing CORDA-3897
+        // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED flows
+        // - RESULTED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3692
+        // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+        // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
         for (flow in fibers) {
             flow.fiber.clientId?.let {
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
@@ -279,7 +281,8 @@ internal class SingleThreadedStateMachineManager(
                     if (existingStatus != null) {
                         existingFuture = when (existingStatus) {
                             is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
-                            is FlowWithClientIdStatus.Removed -> doneClientIdFuture(existingStatus.flowId, doneFuture(5), clientId) // This dummy future ('doneFuture(5)') will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
+                            // This below dummy future ('doneFuture(5)') will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
+                            is FlowWithClientIdStatus.Removed -> doneClientIdFuture(existingStatus.flowId, doneFuture(@Suppress("MagicNumber")5), clientId)
                         }
                         existingStatus
                     } else {
