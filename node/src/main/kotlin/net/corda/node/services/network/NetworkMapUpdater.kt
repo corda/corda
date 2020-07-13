@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
+import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.lang.Integer.max
@@ -83,6 +84,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var networkParameters: NetworkParameters
     private lateinit var keyManagementService: KeyManagementService
     private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
+
+    private val _updateComplete: PublishSubject<Unit> = PublishSubject.create()
+    val updateComplete: Observable<Unit>
+        get() = _updateComplete
 
     override fun close() {
         fileWatcherSubscription.updateAndGet { subscription ->
@@ -144,6 +149,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         // Mark the network map cache as ready on a successful poll of the node infos dir if not using
                         // the HTTP network map even if there aren't any node infos
                         networkMapCache.nodeReady.set(null)
+                        _updateComplete.onNext(Unit)
                     }
                 }
     }
@@ -200,6 +206,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
         // it's empty
         networkMapCache.nodeReady.set(null)
+        _updateComplete.onNext(Unit)
         return cacheTimeout
     }
 

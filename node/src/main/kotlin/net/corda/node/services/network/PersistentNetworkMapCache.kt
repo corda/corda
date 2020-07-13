@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.flows.PartyNotFoundException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -48,7 +49,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
-    override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
+    override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction(database)
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
     override val nodeReady: OpenFuture<Void?> = openFuture()
@@ -99,17 +100,11 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
-        if (nodes.size == 1 && nodes[0].isLegalIdentity(party)) {
-            return PartyInfo.SingleNode(party, nodes[0].addresses)
+        return when {
+            nodes.isEmpty() -> throw PartyNotFoundException("Could not find party: $party", party.name)
+            nodes.size == 1 && nodes[0].isLegalIdentity(party) -> PartyInfo.SingleNode(party, nodes[0].addresses)
+            else -> nodes.firstOrNull { it.isLegalIdentity(party) }?.let { PartyInfo.DistributedNode(party) }
         }
-        for (node in nodes) {
-            for (identity in node.legalIdentities) {
-                if (identity == party) {
-                    return PartyInfo.DistributedNode(party)
-                }
-            }
-        }
-        return null
     }
 
     override fun getNodeByLegalName(name: CordaX500Name): NodeInfo? {
