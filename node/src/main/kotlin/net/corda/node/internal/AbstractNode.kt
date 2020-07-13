@@ -173,6 +173,7 @@ import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
 import java.lang.reflect.InvocationTargetException
+import java.math.BigInteger
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.sql.Connection
@@ -379,6 +380,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private val nodeLifecycleEventsDistributor = NodeLifecycleEventsDistributor().apply { add(checkpointDumper) }
 
+    protected open val devModeKeyEntropy: BigInteger? = null
+
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this as? SerializeAsToken ?:
             throw IllegalStateException("${this::class.java} is expected to be extending from SerializeAsToken"))
@@ -413,17 +416,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
-    private fun initKeyStores(): X509Certificate {
-        val result = configuration.initKeyStores(cryptoService)
-        if (configuration.devMode) {
-            updateDevKeyStores()
-        }
-        return result
-    }
-
-    // Additional keystore updates for mock network
-    protected open fun updateDevKeyStores() {}
-
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
         val quasarInstrumentor = Retransform.getInstrumentor()
 
@@ -431,6 +423,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             quasarInstrumentor.addExcludedPackage(packageExclude)
         }
     }
+
+    private fun initKeyStores() = configuration.initKeyStores(cryptoService, devModeKeyEntropy)
 
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }

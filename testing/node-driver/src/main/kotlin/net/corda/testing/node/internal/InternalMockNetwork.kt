@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.common.configuration.parsing.internal.ConfigurationWithOptions
 import net.corda.core.DoNotImplement
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
@@ -59,12 +58,9 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
@@ -84,6 +80,7 @@ import java.nio.file.Paths
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
@@ -346,8 +343,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
         }
 
-        private val entropyRoot = args.entropyRoot
-        var counter = entropyRoot
+        private val entropyCounter = AtomicReference(args.entropyRoot)
         override val log get() = staticLog
         override val transactionVerifierWorkerCount: Int get() = 1
 
@@ -415,15 +411,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             //No mock shell
         }
 
-        // This is not thread safe, but node construction is done on a single thread, so that should always be fine
-        override fun updateDevKeyStores() {
-            require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
-            counter = counter.add(BigInteger.ONE)
-            // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
-            val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
-            (cryptoService as BCCryptoService).certificateStore.storeLegalIdentity(X509Utilities.NODE_IDENTITY_KEY_ALIAS, keyPair)
-            cryptoService.resyncKeystore()
-        }
+        override val devModeKeyEntropy: BigInteger get() = entropyCounter.updateAndGet { it.add(BigInteger.ONE) }
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
         // The non-empty addresses check is important to have and so we tolerate the ugliness here.

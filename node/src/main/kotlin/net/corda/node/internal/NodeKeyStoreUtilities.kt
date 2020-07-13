@@ -8,15 +8,16 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import java.io.IOException
+import java.math.BigInteger
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 
 private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
 
 
-internal fun NodeConfiguration.initKeyStores(cryptoService: CryptoService): X509Certificate {
+fun NodeConfiguration.initKeyStores(cryptoService: CryptoService, devModeKeyEntropy: BigInteger? = null): X509Certificate {
     if (devMode) {
-        configureWithDevSSLCertificate(cryptoService)
+        configureWithDevSSLCertificate(cryptoService, devModeKeyEntropy)
         // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
         // we should re-synchronise BCCryptoService with the updated keystore file.
         if (cryptoService is BCCryptoService) {

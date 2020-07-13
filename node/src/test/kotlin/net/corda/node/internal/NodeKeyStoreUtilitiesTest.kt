@@ -61,25 +61,6 @@ class NodeKeyStoreUtilitiesTest {
     }
 
     @Test(timeout = 300_000)
-    fun `initializing key store in non-dev mode without alias for node CA key`() {
-        whenever(signingStore.contains(CORDA_CLIENT_CA)).thenReturn(false)
-
-        assertThatThrownBy {
-            config.initKeyStores(cryptoService)
-        }.hasMessageContaining("Alias for Node CA key not found. Please ensure you have an updated identity keyStore file")
-    }
-
-    @Test(timeout = 300_000)
-    fun `initializing key store should throw exception if cert path does not chain to the trust root`() {
-        val untrustedRoot = mock<X509Certificate>()
-        whenever(signingStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
-
-        assertThatThrownBy {
-            config.initKeyStores(cryptoService)
-        }.hasMessageContaining("Client CA certificate must chain to the trusted root")
-    }
-
-    @Test(timeout = 300_000)
     fun `initializing key store should throw exception if TLS certificate does not chain to the trust root`() {
         val untrustedRoot = mock<X509Certificate>()
         whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
