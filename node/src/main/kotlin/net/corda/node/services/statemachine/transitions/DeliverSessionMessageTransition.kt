@@ -173,11 +173,9 @@ class DeliverSessionMessageTransition(
                     return freshErrorTransition(UnexpectedEventInState())
 
                 val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages + payload)
-                currentState = currentState.copy(
-                        checkpoint = currentState.checkpoint.addSession(
-                                event.sessionMessage.recipientSessionId to newSessionState
-                        )
-                )
+                val newCheckpoint = currentState.checkpoint.addSession(event.sessionMessage.recipientSessionId to newSessionState)
+                                                           .addSessionsToBeClosed(setOf(event.sessionMessage.recipientSessionId))
+                currentState = currentState.copy(checkpoint = newCheckpoint)
             }
             else -> {
                 freshErrorTransition(PrematureSessionEndMessage(event.sessionMessage.recipientSessionId))

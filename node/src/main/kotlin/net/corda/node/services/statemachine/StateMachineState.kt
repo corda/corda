@@ -106,6 +106,7 @@ data class Checkpoint(
                         invocationContext,
                         ourIdentity,
                         emptyMap(),
+                        emptySet(),
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0
                     ),
@@ -130,6 +131,14 @@ data class Checkpoint(
      */
     fun addSession(session: Pair<SessionId, SessionState>) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
+    }
+
+    fun addSessionsToBeClosed(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessionsToBeClosed = checkpointState.sessionsToBeClosed + sessionIds))
+    }
+
+    fun removeSessionsToBeClosed(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessionsToBeClosed = checkpointState.sessionsToBeClosed - sessionIds))
     }
 
     /**
@@ -201,16 +210,18 @@ data class Checkpoint(
  * @param invocationContext the initiator of the flow.
  * @param ourIdentity the identity the flow is run as.
  * @param sessions map of source session ID to session state.
+ * @param sessionsToBeClosed the sessions that have pending session end messages and need to be closed. This is available to avoid scanning all the sessions.
  * @param subFlowStack the stack of currently executing subflows.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 @CordaSerializable
 data class CheckpointState(
-    val invocationContext: InvocationContext,
-    val ourIdentity: Party,
-    val sessions: SessionMap, // This must preserve the insertion order!
-    val subFlowStack: List<SubFlow>,
-    val numberOfSuspends: Int
+        val invocationContext: InvocationContext,
+        val ourIdentity: Party,
+        val sessions: SessionMap, // This must preserve the insertion order!
+        val sessionsToBeClosed: Set<SessionId>,
+        val subFlowStack: List<SubFlow>,
+        val numberOfSuspends: Int
 )
 
 /**

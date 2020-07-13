@@ -63,20 +63,22 @@ class StartedFlowTransition(
     }
 
     private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
-        return startingState.checkpoint.checkpointState.sessions
-                .filter { (_, sessionState) ->
-                    sessionState is SessionState.Initiated &&
-                    sessionState.receivedMessages.isNotEmpty() &&
-                    sessionState.receivedMessages.first() is EndSessionMessage
-                }
+        return startingState.checkpoint.checkpointState.sessionsToBeClosed.mapNotNull { sessionId ->
+                    val sessionState = startingState.checkpoint.checkpointState.sessions[sessionId]!! as SessionState.Initiated
+                    if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is EndSessionMessage) {
+                        sessionId to sessionState
+                    } else {
+                        null
+                    }
+                }.toMap()
     }
 
     private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
         return builder {
             val sessionsToRemove = sessionsToBeTerminated.keys
-            currentState = currentState.copy(
-                    checkpoint = currentState.checkpoint.removeSessions(sessionsToRemove)
-            )
+            val newCheckpoint = currentState.checkpoint.removeSessions(sessionsToRemove)
+                                                       .removeSessionsToBeClosed(sessionsToRemove)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
             actions.add(Action.RemoveSessionBindings(sessionsToRemove))
             actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
             FlowContinuation.ProcessEvents
