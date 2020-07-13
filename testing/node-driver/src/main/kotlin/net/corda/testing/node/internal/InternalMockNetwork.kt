@@ -63,6 +63,8 @@ import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
@@ -79,7 +81,6 @@ import java.math.BigInteger
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -415,13 +416,13 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
-        override fun generateKeyPair(alias: String): PublicKey {
+        override fun updateDevKeyStores() {
             require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
             counter = counter.add(BigInteger.ONE)
             // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
             val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
-            (cryptoService as BCCryptoService).importKey(alias, keyPair)
-            return keyPair.public
+            (cryptoService as BCCryptoService).certificateStore.storeLegalIdentity(X509Utilities.NODE_IDENTITY_KEY_ALIAS, keyPair)
+            cryptoService.resyncKeystore()
         }
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
