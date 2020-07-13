@@ -51,17 +51,43 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
      * Serialize obj to the Kryo stream.
      */
     override fun write(kryo: Kryo, output: Output, obj: OBJ) {
-        val proxy = userSerializer.toProxy(obj)
-        kryo.writeClassAndObject(output, proxy)
+
+        fun <T> writeToKryo(obj: T) = kryo.writeClassAndObject(output, obj)
+
+        // Write serializer type
+        writeToKryo(serializerName)
+
+        // Write proxy object
+        writeToKryo(userSerializer.toProxy(obj))
     }
 
     /**
      * Deserialize an object from the Kryo stream.
      */
     override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
+
+        // The cast is to an erased type so we can't do better.
+        // This will throw a runtime exception when the type is not as expected so it won't allow the wrong thing to happen.
         @Suppress("UNCHECKED_CAST")
-        val proxy = kryo.readClassAndObject(input) as PROXY
-        return userSerializer.fromProxy(proxy)
+        fun <T> readFromKryo() = kryo.readClassAndObject(input) as T
+
+        // Check the serializer type
+        checkSerializerType(readFromKryo())
+
+        // Read the proxy object
+        return userSerializer.fromProxy(readFromKryo())
+    }
+
+    /**
+     * Throws a `CustomCheckpointSerializersHaveChangedException` if the serializer type in the kryo stream does not match the serializer
+     * type for this custom serializer.
+     *
+     * @param checkpointSerializerType Serializer type from the Kryo stream
+     */
+    private fun checkSerializerType(checkpointSerializerType: String) {
+        if (checkpointSerializerType != serializerName)
+            throw CustomCheckpointSerializersHaveChangedException("The custom checkpoint serializers have changed while checkpoints exist. " +
+                "Please restore the CorDapps to when this checkpoint was created.")
     }
 }
 
@@ -69,3 +95,9 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
  * Thrown when the input/output types are missing from the custom serializer.
  */
 class UnableToDetermineSerializerTypesException(message: String) : RuntimeException(message)
+
+/**
+ * Thrown when the custom serializer is found to be reading data from another type of custom serializer.
+ * This can happen if the user adds or removes CorDapps while checkpoints exist.
+ */
+class CustomCheckpointSerializersHaveChangedException(message: String) : RuntimeException(message)
