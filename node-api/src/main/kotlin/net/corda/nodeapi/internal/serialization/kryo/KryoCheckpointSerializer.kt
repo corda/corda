@@ -17,7 +17,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.AlwaysAcceptEncodingWhitelist
 import net.corda.serialization.internal.ByteBufferInputStream
@@ -27,7 +26,6 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.QuasarWhitelist
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.encodingNotPermittedFormat
-import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
