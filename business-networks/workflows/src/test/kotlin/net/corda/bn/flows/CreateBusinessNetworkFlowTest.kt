@@ -28,6 +28,16 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
     }
 
     @Test(timeout = 300_000)
+    fun `create business network flow should fail when trying to create initial group with already existing group ID`() {
+        val authorisedMember = authorisedMembers.first()
+
+        val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
+        val groupId = getAllGroupsFromVault(authorisedMember, networkId).single().linearId
+
+        assertFailsWith<DuplicateBusinessNetworkGroupException> { runCreateBusinessNetworkFlow(authorisedMember, groupId = groupId) }
+    }
+
+    @Test(timeout = 300_000)
     fun `create business network flow happy path`() {
         val authorisedMember = authorisedMembers.first()
         val (membership, command) = runCreateBusinessNetworkFlow(authorisedMember, businessIdentity = DummyIdentity("dummy-identity")).run {
@@ -50,6 +60,9 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
         // also check ledger
         getAllMembershipsFromVault(authorisedMember, networkId).single().apply {
             assertEquals(authorisedMember.identity(), identity.cordaIdentity)
+        }
+        getAllGroupsFromVault(authorisedMember, networkId).single().apply {
+            assertEquals(setOf(authorisedMember.identity()), participants.toSet())
         }
     }
 }
