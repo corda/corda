@@ -314,6 +314,8 @@ internal class SingleThreadedStateMachineManager(
                 clientIdsToFlowIds.remove(clientId)
                 newFuture?.setException(t)
             }
+            // Throwing the exception plain here is the same as to return an exceptionally completed future since the caller calls
+            // getOrThrow() on the returned future at [CordaRPCOpsImpl.startFlow].
             throw t
         }
     }
