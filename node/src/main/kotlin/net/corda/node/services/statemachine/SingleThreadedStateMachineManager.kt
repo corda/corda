@@ -272,7 +272,7 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<out FlowStateMachineHandle<A>> {
         beforeClientIDCheck?.invoke()
 
-        var newFuture: OpenFuture<out FlowStateMachineHandle<A>>? = null
+        var newFuture: OpenFuture<FlowStateMachineHandle<A>>? = null
 
         val clientId = context.clientId
         if (clientId != null) {
@@ -886,7 +886,7 @@ internal class SingleThreadedStateMachineManager(
         id: StateMachineRunId,
         resultFuture: CordaFuture<Any?>,
         clientId: String
-    ): CordaFuture<out FlowStateMachineHandle<out Any?>> =
+    ): CordaFuture<FlowStateMachineHandle<Any?>> =
         doneFuture(object : FlowStateMachineHandle<Any?> {
             override val logic: Nothing? = null
             override val id: StateMachineRunId = id
