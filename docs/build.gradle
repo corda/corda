@@ -112,7 +112,8 @@ artifactory {
     publish {
         contextUrl = artifactory_contextUrl
         repository {
-            repoKey = 'corda-dependencies-dev'
+//            repoKey = 'corda-dependencies-dev'
+            repoKey = 'testing-ci-uploads-release-local'
             username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
