@@ -614,7 +614,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             val joinPredicate = if(IndirectStatePersistable::class.java.isAssignableFrom(entityRoot.javaType)) {
                         criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef"))
                     } else {
-                criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
+                        criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             }
             predicateSet.add(joinPredicate)
 
@@ -661,9 +661,14 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         rootEntities.values.forEach {
             if (it != vaultStates) {
-                returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<PersistentStateRef>("stateRef")))
+                if(IndirectStatePersistable::class.java.isAssignableFrom(it.javaType)) {
+                    returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef")))
+                } else {
+                    returnSet.add(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), it.get<PersistentStateRef>("stateRef")))
+                }
             }
         }
+
         return returnSet
     }
 
@@ -863,8 +868,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         // scenario where sorting on attributes not parsed as criteria
                         val entityRoot = criteriaQuery.from(entityStateClass)
                         rootEntities[entityStateClass] = entityRoot
-                        val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
-                        joinPredicates.add(joinPredicate)
                         entityRoot
                     }
             when (direction) {
@@ -883,7 +886,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
         if (orderCriteria.isNotEmpty()) {
             criteriaQuery.orderBy(orderCriteria)
-            criteriaQuery.where(*joinPredicates.toTypedArray())
         }
     }
 
