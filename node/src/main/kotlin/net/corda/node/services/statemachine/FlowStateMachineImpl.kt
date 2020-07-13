@@ -6,6 +6,10 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.StateRef
@@ -96,7 +100,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val checkpointSerializationContext: CheckpointSerializationContext,
         val unfinishedFibers: ReusableLatch,
         val waitTimeUpdateHook: (id: StateMachineRunId, timeout: Long) -> Unit
-    )
+    ) : KryoSerializable {
+        override fun write(kryo: Kryo?, output: Output?) {
+            throw IllegalStateException("${TransientValues::class.qualifiedName} should never be serialized")
+        }
+
+        override fun read(kryo: Kryo?, input: Input?) {
+            throw IllegalStateException("${TransientValues::class.qualifiedName} should never be deserialized")
+        }
+    }
 
     private var transientValuesReference: TransientReference<TransientValues>? = null
     internal var transientValues: TransientValues
