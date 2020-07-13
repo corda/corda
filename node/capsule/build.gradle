@@ -39,9 +39,9 @@ capsule {
 def nodeProject = project(':node')
 
 task buildCordaJAR(type: FatCapsule, dependsOn: [
-        nodeProject.tasks.jar,
-        project(':core-deterministic').tasks.assemble,
-        project(':serialization-deterministic').tasks.assemble
+        nodeProject.tasks.named('jar'),
+        project(':core-deterministic').tasks.named('assemble'),
+        project(':serialization-deterministic').tasks.named('assemble')
     ]) {
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
