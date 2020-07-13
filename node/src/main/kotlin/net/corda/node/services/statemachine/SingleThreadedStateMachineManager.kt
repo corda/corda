@@ -294,7 +294,6 @@ internal class SingleThreadedStateMachineManager(
             }
             if (existingFuture != null) return uncheckedCast(existingFuture)
 
-            // (testing) client id exists but is not present in the map
             onClientIDNotFound?.invoke()
         }
 
