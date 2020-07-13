@@ -11,6 +11,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
+import net.corda.core.internal.readText
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.AttachmentFixup
@@ -41,8 +42,10 @@ import rx.subjects.AsyncSubject
 import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
+import java.nio.file.Path
 import java.sql.DriverManager
 import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
@@ -78,6 +81,8 @@ val FINANCE_CORDAPPS: Set<TestCordappImpl> = setOf(FINANCE_CONTRACTS_CORDAPP, FI
  */
 @JvmField
 val DUMMY_CONTRACTS_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.testing.contracts")
+
+private const val SECONDS_TO_WAIT_FOR_P2P: Long = 20
 
 fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 
@@ -172,20 +177,28 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
 }
 
 fun nodeMustBeStartedFuture(
-    executorService: ScheduledExecutorService,
-    hostAndPort: NetworkHostAndPort,
-    listenProcess: Process? = null,
-    exception: () -> NodeListenProcessDeathException
+        executorService: ScheduledExecutorService,
+        logFile: Path,
+        listenProcess: Process,
+        exception: () -> NodeListenProcessDeathException
 ): CordaFuture<Unit> {
-    return poll(executorService, "address $hostAndPort to bind") {
-        if (listenProcess != null && !listenProcess.isAlive) {
+    val stopPolling = Instant.now().plusSeconds(SECONDS_TO_WAIT_FOR_P2P)
+    return poll(executorService, "process $listenProcess is running") {
+        if (!listenProcess.isAlive) {
             throw exception()
         }
-        try {
-            Socket(hostAndPort.host, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
-            null
+        when {
+            logFile.readText().contains("Running P2PMessaging loop") -> {
+                Unit
+            }
+            Instant.now().isAfter(stopPolling) -> {
+                // Waited for 20 seconds and the log file did not indicate that the PWP loop is running.
+                // This could be because the log is disabled, so lets try to create a client anyway.
+                Unit
+            }
+            else -> {
+                null
+            }
         }
     }
 }

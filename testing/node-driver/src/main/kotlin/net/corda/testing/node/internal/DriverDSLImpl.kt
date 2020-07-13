@@ -729,7 +729,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = nodeMustBeStartedFuture(
                 executorService,
-                effectiveP2PAddress,
+                config.corda.baseDirectory / "net.corda.node.Corda.${identifier}.stdout.log",
                 process
             ) {
                 NodeListenProcessDeathException(
