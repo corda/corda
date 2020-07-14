@@ -13,7 +13,7 @@ import kotlin.reflect.jvm.jvmErasure
 /**
  * Adapts CheckpointCustomSerializer for use in Kryo
  */
-class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer : CheckpointCustomSerializer<OBJ, PROXY>) : Serializer<OBJ>() {
+internal class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer : CheckpointCustomSerializer<OBJ, PROXY>) : Serializer<OBJ>() {
 
     /**
      * The class name of the serializer we are adapting.
