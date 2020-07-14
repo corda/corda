@@ -96,7 +96,7 @@ abstract class StateMachineErrorHandlingTest {
                         additionalCordapps = additionalCordapps
                 )
         )
-        val bytmanNodeHandle = (this as InternalDriverDSL).startNode(
+        val bytmanNodeHandle = startNode(
                 NodeParameters(
                         providedName = bytemanNodeProvidedName,
                         rpcUsers = listOf(rpcUser),
