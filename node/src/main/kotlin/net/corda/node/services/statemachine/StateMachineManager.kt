@@ -10,7 +10,6 @@ import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
-import java.time.Duration
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -110,7 +109,6 @@ internal interface StateMachineManagerInternal {
     fun retryFlowFromSafePoint(currentState: StateMachineState)
     fun scheduleFlowTimeout(flowId: StateMachineRunId)
     fun cancelFlowTimeout(flowId: StateMachineRunId)
-    fun scheduleFlowSleep(fiber: FlowFiber, currentState: StateMachineState, duration: Duration)
 }
 
 /**
