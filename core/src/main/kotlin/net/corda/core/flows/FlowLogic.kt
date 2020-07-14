@@ -391,7 +391,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     fun close(sessions: NonEmptySet<FlowSession>) {
-        val request = FlowIORequest.CloseSessions(sessions.toNonEmptySet())
+        val request = FlowIORequest.CloseSessions(sessions)
         stateMachine.suspend(request, false)
     }
 
