@@ -62,30 +62,49 @@ abstract class StateMachineErrorHandlingTest {
         }
     }
 
-    internal fun DriverDSL.createBytemanNode(
-        providedName: CordaX500Name,
-        additionalCordapps: Collection<TestCordapp> = emptyList()
-    ): Pair<NodeHandle, Int> {
+    internal fun DriverDSL.createBytemanNode(nodeProvidedName: CordaX500Name): Pair<NodeHandle, Int> {
         val port = nextPort()
-        val nodeHandle = (this as InternalDriverDSL).startNode(
-            NodeParameters(
-                providedName = providedName,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
-            ),
-            bytemanPort = port
-        ).getOrThrow()
-        return nodeHandle to port
+        val bytmanNodeHandle = (this as InternalDriverDSL).startNode(
+                NodeParameters(
+                        providedName = nodeProvidedName,
+                        rpcUsers = listOf(rpcUser)
+                ),
+                bytemanPort = port
+        )
+        return bytmanNodeHandle.getOrThrow() to port
     }
 
-    internal fun DriverDSL.createNode(providedName: CordaX500Name, additionalCordapps: Collection<TestCordapp> = emptyList()): NodeHandle {
-        return startNode(
-            NodeParameters(
-                providedName = providedName,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
-            )
+    internal fun DriverDSL.createNode(nodeProvidedName: CordaX500Name): NodeHandle {
+        return (this as InternalDriverDSL).startNode(
+                NodeParameters(
+                        providedName = nodeProvidedName,
+                        rpcUsers = listOf(rpcUser)
+                )
         ).getOrThrow()
+    }
+
+    internal fun DriverDSL.createNodeAndBytemanNode(
+            nodeProvidedName: CordaX500Name,
+            bytemanNodeProvidedName: CordaX500Name,
+            additionalCordapps: Collection<TestCordapp> = emptyList()
+    ): Triple<NodeHandle, NodeHandle, Int> {
+        val port = nextPort()
+        val nodeHandle = (this as InternalDriverDSL).startNode(
+                NodeParameters(
+                        providedName = nodeProvidedName,
+                        rpcUsers = listOf(rpcUser),
+                        additionalCordapps = additionalCordapps
+                )
+        )
+        val bytmanNodeHandle = (this as InternalDriverDSL).startNode(
+                NodeParameters(
+                        providedName = bytemanNodeProvidedName,
+                        rpcUsers = listOf(rpcUser),
+                        additionalCordapps = additionalCordapps
+                ),
+                bytemanPort = port
+        )
+        return Triple(nodeHandle.getOrThrow(), bytmanNodeHandle.getOrThrow(), port)
     }
 
     internal fun submitBytemanRules(rules: String, port: Int) {
