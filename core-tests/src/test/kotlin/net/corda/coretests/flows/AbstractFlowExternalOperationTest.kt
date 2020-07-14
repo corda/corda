@@ -22,10 +22,17 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.statemachine.StaffedFlowHospital
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.driver.DriverDSL
+import net.corda.testing.driver.NodeHandle
 import org.junit.Before
 import java.sql.SQLTransientConnectionException
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import javax.persistence.Column
@@ -38,6 +45,27 @@ abstract class AbstractFlowExternalOperationTest {
 
     var dischargeCounter = 0
     var observationCounter = 0
+
+    private var bob: Future<NodeHandle>? = null
+    private var alice: Future<NodeHandle>? = null
+
+    fun aliceAndBob(driver: DriverDSL): Pair<Future<NodeHandle>, Future<NodeHandle>> {
+        if ((bob == null) || (alice==null)) {
+            bob = driver.startNode(providedName = BOB_NAME)
+            alice = driver.startNode(providedName = ALICE_NAME)
+        }
+        return alice as Future<NodeHandle> to bob as Future<NodeHandle>
+    }
+
+    fun bob(driver: DriverDSL): NodeHandle {
+        return aliceAndBob(driver).second
+                .getOrThrow(Duration.of(1, ChronoUnit.MINUTES))
+    }
+
+    fun alice(driver: DriverDSL): NodeHandle {
+        return aliceAndBob(driver).first
+                .getOrThrow(Duration.of(1, ChronoUnit.MINUTES))
+    }
 
     @Before
     fun before() {

@@ -6,11 +6,9 @@ import net.corda.core.flows.FlowExternalOperation;
 import net.corda.core.flows.StartableByRPC;
 import net.corda.core.identity.Party;
 import net.corda.core.utilities.KotlinUtilsKt;
-import net.corda.testing.core.TestConstants;
 import net.corda.testing.core.TestUtils;
 import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
-import net.corda.testing.driver.NodeParameters;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -29,14 +27,8 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            NodeHandle alice = alice(driver);
+            NodeHandle bob = bob(driver);
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
@@ -47,14 +39,8 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalAsyncOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            NodeHandle alice = alice(driver);
+            NodeHandle bob = bob(driver);
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalAsyncOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
@@ -65,14 +51,8 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalOperationInJavaCanBeRetried() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            NodeHandle alice = alice(driver);
+            NodeHandle bob = bob(driver);
             KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationThatGetsRetriedInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())

@@ -8,8 +8,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.services.statemachine.StateTransitionException
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -24,8 +22,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             alice.rpc.startFlow(::FlowWithExternalAsyncOperation, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(1.minutes)
             assertHospitalCounters(0, 0)
@@ -35,8 +33,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation that checks deduplicationId is not rerun when flow is retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             assertFailsWith<DuplicatedProcessException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationWithDeduplication,
@@ -50,8 +48,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation propagates exception to calling flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             assertFailsWith<MyCordaException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationPropagatesException,
@@ -66,8 +64,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation exception can be caught in flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             val result = alice.rpc.startFlow(
                 ::FlowWithExternalAsyncOperationThatThrowsExceptionAndCaughtInFlow,
                 bob.nodeInfo.singleIdentity()
@@ -80,8 +78,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation with exception that hospital keeps for observation does not fail`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationPropagatesException,
@@ -96,8 +94,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation with exception that hospital discharges is retried and runs the future again`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationPropagatesException,
@@ -112,8 +110,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation that throws exception rather than completing future exceptionally fails with internal exception`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             assertFailsWith<StateTransitionException> {
                 alice.rpc.startFlow(::FlowWithExternalAsyncOperationUnhandledException, bob.nodeInfo.singleIdentity())
                     .returnValue.getOrThrow(1.minutes)
@@ -125,8 +123,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation that passes serviceHub into process can be retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             blockUntilFlowKeptInForObservation {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationThatPassesInServiceHubCanRetry,
@@ -140,8 +138,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `external async operation that accesses serviceHub from flow directly will fail when retried`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             assertFailsWith<DirectlyAccessedServiceHubException> {
                 alice.rpc.startFlow(
                     ::FlowWithExternalAsyncOperationThatDirectlyAccessesServiceHubFailsRetry,
@@ -155,8 +153,8 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `starting multiple futures and joining on their results`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = alice(this)
+            val bob = bob(this)
             alice.rpc.startFlow(::FlowThatStartsMultipleFuturesAndJoins, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow(1.minutes)
             assertHospitalCounters(0, 0)
         }

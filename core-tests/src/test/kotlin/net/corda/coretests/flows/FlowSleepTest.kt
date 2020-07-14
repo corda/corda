@@ -53,8 +53,10 @@ class FlowSleepTest {
     fun `flow can sleep and perform other suspending functions`() {
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val aliceFuture = startNode(providedName = ALICE_NAME)
+            val bobFuture = startNode(providedName = BOB_NAME)
+            val alice = aliceFuture.getOrThrow()
+            val bob = bobFuture.getOrThrow()
             val (start, finish) = alice.rpc.startFlow(
                 ::SleepAndInteractWithPartyFlow,
                 bob.nodeInfo.singleIdentity()

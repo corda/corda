@@ -56,9 +56,12 @@ class FlowIsKilledTest {
     @Test(timeout = 300_000)
     fun `manually handled killed flows propagate error to counter parties`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
+            val aliceFuture = startNode(providedName = ALICE_NAME)
+            val bobFuture = startNode(providedName = BOB_NAME)
+            val charlieFuture = startNode(providedName = CHARLIE_NAME)
+            val alice = aliceFuture.getOrThrow()
+            val charlie = charlieFuture.getOrThrow()
+            val bob = bobFuture.getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(
                     ::AFlowThatWantsToDieAndKillsItsFriends,
@@ -85,8 +88,10 @@ class FlowIsKilledTest {
     @Test(timeout = 300_000)
     fun `a manually killed initiated flow will propagate the killed error to the initiator and its counter parties`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val aliceFuture = startNode(providedName = ALICE_NAME)
+            val bobFuture = startNode(providedName = BOB_NAME)
+            val alice = aliceFuture.getOrThrow()
+            val bob = bobFuture.getOrThrow()
             val handle = alice.rpc.startFlow(
                 ::AFlowThatGetsMurderedByItsFriend,
                 bob.nodeInfo.singleIdentity()
