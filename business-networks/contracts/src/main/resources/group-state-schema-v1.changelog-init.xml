@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3 Corda" id="GroupStateSchemaV1">
+        <createTable tableName="group_state">
+            <column name="output_index" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_id" type="varchar(255)"/>
+        </createTable>
+        <addPrimaryKey columnNames="output_index, transaction_id"
+                       constraintName="PK_GroupStateSchemaV1"
+                       tableName="group_state"/>
+    </changeSet>
+</databaseChangeLog>
