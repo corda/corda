@@ -1,11 +1,27 @@
 #!groovy
+/**
+ * Jenkins pipeline to build Corda OS nightly snapshots
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+/*
+** calculate the stage for NexusIQ evaluation
+**  * build for snapshots
+*/
+def nexusIqStage = "build"
+
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'standard' }
 
     options {
         timestamps()
@@ -27,6 +43,25 @@ pipeline {
     }
 
     stages {
+        stage('Sonatype Check') {
+            steps {
+                sh "./gradlew --no-daemon clean jar"
+                script {
+                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
+                    def artifactId = 'corda'
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                }
+                nexusPolicyEvaluation (
+                        failBuildOnNetworkError: false,
+                        iqApplication: manualApplication(nexusAppId),
+                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
+                        iqStage: nexusIqStage
+                )
+            }
+        }
+
         stage('Publish to Artifactory') {
             steps {
                 rtServer (
