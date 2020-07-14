@@ -404,8 +404,10 @@ class DBCheckpointStorage(
             )
         }
 
-        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
-        //val result = updateDBFlowResult(entity, checkpoint, now)
+        val dbFlowResult = checkpoint.result?.let {
+            createDBFlowResult(flowId, it, now)
+        }
+
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
         val metadata = createDBFlowMetadata(flowId, checkpoint)
@@ -425,6 +427,7 @@ class DBCheckpointStorage(
 
         currentDBSession().update(dbFlowCheckpoint)
         blob?.let { currentDBSession().update(it) }
+        dbFlowResult?.let { currentDBSession().save(it) } // there should be only one result per flow stored in the database
         if (checkpoint.isFinished()) {
             metadata.finishInstant = now
             currentDBSession().update(metadata)
@@ -446,9 +449,9 @@ class DBCheckpointStorage(
         var deletedRows = 0
         val flowId = id.uuid.toString()
         deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
-//        resultId?.let { deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, it.toString()) }
 //        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
         return deletedRows == 3
     }
@@ -539,31 +542,6 @@ class DBCheckpointStorage(
             hmac = ByteArray(HMAC_SIZE_BYTES),
             persistedInstant = now
         )
-    }
-
-    /**
-     * Creates, updates or deletes the result related to the current flow/checkpoint.
-     *
-     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
-     *
-     * A [DBFlowResult] is created if [DBFlowCheckpoint.result] does not exist and the [Checkpoint] has a result..
-     * The existing [DBFlowResult] is updated if [DBFlowCheckpoint.result] exists and the [Checkpoint] has a result.
-     * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
-     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
-     */
-    private fun updateDBFlowResult(flowId: String, entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
-        val result = checkpoint.result?.let { createDBFlowResult(flowId, it, now) }
-        if (entity.result != null) {
-            if (result != null) {
-                result.flow_id = entity.result!!.flow_id
-                currentDBSession().update(result)
-            } else {
-                currentDBSession().delete(entity.result)
-            }
-        } else if (result != null) {
-            currentDBSession().save(result)
-        }
-        return result
     }
 
     private fun createDBFlowResult(flowId: String, result: Any, now: Instant): DBFlowResult {
