@@ -100,13 +100,13 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
      *
      * @param memberships Collection of all memberships to be sent.
      * @param observerSessions Sessions of all observers who get finalised transaction.
-     * @param destinationSessions Session to which [memberships] will be sent.
+     * @param destinationSessions Sessions to which [memberships] will be sent.
      */
     @Suspendable
     protected fun sendMemberships(
             memberships: Collection<StateAndRef<MembershipState>>,
             observerSessions: List<FlowSession>,
-            destinationSessions: List<FlowSession>
+            destinationSessions: HashSet<FlowSession>
     ) {
         val membershipsTransactions = memberships.map {
             serviceHub.validatedTransactions.getTransaction(it.ref.txhash)
@@ -161,43 +161,3 @@ abstract class MembershipManagementFlow<T> : FlowLogic<T>() {
         }
     }
 }
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever Business Network with provided [MembershipState.networkId] doesn't exist.
- */
-class BusinessNetworkNotFoundException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever provided parties membership doesn't exist.
- */
-class MembershipNotFoundException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever provided member's state is not appropriate for the context.
- */
-class IllegalMembershipStatusException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever membership fails role based authorisation.
- */
-class MembershipAuthorisationException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever Business Network group with provided [GroupState.linearId] doesn't exist.
- */
-class BusinessNetworkGroupNotFoundException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever member remains without participation in any Business Network Group.
- */
-class MembershipMissingGroupParticipationException(message: String) : FlowException(message)
-
-/**
- * [MembershipManagementFlow] version of [IllegalArgumentException]
- */
-class IllegalFlowArgumentException(message: String) : FlowException(message)
-
-/**
- * Exception thrown by any [MembershipManagementFlow] whenever group ends up in illegal state.
- */
-class IllegalBusinessNetworkGroupStateException(message: String) : FlowException(message)

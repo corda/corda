@@ -46,7 +46,7 @@ class CreateGroupFlow(
 
         // check whether group with groupId already exists
         if (databaseService.businessNetworkGroupExists(groupId)) {
-            throw DuplicateBusinessNetworkGroupException("Business Network group with $groupId ID already exists")
+            throw DuplicateBusinessNetworkGroupException(groupId)
         }
 
         // get all additional participants' memberships from provided membership ids
@@ -82,7 +82,7 @@ class CreateGroupFlow(
         val finalisedTransaction = collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
 
         // exchange memberships between new group participants
-        sendMemberships(additionalParticipantsMemberships + ourMembership, observerSessions, observerSessions)
+        sendMemberships(additionalParticipantsMemberships + ourMembership, observerSessions, observerSessions.toHashSet())
 
         // sync memberships' participants according to new participants of the groups member is part of
         syncMembershipsParticipants(networkId, (additionalParticipantsMemberships + ourMembership).toList(), signers, databaseService, notary)

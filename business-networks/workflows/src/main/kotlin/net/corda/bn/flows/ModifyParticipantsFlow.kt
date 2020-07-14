@@ -12,6 +12,14 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 
+/**
+ * This flow builds membership participants modification transaction, collects its signature and finalises it on all participants' vaults.
+ *
+ * @property membership State and ref pair of membership state which participants are modified.
+ * @property participants New list of participants to be given to membership.
+ * @property signers List of signers required to sign the transaction.
+ * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
+ */
 @InitiatingFlow
 class ModifyParticipantsFlow(
         private val membership: StateAndRef<MembershipState>,

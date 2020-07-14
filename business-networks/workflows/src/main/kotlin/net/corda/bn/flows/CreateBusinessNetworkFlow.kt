@@ -43,11 +43,20 @@ class CreateBusinessNetworkFlow(
         private val notary: Party? = null
 ) : FlowLogic<SignedTransaction>() {
 
+    /**
+     * Issues pending membership (with new unique Business Network ID) on initiator's ledger.
+     *
+     * @param databaseService Service used to query vault for memberships.
+     *
+     * @return Signed membership issuance transaction.
+     *
+     * @throws DuplicateBusinessNetworkException If Business Network with [networkId] ID already exists.
+     */
     @Suspendable
     private fun createMembershipRequest(databaseService: DatabaseService): SignedTransaction {
         // check if business network with networkId already exists
         if (databaseService.businessNetworkExists(networkId.toString())) {
-            throw DuplicateBusinessNetworkException("Business Network with $networkId ID already exists")
+            throw DuplicateBusinessNetworkException(networkId)
         }
 
         val membership = MembershipState(
@@ -66,6 +75,13 @@ class CreateBusinessNetworkFlow(
         return subFlow(FinalityFlow(stx, emptyList()))
     }
 
+    /**
+     * Activates initiator's pending membership.
+     *
+     * @param membership State and ref pair of pending membership to be activated.
+     *
+     * @return Signed membership activation transaction.
+     */
     @Suspendable
     private fun activateMembership(membership: StateAndRef<MembershipState>): SignedTransaction {
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
@@ -78,6 +94,13 @@ class CreateBusinessNetworkFlow(
         return subFlow(FinalityFlow(stx, emptyList()))
     }
 
+    /**
+     * Assigns [BNORole] to initiator's active membership.
+     *
+     * @param membership State and ref pair of pending membership to be authorised.
+     *
+     * @return Signed membership role modification transaction.
+     */
     @Suspendable
     private fun authoriseMembership(membership: StateAndRef<MembershipState>): SignedTransaction {
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
@@ -90,11 +113,18 @@ class CreateBusinessNetworkFlow(
         return subFlow(FinalityFlow(stx, emptyList()))
     }
 
+    /**
+     * Issues initial Business Network Group on initiator's ledger.
+     *
+     * @param databaseService Service used to query vault for memberships.
+     *
+     * @return Signed group issuance transaction.
+     */
     @Suspendable
     private fun createBusinessNetworkGroup(databaseService: DatabaseService): SignedTransaction {
         // check if business network group with groupId already exists
         if (databaseService.businessNetworkGroupExists(groupId)) {
-            throw DuplicateBusinessNetworkGroupException("Business Network Group with $groupId already exists.")
+            throw DuplicateBusinessNetworkGroupException(groupId)
         }
 
         val group = GroupState(networkId = networkId.toString(), name = groupName, linearId = groupId, participants = listOf(ourIdentity))
@@ -121,13 +151,3 @@ class CreateBusinessNetworkFlow(
         }
     }
 }
-
-/**
- * Exception thrown whenever Business Network with [MembershipState.networkId] already exists.
- */
-class DuplicateBusinessNetworkException(message: String) : FlowException(message)
-
-/**
- * Exception thrown whenever Business Network Group with [GroupState.linearId] already exists.
- */
-class DuplicateBusinessNetworkGroupException(message: String) : FlowException(message)

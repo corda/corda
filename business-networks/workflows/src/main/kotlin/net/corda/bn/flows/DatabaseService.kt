@@ -133,9 +133,18 @@ class DatabaseService(private val serviceHub: ServiceHub) : SingletonSerializeAs
         return serviceHub.vaultService.queryBy<GroupState>(criteria).states
     }
 
+    /** Instantiates custom vault query criteria for finding membership with given [networkId]. **/
     private fun membershipNetworkIdCriteria(networkId: String) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::networkId.equal(networkId) })
+
+    /** Instantiates custom vault query criteria for finding Business Network Group with given [networkId]. **/
     private fun groupNetworkIdCriteria(networkId: String) = QueryCriteria.VaultCustomQueryCriteria(builder { GroupStateSchemaV1.PersistentGroupState::networkId.equal(networkId) })
+
+    /** Instantiates custom vault query criteria for finding membership with given [cordaIdentity]. **/
     private fun identityCriteria(cordaIdentity: Party) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::cordaIdentity.equal(cordaIdentity) })
+
+    /** Instantiates custom vault query criteria for finding membership with any of given [statuses]. **/
     private fun statusCriteria(statuses: List<MembershipStatus>) = QueryCriteria.VaultCustomQueryCriteria(builder { MembershipStateSchemaV1.PersistentMembershipState::status.`in`(statuses) })
+
+    /** Instantiates custom vault query criteria for finding linear state with given [linearId]. **/
     private fun linearIdCriteria(linearId: UniqueIdentifier) = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
 }

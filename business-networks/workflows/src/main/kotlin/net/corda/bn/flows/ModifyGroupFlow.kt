@@ -96,8 +96,9 @@ class ModifyGroupInternalFlow(
             databaseService.getMembership(networkId, it)
                     ?: throw MembershipNotFoundException("Cannot find membership with $it linear ID")
         }.toSet()
+        val allGroups = databaseService.getAllBusinessNetworkGroups(networkId)
         val membersWithoutGroup = oldParticipantsMemberships.filter { membership ->
-            membership.state.data.identity.cordaIdentity !in (databaseService.getAllBusinessNetworkGroups(networkId) - group).flatMap { it.state.data.participants }
+            membership.state.data.identity.cordaIdentity !in (allGroups - group).flatMap { it.state.data.participants }
         }
         if (syncMembershipsParticipants && membersWithoutGroup.isNotEmpty()) {
             throw MembershipMissingGroupParticipationException("Illegal group modification: $membersWithoutGroup would remain without any group participation.")
@@ -122,7 +123,7 @@ class ModifyGroupInternalFlow(
 
         // sync memberships between all group members
         participantsMemberships?.also { membershipsToSend ->
-            sendMemberships(membershipsToSend, observerSessions, observerSessions.filter { it.counterparty in outputGroup.participants })
+            sendMemberships(membershipsToSend, observerSessions, observerSessions.filter { it.counterparty in outputGroup.participants }.toHashSet())
         }
 
         // sync participants of all relevant membership states
