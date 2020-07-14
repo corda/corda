@@ -832,12 +832,6 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
-        val criteria = session.criteriaBuilder.createQuery(T::class.java)
-        criteria.select(criteria.from(T::class.java))
-        return session.createQuery(criteria).resultList
-    }
-
     //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -1020,6 +1014,12 @@ internal fun TestStartedNode.sendSessionMessage(message: SessionMessage, destina
         val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
         send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
     }
+}
+
+inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
+    val criteria = session.criteriaBuilder.createQuery(T::class.java)
+    criteria.select(criteria.from(T::class.java))
+    return session.createQuery(criteria).resultList
 }
 
 internal fun errorMessage(errorResponse: FlowException? = null) =
