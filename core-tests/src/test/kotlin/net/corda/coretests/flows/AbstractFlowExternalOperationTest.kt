@@ -59,12 +59,12 @@ abstract class AbstractFlowExternalOperationTest {
 
     fun bob(driver: DriverDSL): NodeHandle {
         return aliceAndBob(driver).second
-                .getOrThrow(Duration.of(1, ChronoUnit.MINUTES))
+                .getOrThrow()
     }
 
     fun alice(driver: DriverDSL): NodeHandle {
         return aliceAndBob(driver).first
-                .getOrThrow(Duration.of(1, ChronoUnit.MINUTES))
+                .getOrThrow()
     }
 
     @Before
