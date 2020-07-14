@@ -6,6 +6,7 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.flows.FlowLogic
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
@@ -63,6 +64,16 @@ class FlowClientIdTests {
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         Assert.assertEquals(1, counter)
+    }
+
+    @Test
+    fun `flow's result gets persisted if the flow is started with a client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10)).resultFuture.getOrThrow()
+
+        aliceNode.database.transaction {
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+        }
     }
 
     @Test(timeout=300_000)
