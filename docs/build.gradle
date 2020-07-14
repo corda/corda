@@ -94,9 +94,11 @@ task archiveApiDocs(type: Tar) {
 
 publishing {
     publications {
-        archivedApiDocs(MavenPublication) {
-            artifact archiveApiDocs {
-                artifactId archivedApiDocsBaseFilename
+        if (System.getProperty('publishApiDocs') != null) {
+            archivedApiDocs(MavenPublication) {
+                artifact archiveApiDocs {
+                    artifactId archivedApiDocsBaseFilename
+                }
             }
         }
     }
@@ -112,8 +114,7 @@ artifactory {
     publish {
         contextUrl = artifactory_contextUrl
         repository {
-//            repoKey = 'corda-dependencies-dev'
-            repoKey = 'testing-ci-uploads-release-local'
+            repoKey = 'corda-dependencies-dev'
             username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
