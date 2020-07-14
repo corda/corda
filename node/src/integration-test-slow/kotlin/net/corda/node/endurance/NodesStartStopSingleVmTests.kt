@@ -23,8 +23,10 @@ class NodesStartStopSingleVmTests(@Suppress("unused") private val iteration: Int
     @Test(timeout = 300_000)
     fun nodesStartStop() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            startNode(providedName = ALICE_NAME).getOrThrow()
-            startNode(providedName = BOB_NAME).getOrThrow()
+            val alice = startNode(providedName = ALICE_NAME)
+            val bob = startNode(providedName = BOB_NAME)
+            alice.getOrThrow()
+            bob.getOrThrow()
         }
     }
 }

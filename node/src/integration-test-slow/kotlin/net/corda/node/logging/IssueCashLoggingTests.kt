@@ -22,8 +22,10 @@ class IssueCashLoggingTests {
 	fun `issuing and sending cash as payment do not result in duplicate insertion warnings`() {
         val user = User("mark", "dadada", setOf(all()))
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
-            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
-            val nodeB = startNode().getOrThrow()
+            val nodeAFuture = startNode(rpcUsers = listOf(user))
+            val nodeBFuture = startNode()
+            val nodeA = nodeAFuture.getOrThrow()
+            val nodeB = nodeBFuture.getOrThrow()
 
             val amount = 1.DOLLARS
             val ref = OpaqueBytes.of(0)
