@@ -96,6 +96,8 @@ class UnableToDetermineSerializerTypesException(message: String) : RuntimeExcept
 
 /**
  * Thrown when the custom serializer is found to be reading data from another type of custom serializer.
- * This can happen if the user adds or removes CorDapps while checkpoints exist.
+ *
+ * This was expected to happen if the user adds or removes CorDapps while checkpoints exist but it turned out that registering serializers
+ * as default made the system reliable.
  */
 class CustomCheckpointSerializersHaveChangedException(message: String) : RuntimeException(message)
