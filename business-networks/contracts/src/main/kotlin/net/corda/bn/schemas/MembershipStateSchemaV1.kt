@@ -10,8 +10,19 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table
 
+/**
+ * A database schema configured to represent [MembershipState].
+ */
 @CordaSerializable
 object MembershipStateSchemaV1 : MappedSchema(schemaFamily = MembershipState::class.java, version = 1, mappedTypes = listOf(PersistentMembershipState::class.java)) {
+
+    /**
+     * Mapped [MembershipState] to be exported to a schema.
+     *
+     * @property cordaIdentity Mapped column for Corda part of [MembershipState.identity].
+     * @property networkId Mapped column for [MembershipState.networkId].
+     * @property status Mapped column for [MembershipState.status].
+     */
     @Entity
     @Table(name = "membership_state")
     class PersistentMembershipState(

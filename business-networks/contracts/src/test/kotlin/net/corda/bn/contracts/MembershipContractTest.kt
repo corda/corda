@@ -25,7 +25,7 @@ class DummyContract : Contract {
     override fun verify(tx: LedgerTransaction) {}
 }
 
-private class DummyCommand : TypeOnlyCommandData()
+class DummyCommand : TypeOnlyCommandData()
 
 @CordaSerializable
 private data class DummyIdentity(val name: String) : BNIdentity
@@ -199,6 +199,12 @@ class MembershipContractTest {
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.ACTIVE, participants = listOf(bnoIdentity)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.Activate(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership activation transaction should have same participants"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.ACTIVE))
                 command(memberIdentity.owningKey, MembershipContract.Commands.Activate(listOf(memberIdentity.owningKey)))
                 this `fails with` "Input membership owner shouldn't be required signer of membership activation transaction"
@@ -239,6 +245,12 @@ class MembershipContractTest {
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED, identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity"))))
                 command(bnoIdentity.owningKey, MembershipContract.Commands.Suspend(listOf(bnoIdentity.owningKey)))
                 this `fails with` "Input and output state of membership suspension transaction should have same business identity"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED, participants = listOf(bnoIdentity)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.Suspend(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership suspension transaction should have same participants"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
@@ -308,6 +320,12 @@ class MembershipContractTest {
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole()), participants = listOf(bnoIdentity)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership roles modification transaction should have same participants"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
                 command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey, memberIdentity.owningKey)))
                 this `fails with` "Input membership owner shouldn't be required signer of membership roles modification transaction"
@@ -351,6 +369,12 @@ class MembershipContractTest {
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity")), participants = listOf(bnoIdentity)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyBusinessIdentity(listOf(bnoIdentity.owningKey), bnoIdentity))
+                this `fails with` "Input and output state of membership business identity modification transaction should have same participants"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity"))))
                 command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyBusinessIdentity(listOf(bnoIdentity.owningKey), memberIdentity))
                 this `fails with` "Input membership owner should be required signer of membership business identity modification transaction if it initiated it"
@@ -365,6 +389,49 @@ class MembershipContractTest {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity"))))
                 command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyBusinessIdentity(listOf(bnoIdentity.owningKey), bnoIdentity))
+                verifies()
+            }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `test modify participants command contract verification`() {
+        ledgerServices.ledger {
+            val input = membershipState.copy(status = MembershipStatus.ACTIVE)
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership participants modification transaction should have same status"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING))
+                output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Membership participants modification transaction can only be performed on active or suspended state"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership participants modification transaction should have same roles"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity"))))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
+                this `fails with` "Input and output state of membership participants modification transaction should have same business identity"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input)
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
+                verifies()
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(participants = listOf(bnoIdentity)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyParticipants(listOf(bnoIdentity.owningKey)))
                 verifies()
             }
         }
