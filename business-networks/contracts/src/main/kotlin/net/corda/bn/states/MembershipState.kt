@@ -45,16 +45,41 @@ data class MembershipState(
 
     override fun supportedSchemas() = listOf(MembershipStateSchemaV1)
 
+    /** Indicates whether membership is in [MembershipStatus.PENDING] status. **/
     fun isPending() = status == MembershipStatus.PENDING
+
+    /** Indicates whether membership is in [MembershipStatus.ACTIVE] status. **/
     fun isActive() = status == MembershipStatus.ACTIVE
+
+    /** Indicates whether membership is in [MembershipStatus.SUSPENDED] status. **/
     fun isSuspended() = status == MembershipStatus.SUSPENDED
 
+    /**
+     * Iterates through all roles yielding set of all permissions given to them.
+     *
+     * @return Set of all roles given to all [MembershipState.roles].
+     */
     private fun permissions() = roles.flatMap { it.permissions }.toSet()
+
+    /** Indicates whether membership is authorised to activate memberships. **/
     fun canActivateMembership() = AdminPermission.CAN_ACTIVATE_MEMBERSHIP in permissions()
+
+    /** Indicates whether membership is authorised to suspend memberships. **/
     fun canSuspendMembership() = AdminPermission.CAN_SUSPEND_MEMBERSHIP in permissions()
+
+    /** Indicates whether membership is authorised to revoke memberships. **/
     fun canRevokeMembership() = AdminPermission.CAN_REVOKE_MEMBERSHIP in permissions()
+
+    /** Indicates whether membership is authorised to modify memberships' roles. **/
     fun canModifyRoles() = AdminPermission.CAN_MODIFY_ROLE in permissions()
+
+    /** Indicates whether membership is authorised to modify memberships' business identity. **/
     fun canModifyBusinessIdentity() = AdminPermission.CAN_MODIFY_BUSINESS_IDENTITY in permissions()
+
+    /** Indicates whether membership is authorised to modify memberships' groups. **/
+    fun canModifyGroups() = AdminPermission.CAN_MODIFY_GROUPS in permissions()
+
+    /** Indicates whether membership has any administrative permission. **/
     fun canModifyMembership() = permissions().any { it is AdminPermission }
 }
 
@@ -155,5 +180,10 @@ enum class AdminPermission : BNPermission {
     /**
      * Enables member to modify memberships' business identity.
      */
-    CAN_MODIFY_BUSINESS_IDENTITY
+    CAN_MODIFY_BUSINESS_IDENTITY,
+
+    /**
+     * Enables member to modify Business Networks' associated [GroupState]s.
+     */
+    CAN_MODIFY_GROUPS
 }

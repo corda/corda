@@ -42,6 +42,7 @@ class MembershipStateTest {
             assertTrue(canRevokeMembership())
             assertTrue(canModifyRoles())
             assertTrue(canModifyBusinessIdentity())
+            assertTrue(canModifyGroups())
             assertTrue(canModifyMembership())
         }
         mockMembership(roles = setOf(MemberRole())).apply {
@@ -50,6 +51,7 @@ class MembershipStateTest {
             assertFalse(canRevokeMembership())
             assertFalse(canModifyRoles())
             assertFalse(canModifyBusinessIdentity())
+            assertFalse(canModifyGroups())
             assertFalse(canModifyMembership())
         }
 
@@ -60,6 +62,7 @@ class MembershipStateTest {
             assertFalse(canRevokeMembership())
             assertFalse(canModifyRoles())
             assertFalse(canModifyBusinessIdentity())
+            assertFalse(canModifyGroups())
             assertTrue(canModifyMembership())
         }
 
@@ -69,6 +72,8 @@ class MembershipStateTest {
             assertFalse(canSuspendMembership())
             assertFalse(canRevokeMembership())
             assertFalse(canModifyRoles())
+            assertFalse(canModifyBusinessIdentity())
+            assertFalse(canModifyGroups())
             assertFalse(canModifyMembership())
         }
     }
