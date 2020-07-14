@@ -66,8 +66,6 @@ class CustomSerializerCheckpointAdaptor<OBJ, PROXY>(private val userSerializer :
      */
     override fun read(kryo: Kryo, input: Input, type: Class<OBJ>): OBJ {
 
-        // The cast is to an erased type so we can't do better.
-        // This will throw a runtime exception when the type is not as expected so it won't allow the wrong thing to happen.
         @Suppress("UNCHECKED_CAST")
         fun <T> readFromKryo() = kryo.readClassAndObject(input) as T
 
