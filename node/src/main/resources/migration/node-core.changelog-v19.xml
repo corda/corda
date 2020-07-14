@@ -49,7 +49,6 @@
         </createTable>
     </changeSet>
 
-
     <changeSet author="R3.Corda" id="add_new_flow_result_table" dbms="!postgresql">
         <createTable tableName="node_flow_results">
             <column name="flow_id" type="NVARCHAR(64)">
