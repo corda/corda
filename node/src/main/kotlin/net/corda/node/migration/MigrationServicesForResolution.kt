@@ -15,6 +15,8 @@ import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.WireTransaction
@@ -61,6 +63,8 @@ class MigrationServicesForResolution(
         attachments,
         cacheFactory
     )
+
+    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
@@ -125,7 +129,7 @@ class MigrationServicesForResolution(
                     tx.id,
                     attachmentTrustCalculator::calculate,
                     cordappLoader.appClassLoader,
-                    attachmentsClassLoaderCache = null) {
+                    attachmentsClassLoaderCache) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

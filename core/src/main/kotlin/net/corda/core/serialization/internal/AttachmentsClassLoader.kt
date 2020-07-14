@@ -293,9 +293,9 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    const val CACHE_SIZE = 1000
+    const val CACHE_SIZE = 16
 
-    private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl()
+    private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
@@ -434,10 +434,10 @@ class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : Singlet
     }
 }
 
-class AttachmentsClassLoaderSimpleCacheImpl : AttachmentsClassLoaderCache {
+class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int) : AttachmentsClassLoaderCache {
 
     private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
-            = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(AttachmentsClassLoaderBuilder.CACHE_SIZE).toSynchronised()
+            = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(cacheSize).toSynchronised()
 
     override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
         return cache.computeIfAbsent(key, mappingFunction)
