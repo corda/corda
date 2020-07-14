@@ -254,7 +254,7 @@ class TopLevelTransition(
                         }
                     }
 
-                    val allSourceSessionIds = checkpoint.checkpointState.sessions.keys
+                    val allSourceSessionIds = currentState.checkpoint.checkpointState.sessions.keys
                     actions.addAll(arrayOf(
                         Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.ReleaseSoftLocks(event.softLocksId),
