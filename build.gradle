@@ -170,7 +170,6 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
@@ -204,7 +203,6 @@ plugins {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
 apply plugin: "com.r3.dependx.dependxies"
@@ -626,7 +624,7 @@ dependxiesModule {
     skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
 }
 
-tasks.register('generateApi', net.corda.plugins.GenerateApi) {
+tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
     baseName = "api-corda"
 }
 
