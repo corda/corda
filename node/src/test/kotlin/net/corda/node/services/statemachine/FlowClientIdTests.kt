@@ -66,7 +66,7 @@ class FlowClientIdTests {
         Assert.assertEquals(1, counter)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow's result gets persisted if the flow is started with a client id`() {
         val clientId = UUID.randomUUID().toString()
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10)).resultFuture.getOrThrow()
