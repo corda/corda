@@ -453,7 +453,7 @@ class DBCheckpointStorage(
         deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
 //        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
-        return deletedRows == 3
+        return deletedRows >= 2
     }
 
     private fun <T> deleteRow(clazz: Class<T>, pk: String, value: String): Int {
