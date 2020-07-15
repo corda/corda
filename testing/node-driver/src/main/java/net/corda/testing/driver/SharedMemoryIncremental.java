@@ -17,40 +17,38 @@ import java.nio.channels.FileChannel;
  * import sun.misc.Unsafe;
  * import sun.nio.ch.DirectBuffer;
  */
-class SharedMemoryIncremental extends PortAllocation {
+public class SharedMemoryIncremental extends PortAllocation {
 
-    static private final int DEFAULT_START_PORT = 10_000;
-    static private final int FIRST_EPHEMERAL_PORT = 30_000;
+    private static final int DEFAULT_START_PORT = 10_000;
+    private static final int FIRST_EPHEMERAL_PORT = 30_000;
 
-    private int startPort;
-    private int endPort;
+    private static final Unsafe UNSAFE = getUnsafe();
 
-    private MappedByteBuffer mb;
+    public static final SharedMemoryIncremental INSTANCE = new SharedMemoryIncremental(DEFAULT_START_PORT, FIRST_EPHEMERAL_PORT);
+
+    private final int startPort;
+    private final int endPort;
+
     private Long startingAddress;
 
-    private File file = new File(System.getProperty("user.home"), "corda-" + startPort + "-to-" + endPort + "-port-allocator.bin");
-    private RandomAccessFile backingFile;
-    {
+    private SharedMemoryIncremental(int startPort, int endPort) {
+        this.startPort = startPort;
+        this.endPort = endPort;
+        File file = new File(System.getProperty("user.home"), "corda-" + startPort + "-to-" + endPort + "-port-allocator.bin");
+        RandomAccessFile backingFile;
         try {
             backingFile = new RandomAccessFile(file, "rw");
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
-    }
 
-    private SharedMemoryIncremental(int startPort, int endPort) {
-        this.startPort = startPort;
-        this.endPort = endPort;
         try {
-            mb = backingFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, 16);
+            MappedByteBuffer mb = backingFile.getChannel().map(FileChannel.MapMode.READ_WRITE, 0, 16);
             startingAddress = ((DirectBuffer) mb).address();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-    public static SharedMemoryIncremental INSTANCE = new SharedMemoryIncremental(DEFAULT_START_PORT, FIRST_EPHEMERAL_PORT);
-    static private Unsafe UNSAFE = getUnsafe();
 
     static private Unsafe getUnsafe() {
         try {
@@ -83,7 +81,6 @@ class SharedMemoryIncremental extends PortAllocation {
         return (int) newValue;
     }
 
-
     private boolean isLocalPortAvailable(Long portToTest) {
         try (ServerSocket serverSocket = new ServerSocket(Math.toIntExact(portToTest))) {
         } catch (Exception e) {
@@ -91,5 +88,4 @@ class SharedMemoryIncremental extends PortAllocation {
         }
         return true;
     }
-
 }
