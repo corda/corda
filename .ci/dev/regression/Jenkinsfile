@@ -24,14 +24,7 @@ boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
 **  * stage-release:  for release candidates and for health checks
 **  * operate: for final release
 */
-def nexusIqStage = "build"
-if (isReleaseTag) {
-    switch (env.TAG_NAME) {
-        case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        default: nexusIqStage = "operate"
-    }
-}
+def nexusIqStage = "operate"
 
 pipeline {
     agent { label 'k8s' }
@@ -134,7 +127,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'r3-corda-releases'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
