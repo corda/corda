@@ -16,6 +16,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
@@ -450,8 +451,11 @@ class VaultObserverExceptionTest {
                                     findCordapp("com.r3.dbfailure.schemas")
                                 ),inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {
@@ -540,8 +544,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {
@@ -622,8 +629,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenCreatingSecondState = {
@@ -699,8 +709,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {

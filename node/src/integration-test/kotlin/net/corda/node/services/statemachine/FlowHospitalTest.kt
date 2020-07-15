@@ -15,6 +15,7 @@ import net.corda.core.flows.NotaryException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
@@ -49,11 +50,13 @@ class FlowHospitalTest {
     @Test(timeout=300_000)
 	fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
         driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
-            val charlie = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
-            val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
-
-            val charlieClient = CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-            val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+            val (charlieClient, aliceClient) = listOf(CHARLIE_NAME, ALICE_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(rpcUser)) }
+                    .transpose()
+                    .getOrThrow()
+                    .map { CordaRPCClient(it.rpcAddress)
+                            .start(rpcUser.username, rpcUser.password).proxy }
 
             val aliceParty = aliceClient.nodeInfo().legalIdentities.first()
 
