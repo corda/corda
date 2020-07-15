@@ -80,6 +80,9 @@ data class CustomCordapp(
 
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
                 // pick the first one found.
+                if (scanResult.allResources.isEmpty()){
+                    throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
+                }
                 scanResult.allResources.asMap().forEach { path, resourceList ->
                     jos.addEntry(testEntry(path), resourceList[0].open())
                 }
