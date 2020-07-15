@@ -19,10 +19,10 @@ import net.corda.core.transactions.TransactionBuilder
 /**
  * This flow is initiated by any member authorised to modify membership roles. Queries for the membership with [membershipId] linear ID and
  * overwrites [MembershipState.roles] field with [roles] value. Transaction is signed by all active members authorised to modify membership
- * and stored on ledgers of all members authorised to modify membership and on modified member's ledger.
+ * and stored on ledgers of all state's participants.
  *
- * If member becomes authorised to modify memberships (its membership roles didn't have any administrative permission before assigning them),
- * it will receive all non revoked memberships.
+ * If the members becomes authorised to modify memberships, it should be added to all Business Network Groups in order to observe all
+ * Business Network's memberships.
  *
  * @property membershipId ID of the membership to assign roles.
  * @property roles Set of roles to be assigned to membership.
@@ -42,17 +42,12 @@ class ModifyRolesFlow(private val membershipId: UniqueIdentifier, private val ro
         val networkId = membership.state.data.networkId
         authorise(networkId, databaseService) { it.canModifyRoles() }
 
-        // fetch observers and signers
+        // fetch signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity }.toSet() + membership.state.data.identity.cordaIdentity - ourIdentity
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
 
         // building transaction
-        val outputMembership = membership.state.data.copy(
-                roles = roles,
-                modified = serviceHub.clock.instant(),
-                participants = (observers + ourIdentity).toList()
-        )
+        val outputMembership = membership.state.data.copy(roles = roles, modified = serviceHub.clock.instant())
         val requiredSigners = signers.map { it.owningKey }
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
@@ -60,16 +55,9 @@ class ModifyRolesFlow(private val membershipId: UniqueIdentifier, private val ro
                 .addCommand(MembershipContract.Commands.ModifyRoles(requiredSigners), requiredSigners)
         builder.verify(serviceHub)
 
-        // send info to observers whether they need to sign the transaction
-        val observerSessions = observers.map { initiateFlow(it) }
-        val finalisedTransaction = collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
-
-        // send all non revoked memberships (ones that can be modified) if modified member becomes authorised to modify them
-        if (!membership.state.data.canModifyMembership() && outputMembership.canModifyMembership()) {
-            syncMembershipList(networkId, outputMembership, emptySet(), observerSessions, databaseService)
-        }
-
-        return finalisedTransaction
+        // collect signatures and finalise transactions
+        val observerSessions = (outputMembership.participants - ourIdentity).map { initiateFlow(it) }
+        return collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
     }
 }
 
@@ -113,6 +101,5 @@ class ModifyRolesResponderFlow(private val session: FlowSession) : MembershipMan
                 throw FlowException("Only ModifyPermissions command is allowed")
             }
         }
-        receiveMemberships(session)
     }
 }
