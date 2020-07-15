@@ -17,7 +17,8 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
         val networkId = UniqueIdentifier()
 
         runCreateBusinessNetworkFlow(authorisedMember, networkId = networkId)
-        assertFailsWith<DuplicateBusinessNetworkException> { runCreateBusinessNetworkFlow(authorisedMember, networkId = networkId) }
+        val e = assertFailsWith<DuplicateBusinessNetworkException> { runCreateBusinessNetworkFlow(authorisedMember, networkId = networkId) }
+        assertEquals(networkId, e.networkId)
     }
 
     @Test(timeout = 300_000)
@@ -25,6 +26,17 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
         val authorisedMember = authorisedMembers.first()
 
         assertFailsWith<IllegalStateException> { runCreateBusinessNetworkFlow(authorisedMember, notary = authorisedMember.identity()) }
+    }
+
+    @Test(timeout = 300_000)
+    fun `create business network flow should fail when trying to create initial group with already existing group ID`() {
+        val authorisedMember = authorisedMembers.first()
+
+        val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
+        val groupId = getAllGroupsFromVault(authorisedMember, networkId).single().linearId
+
+        val e = assertFailsWith<DuplicateBusinessNetworkGroupException> { runCreateBusinessNetworkFlow(authorisedMember, groupId = groupId) }
+        assertEquals(groupId, e.groupId)
     }
 
     @Test(timeout = 300_000)
@@ -50,6 +62,9 @@ class CreateBusinessNetworkFlowTest : MembershipManagementFlowTest(numberOfAutho
         // also check ledger
         getAllMembershipsFromVault(authorisedMember, networkId).single().apply {
             assertEquals(authorisedMember.identity(), identity.cordaIdentity)
+        }
+        getAllGroupsFromVault(authorisedMember, networkId).single().apply {
+            assertEquals(setOf(authorisedMember.identity()), participants.toSet())
         }
     }
 }

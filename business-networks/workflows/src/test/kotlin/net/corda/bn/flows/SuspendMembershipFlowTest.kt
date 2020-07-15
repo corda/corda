@@ -1,8 +1,6 @@
 package net.corda.bn.flows
 
 import net.corda.bn.contracts.MembershipContract
-import net.corda.bn.states.BNORole
-import net.corda.bn.states.MemberRole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
@@ -29,20 +27,16 @@ class SuspendMembershipFlowTest : MembershipManagementFlowTest(numberOfAuthorise
         val nonMember = regularMembers[1]
 
         val networkId = (runCreateBusinessNetworkFlow(authorisedMember).tx.outputStates.single() as MembershipState).networkId
-        val membership = runRequestMembershipFlow(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
+        val membership = runRequestAndActivateMembershipFlows(regularMember, authorisedMember, networkId).tx.outputStates.single() as MembershipState
 
         assertFailsWith<MembershipNotFoundException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
 
         runRequestAndSuspendMembershipFlow(nonMember, authorisedMember, networkId).apply {
             val initiatorMembership = tx.outputStates.single() as MembershipState
 
-            // make `nonMember` authorised to modify membership so he fetches all members to be modified
-            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(BNORole()))
             assertFailsWith<IllegalMembershipStatusException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
 
-            // remove permissions from `nonMember` and activate membership
             runActivateMembershipFlow(authorisedMember, initiatorMembership.linearId)
-            runModifyRolesFlow(authorisedMember, initiatorMembership.linearId, setOf(MemberRole()))
             assertFailsWith<MembershipAuthorisationException> { runSuspendMembershipFlow(nonMember, membership.linearId) }
         }
     }

@@ -16,8 +16,7 @@ import net.corda.core.transactions.TransactionBuilder
 /**
  * This flow is initiated by any member authorised to modify membership's business identity. Queries for the membership with
  * [membershipId] linear ID and overwrites [MembershipState.identity.businessIdentity] field with [businessIdentity] value. Transaction
- * is signed by all active members authorised to modify membership and stored on ledger of all members authorised to modify membership and
- * on modified member's ledger.
+ * is signed by all active members authorised to modify membership and stored on ledger of all state's participants.
  *
  * @property membershipId ID of the membership to modify business identity.
  * @property businessIdentity Custom business identity to be given to membership.
@@ -41,9 +40,8 @@ class ModifyBusinessIdentityFlow(
         val networkId = membership.state.data.networkId
         authorise(networkId, databaseService) { it.canModifyBusinessIdentity() }
 
-        // fetch observers and signers
+        // fetch signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity }.toSet() + membership.state.data.identity.cordaIdentity - ourIdentity
         val signers = authorisedMemberships.filter {
             it.state.data.isActive()
         }.map {
@@ -55,11 +53,7 @@ class ModifyBusinessIdentityFlow(
 
         // building transaction
         val outputMembership = membership.state.data.run {
-            copy(
-                    identity = identity.copy(businessIdentity = businessIdentity),
-                    modified = serviceHub.clock.instant(),
-                    participants = (observers + ourIdentity).toList()
-            )
+            copy(identity = identity.copy(businessIdentity = businessIdentity), modified = serviceHub.clock.instant())
         }
         val requiredSigners = signers.map { it.owningKey }
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
@@ -68,7 +62,8 @@ class ModifyBusinessIdentityFlow(
                 .addCommand(MembershipContract.Commands.ModifyBusinessIdentity(requiredSigners, ourIdentity), requiredSigners)
         builder.verify(serviceHub)
 
-        val observerSessions = observers.map { initiateFlow(it) }
+        // collect signatures and finalise transaction
+        val observerSessions = (outputMembership.participants - ourIdentity).map { initiateFlow(it) }
         return collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
     }
 }

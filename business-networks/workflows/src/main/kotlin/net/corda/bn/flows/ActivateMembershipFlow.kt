@@ -16,11 +16,10 @@ import net.corda.core.transactions.TransactionBuilder
 /**
  * This flow is initiated by any member authorised to activate membership. Queries for the membership with [membershipId] linear ID and
  * moves it to [MembershipStatus.ACTIVE] status. Transaction is signed by all active members authorised to modify membership and stored on
- * ledgers of all members authorised to modify membership and on activated member's ledger.
+ * ledgers of all state's participants.
  *
- * If this is new onboarded member (it's membership was in pending status before activation), it will receive all "authorised to modify
- * membership" member's membership states. The new member will also receive all non revoked memberships if it is authorised to modify
- * memberships.
+ * If this is new onboarded member (its membership was in pending status before activation), it should be added in one of Business Network
+ * Groups in order to be discoverable by any member authorised to modify memberships.
  *
  * @property membershipId ID of the membership to be activated.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
@@ -39,17 +38,12 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
         val networkId = membership.state.data.networkId
         authorise(networkId, databaseService) { it.canActivateMembership() }
 
-        // fetch observers and signers
+        // fetch signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val observers = authorisedMemberships.map { it.state.data.identity.cordaIdentity }.toSet() + membership.state.data.identity.cordaIdentity - ourIdentity
         val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity }
 
         // building transaction
-        val outputMembership = membership.state.data.copy(
-                status = MembershipStatus.ACTIVE,
-                modified = serviceHub.clock.instant(),
-                participants = (observers + ourIdentity).toList()
-        )
+        val outputMembership = membership.state.data.copy(status = MembershipStatus.ACTIVE, modified = serviceHub.clock.instant())
         val requiredSigners = signers.map { it.owningKey }
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
@@ -57,17 +51,9 @@ class ActivateMembershipFlow(private val membershipId: UniqueIdentifier, private
                 .addCommand(MembershipContract.Commands.Activate(requiredSigners), requiredSigners)
         builder.verify(serviceHub)
 
-        // send info to observers whether they need to sign the transaction
-        val observerSessions = observers.map { initiateFlow(it) }
-        val finalisedTransaction = collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
-
-        // send authorised memberships to new activated (status moved from PENDING to ACTIVE)
-        // also send all non revoked memberships (ones that can be modified) if new activated member is authorised to modify them
-        if (membership.state.data.isPending()) {
-            syncMembershipList(networkId, outputMembership, authorisedMemberships, observerSessions, databaseService)
-        }
-
-        return finalisedTransaction
+        // collect signatures and finalise transaction
+        val observerSessions = (outputMembership.participants - ourIdentity).map { initiateFlow(it) }
+        return collectSignaturesAndFinaliseTransaction(builder, observerSessions, signers)
     }
 }
 
@@ -81,6 +67,5 @@ class ActivateMembershipResponderFlow(private val session: FlowSession) : Member
                 throw FlowException("Only Activate command is allowed")
             }
         }
-        receiveMemberships(session)
     }
 }
