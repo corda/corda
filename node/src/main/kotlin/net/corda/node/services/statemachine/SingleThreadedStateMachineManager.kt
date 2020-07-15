@@ -286,9 +286,24 @@ internal class SingleThreadedStateMachineManager(
                             // This below dummy future ('doneFuture(5)') will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
                             is FlowWithClientIdStatus.Removed -> {
                                 val serializedFlowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
-                                val flowResult = serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
-                                    ?: throw IllegalStateException("serializedFlowResult was null or could not deserialize it")
-                                doneClientIdFuture(existingStatus.flowId, doneFuture(flowResult), clientId)
+                                if (serializedFlowResult == null) {
+                                    openFuture<FlowStateMachineHandle<A>>().also {
+                                        it.setException(IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong."))
+                                    }
+                                } else {
+                                    val flowResult = try {
+                                        serializedFlowResult.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                    if (flowResult == null) {
+                                        openFuture<FlowStateMachineHandle<A>>().also {
+                                            it.setException(IllegalStateException("Unable to deserialize flow's result for flow $flowId."))
+                                        }
+                                    } else {
+                                        doneClientIdFuture(existingStatus.flowId, doneFuture(flowResult), clientId)
+                                    }
+                                }
                             }
                         }
                         existingStatus
