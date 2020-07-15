@@ -3,9 +3,12 @@ package net.corda.coretests.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -16,8 +19,10 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `starting a flow inside of a flow that starts a future will succeed`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = alice(this)
-            val bob = bob(this)
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.startFlow(::FlowThatStartsAnotherFlowInAnExternalOperation, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(1.minutes)
             assertHospitalCounters(0, 0)
@@ -27,8 +32,10 @@ class FlowExternalOperationStartFlowTest : AbstractFlowExternalOperationTest() {
     @Test(timeout = 300_000)
     fun `multiple flows can be started and their futures joined from inside a flow`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = alice(this)
-            val bob = bob(this)
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.startFlow(::ForkJoinFlows, bob.nodeInfo.singleIdentity())
                 .returnValue.getOrThrow(1.minutes)
             assertHospitalCounters(0, 0)
