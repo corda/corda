@@ -282,16 +282,20 @@ internal class SingleThreadedStateMachineManager(
                     if (existingStatus != null) {
                         existingFuture = when (existingStatus) {
                             is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
-                            // This below dummy future ('doneFuture(5)') will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
                             is FlowWithClientIdStatus.Removed -> {
-                                val serializedFlowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
-                                if (serializedFlowResult == null) {
+                                val serializedFlowResultOrException = if (existingStatus.succeeded) {
+                                    database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
+                                } else {
+                                    // this block will be implemented upon implementing CORDA-3681
+                                    null
+                                }
+                                if (serializedFlowResultOrException == null) {
                                     openFuture<FlowStateMachineHandle<A>>().also {
                                         it.setException(IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong."))
                                     }
                                 } else {
                                     val flowResult = try {
-                                        serializedFlowResult.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                                        serializedFlowResultOrException.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                                     } catch (e: Exception) {
                                         null
                                     }
