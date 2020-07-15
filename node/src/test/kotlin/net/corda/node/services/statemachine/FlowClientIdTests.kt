@@ -122,7 +122,7 @@ class FlowClientIdTests {
         }
 
         assertFailsWith<IllegalStateException> {
-            val handle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         }
     }
 
