@@ -280,35 +280,7 @@ internal class SingleThreadedStateMachineManager(
             innerState.withLock {
                 clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
                     if (existingStatus != null) {
-                        existingFuture = when (existingStatus) {
-                            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
-                            is FlowWithClientIdStatus.Removed -> {
-                                val serializedFlowResultOrException = if (existingStatus.succeeded) {
-                                    database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
-                                } else {
-                                    // this block will be implemented upon implementing CORDA-3681
-                                    null
-                                }
-                                if (serializedFlowResultOrException == null) {
-                                    openFuture<FlowStateMachineHandle<A>>().also {
-                                        it.setException(IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong."))
-                                    }
-                                } else {
-                                    val flowResult = try {
-                                        serializedFlowResultOrException.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
-                                    } catch (e: Exception) {
-                                        null
-                                    }
-                                    if (flowResult == null) {
-                                        openFuture<FlowStateMachineHandle<A>>().also {
-                                            it.setException(IllegalStateException("Unable to deserialize flow's result for flow $flowId."))
-                                        }
-                                    } else {
-                                        doneClientIdFuture(existingStatus.flowId, doneFuture(flowResult), clientId)
-                                    }
-                                }
-                            }
-                        }
+                        existingFuture = activeOrRemovedFuture(existingStatus, clientId)
                         existingStatus
                     } else {
                         newFuture = openFuture()
@@ -896,6 +868,37 @@ internal class SingleThreadedStateMachineManager(
         clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
             require(existingStatus != null && existingStatus is FlowWithClientIdStatus.Active)
             FlowWithClientIdStatus.Removed(id, succeeded)
+        }
+    }
+
+    private fun activeOrRemovedFuture(existingStatus: FlowWithClientIdStatus, clientId: String) = when (existingStatus) {
+        is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+        is FlowWithClientIdStatus.Removed -> {
+            val flowId = existingStatus.flowId
+            val serializedFlowResultOrException = if (existingStatus.succeeded) {
+                database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
+            } else {
+                // this block will be implemented upon implementing CORDA-3681
+                null
+            }
+            if (serializedFlowResultOrException == null) {
+                openFuture<FlowStateMachineHandle<Any>>().also {
+                    it.setException(IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong."))
+                }
+            } else {
+                val flowResult = try {
+                    serializedFlowResultOrException.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                } catch (e: Exception) {
+                    null
+                }
+                if (flowResult == null) {
+                    openFuture<FlowStateMachineHandle<Any>>().also {
+                        it.setException(IllegalStateException("Unable to deserialize flow's result for flow $flowId."))
+                    }
+                } else {
+                    doneClientIdFuture(flowId, doneFuture(flowResult), clientId)
+                }
+            }
         }
     }
 
