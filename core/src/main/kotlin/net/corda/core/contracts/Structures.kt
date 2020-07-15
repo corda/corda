@@ -89,6 +89,7 @@ interface OwnableState : ContractState {
 // DOCEND 3
 
 /** Something which is scheduled to happen at a point in time. */
+@KeepForDJVM
 interface Scheduled {
     val scheduledAt: Instant
 }
@@ -101,6 +102,7 @@ interface Scheduled {
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
  */
 @CordaSerializable
+@KeepForDJVM
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**
@@ -115,7 +117,7 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
  * for a particular [ContractState] have been processed/fired etc.  If the activity is not "on ledger" then the
  * scheduled activity shouldn't be either.
  */
-@DeleteForDJVM
+@KeepForDJVM
 data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
 // DOCSTART 2
@@ -134,7 +136,7 @@ interface LinearState : ContractState {
     val linearId: UniqueIdentifier
 }
 // DOCEND 2
-@DeleteForDJVM
+@KeepForDJVM
 interface SchedulableState : ContractState {
     /**
      * Indicate whether there is some activity to be performed at some future point in time with respect to this
