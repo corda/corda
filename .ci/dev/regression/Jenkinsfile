@@ -135,7 +135,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'r3-corda-releases'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
