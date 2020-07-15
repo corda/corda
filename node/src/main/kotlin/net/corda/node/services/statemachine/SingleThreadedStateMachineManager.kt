@@ -52,7 +52,6 @@ import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
-import sun.plugin.dom.exception.InvalidStateException
 import java.security.SecureRandom
 import java.time.Duration
 import java.util.HashSet
@@ -288,7 +287,7 @@ internal class SingleThreadedStateMachineManager(
                             is FlowWithClientIdStatus.Removed -> {
                                 val serializedFlowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
                                 val flowResult = serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
-                                    ?: throw InvalidStateException("serializedFlowResult was null or could not deserialize it")
+                                    ?: throw IllegalStateException("serializedFlowResult was null or could not deserialize it")
                                 doneClientIdFuture(existingStatus.flowId, doneFuture(flowResult), clientId)
                             }
                         }
