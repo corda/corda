@@ -491,6 +491,10 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
+    private fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
+        return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
+    }
+
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
@@ -501,6 +505,10 @@ class DBCheckpointStorage(
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
+    }
+
+    override fun getFlowResult(id: StateMachineRunId): SerializedBytes<Any>? {
+        return getDBFlowResult(id)?.value?.let { SerializedBytes(it) }
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
