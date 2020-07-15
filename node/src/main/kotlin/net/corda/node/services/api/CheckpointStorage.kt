@@ -66,5 +66,7 @@ interface CheckpointStorage {
      */
     fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
 
+    fun getFlowResult(id: StateMachineRunId): SerializedBytes<Any>?
+
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }
