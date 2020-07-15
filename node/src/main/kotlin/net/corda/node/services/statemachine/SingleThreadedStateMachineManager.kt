@@ -20,7 +20,6 @@ import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
 import net.corda.core.internal.uncheckedCast
@@ -695,16 +694,13 @@ internal class SingleThreadedStateMachineManager(
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
             val existingCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
             existingCheckpoint?.let { serializedCheckpoint ->
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId)
-                if (checkpoint == null) {
-                    return openFuture<FlowStateMachine<A>>().mapError {
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return openFuture<FlowStateMachine<A>>().also {
+                    it.setException(
                         IllegalStateException(
                             "Unable to deserialize database checkpoint for flow $flowId. " +
                                     "Something is very wrong. The flow will not retry."
                         )
-                    }
-                } else {
-                    checkpoint
+                    )
                 }
             }
         } else {
