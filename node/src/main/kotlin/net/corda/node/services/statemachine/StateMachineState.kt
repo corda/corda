@@ -260,18 +260,16 @@ sealed class SessionState {
      *   * [DataSessionMessage]
      *   * [ErrorSessionMessage]
      *   * [EndSessionMessage]
+     * @property otherSideErrored whether the session has received an error from the other side.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<ExistingSessionMessagePayload>,
+            val otherSideErrored: Boolean,
             val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
-    ) : SessionState() {
-        fun hasPendingReceivedError(): Boolean {
-            return receivedMessages.any { it is ErrorSessionMessage }
-        }
-    }
+    ) : SessionState()
 }
 
 typealias SessionMap = Map<SessionId, SessionState>

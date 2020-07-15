@@ -385,7 +385,7 @@ class StartedFlowTransition(
                             if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is ErrorSessionMessage) {
                                 val errorMessage = sessionState.receivedMessages.first() as ErrorSessionMessage
                                 val exception = convertErrorMessageToException(errorMessage, sessionState.peerParty)
-                                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages.subList(1, sessionState.receivedMessages.size))
+                                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages.subList(1, sessionState.receivedMessages.size), otherSideErrored = true)
                                 val newCheckpoint = startingState.checkpoint.addSession(sessionId to newSessionState)
                                 newState = startingState.copy(checkpoint = newCheckpoint)
                                 listOf(exception)
@@ -427,7 +427,7 @@ class StartedFlowTransition(
                 .filter { (_, sessionState) -> sessionState !is SessionState.Initiated }
                 .map { it.first }
 
-        return uninitialisedSessions.map { PrematureSessionClose(it) }
+        return uninitialisedSessions.map { PrematureSessionCloseException(it) }
     }
 
     private fun collectErroredInitiatingSessionErrors(checkpoint: Checkpoint): List<Throwable> {

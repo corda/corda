@@ -18,7 +18,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.node.services.statemachine.transitions.PrematureSessionClose
+import net.corda.node.services.statemachine.transitions.PrematureSessionCloseException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.DriverParameters
@@ -45,7 +45,7 @@ class FlowSessionCloseTest {
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 assertThatThrownBy { it.proxy.startFlow(::InitiatorFlow, nodeBHandle.nodeInfo.legalIdentities.first(), true, null, false).returnValue.getOrThrow() }
                         .isInstanceOf(CordaRuntimeException::class.java)
-                        .hasMessageContaining(PrematureSessionClose::class.java.name)
+                        .hasMessageContaining(PrematureSessionCloseException::class.java.name)
                         .hasMessageContaining("The following session was closed before it was initialised")
             }
         }

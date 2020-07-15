@@ -105,9 +105,9 @@ class KilledFlowTransition(
                 sessionState
             }
         }
-        // if there are already pending error messages from the other side, we don't include that session in the list to avoid propagating errors.
+        // if we have already received error message from the other side, we don't include that session in the list to avoid propagating errors.
         val initiatedSessions = sessions.values.mapNotNull { session ->
-            if (session is SessionState.Initiated && !session.hasPendingReceivedError()) {
+            if (session is SessionState.Initiated && !session.otherSideErrored) {
                 session
             } else {
                 null

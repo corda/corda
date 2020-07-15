@@ -89,7 +89,8 @@ class DeliverSessionMessageTransition(
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyList(),
                         peerSinkSessionId = message.initiatedSessionId,
-                        deduplicationSeed = sessionState.deduplicationSeed
+                        deduplicationSeed = sessionState.deduplicationSeed,
+                        otherSideErrored = false
                 )
                 val newCheckpoint = currentState.checkpoint.addSession(
                         event.sessionMessage.recipientSessionId to initiatedSession
@@ -178,7 +179,7 @@ class DeliverSessionMessageTransition(
                 currentState = currentState.copy(checkpoint = newCheckpoint)
             }
             else -> {
-                freshErrorTransition(PrematureSessionEndMessage(event.sessionMessage.recipientSessionId))
+                freshErrorTransition(PrematureSessionEndException(event.sessionMessage.recipientSessionId))
             }
         }
     }
