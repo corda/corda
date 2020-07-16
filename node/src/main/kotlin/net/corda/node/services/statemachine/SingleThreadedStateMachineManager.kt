@@ -280,7 +280,7 @@ internal class SingleThreadedStateMachineManager(
             innerState.withLock {
                 clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
                     if (existingStatus != null) {
-                        existingFuture = activeOrRemovedFuture(existingStatus, clientId)
+                        existingFuture = activeOrRemovedClientIdFuture(existingStatus, clientId)
                         existingStatus
                     } else {
                         newFuture = openFuture()
@@ -871,7 +871,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun activeOrRemovedFuture(existingStatus: FlowWithClientIdStatus, clientId: String) = when (existingStatus) {
+    private fun activeOrRemovedClientIdFuture(existingStatus: FlowWithClientIdStatus, clientId: String) = when (existingStatus) {
         is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
         is FlowWithClientIdStatus.Removed -> {
             val flowId = existingStatus.flowId
