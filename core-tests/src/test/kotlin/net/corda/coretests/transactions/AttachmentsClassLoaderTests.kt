@@ -23,6 +23,7 @@ import net.corda.core.internal.inputStream
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.testing.contracts.DummyContract
@@ -500,6 +501,7 @@ class AttachmentsClassLoaderTests {
             val id = SecureHash.randomSHA256()
             val timeWindow: TimeWindow? = null
             val privacySalt = PrivacySalt()
+            val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory)
             val transaction = createLedgerTransaction(
                     inputs,
                     outputs,
@@ -511,7 +513,8 @@ class AttachmentsClassLoaderTests {
                     privacySalt,
                     testNetworkParameters(),
                     emptyList(),
-                    isAttachmentTrusted = { true }
+                    isAttachmentTrusted = { true },
+                    attachmentsClassLoaderCache = attachmentsClassLoaderCache
             )
             transaction.verify()
         }
