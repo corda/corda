@@ -4,10 +4,8 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.flows.FlowLogic
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -24,7 +22,6 @@ import org.junit.Ignore
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
-import java.time.Clock
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -47,18 +44,6 @@ class FlowClientIdTests {
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
 
     }
-
-    private val dbCheckpointStorage = DBCheckpointStorage(
-        object : CheckpointPerformanceRecorder {
-            override fun record(
-                serializedCheckpointState: SerializedBytes<CheckpointState>,
-                serializedFlowState: SerializedBytes<FlowState>?
-            ) {
-                // do nothing
-            }
-        },
-        Clock.systemUTC()
-    )
 
     @After
     fun cleanUp() {
@@ -118,7 +103,7 @@ class FlowClientIdTests {
 
         // manually remove the checkpoint (including DBFlowResult) from the database
         aliceNode.database.transaction {
-            dbCheckpointStorage.removeCheckpoint(flowId0)
+            aliceNode.internals.checkpointStorage.removeCheckpoint(flowId0)
         }
 
         assertFailsWith<IllegalStateException> {
