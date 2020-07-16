@@ -39,6 +39,7 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -134,7 +135,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'r3-corda-releases'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
