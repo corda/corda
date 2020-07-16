@@ -151,7 +151,7 @@ internal class RPCClientProxyHandler(
                 observable.onError(ConnectionFailureException())
             } catch (ex: OnErrorNotImplementedException) {
                 // Indicates the observer does not have any error handling.
-                log.warn("Closed connection on observable $observable whose observers have no error handling.")
+                log.trace("Closed connection on observable whose observers have no error handling.")
             } catch (ex: Exception) {
                 log.error("Unexpected exception when RPC connection failure handling", ex)
             }
