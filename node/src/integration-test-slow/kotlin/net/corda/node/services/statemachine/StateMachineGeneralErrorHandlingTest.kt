@@ -696,4 +696,63 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
             )
         }
     }
+
+    @Test(timeout = 300_000)
+    fun `error during transition - flow will retry after network map refresh if party is not found on original call`() {
+        startDriver {
+            val charlie = createNode(CHARLIE_NAME)
+            val (alice, port) = createBytemanNode(ALICE_NAME)
+
+            val rules = """
+                 RULE Set flag when executing first suspend
+                 CLASS ${TopLevelTransition::class.java.name}
+                 METHOD suspendTransition
+                 AT ENTRY
+                 IF !flagged("suspend_flag")
+                 DO flag("suspend_flag"); traceln("Setting suspend flag to true")
+                 ENDRULE
+                 
+                 RULE Set flag when getPartyInfo
+                 CLASS ${PersistentNetworkMapCache::class.java.name}
+                 METHOD getPartyInfo
+                 AT ENTRY
+                 IF flagged("suspend_flag") && !flagged("party_not_found_flag") && !flagged("commit_exception_flag")
+                 DO flag("party_not_found_flag"); traceln("Setting flag to true and throwing exception"); 
+                 throw new ${PartyNotFoundException::class.java.name}("Some message", new ${CordaX500Name::class.java.simpleName}("Charlie Ltd", "Athens", "GR"))
+                 ENDRULE
+
+                 RULE Throw exception on retry
+                 CLASS $stateMachineManagerClassName
+                 METHOD addAndStartFlow
+                 AT ENTRY
+                 IF flagged("suspend_flag") && flagged("party_not_found_flag") && !flagged("retry_exception_flag")
+                 DO flag("retry_exception_flag"); traceln("Throwing retry exception"); throw new java.lang.RuntimeException("Here we go again")
+                 ENDRULE
+             """.trimIndent()
+
+            submitBytemanRules(rules, port)
+
+            val aliceClient =
+                    CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+
+            val flow = aliceClient.startFlow(StateMachineErrorHandlingTest::SendAMessageAndLookIntoHospitalFlow,
+                    charlie.nodeInfo.singleIdentity())
+
+            val result = flow.returnValue.get()
+
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            alice.rpc.assertHospitalCounts(
+                    networkMapRefresh = 1,
+                    networkMapRefreshRetry = 1
+            )
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+
+            assertEquals("Finished executing test flow - ${flow.id}", result.message)
+            assertEquals(flow.id, result.data.keys.first())
+            assertEquals(
+                    StaffedFlowHospital.AnonymousPsychiatrist.toString().substringBefore("@"),
+                    result.data.values.first().first().substringBefore("@")
+            )
+        }
+    }
 }

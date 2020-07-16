@@ -298,7 +298,9 @@ class StaffedFlowHospital(
                     val outcome = medicalHistory.records.last().outcome
                     log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
-                    EventOutcome(outcome, outcome.event, backOff)
+                    val error = report.error as ErrorStateTransitionException
+                    val event = error.event
+                    EventOutcome(outcome, event, backOff)
                 }
             }
 

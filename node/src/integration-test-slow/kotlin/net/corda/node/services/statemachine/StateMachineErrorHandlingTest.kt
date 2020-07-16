@@ -132,17 +132,21 @@ abstract class StateMachineErrorHandlingTest {
         discharged: Int = 0,
         observation: Int = 0,
         propagated: Int = 0,
+        networkMapRefresh: Int = 0,
         dischargedRetry: Int = 0,
         observationRetry: Int = 0,
-        propagatedRetry: Int = 0
+        propagatedRetry: Int = 0,
+        networkMapRefreshRetry: Int = 0
     ) {
         val counts = startFlow(StateMachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.getOrThrow(20.seconds)
         assertEquals(discharged, counts.discharged)
         assertEquals(observation, counts.observation)
         assertEquals(propagated, counts.propagated)
+        assertEquals(networkMapRefresh, counts.networkMapRefresh)
         assertEquals(dischargedRetry, counts.dischargeRetry)
         assertEquals(observationRetry, counts.observationRetry)
         assertEquals(propagatedRetry, counts.propagatedRetry)
+        assertEquals(networkMapRefreshRetry, counts.networkMapRefreshRetry)
     }
 
     internal fun CordaRPCOps.assertHospitalCountsAllZero() = assertHospitalCounts()
@@ -252,9 +256,11 @@ abstract class StateMachineErrorHandlingTest {
                 serviceHub.cordaService(HospitalCounter::class.java).dischargedCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).observationCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).propagatedCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).networkMapRefreshCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).dischargeRetryCounter,
                 serviceHub.cordaService(HospitalCounter::class.java).observationRetryCounter,
-                serviceHub.cordaService(HospitalCounter::class.java).propagatedRetryCounter
+                serviceHub.cordaService(HospitalCounter::class.java).propagatedRetryCounter,
+                serviceHub.cordaService(HospitalCounter::class.java).networkMapRefreshRetryCounter
             )
     }
 
@@ -263,9 +269,11 @@ abstract class StateMachineErrorHandlingTest {
         val discharged: Int,
         val observation: Int,
         val propagated: Int,
+        val networkMapRefresh: Int,
         val dischargeRetry: Int,
         val observationRetry: Int,
-        val propagatedRetry: Int
+        val propagatedRetry: Int,
+        val networkMapRefreshRetry: Int
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -274,11 +282,16 @@ abstract class StateMachineErrorHandlingTest {
         var dischargedCounter: Int = 0
         var observationCounter: Int = 0
         var propagatedCounter: Int = 0
+        var networkMapRefreshCounter: Int = 0
         var dischargeRetryCounter: Int = 0
         var observationRetryCounter: Int = 0
         var propagatedRetryCounter: Int = 0
+        var networkMapRefreshRetryCounter: Int = 0
 
         init {
+            StaffedFlowHospital.onFlowKeptForWaitingForNetworkMapRefresh.add { _, _ ->
+                networkMapRefreshCounter++
+            }
             StaffedFlowHospital.onFlowDischarged.add { _, _ ->
                 dischargedCounter++
             }
@@ -293,6 +306,7 @@ abstract class StateMachineErrorHandlingTest {
                     StaffedFlowHospital.Outcome.DISCHARGE -> dischargeRetryCounter++
                     StaffedFlowHospital.Outcome.OVERNIGHT_OBSERVATION -> observationRetryCounter++
                     StaffedFlowHospital.Outcome.UNTREATABLE -> propagatedRetryCounter++
+                    StaffedFlowHospital.Outcome.WAITING_FOR_NETWORK_MAP_REFRESH -> networkMapRefreshRetryCounter++
                 }
             }
         }
