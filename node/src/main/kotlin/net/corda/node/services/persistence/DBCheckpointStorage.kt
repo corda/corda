@@ -55,6 +55,7 @@ class DBCheckpointStorage(
         private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
+        const val MAX_CLIENT_ID_LENGTH = 512
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
@@ -513,8 +514,7 @@ class DBCheckpointStorage(
             // Truncate the flow name to fit into the database column
             // Flow names are unlikely to be this long
             flowName = flowInfo.flowClass.name.take(MAX_FLOW_NAME_LENGTH),
-            // will come from the context
-            userSuppliedIdentifier = null,
+            userSuppliedIdentifier = context.clientId,
             startType = context.getStartedType(),
             initialParameters = context.getFlowParameters().storageSerialize().bytes,
             launchingCordapp = (flowInfo.subFlowVersion as? SubFlowVersion.CorDappFlow)?.corDappName ?: "Core flow",
@@ -627,10 +627,14 @@ class DBCheckpointStorage(
         }
     }
 
+    @Suppress("MagicNumber")
     private fun InvocationContext.getFlowParameters(): List<Any?> {
-        // Only RPC flows have parameters which are found in index 1
-        return if (arguments.isNotEmpty()) {
-            uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
+        // Only RPC flows have parameters which are found in index 1 or index 2 (if called with client id)
+        return if (arguments!!.isNotEmpty()) {
+            arguments!!.run {
+                check(size == 2 || size == 3) { "Unexpected argument number provided in rpc call" }
+                uncheckedCast<Any?, Array<Any?>>(last()).toList()
+            }
         } else {
             emptyList()
         }

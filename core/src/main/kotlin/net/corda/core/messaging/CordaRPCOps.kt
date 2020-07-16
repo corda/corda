@@ -265,6 +265,16 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
+     * Start the given flow with the given arguments and a [clientId]. [logicType] must be annotated
+     * with [net.corda.core.flows.StartableByRPC]. The flow's result/ exception will be available for the client to
+     * re-connect and retrieve them even after the flow's lifetime, by re-calling [startFlowDynamicWithClientId] with the same
+     * [clientId]. Upon calling [removeClientId], the node's resources holding the result/ exception will be freed
+     * and the result/ exception will no longer be available.
+     */
+    @RPCReturnsObservables
+    fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T>
+
+    /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
      * result of running the flow. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
      */
@@ -277,6 +287,15 @@ interface CordaRPCOps : RPCOps {
      * @return whether the flow existed and was killed.
      */
     fun killFlow(id: StateMachineRunId): Boolean
+
+    /**
+     * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.
+     *
+     * See [startFlowDynamicWithClientId] for more information.
+     *
+     * @return whether the mapping was removed.
+     */
+    fun removeClientId(clientId: String): Boolean
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
@@ -541,6 +560,79 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlow
         arg4: E,
         arg5: F
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
+
+/**
+ * Extension function for type safe invocation of flows from Kotlin, with [clientId].
+ */
+@Suppress("unused")
+inline fun <T, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: () -> R
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java)
+
+@Suppress("unused")
+inline fun <T, A, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A) -> R,
+    arg0: A
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0)
+
+@Suppress("unused")
+inline fun <T, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A, B) -> R,
+    arg0: A,
+    arg1: B
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0, arg1)
+
+@Suppress("unused")
+inline fun <T, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A, B, C) -> R,
+    arg0: A,
+    arg1: B,
+    arg2: C
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0, arg1, arg2)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A, B, C, D) -> R,
+    arg0: A,
+    arg1: B,
+    arg2: C,
+    arg3: D
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0, arg1, arg2, arg3)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A, B, C, D, E) -> R,
+    arg0: A,
+    arg1: B,
+    arg2: C,
+    arg3: D,
+    arg4: E
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0, arg1, arg2, arg3, arg4)
+
+@Suppress("unused")
+inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithClientId(
+    clientId: String,
+    @Suppress("unused_parameter")
+    flowConstructor: (A, B, C, D, E, F) -> R,
+    arg0: A,
+    arg1: B,
+    arg2: C,
+    arg3: D,
+    arg4: E,
+    arg5: F
+): FlowHandleWithClientId<T> = startFlowDynamicWithClientId(clientId, R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
  * Extension function for type safe invocation of flows from Kotlin, with progress tracking enabled.

@@ -5,6 +5,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
@@ -98,6 +99,13 @@ interface StateMachineManager {
      * Returns a snapshot of all [FlowStateMachineImpl]s currently managed.
      */
     fun snapshot(): Set<FlowStateMachineImpl<*>>
+
+    /**
+     * Removes a flow's [clientId] to result/ exception mapping.
+     *
+     * @return whether the mapping was removed.
+     */
+    fun removeClientId(clientId: String): Boolean
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
@@ -139,11 +147,11 @@ interface ExternalEvent {
         /**
          * A callback for the state machine to pass back the [CordaFuture] associated with the flow start to the submitter.
          */
-        fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
+        fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<T>>)
 
         /**
          * The future representing the flow start, passed back from the state machine to the submitter of this event.
          */
-        val future: CordaFuture<FlowStateMachine<T>>
+        val future: CordaFuture<out FlowStateMachineHandle<T>>
     }
 }

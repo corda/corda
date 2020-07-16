@@ -1,12 +1,15 @@
 package net.corda.node.services.statemachine
 
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -109,8 +112,8 @@ data class Checkpoint(
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0
                     ),
-                    errorState = ErrorState.Clean,
-                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic)
+                    flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
+                    errorState = ErrorState.Clean
                 )
             }
         }
@@ -379,4 +382,9 @@ sealed class SubFlowVersion {
     abstract val platformVersion: Int
     data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
     data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
+}
+
+sealed class FlowWithClientIdStatus {
+    data class Active(val flowStateMachineFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>) : FlowWithClientIdStatus()
+    data class Removed(val flowId: StateMachineRunId, val succeeded: Boolean) : FlowWithClientIdStatus()
 }

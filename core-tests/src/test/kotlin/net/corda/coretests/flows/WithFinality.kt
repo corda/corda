@@ -6,7 +6,7 @@ import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
@@ -16,7 +16,7 @@ import net.corda.testing.node.internal.TestStartedNode
 
 interface WithFinality : WithMockNet {
     //region Operations
-    fun TestStartedNode.finalise(stx: SignedTransaction, vararg recipients: Party): FlowStateMachine<SignedTransaction> {
+    fun TestStartedNode.finalise(stx: SignedTransaction, vararg recipients: Party): FlowStateMachineHandle<SignedTransaction> {
         return startFlowAndRunNetwork(FinalityInvoker(stx, recipients.toSet(), emptySet()))
     }
 

@@ -13,12 +13,17 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -75,12 +80,21 @@ internal class SingleThreadedStateMachineManager(
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
+
+        @VisibleForTesting
+        var beforeClientIDCheck: (() -> Unit)? = null
+        @VisibleForTesting
+        var onClientIDNotFound: (() -> Unit)? = null
+        @VisibleForTesting
+        var onCallingStartFlowInternal: (() -> Unit)? = null
+        @VisibleForTesting
+        var onStartFlowInternalThrewAndAboutToRemove: (() -> Unit)? = null
     }
 
     private val innerState = StateMachineInnerStateImpl()
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val scheduledFutureExecutor = Executors.newSingleThreadScheduledExecutor(
-        ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
+            ThreadFactoryBuilder().setNameFormat("flow-scheduled-future-thread").setDaemon(true).build()
     )
     // How many Fibers are running (this includes suspended flows). If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
@@ -158,6 +172,25 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
         }
+
+        // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED flows
+        // - RESULTED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3692
+        // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+        // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
+        for (flow in fibers) {
+            flow.fiber.clientId?.let {
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
+            }
+        }
+
+        for (pausedFlow in pausedFlows) {
+            pausedFlow.value.checkpoint.checkpointState.invocationContext.clientId?.let {
+                innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
+                    doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
+                )
+            }
+        }
+
         return serviceHub.networkMapCache.nodeReady.map {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
@@ -229,21 +262,62 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
+    @Suppress("ComplexMethod")
     private fun <A> startFlow(
             flowId: StateMachineRunId,
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
             ourIdentity: Party?,
             deduplicationHandler: DeduplicationHandler?
-    ): CordaFuture<FlowStateMachine<A>> {
-        return startFlowInternal(
+    ): CordaFuture<out FlowStateMachineHandle<A>> {
+        beforeClientIDCheck?.invoke()
+
+        var newFuture: OpenFuture<FlowStateMachineHandle<A>>? = null
+
+        val clientId = context.clientId
+        if (clientId != null) {
+            var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
+            innerState.withLock {
+                clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
+                    if (existingStatus != null) {
+                        existingFuture = when (existingStatus) {
+                            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+                            // This below dummy future ('doneFuture(5)') will be populated from DB upon implementing CORDA-3692 and CORDA-3681 - for now just return a dummy future
+                            is FlowWithClientIdStatus.Removed -> doneClientIdFuture(existingStatus.flowId, doneFuture(@Suppress("MagicNumber")5), clientId)
+                        }
+                        existingStatus
+                    } else {
+                        newFuture = openFuture()
+                        FlowWithClientIdStatus.Active(newFuture!!)
+                    }
+                }
+            }
+            if (existingFuture != null) return uncheckedCast(existingFuture)
+
+            onClientIDNotFound?.invoke()
+        }
+
+        return try {
+            startFlowInternal(
                 flowId,
                 invocationContext = context,
                 flowLogic = flowLogic,
                 flowStart = FlowStart.Explicit,
                 ourIdentity = ourIdentity ?: ourFirstIdentity,
                 deduplicationHandler = deduplicationHandler
-        )
+            ).also {
+                newFuture?.captureLater(uncheckedCast(it))
+            }
+        } catch (t: Throwable) {
+            onStartFlowInternalThrewAndAboutToRemove?.invoke()
+            innerState.withLock {
+                clientIdsToFlowIds.remove(clientId)
+                newFuture?.setException(t)
+            }
+            // Throwing the exception plain here is the same as to return an exceptionally completed future since the caller calls
+            // getOrThrow() on the returned future at [CordaRPCOpsImpl.startFlow].
+            throw t
+        }
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
@@ -591,6 +665,7 @@ internal class SingleThreadedStateMachineManager(
             ourIdentity: Party,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
+        onCallingStartFlowInternal?.invoke()
 
         val existingFlow = innerState.withLock { flows[flowId] }
         val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {
@@ -736,6 +811,7 @@ internal class SingleThreadedStateMachineManager(
         require(lastState.isRemoved) { "Flow must be in removable state before removal" }
         require(lastState.checkpoint.checkpointState.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
         require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
+        flow.fiber.clientId?.let { setClientIdAsSucceeded(it, flow.fiber.id) }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
@@ -747,13 +823,14 @@ internal class SingleThreadedStateMachineManager(
             lastState: StateMachineState
     ) {
         drainFlowEventQueue(flow)
+        // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
+        startedFutures.remove(flow.fiber.id)?.set(Unit)
+        flow.fiber.clientId?.let { setClientIdAsFailed(it, flow.fiber.id) }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
         flow.resultFuture.setException(exception)
         lastState.flowLogic.progressTracker?.endWithError(exception)
-        // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
-        startedFutures.remove(flow.fiber.id)?.set(Unit)
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Failure<Nothing>(exception)))
     }
 
@@ -780,5 +857,56 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
         }
+    }
+
+    private fun StateMachineInnerState.setClientIdAsSucceeded(clientId: String, id: StateMachineRunId) {
+        setClientIdAsRemoved(clientId, id, true)
+    }
+
+    private fun StateMachineInnerState.setClientIdAsFailed(clientId: String, id: StateMachineRunId) {
+        setClientIdAsRemoved(clientId, id, false)
+    }
+
+    private fun StateMachineInnerState.setClientIdAsRemoved(
+        clientId: String,
+        id: StateMachineRunId,
+        succeeded: Boolean
+    ) {
+        clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
+            require(existingStatus != null && existingStatus is FlowWithClientIdStatus.Active)
+            FlowWithClientIdStatus.Removed(id, succeeded)
+        }
+    }
+
+    /**
+     * The flow out of which a [doneFuture] will be produced should be a started flow,
+     * i.e. it should not exist in [mutex.content.startedFutures].
+     */
+    private fun doneClientIdFuture(
+        id: StateMachineRunId,
+        resultFuture: CordaFuture<Any?>,
+        clientId: String
+    ): CordaFuture<FlowStateMachineHandle<Any?>> =
+        doneFuture(object : FlowStateMachineHandle<Any?> {
+            override val logic: Nothing? = null
+            override val id: StateMachineRunId = id
+            override val resultFuture: CordaFuture<Any?> = resultFuture
+            override val clientId: String? = clientId
+        }
+        )
+
+    override fun removeClientId(clientId: String): Boolean {
+        var removed = false
+        innerState.withLock {
+            clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
+                if (existingStatus != null && existingStatus is FlowWithClientIdStatus.Removed) {
+                    removed = true
+                    null
+                } else { // don't remove
+                    existingStatus
+                }
+            }
+        }
+        return removed
     }
 }
