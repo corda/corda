@@ -698,7 +698,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
     }
 
     @Test(timeout = 300_000)
-    fun `error during transition - flow will retry after network map refresh if party is not found on original call`() {
+    fun `flow will retry after network map refresh but fails due to transition error and schedules a new retry which completes successfully`() {
         startDriver {
             val charlie = createNode(CHARLIE_NAME)
             val (alice, port) = createBytemanNode(ALICE_NAME)
@@ -725,8 +725,8 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                  CLASS $stateMachineManagerClassName
                  METHOD addAndStartFlow
                  AT ENTRY
-                 IF flagged("suspend_flag") && flagged("party_not_found_flag") && !flagged("retry_exception_flag")
-                 DO flag("retry_exception_flag"); traceln("Throwing retry exception"); throw new java.lang.RuntimeException("Here we go again")
+                 IF flagged("suspend_flag") && flagged("party_not_found_flag") && !flagged("transition_exception_flag")
+                 DO flag("transition_exception_flag"); traceln("Throwing exception"); throw new java.lang.RuntimeException("Exception occured")
                  ENDRULE
              """.trimIndent()
 

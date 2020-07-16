@@ -298,6 +298,7 @@ class StaffedFlowHospital(
                     val outcome = medicalHistory.records.last().outcome
                     log.info("Flow error to be resuscitated, rescheduling previous outcome - $outcome (delay ${backOff.seconds}s) by ${report.by} (error was ${report.error.message})")
                     onFlowResuscitated.forEach { hook -> hook.invoke(flowFiber.id, report.by.map { it.toString() }, outcome) }
+                    // acquire event from the exception as for WAITING_FOR_NETWORK_MAP_REFRESH we can't get it from the medical history
                     val error = report.error as ErrorStateTransitionException
                     val event = error.event
                     EventOutcome(outcome, event, backOff)
@@ -444,11 +445,11 @@ class StaffedFlowHospital(
         }
     }
 
-    enum class Outcome(val event: Event?) {
-        DISCHARGE(Event.RetryFlowFromSafePoint),
-        OVERNIGHT_OBSERVATION(Event.OvernightObservation),
-        UNTREATABLE(Event.StartErrorPropagation),
-        WAITING_FOR_NETWORK_MAP_REFRESH(null)
+    enum class Outcome {
+        DISCHARGE,
+        OVERNIGHT_OBSERVATION,
+        UNTREATABLE,
+        WAITING_FOR_NETWORK_MAP_REFRESH
     }
 
     /** The order of the enum values are in priority order. */
