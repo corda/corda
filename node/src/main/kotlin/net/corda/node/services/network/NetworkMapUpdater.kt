@@ -164,7 +164,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     fun trackParametersUpdate(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         val currentUpdateInfo = newNetworkParameters?.let {
-            ParametersUpdateInfo(it.first.newParametersHash, it.second.deserialize(), it.first.description, it.first.updateDeadline)
+            ParametersUpdateInfo(it.first.newParametersHash, it.second.verified(), it.first.description, it.first.updateDeadline)
         }
         return DataFeed(currentUpdateInfo, parametersUpdatesTrack)
     }
@@ -242,7 +242,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     private fun exitOnParametersMismatch(networkMap: NetworkMap) {
         val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().hash else null
+        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
         val exitCode = if (acceptedHash == networkMap.networkParameterHash) {
             logger.info("Flag day occurred. Network map switched to the new network parameters: " +
                     "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
@@ -292,7 +292,7 @@ The node will shutdown now.""")
         val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
         val newNetParams = signedNewNetParams.verifiedNetworkParametersCert(trustRoot)
-        val newParametersHash = signedNewNetParams.hash
+        val newParametersHash = signedNewNetParams.raw.hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
             signedNewNetParams.serialize()

@@ -13,6 +13,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
@@ -94,25 +95,25 @@ class MigrationServicesForResolution(
 
         private val filedParams = getNetworkParametersFromFile()
 
-        override val defaultHash: SecureHash = filedParams?.hash ?: SecureHash.getZeroHash()
+        override val defaultHash: SecureHash = filedParams?.raw?.hash ?: SecureHash.getZeroHash()
         override val currentHash: SecureHash = cordaDB.transaction {
             storage.allPersisted.use {
-                it.max(comparingInt { it.second.deserialize().epoch }).map { it.first }.orElse(defaultHash)
+                it.max(comparingInt { it.second.verified().epoch }).map { it.first }.orElse(defaultHash)
             }
         }
 
         override fun lookup(hash: SecureHash): NetworkParameters? {
             // Note that the parameters in any file shouldn't be put into the database - this will be done by the node on startup.
-            return if (hash == filedParams?.hash) {
-                filedParams.deserialize()
+            return if (hash == filedParams?.raw?.hash) {
+                filedParams.raw.deserialize()
             } else {
-                cordaDB.transaction { storage[hash]?.deserialize() }
+                cordaDB.transaction { storage[hash]?.verified() }
             }
         }
     }
 
     override val networkParameters: NetworkParameters = networkParametersService.lookup(networkParametersService.currentHash)
-            ?: getNetworkParametersFromFile()?.deserialize()
+            ?: getNetworkParametersFromFile()?.raw?.deserialize()
             ?: defaultNetworkParameters()
 
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {

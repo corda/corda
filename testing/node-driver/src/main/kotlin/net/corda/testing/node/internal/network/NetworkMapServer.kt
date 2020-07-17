@@ -169,7 +169,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         }
 
         private fun networkMapResponse(nodeInfoHashes: List<SecureHash>): Response {
-            val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.hash, parametersUpdate)
+            val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
             return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
         }
@@ -210,7 +210,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkParameter(@PathParam("var") hash: String): Response {
             val requestedHash = SecureHash.parse(hash)
-            val requestedParameters = if (requestedHash == signedNetParams.hash) {
+            val requestedParameters = if (requestedHash == signedNetParams.raw.hash) {
                 signedNetParams
             } else if (requestedHash == nextNetworkParameters?.serialize()?.hash) {
                 nextNetworkParameters?.let { networkMapCertAndKeyPair.sign(it) }

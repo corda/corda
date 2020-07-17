@@ -507,7 +507,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         services.start(nodeInfo, netParams)
         networkMapUpdater.start(
                 trustRoot,
-                signedNetParams.hash,
+                signedNetParams.raw.hash,
                 signedNodeInfo,
                 netParams,
                 keyManagementService,

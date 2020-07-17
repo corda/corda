@@ -51,7 +51,7 @@ class DBNetworkParametersStorage(
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: SignedDataWithCert<NetworkParameters> ->
-                        PersistentNetworkParameters(key.toString(), value.deserialize().epoch, value.bytes, value.sig.bytes, value.sig.by.encoded,
+                        PersistentNetworkParameters(key.toString(), value.verified().epoch, value.raw.bytes, value.sig.bytes, value.sig.by.encoded,
                                 X509Utilities.buildCertPath(value.sig.parentCertsChain).encoded)
                     },
                     persistentEntityClass = PersistentNetworkParameters::class.java
@@ -62,7 +62,7 @@ class DBNetworkParametersStorage(
     override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate) {
         this.trustRoot = trustRoot
         saveParameters(currentSignedParameters)
-        _currentHash = currentSignedParameters.hash
+        _currentHash = currentSignedParameters.raw.hash
     }
 
     private lateinit var _currentHash: SecureHash
@@ -73,7 +73,7 @@ class DBNetworkParametersStorage(
     private val hashToParameters = createParametersMap(cacheFactory)
 
     override fun lookup(hash: SecureHash): NetworkParameters? {
-        return database.transaction { hashToParameters[hash]?.deserialize() } ?: tryDownloadUnknownParameters(hash)
+        return database.transaction { hashToParameters[hash]?.raw?.deserialize() } ?: tryDownloadUnknownParameters(hash)
     }
 
     override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
@@ -87,7 +87,7 @@ class DBNetworkParametersStorage(
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }
         val networkParameters = signedNetworkParameters.verifiedNetworkMapCert(trustRoot)
-        val hash = signedNetworkParameters.hash
+        val hash = signedNetworkParameters.raw.hash
         log.trace { "Parameters to save $networkParameters with hash $hash" }
         database.transaction {
             hashToParameters.addWithDuplicatesAllowed(hash, signedNetworkParameters, false)
@@ -120,7 +120,7 @@ class DBNetworkParametersStorage(
         val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
         if (inCurrentParams != null) return inCurrentParams
         return hashToParameters.allPersisted.use {
-            it.flatMap { (_, signedNetParams) -> signedNetParams.deserialize().notaries.stream() }
+            it.flatMap { (_, signedNetParams) -> signedNetParams.raw.deserialize().notaries.stream() }
                     .filter { it.identity == party }
                     .findFirst()
                     .orElse(null)

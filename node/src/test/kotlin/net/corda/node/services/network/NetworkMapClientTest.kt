@@ -109,7 +109,7 @@ class NetworkMapClientTest {
 	fun `download NetworkParameters correctly`() {
         // The test server returns same network parameter for any hash.
         val parametersHash = server.networkParameters.serialize().hash
-        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).deserialize()
+        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
         assertEquals(server.networkParameters, networkParameters)
     }
 
@@ -129,8 +129,8 @@ class NetworkMapClientTest {
         assertEquals(networkMap.networkParameterHash, originalNetworkParameterHash)
         assertEquals(networkMap.parametersUpdate?.description, description)
         assertEquals(networkMap.parametersUpdate?.newParametersHash, nextNetworkParameterHash)
-        assertEquals(networkMapClient.getNetworkParameters(originalNetworkParameterHash).deserialize(), server.networkParameters)
-        assertEquals(networkMapClient.getNetworkParameters(nextNetworkParameterHash).deserialize(), nextParameters)
+        assertEquals(networkMapClient.getNetworkParameters(originalNetworkParameterHash).verified(), server.networkParameters)
+        assertEquals(networkMapClient.getNetworkParameters(nextNetworkParameterHash).verified(), nextParameters)
         val keyPair = Crypto.generateKeyPair()
         val signedHash = nextNetworkParameterHash.serialize().sign(keyPair)
         networkMapClient.ackNetworkParametersUpdate(signedHash)
