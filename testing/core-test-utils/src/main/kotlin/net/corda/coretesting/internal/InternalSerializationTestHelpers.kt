@@ -49,7 +49,7 @@ fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironm
             AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
             KRYO_CHECKPOINT_CONTEXT,
-            KryoCheckpointSerializer.also { it.setCordappSerializers(customCheckpointSerializers) }
+            KryoCheckpointSerializer.also { it.setCordappSerializers(KRYO_CHECKPOINT_CONTEXT, customCheckpointSerializers) }
     )
 }
 

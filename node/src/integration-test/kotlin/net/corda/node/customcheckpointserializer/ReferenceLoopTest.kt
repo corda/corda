@@ -46,12 +46,12 @@ class ReferenceLoopTest(private val compression: CordaSerializationEncoding?) {
                             if (compression != null) doReturn(true).whenever(it)
                                     .acceptEncoding(compression)
                         })
-        KryoCheckpointSerializer.setCordappSerializers(listOf(PersonSerializer()))
+        KryoCheckpointSerializer.setCordappSerializers(context, listOf(PersonSerializer()))
     }
 
     @After
     fun tearDown() {
-        KryoCheckpointSerializer.setCordappSerializers(emptyList())
+        KryoCheckpointSerializer.setCordappSerializers(context, emptyList())
     }
 
     @Test(timeout=300_000)
