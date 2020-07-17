@@ -62,7 +62,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
 
                     // Add custom serializers
                     warnAboutDuplicateSerializers(cordappSerializers)
-                    val classToSerializer = mapInputClassToCustomSerializer(context, cordappSerializers)
+                    val classToSerializer = mapInputClassToCustomSerializer(context.deserializationClassLoader, cordappSerializers)
                     addDefaultCustomSerializers(this, classToSerializer)
                 }
             }.build()
@@ -81,15 +81,15 @@ object KryoCheckpointSerializer : CheckpointSerializer {
      * Returns a list of pairs where the first element is the input class of the custom serializer and the second element is the
      * custom serializer.
      */
-    private fun mapInputClassToCustomSerializer(context: CheckpointSerializationContext, cordappSerializers: List<CustomSerializerCheckpointAdaptor<*,*>>) =
-            cordappSerializers.map { getInputClassForCustomSerializer(context, it) to it }
+    private fun mapInputClassToCustomSerializer(classLoader: ClassLoader, cordappSerializers: List<CustomSerializerCheckpointAdaptor<*, *>>) =
+            cordappSerializers.map { getInputClassForCustomSerializer(classLoader, it) to it }
 
     /**
      * Returns the Class object for the serializers input type.
      */
-    private fun getInputClassForCustomSerializer(context: CheckpointSerializationContext, cordappSerializer: CustomSerializerCheckpointAdaptor<*,*>): Class<*> {
+    private fun getInputClassForCustomSerializer(classLoader: ClassLoader, cordappSerializer: CustomSerializerCheckpointAdaptor<*, *>): Class<*> {
         val typeNameWithoutGenerics = cordappSerializer.cordappType.typeName.substringBefore('<')
-        return context.deserializationClassLoader.loadClass(typeNameWithoutGenerics)
+        return classLoader.loadClass(typeNameWithoutGenerics)
     }
 
     /**
