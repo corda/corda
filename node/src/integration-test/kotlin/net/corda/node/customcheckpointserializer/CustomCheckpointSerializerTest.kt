@@ -31,26 +31,26 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
 
     @get:Rule
     val serializationRule = CheckpointSerializationEnvironmentRule(inheritable = true)
-    private lateinit var context: CheckpointSerializationContext
+    private val context: CheckpointSerializationContext = CheckpointSerializationContextImpl(
+            deserializationClassLoader = javaClass.classLoader,
+            whitelist = AllWhitelist,
+            properties = emptyMap(),
+            objectReferencesEnabled = true,
+            encoding = compression,
+            encodingWhitelist = rigorousMock<EncodingWhitelist>().also {
+                if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
+            })
+    private val customSerializers = listOf(
+            TestCorDapp.TestAbstractClassSerializer(),
+            TestCorDapp.TestClassSerializer(),
+            TestCorDapp.TestInterfaceSerializer(),
+            TestCorDapp.TestFinalClassSerializer(),
+            TestCorDapp.BrokenPublicKeySerializer()
+    )
 
     @Before
     fun setup() {
-        context = CheckpointSerializationContextImpl(
-                deserializationClassLoader = javaClass.classLoader,
-                whitelist = AllWhitelist,
-                properties = emptyMap(),
-                objectReferencesEnabled = true,
-                encoding = compression,
-                encodingWhitelist = rigorousMock<EncodingWhitelist>().also {
-                    if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
-                })
-        KryoCheckpointSerializer.setCordappSerializers(listOf(
-                TestCorDapp.TestAbstractClassSerializer(),
-                TestCorDapp.TestClassSerializer(),
-                TestCorDapp.TestInterfaceSerializer(),
-                TestCorDapp.TestFinalClassSerializer(),
-                TestCorDapp.BrokenPublicKeySerializer()
-        ))
+        KryoCheckpointSerializer.setCordappSerializers(customSerializers)
     }
 
     @After
