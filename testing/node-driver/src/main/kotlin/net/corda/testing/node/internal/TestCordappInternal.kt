@@ -6,6 +6,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.writeText
 import net.corda.testing.node.TestCordapp
+import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 
@@ -30,14 +31,17 @@ abstract class TestCordappInternal : TestCordapp() {
             // Precedence is given to node-specific CorDapps
             val allCordapps = nodeSpecificCordapps + generalCordapps.filter { it.withOnlyJarContents() !in nodeSpecificCordappsWithoutMeta }
             // Ignore any duplicate jar files
-            val jarToCordapp  = allCordapps.associateBy { it.jarFile }
+            val jarToCordapp  = allCordapps.filter { it !is CustomCordapp ||
+                    (it is CustomCordapp && it.classes.isNotEmpty()) }.associateBy { it.jarFile }
 
             val cordappsDir = baseDirectory / "cordapps"
             val configDir = (cordappsDir / "config").createDirectories()
 
             jarToCordapp.forEach { jar, cordapp ->
                 try {
-                    jar.copyToDirectory(cordappsDir)
+                    if (jar.toFile().exists()) {
+                        jar.copyToDirectory(cordappsDir)
+                    }
                 } catch (e: FileAlreadyExistsException) {
                     // Ignore if the node already has the same CorDapp jar. This can happen if the node is being restarted.
                 }

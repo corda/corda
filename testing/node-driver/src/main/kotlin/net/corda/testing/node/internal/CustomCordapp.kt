@@ -37,11 +37,6 @@ data class CustomCordapp(
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
 ) : TestCordappInternal() {
-    init {
-        require(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isNotEmpty()) {
-            "At least one package or class must be specified"
-        }
-    }
 
     override val jarFile: Path get() = getJarFile(this)
 
@@ -54,6 +49,9 @@ data class CustomCordapp(
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
+        if(packages.isEmpty() && classes.isEmpty() && fixups.isEmpty()){
+            return
+        }
         val classGraph = ClassGraph()
         if (packages.isNotEmpty()) {
             classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
@@ -83,8 +81,10 @@ data class CustomCordapp(
                 if (scanResult.allResources.isEmpty()){
                     throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
                 }
-                scanResult.allResources.asMap().forEach { path, resourceList ->
-                    jos.addEntry(testEntry(path), resourceList[0].open())
+                if(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isNotEmpty()){
+                    scanResult.allResources.asMap().forEach { path, resourceList ->
+                        jos.addEntry(testEntry(path), resourceList[0].open())
+                    }
                 }
             }
         }
