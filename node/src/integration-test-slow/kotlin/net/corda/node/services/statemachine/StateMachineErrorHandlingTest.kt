@@ -65,44 +65,44 @@ abstract class StateMachineErrorHandlingTest {
     internal fun DriverDSL.createBytemanNode(nodeProvidedName: CordaX500Name): Pair<NodeHandle, Int> {
         val port = nextPort()
         val bytemanNodeHandle = (this as InternalDriverDSL).startNode(
-                NodeParameters(
-                        providedName = nodeProvidedName,
-                        rpcUsers = listOf(rpcUser)
-                ),
-                bytemanPort = port
+            NodeParameters(
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser)
+            ),
+            bytemanPort = port
         )
         return bytemanNodeHandle.getOrThrow() to port
     }
 
     internal fun DriverDSL.createNode(nodeProvidedName: CordaX500Name): NodeHandle {
         return (this as InternalDriverDSL).startNode(
-                NodeParameters(
-                        providedName = nodeProvidedName,
-                        rpcUsers = listOf(rpcUser)
-                )
+            NodeParameters(
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser)
+            )
         ).getOrThrow()
     }
 
     internal fun DriverDSL.createNodeAndBytemanNode(
-            nodeProvidedName: CordaX500Name,
-            bytemanNodeProvidedName: CordaX500Name,
-            additionalCordapps: Collection<TestCordapp> = emptyList()
+        nodeProvidedName: CordaX500Name,
+        bytemanNodeProvidedName: CordaX500Name,
+        additionalCordapps: Collection<TestCordapp> = emptyList()
     ): Triple<NodeHandle, NodeHandle, Int> {
         val port = nextPort()
         val nodeHandle = (this as InternalDriverDSL).startNode(
-                NodeParameters(
-                        providedName = nodeProvidedName,
-                        rpcUsers = listOf(rpcUser),
-                        additionalCordapps = additionalCordapps
-                )
+            NodeParameters(
+                providedName = nodeProvidedName,
+                rpcUsers = listOf(rpcUser),
+                additionalCordapps = additionalCordapps
+            )
         )
         val bytemanNodeHandle = startNode(
-                NodeParameters(
-                        providedName = bytemanNodeProvidedName,
-                        rpcUsers = listOf(rpcUser),
-                        additionalCordapps = additionalCordapps
-                ),
-                bytemanPort = port
+            NodeParameters(
+                providedName = bytemanNodeProvidedName,
+                rpcUsers = listOf(rpcUser),
+                additionalCordapps = additionalCordapps
+            ),
+            bytemanPort = port
         )
         return Triple(nodeHandle.getOrThrow(), bytemanNodeHandle.getOrThrow(), port)
     }

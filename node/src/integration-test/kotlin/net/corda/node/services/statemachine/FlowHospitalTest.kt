@@ -47,16 +47,20 @@ class FlowHospitalTest {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
 
-    @Test(timeout=300_000)
-	fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
+    @Test(timeout = 300_000)
+    fun `when double spend occurs, the flow is successfully deleted on the counterparty`() {
         driver(DriverParameters(cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts")))) {
             val (charlieClient, aliceClient) = listOf(CHARLIE_NAME, ALICE_NAME)
-                    .map { startNode(providedName = it,
-                            rpcUsers = listOf(rpcUser)) }
+                    .map {
+                        startNode(providedName = it,
+                                rpcUsers = listOf(rpcUser))
+                    }
                     .transpose()
                     .getOrThrow()
-                    .map { CordaRPCClient(it.rpcAddress)
-                            .start(rpcUser.username, rpcUser.password).proxy }
+                    .map {
+                        CordaRPCClient(it.rpcAddress)
+                                .start(rpcUser.username, rpcUser.password).proxy
+                    }
 
             val aliceParty = aliceClient.nodeInfo().legalIdentities.first()
 
@@ -83,7 +87,7 @@ class FlowHospitalTest {
             val secondStateAndRef = charlieClient.startFlow(::IssueFlow, defaultNotaryIdentity).returnValue.get()
             charlieClient.startFlow(::SpendFlowWithCustomException, secondStateAndRef, aliceParty).returnValue.get()
 
-            val secondSubscription = aliceClient.stateMachinesFeed().updates.subscribe{
+            val secondSubscription = aliceClient.stateMachinesFeed().updates.subscribe {
                 if (it is StateMachineUpdate.Removed && it.result.isFailure)
                     secondLatch.countDown()
             }
@@ -98,75 +102,75 @@ class FlowHospitalTest {
         }
     }
 
-    @Test(timeout=300_000)
-	fun `HospitalizeFlowException thrown`() {
+    @Test(timeout = 300_000)
+    fun `HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
         driver(
-            DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
-            )
+                DriverParameters(
+                        startNodesInProcess = true,
+                        cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+                )
         ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::ThrowingHospitalisedExceptionFlow, HospitalizeFlowException::class.java)
-                    .returnValue.getOrThrow(5.seconds)
+                        .returnValue.getOrThrow(5.seconds)
             }
             assertEquals(1, observationCounter)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Custom exception wrapping HospitalizeFlowException thrown`() {
+    @Test(timeout = 300_000)
+    fun `Custom exception wrapping HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
         driver(
-            DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
-            )
+                DriverParameters(
+                        startNodesInProcess = true,
+                        cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+                )
         ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::ThrowingHospitalisedExceptionFlow, WrappingHospitalizeFlowException::class.java)
-                    .returnValue.getOrThrow(5.seconds)
+                        .returnValue.getOrThrow(5.seconds)
             }
             assertEquals(1, observationCounter)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Custom exception extending HospitalizeFlowException thrown`() {
+    @Test(timeout = 300_000)
+    fun `Custom exception extending HospitalizeFlowException thrown`() {
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++observationCounter
         }
         driver(
-            DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
-            )
+                DriverParameters(
+                        startNodesInProcess = true,
+                        cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+                )
         ) {
             // one node will be enough for this testing
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::ThrowingHospitalisedExceptionFlow, ExtendingHospitalizeFlowException::class.java)
-                    .returnValue.getOrThrow(5.seconds)
+                        .returnValue.getOrThrow(5.seconds)
             }
             assertEquals(1, observationCounter)
         }
     }
 
-    @Test(timeout=300_000)
-	fun `HospitalizeFlowException cloaking an important exception thrown`() {
+    @Test(timeout = 300_000)
+    fun `HospitalizeFlowException cloaking an important exception thrown`() {
         var dischargedCounter = 0
         var observationCounter: Int = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ ->
@@ -176,16 +180,16 @@ class FlowHospitalTest {
             ++observationCounter
         }
         driver(
-            DriverParameters(
-                startNodesInProcess = true,
-                cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
-            )
+                DriverParameters(
+                        startNodesInProcess = true,
+                        cordappsForAllNodes = listOf(enclosedCordapp(), findCordapp("net.corda.testing.contracts"))
+                )
         ) {
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser)).getOrThrow()
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
             assertFailsWith<TimeoutException> {
                 aliceClient.startFlow(::ThrowingHospitalisedExceptionFlow, CloakingHospitalizeFlowException::class.java)
-                    .returnValue.getOrThrow(5.seconds)
+                        .returnValue.getOrThrow(5.seconds)
             }
             assertEquals(0, observationCounter)
             // Since the flow will keep getting discharged from hospital dischargedCounter will be > 1.
@@ -194,7 +198,7 @@ class FlowHospitalTest {
     }
 
     @StartableByRPC
-    class IssueFlow(val notary: Party): FlowLogic<StateAndRef<SingleOwnerState>>() {
+    class IssueFlow(val notary: Party) : FlowLogic<StateAndRef<SingleOwnerState>>() {
 
         @Suspendable
         override fun call(): StateAndRef<SingleOwnerState> {
@@ -204,12 +208,11 @@ class FlowHospitalTest {
             val notarised = subFlow(FinalityFlow(signedTransaction, emptySet<FlowSession>()))
             return notarised.coreTransaction.outRef(0)
         }
-
     }
 
     @StartableByRPC
     @InitiatingFlow
-    class SpendFlow(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party): FlowLogic<Unit>() {
+    class SpendFlow(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -219,11 +222,10 @@ class FlowHospitalTest {
             sessionWithCounterParty.sendAndReceive<String>("initial-message")
             subFlow(FinalityFlow(signedTransaction, setOf(sessionWithCounterParty)))
         }
-
     }
 
     @InitiatedBy(SpendFlow::class)
-    class AcceptSpendFlow(private val otherSide: FlowSession): FlowLogic<Unit>() {
+    class AcceptSpendFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -232,12 +234,11 @@ class FlowHospitalTest {
 
             subFlow(ReceiveFinalityFlow(otherSide))
         }
-
     }
 
     @StartableByRPC
     @InitiatingFlow
-    class SpendFlowWithCustomException(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party):
+    class SpendFlowWithCustomException(private val stateAndRef: StateAndRef<SingleOwnerState>, private val newOwner: Party) :
             FlowLogic<Unit>() {
 
         @Suspendable
@@ -252,11 +253,10 @@ class FlowHospitalTest {
                 throw DoubleSpendException("double spend!", e)
             }
         }
-
     }
 
     @InitiatedBy(SpendFlowWithCustomException::class)
-    class AcceptSpendFlowWithCustomException(private val otherSide: FlowSession): FlowLogic<Unit>() {
+    class AcceptSpendFlowWithCustomException(private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -265,16 +265,15 @@ class FlowHospitalTest {
 
             subFlow(ReceiveFinalityFlow(otherSide))
         }
-
     }
 
-    class DoubleSpendException(message: String, cause: Throwable): FlowException(message, cause)
+    class DoubleSpendException(message: String, cause: Throwable) : FlowException(message, cause)
 
     @StartableByRPC
     class ThrowingHospitalisedExceptionFlow(
-        // Starting this Flow from an RPC client: if we pass in an encapsulated exception within another exception then the wrapping
-        // exception, when deserialized, will get grounded into a CordaRuntimeException (this happens in ThrowableSerializer#fromProxy).
-        private val hospitalizeFlowExceptionClass: Class<*>): FlowLogic<Unit>() {
+            // Starting this Flow from an RPC client: if we pass in an encapsulated exception within another exception then the wrapping
+            // exception, when deserialized, will get grounded into a CordaRuntimeException (this happens in ThrowableSerializer#fromProxy).
+            private val hospitalizeFlowExceptionClass: Class<*>) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
@@ -285,7 +284,7 @@ class FlowHospitalTest {
         }
     }
 
-    class WrappingHospitalizeFlowException(cause: HospitalizeFlowException =  HospitalizeFlowException()) : Exception(cause)
+    class WrappingHospitalizeFlowException(cause: HospitalizeFlowException = HospitalizeFlowException()) : Exception(cause)
 
     class ExtendingHospitalizeFlowException : HospitalizeFlowException()
 
@@ -297,5 +296,4 @@ class FlowHospitalTest {
             setCause(SQLException("deadlock"))
         }
     }
-
 }
