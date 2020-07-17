@@ -32,7 +32,7 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
     @get:Rule
     val serializationRule = CheckpointSerializationEnvironmentRule(inheritable = true)
     private val context: CheckpointSerializationContext = CheckpointSerializationContextImpl(
-            deserializationClassLoader = javaClass.classLoader,
+            deserializationClassLoader = buildClassLoaderForUniqueKryoPool(),
             whitelist = AllWhitelist,
             properties = emptyMap(),
             objectReferencesEnabled = true,
@@ -47,6 +47,11 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
             TestCorDapp.TestFinalClassSerializer(),
             TestCorDapp.BrokenPublicKeySerializer()
     )
+
+    /**
+     * Create a new class loader so this test gets a unique context and Kryo pool
+     */
+    private fun buildClassLoaderForUniqueKryoPool() = object : ClassLoader(this.javaClass.classLoader) {}
 
     @Before
     fun setup() {
