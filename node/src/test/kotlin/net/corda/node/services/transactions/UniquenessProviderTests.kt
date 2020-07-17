@@ -671,7 +671,7 @@ var ourKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNA
 val keyService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
 val pubKey = keyService.freshKey()
 
-fun signSingle(it: SecureHash, notary: Party?) = keyService.sign(
+fun signSingle(it: SecureHash, @Suppress("UNUSED_PARAMETER") notary: Party?) = keyService.sign(
         SignableData(
                 txId = it,
                 signatureMetadata = SignatureMetadata(
