@@ -14,6 +14,7 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
@@ -670,7 +671,7 @@ var ourKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNA
 val keyService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
 val pubKey = keyService.freshKey()
 
-fun signSingle(it: SecureHash) = keyService.sign(
+fun signSingle(it: SecureHash, notary: Party?) = keyService.sign(
         SignableData(
                 txId = it,
                 signatureMetadata = SignatureMetadata(

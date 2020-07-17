@@ -57,7 +57,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
-    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+    // Keep only last entry for duplicated X.500 name if notary key was rotated
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }.reversed().distinctBy { it.name }.reversed()
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -96,6 +97,8 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             session.createQuery(query).resultList.singleOrNull()?.toNodeInfo()
         }
     }
+
+    override fun isNotary(party: Party): Boolean = notaries.any { it.identity == party }
 
     override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 

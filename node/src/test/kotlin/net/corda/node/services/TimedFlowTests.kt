@@ -270,7 +270,7 @@ class TimedFlowTests {
     private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
         override val uniquenessProvider = object : UniquenessProvider {
             /** A dummy commit method that immediately returns a success message. */
-            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
+            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>, notary: Party?): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
                         signTransaction(txId)
@@ -289,7 +289,8 @@ class TimedFlowTests {
                 caller: Party,
                 requestSignature: NotarisationRequestSignature,
                 timeWindow: TimeWindow?,
-                references: List<StateRef>
+                references: List<StateRef>,
+                notary: Party?
         ) : UniquenessProvider.Result {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
@@ -300,7 +301,7 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
+                return super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references, notary)
             }
             return UniquenessProvider.Result.Failure(NotaryError.General(Throwable("leave me alone")))
         }

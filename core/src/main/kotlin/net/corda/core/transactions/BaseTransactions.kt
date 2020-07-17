@@ -4,6 +4,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
@@ -54,7 +55,7 @@ abstract class FullTransaction : BaseTransaction() {
             networkParameters?.let { parameters ->
                 val notaryWhitelist = parameters.notaries.map { it.identity }
                 check(notaryParty in notaryWhitelist) {
-                    "Notary ($notaryParty) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
+                    "Notary ($notaryParty:${notaryParty.owningKey.toStringShort()}) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
                 }
             }
         }

@@ -48,7 +48,6 @@ import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import kotlin.collections.HashSet
 import kotlin.streams.toList
 
 /**
@@ -178,7 +177,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     fun start(
             trustRoot: X509Certificate,
             ourIdentity: PartyAndCertificate,
-            notaryIdentities: List<Party> = emptyList(),
             pkToIdCache: WritablePublicKeyToOwningIdentityCache
     ) {
         _trustRoot = trustRoot
@@ -188,7 +186,6 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(certificates))
         _pkToIdCache = pkToIdCache
         ourParty = ourIdentity.party
-        notaryIdentityCache.addAll(notaryIdentities)
     }
 
     fun loadIdentities(identities: Collection<PartyAndCertificate>) {
@@ -285,28 +282,21 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // Skip database lookup if the party is a notary identity.
-        // This also prevents an issue where the notary identity can't be resolved if it's not in the network map cache. The node obtains
-        // a trusted list of notary identities from the network parameters automatically.
-        return if (party is Party && party in notaryIdentityCache) {
-            party
-        } else {
-            database.transaction {
-                if (party is Party) {
-                    val candidate = wellKnownPartyFromX500Name(party.name)
-                    if (candidate != null && candidate != party) {
-                        // Party doesn't match existing well-known party: check that the key is registered, otherwise return null.
-                        require(party.name == candidate.name) { "Candidate party $candidate does not match expected $party" }
-                        keyToParty[party.owningKey]?.let { candidate }
-                    } else {
-                        // Party is a well-known party or well-known party doesn't exist: skip checks.
-                        candidate
-                    }
+        return database.transaction {
+            if (party is Party) {
+                val candidate = wellKnownPartyFromX500Name(party.name)
+                if (candidate != null && candidate != party) {
+                    // Party doesn't match existing well-known party: check that the key is registered, otherwise return null.
+                    require(party.name == candidate.name) { "Candidate party $candidate does not match expected $party" }
+                    keyToParty[party.owningKey]?.let { candidate }
                 } else {
-                    keyToParty[party.owningKey]?.let {
-                        // Rotated (inactive) well-known party should be converted to the actual well-known party.
-                        wellKnownPartyFromX500Name(it.name)
-                    }
+                    // Party is a well-known party or well-known party doesn't exist: skip checks.
+                    candidate
+                }
+            } else {
+                keyToParty[party.owningKey]?.let {
+                    // Rotated (inactive) well-known party should be converted to the actual well-known party.
+                    wellKnownPartyFromX500Name(it.name)
                 }
             }
         }

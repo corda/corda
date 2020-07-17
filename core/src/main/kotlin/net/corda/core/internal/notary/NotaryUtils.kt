@@ -4,6 +4,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotarisationResponse
@@ -40,7 +41,7 @@ fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSig
  */
 fun NotarisationResponse.validateSignatures(txId: SecureHash, notary: Party) {
     val signingKeys = signatures.map { it.by }
-    require(notary.owningKey.isFulfilledBy(signingKeys)) { "Insufficient signatures to fulfill the notary signing requirement for $notary" }
+    require(notary.owningKey.isFulfilledBy(signingKeys)) { "Insufficient signatures to fulfill the notary signing requirement for $notary ${notary.owningKey.toStringShort()}" }
     signatures.forEach { it.verify(txId) }
 }
 

@@ -560,7 +560,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val (identity, myNotaryIdentity, keyPairs) = obtainIdentities(trustRoot)
 
-        identityService.start(trustRoot, identity, netParams.notaries.map { it.identity }, pkToIdCache)
+        identityService.start(trustRoot, identity, pkToIdCache = pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
             updateNodeInfo(identity, myNotaryIdentity, keyPairs, publish = true)
@@ -613,7 +613,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs.map { it.key to it.alias })
             installCordaServices()
-            notaryService = maybeStartNotaryService(myNotaryIdentity)
+            notaryService = maybeStartNotaryService(myNotaryIdentity, keyPairs.filter { it.notary }.map { it.key }.toSet())
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -1002,9 +1002,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Loads and starts a notary service if it is configured. */
-    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
+    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?, rotatedKeys: Set<PublicKey>): NotaryService? {
         return notaryLoader?.let { loader ->
             val service = loader.loadService(myNotaryIdentity, services, cordappLoader)
+            /** TODO: include rotated composite identity  */
+            service.rotatedKeys = rotatedKeys
 
             service.run {
                 tokenize()
@@ -1061,8 +1063,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyPairs = identityKeyPairs.toMutableSet()
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
-                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryServiceIdentity(it.serviceLegalName)
-                keyPairs += notaryIdentityKeyPair
+                val (notaryIdentity, notaryIdentityKeyPairs) = loadNotaryServiceIdentity(it.serviceLegalName)
+                keyPairs += notaryIdentityKeyPairs
                 notaryIdentity
             } else {
                 // The only case where the myNotaryIdentity will be the node's legal identity is for existing single notary services running
@@ -1083,8 +1085,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return Triple(identity, myNotaryIdentity, keyPairs)
     }
 
-    private data class KeyAndAlias(val key: PublicKey, val alias: String)
-
     /**
      * Loads the node's legal identity, public key and alias.
      *
@@ -1092,38 +1092,40 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * In this case we also return public keys and aliases for old entries, so they can be used by [KeyManagementService] for signing.
      */
     private fun obtainIdentity(trustRoot: X509Certificate): Pair<PartyAndCertificate, Set<KeyAndAlias>> {
-        val signingCertificateStore = configuration.signingCertificateStore.get()
+        val defaultAlias = NODE_IDENTITY_KEY_ALIAS
         val legalName = configuration.myLegalName
+        val signingCertificateStore = configuration.signingCertificateStore.get()
 
         // Filter keystore entries by legal name to distinguish them from notary identities.
-        val entries = signingCertificateStore
-                .filter { CordaX500Name.build(it.second.subjectX500Principal) == legalName }
-                .map { it.first to signingCertificateStore.value.getCertificateChain(it.first) }
+        val entries = signingCertificateStore.filter { CordaX500Name.build(it.second.subjectX500Principal) == legalName }
 
-        // Rotated identities are represented with self-signed certificates.
-        val rotatedIdentities = entries.filter { it.second.size == 1 }.map { it.first }
+        // Rotated identities are represented using self-signed certificates without extendedKeyUsage.
+        val rotatedIdentities = entries.filter { it.second.rotatedIdentity }.map { it.first }
 
-        val defaultAlias = NODE_IDENTITY_KEY_ALIAS
+        // If configured legal identity alias is present and has a valid certificate, use it (backwards compatibility mode).
+        // Otherwise resolve legal identity and node CA certificates automatically.
         val legalIdentityPrivateKeyAlias = if (defaultAlias in signingCertificateStore && defaultAlias !in rotatedIdentities) {
-            // If configured legal identity alias is present and has a valid certificate, use it (backwards compatibility mode).
             defaultAlias
         } else {
-            // Otherwise resolve legal identity and node CA certificates automatically.
-            val activeEntries = entries.filter { it.first !in rotatedIdentities }.sortedByDescending { it.second.size }
-            val activeAliases = activeEntries.map { it.first }
-            check(activeEntries.isNotEmpty()) {
+            // Sort keystore entries (except for rotated ones) by certificate chain length, so that legal identity comes before Node CA.
+            val candidates = entries.filter { it.first !in rotatedIdentities }
+                    .map { it.first to signingCertificateStore.value.getCertificateChain(it.first) }
+                    .sortedByDescending { it.second.size }
+
+            val aliases = candidates.map { it.first }
+            check(candidates.isNotEmpty()) {
                 "Unable to find node identity certificate for $legalName in keystore"
             }
-            check(activeEntries.size <= 2) {
-                "Unable to locate node identity certificate for $legalName in keystore, too many entries found: $activeAliases"
+            check(candidates.size <= 2) {
+                "Unable to locate node identity certificate for $legalName in keystore, too many entries found: $aliases"
             }
             // If node CA certificate is present in keystore, check that it's a parent for legal identity certificate.
-            if (activeEntries.size == 2) {
-                check(activeEntries[0].second[1] == activeEntries[1].second[0]) {
-                    "Legal identity and Node CA certificates from keystore do not match: $activeAliases"
+            if (candidates.size == 2) {
+                check(candidates[0].second[1] == candidates[1].second[0]) {
+                    "Legal identity and Node CA certificates from keystore do not match: $aliases"
                 }
             }
-            activeAliases[0]
+            aliases[0]
         }
 
         val x509Cert = signingCertificateStore.query { getCertificate(legalIdentityPrivateKeyAlias) }
@@ -1160,25 +1162,58 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
      * that is generated during initial registration and is used to sign notarisation requests.
      * */
-    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyAndAlias> {
-        val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
-        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
-
+    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, Set<KeyAndAlias>> {
+        val defaultPrivateKeyAlias = DISTRIBUTED_NOTARY_KEY_ALIAS
+        val defaultCompositeKeyAlias = DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
         val signingCertificateStore = configuration.signingCertificateStore.get()
-        val privateKeyAliasCertChain = try {
-            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
-        } catch (e: Exception) {
-            throw IllegalStateException("Certificate-chain for $privateKeyAlias cannot be found", e)
+
+        // Filter keystore entries by legal name to distinguish them from node identities.
+        // Identify and separate composite key entries, which are present without private keys.
+        val (entries, compositeEntries) = signingCertificateStore
+                    .filter { CordaX500Name.build(it.second.subjectX500Principal) == serviceLegalName }
+                    .partition { signingCertificateStore.value.internal.isKeyEntry(it.first) }
+
+        // Rotated identities are represented using self-signed certificates without extendedKeyUsage.
+        val rotatedIdentities = entries.filter { it.second.rotatedIdentity }.map { it.first }
+        val rotatedCompositeIdentities = compositeEntries.filter { it.second.rotatedIdentity }.map { it.first }
+
+        // If configured alias is present and has a valid certificate, use it (backwards compatibility mode).
+        // Otherwise, resolve alias automatically.
+        val privateKeyAlias = if (defaultPrivateKeyAlias in signingCertificateStore && defaultPrivateKeyAlias !in rotatedIdentities) {
+            defaultPrivateKeyAlias
+        } else {
+            val candidates = entries.filter { it.first !in rotatedIdentities }.map { it.first }
+            check(candidates.isNotEmpty()) {
+                "Unable to find notary identity certificate for $serviceLegalName in keystore"
+            }
+            check(candidates.size == 1) {
+                "Unable to locate notary identity certificate for $serviceLegalName in keystore, too many entries found: $candidates"
+            }
+            candidates.first()
         }
+
+        // If configured alias is present and has a valid certificate, use it (backwards compatibility mode).
+        // Otherwise, resolve alias automatically.
+        val compositeKeyAlias = if (defaultCompositeKeyAlias in signingCertificateStore && defaultCompositeKeyAlias !in rotatedCompositeIdentities) {
+            // If configured alias is present and has a valid certificate, use it (backwards compatibility mode).
+            defaultCompositeKeyAlias
+        } else {
+            val candidates = compositeEntries.filter { it.first !in rotatedCompositeIdentities }.map { it.first }
+            check(candidates.size <= 1) {
+                "Unable to locate notary identity certificate for $serviceLegalName in keystore, too many entries found: $candidates"
+            }
+            candidates.firstOrNull()
+        }
+
+        val privateKeyAliasCertChain = signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
         // A composite key is only required for BFT notaries.
-        val certificates = if (cryptoService.containsKey(compositeKeyAlias) && signingCertificateStore.contains(compositeKeyAlias)) {
+        val certificates = if (compositeKeyAlias != null) {
             val certificate = signingCertificateStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + privateKeyAliasCertChain.drop(1)
         } else {
-            checkAliasMismatch(compositeKeyAlias, signingCertificateStore)
             // If [compositeKeyAlias] does not exist, we assume the notary is CFT, and each cluster member shares the same notary key pair.
             privateKeyAliasCertChain
         }
@@ -1189,17 +1224,25 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
-        val keyPair = loadIdentityKey(privateKeyAlias, "notary service identity")
-        return identity to keyPair
+        val keyPairs = setOf(loadIdentityKey(privateKeyAlias, "notary service identity", notary = true)) +
+                rotatedIdentities.map { loadIdentityKey(it, "previous notary service identity", notary = true) }
+        return identity to keyPairs
     }
 
-    private fun loadIdentityKey(alias: String, description: String): KeyAndAlias {
+    /**
+     * If this certificate is only used to store alias for rotated identity.
+     */
+    private val X509Certificate.rotatedIdentity: Boolean get() = (extendedKeyUsage == null || extendedKeyUsage.size == 0)
+
+    private data class KeyAndAlias(val key: PublicKey, val alias: String, val notary: Boolean)
+
+    private fun loadIdentityKey(alias: String, description: String, notary: Boolean = false): KeyAndAlias {
         if (!cryptoService.containsKey(alias)) {
             throw IllegalStateException("Key alias $alias for $description was not found in CryptoService")
         }
         val key = cryptoService.getPublicKey(alias)!!
         log.info("Loaded $description key: ${key.toStringShort()}, alias: $alias")
-        return KeyAndAlias(key, alias)
+        return KeyAndAlias(key, alias, notary)
     }
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,

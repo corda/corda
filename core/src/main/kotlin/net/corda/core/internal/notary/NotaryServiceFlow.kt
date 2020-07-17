@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
@@ -68,7 +69,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     otherSideSession.counterparty,
                     requestPayload.requestSignature,
                     tx.timeWindow,
-                    tx.references)
+                    tx.references,
+                    tx.notary)
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
@@ -107,8 +109,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
     private fun checkNotary(notary: Party?) {
-        require(notary?.owningKey == service.notaryIdentityKey) {
-            "The notary specified on the transaction: [$notary] does not match the notary service's identity: [${service.notaryIdentityKey}] "
+        require(notary?.owningKey == service.notaryIdentityKey || notary?.owningKey in service.rotatedKeys) {
+            "The notary specified on the transaction: [$notary][${notary?.owningKey?.toStringShort()}] does not match the notary service's identity: [${service.notaryIdentityKey.toStringShort()}] [${service.rotatedKeys.map { it.toStringShort() }}]"
         }
     }
 
