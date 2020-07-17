@@ -31,7 +31,7 @@ abstract class TestCordappInternal : TestCordapp() {
             val allCordapps = nodeSpecificCordapps + generalCordapps.filter { it.withOnlyJarContents() !in nodeSpecificCordappsWithoutMeta }
             // Ignore any duplicate jar files
             val jarToCordapp  = allCordapps.filter {
-                it !is CustomCordapp || it.packages.isNotEmpty() }.associateBy { it.jarFile }
+                it !is CustomCordapp || it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty() }.associateBy { it.jarFile }
 
             val cordappsDir = baseDirectory / "cordapps"
             val configDir = (cordappsDir / "config").createDirectories()

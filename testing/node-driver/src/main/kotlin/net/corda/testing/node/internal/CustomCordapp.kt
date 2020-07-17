@@ -49,11 +49,10 @@ data class CustomCordapp(
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
-        if(packages.isEmpty()){
-            return
-        }
         val classGraph = ClassGraph()
-        classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
+        if(packages.isNotEmpty()){
+            classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
+        }
         if (classes.isNotEmpty()) {
             classes.forEach { classGraph.addClassLoader(it.classLoader) }
             classGraph.whitelistClasses(*classes.map { it.name }.toTypedArray())
@@ -79,8 +78,10 @@ data class CustomCordapp(
                 if (scanResult.allResources.isEmpty()){
                     throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
                 }
-                scanResult.allResources.asMap().forEach { path, resourceList ->
-                    jos.addEntry(testEntry(path), resourceList[0].open())
+                if(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isEmpty()){
+                    scanResult.allResources.asMap().forEach { path, resourceList ->
+                        jos.addEntry(testEntry(path), resourceList[0].open())
+                    }
                 }
             }
         }
