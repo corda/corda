@@ -8,6 +8,7 @@ import freighter.installers.corda.OPEN_SOURCE
 import freighter.machine.DeploymentMachineProvider
 import freighter.testing.DockerRemoteMachineBasedTest
 import net.corda.bn.flows.CreateBusinessNetworkFlow
+import net.corda.bn.flows.RequestMembershipFlow
 import net.corda.bn.testing.DummyIdentity
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
@@ -36,7 +37,7 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
         val businessId = DummyIdentity("ImARealBNOY")
         val groupName = "GroupOfBnoyos"
 
-//        val listOfGroupMembers = listOf(nodeGenerator(), nodeGenerator(), nodeGenerator()).map { it.getOrThrow() }
+        val listOfGroupMembers = listOf(nodeGenerator(), nodeGenerator(), nodeGenerator()).map { it.getOrThrow() }
 
         val output = bnoNode.rpc {
             startFlow(::CreateBusinessNetworkFlow,
@@ -49,15 +50,15 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
 
         //Need to get a value from the state returned from teh CreateBusinessNetworkFlow
 
-//        for (node in listOfGroupMembers) {
-//            node.rpc {
-//                startFlow(::RequestMembershipFlow,
-//                        bnoNode.identity(),
-//                        networkId.toString(),
-//                        businessId,
-//                        null).returnValue.getOrThrow()
-//            }
-//        }
+        for (node in listOfGroupMembers) {
+            node.rpc {
+                startFlow(::RequestMembershipFlow,
+                        bnoNode.identity(),
+                        networkId.toString(),
+                        businessId,
+                        null).returnValue.getOrThrow()
+            }
+        }
     }
 
 //    private fun createNodeDeployment(randomString: String, deploymentContext: DeploymentContext): SingleNodeDeployed {
