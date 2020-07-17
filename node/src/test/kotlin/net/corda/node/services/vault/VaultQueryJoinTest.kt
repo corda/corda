@@ -10,6 +10,8 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.node.services.vault.builder
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -23,7 +25,6 @@ import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.BeforeClass
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
@@ -68,22 +69,45 @@ class VaultQueryJoinTest {
         }
     }
 
+    private val queryToCheckId = builder {
+        val conditionToCheckId =
+                DummySchema.DummyState::id
+                        .equal(0)
+        QueryCriteria.VaultCustomQueryCriteria(conditionToCheckId, Vault.StateStatus.UNCONSUMED)
+    }
+
+    private val queryToCheckStateRef =
+            QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, stateRefs = listOf(createdStateRefs[numObjectsInLedger-1]))
+
     @Test(timeout = 300_000)
-    fun `filter query with OR operator that returns only one tuple with pagination defined`() {
-        val queryToCheckId = builder {
-            val conditionToCheckId =
-                    DummySchema.DummyState::id
-                            .equal(0)
-            QueryCriteria.VaultCustomQueryCriteria(conditionToCheckId, Vault.StateStatus.UNCONSUMED)
-        }
-
-        val queryToCheckStateRef =
-                QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, stateRefs = listOf(createdStateRefs[numObjectsInLedger-1]))
-
-
+    fun `filter query with OR operator`() {
         val results = serviceHubHandle.vaultService.queryBy<DummyState>(
                 queryToCheckId.or(queryToCheckStateRef)
         )
+        assertEquals(2, results.states.size)
+        assertEquals(2, results.statesMetadata.size)
+    }
+
+    @Test(timeout = 300_000)
+    fun `filter query with sorting`() {
+        val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Custom(DummySchema.DummyState::class.java, "stateRef"), Sort.Direction.DESC)))
+
+        val results = serviceHubHandle.vaultService.queryBy<DummyState>(
+                queryToCheckStateRef, sorting = sorting
+        )
+
+        assertEquals(1, results.states.size)
+        assertEquals(1, results.statesMetadata.size)
+    }
+
+    @Test(timeout = 300_000)
+    fun `filter query with OR operator and sorting`() {
+        val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Custom(DummySchema.DummyState::class.java, "stateRef"), Sort.Direction.DESC)))
+
+        val results = serviceHubHandle.vaultService.queryBy<DummyState>(
+                queryToCheckId.or(queryToCheckStateRef), sorting = SORTING
+        )
+
         assertEquals(2, results.states.size)
         assertEquals(2, results.statesMetadata.size)
     }
