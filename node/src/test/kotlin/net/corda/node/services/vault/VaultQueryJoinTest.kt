@@ -102,10 +102,10 @@ class VaultQueryJoinTest {
 
     @Test(timeout = 300_000)
     fun `filter query with OR operator and sorting`() {
-        val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Custom(DummySchema.DummyState::class.java, "stateRef"), Sort.Direction.DESC)))
+        val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Custom(DummySchema.DummyState::class.java, "stateRef"), Sort.Direction.DESC)))
 
         val results = serviceHubHandle.vaultService.queryBy<DummyState>(
-                queryToCheckId.or(queryToCheckStateRef), sorting = SORTING
+                queryToCheckId.or(queryToCheckStateRef), sorting = sorting
         )
 
         assertEquals(2, results.states.size)
