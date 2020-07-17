@@ -1,0 +1,51 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+repositories {
+    maven { url "http://ci-artifactory.corda.r3cev.com/artifactory/freighter-dev" }
+}
+sourceSets {
+    freighterTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/freighterTest/kotlin')
+        }
+    }
+}
+evaluationDependsOn(":business-networks:workflows")
+task freighterTest(type: Test, dependsOn: [project(":business-networks:workflows").jar]) {
+    maxParallelForks 2
+    systemProperty "java.util.concurrent.ForkJoinPool.common.parallelism", "128"
+    testClassesDirs = sourceSets.freighterTest.output.classesDirs
+    classpath = sourceSets.freighterTest.runtimeClasspath
+    useJUnitPlatform {
+        includeTags "DOCKER"
+        excludeTags "AZURE", "ORACLE"
+        if (Os.isFamily(Os.FAMILY_WINDOWS) || Os.isFamily(Os.FAMILY_MAC)) {
+            //windows + mac cannot run comcast tests and cannot run oracle tests due to credential store issues
+            excludeTags "FULL_LINUX_KERNEL", "ORACLE"
+        }
+        if (Os.isFamily(Os.FAMILY_UNIX) && "uname -a".execute().getText().contains("microsoft")) {
+            excludeTags "FULL_LINUX_KERNEL"
+        }
+    }
+}
+configurations {
+    freighterTestCompile.extendsFrom testCompile
+    freighterTestRuntime.extendsFrom testRuntime
+}
+dependencies {
+    freighterTestCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    freighterTestCompile "freighter:freighter-testing-core-junit5:0.5.0-SNAPSHOT"
+    freighterTestCompile project(":business-networks:workflows")
+    freighterTestCompile project(":business-networks:contracts")
+}
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        languageVersion = "1.2"
+        apiVersion = "1.2"
+        jvmTarget = "1.8"
+        javaParameters = true   // Useful for reflection.
+    }
+}
