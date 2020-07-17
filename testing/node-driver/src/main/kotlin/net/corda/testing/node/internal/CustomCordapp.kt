@@ -78,10 +78,9 @@ data class CustomCordapp(
                 if (scanResult.allResources.isEmpty()){
                     throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
                 }
-                if(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isEmpty()){
-                    scanResult.allResources.asMap().forEach { path, resourceList ->
-                        jos.addEntry(testEntry(path), resourceList[0].open())
-                    }
+
+                scanResult.allResources.asMap().forEach { path, resourceList ->
+                    jos.addEntry(testEntry(path), resourceList[0].open())
                 }
             }
         }
@@ -179,7 +178,9 @@ data class CustomCordapp(
                 if (it.fixups.isNotEmpty()) {
                     it.createFixupJar(jarFile)
                 } else {
-                    it.packageAsJar(jarFile)
+                    if(it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty()) {
+                        it.packageAsJar(jarFile)
+                    }
                 }
                 it.signJar(jarFile)
                 logger.debug { "$it packaged into $jarFile" }
