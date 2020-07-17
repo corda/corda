@@ -1,20 +1,16 @@
-package `freighter-tests`.src.freighterTest.kotlin
+package freightertests
 
 import freighter.deployments.DeploymentContext
 import freighter.deployments.NodeBuilder
 import freighter.deployments.SingleNodeDeployed
 import freighter.deployments.SingleNodeDeployment
-import freighter.installers.corda.ENTERPRISE
 import freighter.installers.corda.OPEN_SOURCE
 import freighter.machine.DeploymentMachineProvider
-import freighter.machine.generateRandomString
 import freighter.testing.DockerRemoteMachineBasedTest
 import net.corda.bn.flows.CreateBusinessNetworkFlow
-import net.corda.bn.flows.RequestMembershipFlow
-import net.corda.bn.states.BNIdentity
+import net.corda.bn.testing.DummyIdentity
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
@@ -25,8 +21,8 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
 
     private val bnoContracts = NodeBuilder.DeployedCordapp.fromClassPath("corda-business-network-contracts")
     private val bnoWorkflows = NodeBuilder.DeployedCordapp.fromClassPath("corda-business-network-workflows")
+    private val bnoTesting = NodeBuilder.DeployedCordapp.fromClassPath("corda-business-network-testing-cordapp")
     private val freighterHelperCordapp = NodeBuilder.DeployedCordapp.fromClassPath("freighter-cordapp-flows")
-
 
     @Test
     fun test() {
@@ -40,27 +36,28 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
         val businessId = DummyIdentity("ImARealBNOY")
         val groupName = "GroupOfBnoyos"
 
-        val listOfGroupMembers =  listOf(nodeGenerator(), nodeGenerator(), nodeGenerator()).map { it.getOrThrow() }
+//        val listOfGroupMembers = listOf(nodeGenerator(), nodeGenerator(), nodeGenerator()).map { it.getOrThrow() }
 
-        val output = bnoNode.rpc { startFlow(::CreateBusinessNetworkFlow,
-                networkId,
-                businessId,
-                groupId,
-                groupName,
-                null).returnValue.getOrThrow()
+        val output = bnoNode.rpc {
+            startFlow(::CreateBusinessNetworkFlow,
+                    networkId,
+                    businessId,
+                    groupId,
+                    groupName,
+                    null).returnValue.getOrThrow()
         }
 
         //Need to get a value from the state returned from teh CreateBusinessNetworkFlow
 
-        for( node in listOfGroupMembers){
-            node.rpc { startFlow(::RequestMembershipFlow,
-                    bnoNode.identity(),
-                    networkId.toString(),
-                    businessId,
-                    null).returnValue.getOrThrow() }
-        }
-
-
+//        for (node in listOfGroupMembers) {
+//            node.rpc {
+//                startFlow(::RequestMembershipFlow,
+//                        bnoNode.identity(),
+//                        networkId.toString(),
+//                        businessId,
+//                        null).returnValue.getOrThrow()
+//            }
+//        }
     }
 
 //    private fun createNodeDeployment(randomString: String, deploymentContext: DeploymentContext): SingleNodeDeployed {
@@ -88,7 +85,7 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
                                         .withCordapp(bnoContracts)
                                         .withCordapp(bnoWorkflows)
                                         .withCordapp(freighterHelperCordapp)
-                                        .withDatabase(machineProvider.requestDatabase(DeploymentMachineProvider.DatabaseType.PG_11_5))
+                                        .withCordapp(bnoTesting)
                         ).withVersion("4.4")
                                 .withDistribution(OPEN_SOURCE)
                                 .deploy(deploymentContext)
@@ -96,6 +93,3 @@ class FreighterTests : DockerRemoteMachineBasedTest() {
                 })
             }(indexGenerator, deploymentContext, DeploymentMachineProvider.DatabaseType.PG_11_5)
 }
-
-@CordaSerializable
-data class DummyIdentity(val name: String) : BNIdentity
