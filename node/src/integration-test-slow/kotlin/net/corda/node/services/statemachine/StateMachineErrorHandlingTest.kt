@@ -64,14 +64,14 @@ abstract class StateMachineErrorHandlingTest {
 
     internal fun DriverDSL.createBytemanNode(nodeProvidedName: CordaX500Name): Pair<NodeHandle, Int> {
         val port = nextPort()
-        val bytmanNodeHandle = (this as InternalDriverDSL).startNode(
+        val bytemanNodeHandle = (this as InternalDriverDSL).startNode(
                 NodeParameters(
                         providedName = nodeProvidedName,
                         rpcUsers = listOf(rpcUser)
                 ),
                 bytemanPort = port
         )
-        return bytmanNodeHandle.getOrThrow() to port
+        return bytemanNodeHandle.getOrThrow() to port
     }
 
     internal fun DriverDSL.createNode(nodeProvidedName: CordaX500Name): NodeHandle {
@@ -96,7 +96,7 @@ abstract class StateMachineErrorHandlingTest {
                         additionalCordapps = additionalCordapps
                 )
         )
-        val bytmanNodeHandle = startNode(
+        val bytemanNodeHandle = startNode(
                 NodeParameters(
                         providedName = bytemanNodeProvidedName,
                         rpcUsers = listOf(rpcUser),
@@ -104,7 +104,7 @@ abstract class StateMachineErrorHandlingTest {
                 ),
                 bytemanPort = port
         )
-        return Triple(nodeHandle.getOrThrow(), bytmanNodeHandle.getOrThrow(), port)
+        return Triple(nodeHandle.getOrThrow(), bytemanNodeHandle.getOrThrow(), port)
     }
 
     internal fun submitBytemanRules(rules: String, port: Int) {
