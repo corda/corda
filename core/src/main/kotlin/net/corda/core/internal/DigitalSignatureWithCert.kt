@@ -48,13 +48,8 @@ Cert path: $fullCertPath
 class SignedDataWithCert<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignatureWithCert): NamedByHash {
     override val id: SecureHash get () = raw.hash
 
-    private lateinit var obj: T
-
     fun verified(): T {
-        if (!this::obj.isInitialized) {
-            sig.verify(raw)
-            obj = uncheckedCast(raw.deserialize<Any>())
-        }
-        return obj
+        sig.verify(raw)
+        return uncheckedCast(raw.deserialize<Any>())
     }
 }
