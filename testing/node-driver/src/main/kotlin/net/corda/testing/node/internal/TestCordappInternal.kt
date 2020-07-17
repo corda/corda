@@ -6,7 +6,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.writeText
 import net.corda.testing.node.TestCordapp
-import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 
