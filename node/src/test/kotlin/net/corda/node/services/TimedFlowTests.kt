@@ -273,7 +273,7 @@ class TimedFlowTests {
             override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>, notary: Party?): CordaFuture<UniquenessProvider.Result> {
                 return openFuture<UniquenessProvider.Result>().apply {
                     val signature = services.database.transaction {
-                        signTransaction(txId)
+                        signTransaction(txId, notary)
                     }
                     set(UniquenessProvider.Result.Success(signature))
                 }
