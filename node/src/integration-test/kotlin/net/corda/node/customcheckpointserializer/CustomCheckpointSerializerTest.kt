@@ -50,12 +50,12 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
 
     @Before
     fun setup() {
-        KryoCheckpointSerializer.setCordappSerializers(context, customSerializers)
+        KryoCheckpointSerializer.setCordappSerializers(customSerializers)
     }
 
     @After
     fun tearDown() {
-        KryoCheckpointSerializer.setCordappSerializers(context, emptyList())
+        KryoCheckpointSerializer.setCordappSerializers(emptyList())
     }
 
     @Test(timeout=300_000)

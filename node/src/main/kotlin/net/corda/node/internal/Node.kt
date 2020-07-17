@@ -633,7 +633,6 @@ open class Node(configuration: NodeConfiguration,
     private fun initialiseSerialization() {
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
-        val checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()))
@@ -644,8 +643,8 @@ open class Node(configuration: NodeConfiguration,
                 rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null, //even Shell embeded in the node connects via RPC to the node
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
-                checkpointSerializer = KryoCheckpointSerializer.also { checkpointSerializer -> checkpointSerializer.setCordappSerializers(checkpointContext, cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers }) },
-                checkpointContext = checkpointContext
+                checkpointSerializer = KryoCheckpointSerializer.also { checkpointSerializer -> checkpointSerializer.setCordappSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers }) },
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
         )
     }
 

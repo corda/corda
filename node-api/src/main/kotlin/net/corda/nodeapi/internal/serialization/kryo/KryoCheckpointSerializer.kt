@@ -46,7 +46,7 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     private var cordappSerializers: List<CustomSerializerCheckpointAdaptor<*,*>> = listOf()
 
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
-        return kryoPoolsForContexts.computeIfAbsent(kryoPoolKey(context)) {
+        return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             KryoPool.Builder {
                 val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
                 val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
@@ -71,18 +71,12 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     }
 
     /**
-     * Builds the key for kryoPoolsForContexts
-     */
-    private fun kryoPoolKey(context: CheckpointSerializationContext) =
-            Pair(context.whitelist, context.deserializationClassLoader)
-
-    /**
      * Set the custom checkpoint serializers to use in checkpointing
      */
-    fun setCordappSerializers(context: CheckpointSerializationContext, customSerializers: Iterable<CheckpointCustomSerializer<*,*>>) {
+    fun setCordappSerializers(customSerializers: Iterable<CheckpointCustomSerializer<*, *>>) {
         cordappSerializers = customSerializers.map { CustomSerializerCheckpointAdaptor(it) }.sortedBy { it.serializerName }
-        // Rebuild Kryo pool if it already exists
-        kryoPoolsForContexts.remove(kryoPoolKey(context))
+        // Rebuild Kryo pools
+        kryoPoolsForContexts.clear()
     }
 
     /**
