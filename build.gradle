@@ -155,16 +155,34 @@ buildscript {
     ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/$baseVersion"
     repositories {
         mavenLocal()
-        mavenCentral()
-        jcenter()
-        maven {
-            url 'https://kotlin.bintray.com/kotlinx'
-        }
-        maven {
-            url "$artifactory_contextUrl/corda-dependencies-dev"
-        }
-        maven {
-            url "$artifactory_contextUrl/corda-releases"
+        // Use system environment to activate caching with Artifactory,
+        // because it is actually easier to pass that during parallel build.
+        // NOTE: it has to be a name of a virtual repository with all
+        // required remote or local repositories!
+        if (System.getenv("CORDA_USE_CACHE")) {
+            maven {
+                name "R3 Maven remote repositories"
+                url "${artifactory_contextUrl}/${System.getenv("CORDA_USE_CACHE")}"
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                credentials {
+                    username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+                    password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+                }
+            }
+        } else {
+            mavenCentral()
+            jcenter()
+            maven {
+                url 'https://kotlin.bintray.com/kotlinx'
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+            }
         }
     }
     dependencies {
@@ -355,11 +373,29 @@ allprojects {
 
     repositories {
         mavenLocal()
-        mavenCentral()
-        jcenter()
-        maven { url "$artifactory_contextUrl/corda-dependencies" }
-        maven { url 'https://repo.gradle.org/gradle/libs-releases' }
-        maven { url "$artifactory_contextUrl/corda-dev" }
+        // Use system environment to activate caching with Artifactory,
+        // because it is actually easier to pass that during parallel build.
+        // NOTE: it has to be a name of a virtual repository with all
+        // required remote or local repositories!
+        if (System.getenv("CORDA_USE_CACHE")) {
+            maven {
+                name "R3 Maven remote repositories"
+                url "${artifactory_contextUrl}/${System.getenv("CORDA_USE_CACHE")}"
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                credentials {
+                    username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+                    password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+                }
+            }
+        } else {
+            mavenCentral()
+            jcenter()
+            maven { url "${artifactory_contextUrl}/corda-dependencies" }
+            maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+            maven { url "${artifactory_contextUrl}/corda-dev" }
+        }
     }
 
     configurations {

@@ -1,0 +1,35 @@
+@Library('corda-shared-build-pipeline-steps')
+
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent { label 'standard' }
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
+
+    environment {
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+    }
+
+    stages {
+        stage('Publish Archived API Docs to Artifactory') {
+            when { tag pattern: /^release-os-V(\d+\.\d+)(\.\d+){0,1}(-GA){0,1}(-\d{4}-\d\d-\d\d-\d{4}){0,1}$/, comparator: 'REGEXP' }
+            steps {
+                sh "./gradlew :clean :docs:artifactoryPublish -DpublishApiDocs"
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
