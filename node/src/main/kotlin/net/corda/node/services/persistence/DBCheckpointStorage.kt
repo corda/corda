@@ -417,7 +417,7 @@ class DBCheckpointStorage(
             blob = blob,
             result = null,
             exceptionDetails = exceptionDetails,
-            flowMetadata = metadata,
+            flowMetadata = metadata, // TODO: check if there is a way to create a mock placeholder for this one for whenever we don't want to update it
             status = checkpoint.status,
             compatible = checkpoint.compatible,
             progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
@@ -429,8 +429,11 @@ class DBCheckpointStorage(
         blob?.let { currentDBSession().update(it) }
         dbFlowResult?.let { currentDBSession().save(it) } // there should be only one result per flow stored in the database
         if (checkpoint.isFinished()) {
-            metadata.finishInstant = now
-            currentDBSession().update(metadata)
+            val session = currentDBSession()
+            val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
+                    "where flow_id = '$flowId'"
+            val query = session.createNativeQuery(sqlQuery)
+            query.executeUpdate()
         }
     }
 
