@@ -151,7 +151,7 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(
         /** Specifies whether the notary validates transactions or not. */
         val validating: Boolean,
-        /** The legal name of cluster in case of a distributed notary service. */
+        /** The legal name of the notary service identity. */
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
         val className: String? = null,
