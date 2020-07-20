@@ -86,6 +86,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         logger.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
         networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
+        signedParams.verifiedNetworkParametersCert(trustRoot)
         signedParams.serialize().open().copyTo(baseDirectory / NETWORK_PARAMS_FILE_NAME)
         return signedParams
     }
