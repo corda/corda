@@ -363,7 +363,7 @@ class DBCheckpointStorage(
             now
         )
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint, now)
 
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         val dbFlowCheckpoint = DBFlowCheckpoint(
@@ -410,7 +410,7 @@ class DBCheckpointStorage(
 
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint, now)
 
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
@@ -519,7 +519,7 @@ class DBCheckpointStorage(
         currentDBSession().createNativeQuery(update).executeUpdate()
     }
 
-    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
@@ -535,7 +535,7 @@ class DBCheckpointStorage(
             platformVersion = PLATFORM_VERSION,
             startedBy = context.principal().name,
             invocationInstant = context.trace.invocationId.timestamp,
-            startInstant = clock.instant(),
+            startInstant = now,
             finishInstant = null
         )
     }
