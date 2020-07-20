@@ -31,28 +31,18 @@ class ReferenceLoopTest(private val compression: CordaSerializationEncoding?) {
 
     @get:Rule
     val serializationRule = CheckpointSerializationEnvironmentRule(inheritable = true)
-    private lateinit var context: CheckpointSerializationContext
-
-    @Before
-    fun setup() {
-        context = CheckpointSerializationContextImpl(
-                deserializationClassLoader = javaClass.classLoader,
-                whitelist = AllWhitelist,
-                properties = emptyMap(),
-                objectReferencesEnabled = true,
-                encoding = compression,
-                encodingWhitelist = rigorousMock<EncodingWhitelist>()
-                        .also {
-                            if (compression != null) doReturn(true).whenever(it)
-                                    .acceptEncoding(compression)
-                        })
-        KryoCheckpointSerializer.setCordappSerializers(listOf(PersonSerializer()))
-    }
-
-    @After
-    fun tearDown() {
-        KryoCheckpointSerializer.setCordappSerializers(emptyList())
-    }
+    private val context: CheckpointSerializationContext = CheckpointSerializationContextImpl(
+            deserializationClassLoader = javaClass.classLoader,
+            whitelist = AllWhitelist,
+            properties = emptyMap(),
+            objectReferencesEnabled = true,
+            encoding = compression,
+            encodingWhitelist = rigorousMock<EncodingWhitelist>()
+            .also {
+                if (compression != null) doReturn(true).whenever(it)
+                        .acceptEncoding(compression)
+            },
+            checkpointCustomSerializers = listOf(PersonSerializer()))
 
     @Test(timeout=300_000)
     fun `custom checkpoint serialization with reference loop`() {

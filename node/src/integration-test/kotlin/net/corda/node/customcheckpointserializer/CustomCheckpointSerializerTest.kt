@@ -39,24 +39,15 @@ class CustomCheckpointSerializerTest(private val compression: CordaSerialization
             encoding = compression,
             encodingWhitelist = rigorousMock<EncodingWhitelist>().also {
                 if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
-            })
-    private val customSerializers = listOf(
-            TestCorDapp.TestAbstractClassSerializer(),
-            TestCorDapp.TestClassSerializer(),
-            TestCorDapp.TestInterfaceSerializer(),
-            TestCorDapp.TestFinalClassSerializer(),
-            TestCorDapp.BrokenPublicKeySerializer()
+            },
+            checkpointCustomSerializers = listOf(
+                    TestCorDapp.TestAbstractClassSerializer(),
+                    TestCorDapp.TestClassSerializer(),
+                    TestCorDapp.TestInterfaceSerializer(),
+                    TestCorDapp.TestFinalClassSerializer(),
+                    TestCorDapp.BrokenPublicKeySerializer()
+            )
     )
-
-    @Before
-    fun setup() {
-        KryoCheckpointSerializer.setCordappSerializers(customSerializers)
-    }
-
-    @After
-    fun tearDown() {
-        KryoCheckpointSerializer.setCordappSerializers(emptyList())
-    }
 
     @Test(timeout=300_000)
     fun `test custom checkpoint serialization`() {

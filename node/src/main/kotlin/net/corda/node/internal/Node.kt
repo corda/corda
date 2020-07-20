@@ -643,8 +643,8 @@ open class Node(configuration: NodeConfiguration,
                 rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null, //even Shell embeded in the node connects via RPC to the node
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
-                checkpointSerializer = KryoCheckpointSerializer.also { checkpointSerializer -> checkpointSerializer.setCordappSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers }) },
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
+                checkpointSerializer = KryoCheckpointSerializer,
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
         )
     }
 
