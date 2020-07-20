@@ -18,6 +18,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 /*
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
@@ -159,7 +160,7 @@ pipeline {
 
         stage('Publish Release to Docker Hub') {
             when {
-                expression { isReleaseTag }
+                expression { !isInternalRelease && isReleaseTag }
             }
             steps {
                 withCredentials([
