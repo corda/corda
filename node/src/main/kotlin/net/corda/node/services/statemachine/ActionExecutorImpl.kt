@@ -73,6 +73,7 @@ internal class ActionExecutorImpl(
         if (action.uuid != null) services.vaultService.softLockRelease(action.uuid)
     }
 
+    @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
         actionFutureExecutor.awaitTransaction(fiber, action)
     }
@@ -223,6 +224,7 @@ internal class ActionExecutorImpl(
     }
 
     @Suppress("TooGenericExceptionCaught")
+    @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {
             actionFutureExecutor.awaitAsyncOperation(fiber, action)
