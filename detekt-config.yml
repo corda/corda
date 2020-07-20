@@ -11,37 +11,37 @@ complexity:
   ComplexCondition:
     active: true
     excludes: "**/buildSrc/**"
-    threshold: 4
+    threshold: 8
   ComplexMethod:
     active: true
     excludes: "**/buildSrc/**"
-    threshold: 10
+    threshold: 20
     ignoreSingleWhenExpression: true
   LargeClass:
     active: true
     excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
-    threshold: 600
+    threshold: 1200
   LongMethod:
     active: true
     excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
-    threshold: 120
+    threshold: 240
   LongParameterList:
     active: true
     excludes: "**/buildSrc/**"
-    threshold: 6
+    threshold: 12
     ignoreDefaultParameters: false
   NestedBlockDepth:
     active: true
     excludes: "**/buildSrc/**"
-    threshold: 4
+    threshold: 8
   TooManyFunctions:
     active: true
     excludes: "**/test/**,**/integration-test/**,**/integration-test-slow/**,**/*Test.kt,**/*Tests.kt,**/buildSrc/**"
-    thresholdInFiles: 15
-    thresholdInClasses: 15
-    thresholdInInterfaces: 15
-    thresholdInObjects: 15
-    thresholdInEnums: 15
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+    thresholdInInterfaces: 30
+    thresholdInObjects: 30
+    thresholdInEnums: 30
 
 empty-blocks:
   active: true
@@ -100,7 +100,7 @@ naming:
   active: true
   excludes: "**/buildSrc/**"
   ClassNaming:
-    active: true
+    active: false
     classPattern: '[A-Z$][a-zA-Z0-9$]*'
   EnumNaming:
     active: true
@@ -126,7 +126,7 @@ naming:
     propertyPattern: '[A-Za-z][_A-Za-z0-9]*'
     privatePropertyPattern: '_?[A-Za-z][_A-Za-z0-9]*'
   VariableNaming:
-    active: true
+    active: false
     variablePattern: '[a-z][A-Za-z0-9]*'
     privateVariablePattern: '(_)?[A-Za-z][_A-Za-z0-9]*'
     excludeClassPattern: '$^'
@@ -138,7 +138,7 @@ performance:
   ForEachOnRange:
     active: true
   SpreadOperator:
-    active: true
+    active: false
   UnnecessaryTemporaryInstantiation:
     active: true
 
@@ -157,7 +157,7 @@ potential-bugs:
 style:
   active: true
   ForbiddenComment:
-    active: true
+    active: false
     excludes: "**/buildSrc/**"
     values: 'TODO:,FIXME:,STOPSHIP:'
   MagicNumber:
@@ -187,11 +187,11 @@ style:
     active: true
     excludes: "**/buildSrc/**"
   ThrowsCount:
-    active: true
+    active: false
     excludes: "**/buildSrc/**"
     max: 2
   WildcardImport:
-    active: true
+    active: false
     excludes: "**/buildSrc/**"
     excludeImports: 'java.util.*,kotlinx.android.synthetic.*'
   UnusedImports:
