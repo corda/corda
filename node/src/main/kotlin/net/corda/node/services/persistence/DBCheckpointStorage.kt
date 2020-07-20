@@ -59,6 +59,25 @@ class DBCheckpointStorage(
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
+        // We added this dummy static object because [DBFlowCheckpoint.flowMetadata] is not nullable, it must always reference a [DBFlowMetadata].
+        // Creating a new [DBFlowMetadata] includes expensive actions like serialization, and extra memory per [DBFlowMetadata] object creation.
+        // However, on checkpoint update, we do not save it in the database. Therefore, we make all [DBFlowCheckpoint] that are not to update their
+        // [flowMetadata] point to this object.
+        private val dummyDBFlowMetadata: DBFlowMetadata = DBFlowMetadata(
+                flowId = "dummyFlowId",
+                invocationId = "dummyInvocationId",
+                flowName = "dummyFlowName",
+                userSuppliedIdentifier = "dummyUserSuppliedIdentifier",
+                startType = StartReason.INITIATED,
+                initialParameters = ByteArray(0),
+                launchingCordapp = "dummyLaunchingCordapp",
+                platformVersion = -1,
+                startedBy = "dummyStartedBy",
+                invocationInstant = Instant.now(),
+                startInstant = Instant.now(),
+                finishInstant = null
+        )
+
         /**
          * This needs to run before Hibernate is initialised.
          *
@@ -410,14 +429,12 @@ class DBCheckpointStorage(
 
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint, now)
-
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
             result = null,
             exceptionDetails = exceptionDetails,
-            flowMetadata = metadata, // TODO: check if there is a way to create a mock placeholder for this one for whenever we don't want to update it
+            flowMetadata = dummyDBFlowMetadata,
             status = checkpoint.status,
             compatible = checkpoint.compatible,
             progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
