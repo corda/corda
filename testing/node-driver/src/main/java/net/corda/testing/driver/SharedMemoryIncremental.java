@@ -17,7 +17,7 @@ import java.nio.channels.FileChannel;
  * import sun.misc.Unsafe;
  * import sun.nio.ch.DirectBuffer;
  */
-class SharedMemoryIncremental extends PortAllocation {
+public class SharedMemoryIncremental extends PortAllocation {
 
     static private final int DEFAULT_START_PORT = 10_000;
     static private final int FIRST_EPHEMERAL_PORT = 30_000;
