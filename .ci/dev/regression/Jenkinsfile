@@ -152,19 +152,6 @@ pipeline {
             }
         }
 
-        stage('Publish Release to Docker Hub') {
-            when {
-                expression { isReleaseTag }
-            }
-            steps {
-                withCredentials([
-                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
-                                usernameVariable: 'DOCKER_USERNAME',
-                                passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "./gradlew pushOfficialImages"
-                }
-            }
-        }
     }
 
 
