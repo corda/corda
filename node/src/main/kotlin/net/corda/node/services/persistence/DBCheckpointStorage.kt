@@ -318,7 +318,7 @@ class DBCheckpointStorage(
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
 
-        @Column(name = "start_time", nullable = true)
+        @Column(name = "start_time", nullable = false)
         var startInstant: Instant,
 
         @Column(name = "finish_time", nullable = true)
