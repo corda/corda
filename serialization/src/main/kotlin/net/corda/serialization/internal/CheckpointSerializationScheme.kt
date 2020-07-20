@@ -15,7 +15,7 @@ data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
-                                                              override val checkpointCustomSerializers: Iterable<CheckpointCustomSerializer<*,*>>) : CheckpointSerializationContext {
+                                                              override val checkpointCustomSerializers: Iterable<CheckpointCustomSerializer<*,*>> = emptyList()) : CheckpointSerializationContext {
     override fun withProperty(property: Any, value: Any): CheckpointSerializationContext {
         return copy(properties = properties + (property to value))
     }

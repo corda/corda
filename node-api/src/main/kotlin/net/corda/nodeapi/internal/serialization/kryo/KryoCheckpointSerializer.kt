@@ -172,14 +172,11 @@ object KryoCheckpointSerializer : CheckpointSerializer {
     }
 }
 
-val EMPTY_SERIALIZER_LIST : Iterable<CheckpointCustomSerializer<*,*>> = emptyList()
-
 val KRYO_CHECKPOINT_CONTEXT = CheckpointSerializationContextImpl(
         SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,
         emptyMap(),
         true,
         null,
-        AlwaysAcceptEncodingWhitelist,
-        EMPTY_SERIALIZER_LIST
+        AlwaysAcceptEncodingWhitelist
 )
