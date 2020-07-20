@@ -1,6 +1,5 @@
 package net.corda.common.logging
 
-import com.jcabi.manifests.Manifests
 import java.util.jar.Manifest
 
 class CordaVersion  {
@@ -13,9 +12,8 @@ class CordaVersion  {
                 .toList()
                 .map { Manifest(it.openStream()) }
 
-        private fun manifestValue(name: String): String? {
-            return manifests.mapNotNull { it.mainAttributes.getValue(name) }.firstOrNull()
-        }
+        private fun manifestValue(name: String): String? =
+                manifests.first { it.mainAttributes.getValue(name) != null }.mainAttributes.getValue(name)
 
         val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: UNKNOWN }
         val revision: String by lazy { manifestValue("Corda-Revision") ?: UNKNOWN }
