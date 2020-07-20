@@ -121,6 +121,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var bridgeSession: ClientSession? = null
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
+        var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
@@ -145,8 +146,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
     internal var messagingExecutor: MessagingExecutor? = null
-
-    private var sessionFactory: ClientSessionFactory? = null
 
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
