@@ -1,19 +1,13 @@
 package net.corda.common.logging
 
-import java.util.jar.Manifest
+import com.jcabi.manifests.Manifests
 
 class CordaVersion  {
     companion object {
         private const val UNKNOWN = "Unknown"
         const val platformEditionCode = "OS"
 
-        private val manifests: List<Manifest> = Thread.currentThread()
-                .contextClassLoader.getResources("META-INF/MANIFEST.MF")
-                .toList()
-                .map { Manifest(it.openStream()) }
-
-        private fun manifestValue(name: String): String? =
-                manifests.first { it.mainAttributes.getValue(name) != null }.mainAttributes.getValue(name)
+        private fun manifestValue(name: String): String? = if (Manifests.exists(name)) { Manifests.read(name) } else null
 
         val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: UNKNOWN }
         val revision: String by lazy { manifestValue("Corda-Revision") ?: UNKNOWN }
@@ -25,7 +19,7 @@ class CordaVersion  {
     }
 
     fun getVersion(): Array<String> {
-        return if (releaseVersion != UNKNOWN && revision != UNKNOWN) {
+        return if (Manifests.exists("Corda-Release-Version") && Manifests.exists("Corda-Revision")) {
             arrayOf("Version: $releaseVersion", "Revision: $revision", "Platform Version: $platformVersion", "Vendor: $vendor")
         } else {
             arrayOf("No version data is available in the MANIFEST file.")
