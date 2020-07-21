@@ -35,8 +35,8 @@ task freighterTest(type: Test) {
     testClassesDirs = sourceSets.freighterTest.output.classesDirs
     classpath = sourceSets.freighterTest.runtimeClasspath
     useJUnitPlatform {
-        includeTags "DOCKER"
-        excludeTags "AZURE", "ORACLE"
+        includeTags "AZURE"
+        excludeTags "ORACLE","DOCKER"
     }
 }
 configurations {
