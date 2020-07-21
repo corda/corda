@@ -18,3 +18,8 @@ class StateTransitionException(
 class AsyncOperationTransitionException(exception: Exception) : CordaException(exception.message, exception)
 
 class ErrorStateTransitionException(val exception: Exception) : CordaException(exception.message, exception)
+
+class ReloadFlowFromCheckpointException(cause: Exception) : CordaException(
+    "Could not reload flow from checkpoint. This is likely due to a discrepancy " +
+            "between the serialization and deserialization of an object in the flow's checkpoint", cause
+)

@@ -30,11 +30,8 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
 import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
 import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.utilities.AffinityExecutor
@@ -89,7 +86,6 @@ internal class SingleThreadedStateMachineManager(
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
     private val actionFutureExecutor = ActionFutureExecutor(innerState, serviceHub, scheduledFutureExecutor)
     private val flowTimeoutScheduler = FlowTimeoutScheduler(innerState, scheduledFutureExecutor, serviceHub)
-    private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
@@ -124,7 +120,6 @@ internal class SingleThreadedStateMachineManager(
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         val actionExecutor = makeActionExecutor(checkpointSerializationContext)
-        fiberDeserializationChecker?.start(checkpointSerializationContext)
         when (startMode) {
             StateMachineManager.StartMode.ExcludingPaused -> {}
             StateMachineManager.StartMode.Safe -> markAllFlowsAsPaused()
@@ -207,10 +202,6 @@ internal class SingleThreadedStateMachineManager(
         // Account for any expected Fibers in a test scenario.
         liveFibers.countDown(allowedUnsuspendedFiberCount)
         liveFibers.await()
-        fiberDeserializationChecker?.let {
-            val foundUnrestorableFibers = it.stop()
-            check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
-        }
         flowHospital.close()
         scheduledFutureExecutor.shutdown()
         scheduler.shutdown()
@@ -397,7 +388,7 @@ internal class SingleThreadedStateMachineManager(
 
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
             // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(flowId, checkpoint) ?: return
+            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspend) ?: return
         } else {
             // Just flow initiation message
             null
@@ -699,9 +690,6 @@ internal class SingleThreadedStateMachineManager(
         interceptors.add { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
-        }
-        if (serviceHub.configuration.shouldCheckCheckpoints()) {
-            interceptors.add { FiberDeserializationCheckingInterceptor(fiberDeserializationChecker!!, it) }
         }
         if (logger.isDebugEnabled) {
             interceptors.add { PrintingInterceptor(it) }

@@ -198,8 +198,9 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        isFlowResumed = false
+                    checkpoint = newCheckpoint,
+                    isFlowResumed = false,
+                    reloadCheckpointAfterSuspend = false
                 )
             } else {
                 actions.addAll(arrayOf(
@@ -210,10 +211,11 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isFlowResumed = false,
-                        isAnyCheckpointPersisted = true
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isFlowResumed = false,
+                    isAnyCheckpointPersisted = true,
+                    reloadCheckpointAfterSuspend = event.reloadCheckpointAfterSuspend
                 )
             }
             FlowContinuation.ProcessEvents

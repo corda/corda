@@ -103,20 +103,24 @@ sealed class Event {
      * @param maySkipCheckpoint indicates whether the persistence may be skipped.
      * @param fiber the serialised stack of the flow.
      * @param progressStep the current progress tracker step.
+     * @param reloadCheckpointAfterSuspend true if the flow should be reloaded from the database using the
+     * checkpoint persisted by this event, false otherwise.
      */
     data class Suspend(
-            val ioRequest: FlowIORequest<*>,
-            val maySkipCheckpoint: Boolean,
-            val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
-            var progressStep: ProgressTracker.Step?
+        val ioRequest: FlowIORequest<*>,
+        val maySkipCheckpoint: Boolean,
+        val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
+        var progressStep: ProgressTracker.Step?,
+        val reloadCheckpointAfterSuspend: Boolean
     ) : Event() {
         override fun toString() =
-                "Suspend(" +
-                        "ioRequest=$ioRequest, " +
-                        "maySkipCheckpoint=$maySkipCheckpoint, " +
-                        "fiber=${fiber.hash}, " +
-                        "currentStep=${progressStep?.label}" +
-                        ")"
+            "Suspend(" +
+                    "ioRequest=$ioRequest, " +
+                    "maySkipCheckpoint=$maySkipCheckpoint, " +
+                    "fiber=${fiber.hash}, " +
+                    "currentStep=${progressStep?.label}" +
+                    "reloadCheckpointAfterSuspend=$reloadCheckpointAfterSuspend" +
+                    ")"
     }
 
     /**

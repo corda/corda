@@ -61,14 +61,6 @@ class NodeConfigurationImplTest {
     }
 
     @Test(timeout=3_000)
-	fun `check devModeOptions flag helper`() {
-        assertTrue { configDebugOptions(true, null).shouldCheckCheckpoints() }
-        assertTrue { configDebugOptions(true, DevModeOptions()).shouldCheckCheckpoints() }
-        assertTrue { configDebugOptions(true, DevModeOptions(false)).shouldCheckCheckpoints() }
-        assertFalse { configDebugOptions(true, DevModeOptions(true)).shouldCheckCheckpoints() }
-    }
-
-    @Test(timeout=3_000)
 	fun `check crashShell flags helper`() {
         assertFalse { testConfiguration.copy(sshd = null).shouldStartSSHDaemon() }
         assertTrue { testConfiguration.copy(sshd = SSHDConfiguration(1234)).shouldStartSSHDaemon() }

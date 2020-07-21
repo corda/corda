@@ -55,7 +55,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             TransitionErrorGeneralPractitioner,
             SedationNurse,
             NotaryDoctor,
-            ResuscitationSpecialist
+            ResuscitationSpecialist,
+            DeserializationEuthanizer
         )
 
         private const val MAX_BACKOFF_TIME = 110.0 // Totals to 2 minutes when calculating the backoff time
@@ -660,6 +661,25 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         ): Diagnosis {
             return if (newError is ErrorStateTransitionException) {
                 Diagnosis.RESUSCITATE
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+    }
+
+    /**
+     * Makes sure that if a flow has failed due to a [ReloadFlowFromCheckpointException] that the flow fails. This staff member is only
+     * used when [NodeConfiguration.reloadCheckpointAfterSuspend] == true.
+     */
+    object DeserializationEuthanizer : Staff {
+        override fun consult(
+            flowFiber: FlowFiber,
+            currentState: StateMachineState,
+            newError: Throwable,
+            history: FlowMedicalHistory
+        ): Diagnosis {
+            return if (newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java)) {
+                Diagnosis.TERMINAL
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
