@@ -6,7 +6,6 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.relaxedThoroughness
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.ProcessUtilities.startJavaProcess
 import org.junit.Rule
@@ -43,8 +42,7 @@ class AbstractNodeTests {
     @Test(timeout=300_000)
 	fun `H2 fix is applied`() {
         val pool = Executors.newFixedThreadPool(5)
-        val runs = if (relaxedThoroughness) 1 else 100
-        (0 until runs).map {
+        (0 until 5).map {
             // Four "nodes" seems to be the magic number to reproduce the problem on CI:
             val urls = (0 until 4).map { freshURL() }
             // Haven't been able to reproduce in a warm JVM:
