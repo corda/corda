@@ -121,6 +121,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var bridgeSession: ClientSession? = null
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
+        var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
@@ -172,7 +173,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
-            val sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+            sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
@@ -490,8 +491,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
         }
+
         // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
         state.locked {
+            sessionFactory?.close()
             locator?.close()
         }
     }
