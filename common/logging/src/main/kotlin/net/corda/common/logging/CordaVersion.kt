@@ -7,7 +7,7 @@ class CordaVersion  {
         private const val UNKNOWN = "Unknown"
         const val platformEditionCode = "OS"
 
-        private fun manifestValue(name: String): String? = if (Manifests.exists(name)) { Manifests.read(name) } else null
+        private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
         val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: UNKNOWN }
         val revision: String by lazy { manifestValue("Corda-Revision") ?: UNKNOWN }
