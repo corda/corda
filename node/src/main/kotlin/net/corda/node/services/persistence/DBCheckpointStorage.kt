@@ -59,10 +59,9 @@ class DBCheckpointStorage(
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
-        // We added this dummy static object because [DBFlowCheckpoint.flowMetadata] is not nullable, it must always reference a [DBFlowMetadata].
-        // Creating a new [DBFlowMetadata] includes expensive actions like serialization, and extra memory per [DBFlowMetadata] object creation.
-        // However, on checkpoint update, we do not save it in the database. Therefore, we make all [DBFlowCheckpoint] that are not to update their
-        // [flowMetadata] point to this object.
+        // This is a dummy [DBFlowMetadata] object which help us whenever we want to persist a [DBFlowCheckpoint], but not persist its [DBFlowMetadata].
+        // [DBFlowCheckpoint] needs to always reference a [DBFlowMetadata] ([DBFlowCheckpoint.flowMetadata] is not nullable).
+        // However, since we do not -hibernate- cascade, it does not get persisted into the database.
         private val dummyDBFlowMetadata: DBFlowMetadata = DBFlowMetadata(
                 flowId = "dummyFlowId",
                 invocationId = "dummyInvocationId",
@@ -429,12 +428,13 @@ class DBCheckpointStorage(
 
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
+        // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
             result = null,
             exceptionDetails = exceptionDetails,
-            flowMetadata = dummyDBFlowMetadata,
+            flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
             status = checkpoint.status,
             compatible = checkpoint.compatible,
             progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
