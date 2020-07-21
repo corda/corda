@@ -191,6 +191,19 @@ abstract class FlowSession {
      */
     @Suspendable
     abstract fun send(payload: Any)
+
+    /**
+     * Closes this session and performs cleanup of any resources tied to this session.
+     *
+     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
+     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the session is not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
+     */
+    @Suspendable
+    abstract fun close()
 }
 
 /**

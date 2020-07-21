@@ -167,7 +167,7 @@ class FlowExternalAsyncOperationTest : AbstractFlowExternalOperationTest() {
 
         @Suspendable
         override fun testCode(): Any =
-            await(ExternalAsyncOperation(serviceHub) { _, _ ->
+            await(ExternalAsyncOperation(serviceHub) { serviceHub, _ ->
                 serviceHub.cordaService(FutureService::class.java).createFuture()
             })
     }

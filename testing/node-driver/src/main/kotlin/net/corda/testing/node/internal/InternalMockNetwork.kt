@@ -529,7 +529,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     private fun pumpAll(): Boolean {
-        val transferredMessages = messagingNetwork.endpoints.map { it.pumpReceive(false) }
+        val transferredMessages = messagingNetwork.endpoints.filter { it.active }
+                .map { it.pumpReceive(false) }
         return transferredMessages.any { it != null }
     }
 

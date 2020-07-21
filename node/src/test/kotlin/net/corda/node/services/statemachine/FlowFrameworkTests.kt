@@ -201,7 +201,7 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
-	fun `other side ends before doing expected send`() {
+    fun `other side ends before doing expected send`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
@@ -868,6 +868,7 @@ class FlowFrameworkTests {
             session.send(1)
             // ... then pause this one until it's received the session-end message from the other side
             receivedOtherFlowEnd.acquire()
+
             session.sendAndReceive<Int>(2)
         }
     }

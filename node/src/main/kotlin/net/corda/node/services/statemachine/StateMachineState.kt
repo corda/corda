@@ -106,6 +106,7 @@ data class Checkpoint(
                         invocationContext,
                         ourIdentity,
                         emptyMap(),
+                        emptySet(),
                         listOf(topLevelSubFlow),
                         numberOfSuspends = 0
                     ),
@@ -130,6 +131,22 @@ data class Checkpoint(
      */
     fun addSession(session: Pair<SessionId, SessionState>) : Checkpoint {
         return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions + session))
+    }
+
+    fun addSessionsToBeClosed(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessionsToBeClosed = checkpointState.sessionsToBeClosed + sessionIds))
+    }
+
+    fun removeSessionsToBeClosed(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessionsToBeClosed = checkpointState.sessionsToBeClosed - sessionIds))
+    }
+
+    /**
+     * Returns a copy of the Checkpoint with the specified session removed from the session map.
+     * @param sessionIds the sessions to remove.
+     */
+    fun removeSessions(sessionIds: Set<SessionId>): Checkpoint {
+        return copy(checkpointState = checkpointState.copy(sessions = checkpointState.sessions - sessionIds))
     }
 
     /**
@@ -193,16 +210,18 @@ data class Checkpoint(
  * @param invocationContext the initiator of the flow.
  * @param ourIdentity the identity the flow is run as.
  * @param sessions map of source session ID to session state.
+ * @param sessionsToBeClosed the sessions that have pending session end messages and need to be closed. This is available to avoid scanning all the sessions.
  * @param subFlowStack the stack of currently executing subflows.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
  */
 @CordaSerializable
 data class CheckpointState(
-    val invocationContext: InvocationContext,
-    val ourIdentity: Party,
-    val sessions: SessionMap, // This must preserve the insertion order!
-    val subFlowStack: List<SubFlow>,
-    val numberOfSuspends: Int
+        val invocationContext: InvocationContext,
+        val ourIdentity: Party,
+        val sessions: SessionMap, // This must preserve the insertion order!
+        val sessionsToBeClosed: Set<SessionId>,
+        val subFlowStack: List<SubFlow>,
+        val numberOfSuspends: Int
 )
 
 /**
@@ -236,29 +255,24 @@ sealed class SessionState {
 
     /**
      * We have received a confirmation, the peer party and session id is resolved.
-     * @property errors if not empty the session is in an errored state.
+     * @property receivedMessages the messages that have been received and are pending processing.
+     *   this could be any [ExistingSessionMessagePayload] type in theory, but it in practice it can only be one of the following types now:
+     *   * [DataSessionMessage]
+     *   * [ErrorSessionMessage]
+     *   * [EndSessionMessage]
+     * @property otherSideErrored whether the session has received an error from the other side.
      */
     data class Initiated(
             val peerParty: Party,
             val peerFlowInfo: FlowInfo,
-            val receivedMessages: List<DataSessionMessage>,
-            val initiatedState: InitiatedSessionState,
-            val errors: List<FlowError>,
+            val receivedMessages: List<ExistingSessionMessagePayload>,
+            val otherSideErrored: Boolean,
+            val peerSinkSessionId: SessionId,
             override val deduplicationSeed: String
     ) : SessionState()
 }
 
 typealias SessionMap = Map<SessionId, SessionState>
-
-/**
- * Tracks whether an initiated session state is live or has ended. This is a separate state, as we still need the rest
- * of [SessionState.Initiated], even when the session has ended, for un-drained session messages and potential future
- * [FlowInfo] requests.
- */
-sealed class InitiatedSessionState {
-    data class Live(val peerSinkSessionId: SessionId) : InitiatedSessionState()
-    object Ended : InitiatedSessionState() { override fun toString() = "Ended" }
-}
 
 /**
  * Represents the way the flow has started.

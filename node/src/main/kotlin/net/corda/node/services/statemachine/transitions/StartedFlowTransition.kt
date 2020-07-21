@@ -1,13 +1,18 @@
 package net.corda.node.services.statemachine.transitions
 
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.identity.Party
+import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.node.services.statemachine.*
-import java.lang.IllegalStateException
+import org.slf4j.Logger
+import kotlin.collections.LinkedHashMap
 
 /**
  * This transition describes what should happen with a specific [FlowIORequest]. Note that at this time the request
@@ -20,28 +25,62 @@ class StartedFlowTransition(
         override val startingState: StateMachineState,
         val started: FlowState.Started
 ) : Transition {
+
+    companion object {
+        private val logger: Logger = contextLogger()
+    }
+
     override fun transition(): TransitionResult {
         val flowIORequest = started.flowIORequest
-        val checkpoint = startingState.checkpoint
-        val errorsToThrow = collectRelevantErrorsToThrow(flowIORequest, checkpoint)
+        val (newState, errorsToThrow) = collectRelevantErrorsToThrow(startingState, flowIORequest)
         if (errorsToThrow.isNotEmpty()) {
             return TransitionResult(
-                    newState = startingState.copy(isFlowResumed = true),
+                    newState = newState.copy(isFlowResumed = true),
                     // throw the first exception. TODO should this aggregate all of them somehow?
                     actions = listOf(Action.CreateTransaction),
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        return when (flowIORequest) {
-            is FlowIORequest.Send -> sendTransition(flowIORequest)
-            is FlowIORequest.Receive -> receiveTransition(flowIORequest)
-            is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
-            is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
-            is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
-            is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
-            is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
-            is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
-            FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+        val sessionsToBeTerminated = findSessionsToBeTerminated(startingState)
+        // if there are sessions to be closed, we close them as part of this transition and normal processing will continue on the next transition.
+        return if (sessionsToBeTerminated.isNotEmpty()) {
+            terminateSessions(sessionsToBeTerminated)
+        } else {
+            when (flowIORequest) {
+                is FlowIORequest.Send -> sendTransition(flowIORequest)
+                is FlowIORequest.Receive -> receiveTransition(flowIORequest)
+                is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
+                is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
+                is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
+                is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
+                is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
+                is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
+                is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
+                FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+            }
+        }
+    }
+
+    private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
+        return startingState.checkpoint.checkpointState.sessionsToBeClosed.mapNotNull { sessionId ->
+                    val sessionState = startingState.checkpoint.checkpointState.sessions[sessionId]!! as SessionState.Initiated
+                    if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is EndSessionMessage) {
+                        sessionId to sessionState
+                    } else {
+                        null
+                    }
+                }.toMap()
+    }
+
+    private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
+        return builder {
+            val sessionsToRemove = sessionsToBeTerminated.keys
+            val newCheckpoint = currentState.checkpoint.removeSessions(sessionsToRemove)
+                                                       .removeSessionsToBeClosed(sessionsToRemove)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
+            actions.add(Action.RemoveSessionBindings(sessionsToRemove))
+            actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
+            FlowContinuation.ProcessEvents
         }
     }
 
@@ -149,6 +188,34 @@ class StartedFlowTransition(
         }
     }
 
+    private fun closeSessionTransition(flowIORequest: FlowIORequest.CloseSessions): TransitionResult {
+        return builder {
+            val sessionIdsToRemove = flowIORequest.sessions.map { sessionToSessionId(it) }.toSet()
+            val existingSessionsToRemove = currentState.checkpoint.checkpointState.sessions.filter { (sessionId, _) ->
+                sessionIdsToRemove.contains(sessionId)
+            }
+            val alreadyClosedSessions = sessionIdsToRemove.filter { sessionId -> sessionId !in existingSessionsToRemove }
+            if (alreadyClosedSessions.isNotEmpty()) {
+                logger.warn("Attempting to close already closed sessions: $alreadyClosedSessions")
+            }
+
+            if (existingSessionsToRemove.isNotEmpty()) {
+                val sendEndMessageActions = existingSessionsToRemove.values.mapIndexed { index, state ->
+                    val sinkSessionId = (state as SessionState.Initiated).peerSinkSessionId
+                    val message = ExistingSessionMessage(sinkSessionId, EndSessionMessage)
+                    val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
+                    Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
+                }
+
+                currentState = currentState.copy(checkpoint = currentState.checkpoint.removeSessions(existingSessionsToRemove.keys))
+                actions.add(Action.RemoveSessionBindings(sessionIdsToRemove))
+                actions.add(Action.SendMultiple(emptyList(), sendEndMessageActions))
+            }
+
+            resumeFlowLogic(Unit)
+        }
+    }
+
     private fun receiveTransition(flowIORequest: FlowIORequest.Receive): TransitionResult {
         return builder {
             val sessionIdToSession = LinkedHashMap<SessionId, FlowSessionImpl>()
@@ -199,7 +266,8 @@ class StartedFlowTransition(
                         someNotFound = true
                     } else {
                         newSessionMessages[sessionId] = sessionState.copy(receivedMessages = messages.subList(1, messages.size).toList())
-                        resultMessages[sessionId] = messages[0].payload
+                        // at this point, we've already checked for errors and session ends, so it's guaranteed that the first message will be a data message.
+                        resultMessages[sessionId] = (messages[0] as DataSessionMessage).payload
                     }
                 }
                 else -> {
@@ -257,12 +325,6 @@ class StartedFlowTransition(
         val checkpoint = startingState.checkpoint
         val newSessions = LinkedHashMap(checkpoint.checkpointState.sessions)
         var index = 0
-        for ((sourceSessionId, _) in sourceSessionIdToMessage) {
-            val existingSessionState = checkpoint.checkpointState.sessions[sourceSessionId] ?: return freshErrorTransition(CannotFindSessionException(sourceSessionId))
-            if (existingSessionState is SessionState.Initiated && existingSessionState.initiatedState is InitiatedSessionState.Ended) {
-                return freshErrorTransition(IllegalStateException("Tried to send to ended session $sourceSessionId"))
-            }
-        }
 
         val messagesByType = sourceSessionIdToMessage.toList()
                 .map { (sourceSessionId, message) -> Triple(sourceSessionId, checkpoint.checkpointState.sessions[sourceSessionId]!!, message) }
@@ -286,17 +348,13 @@ class StartedFlowTransition(
             val newBufferedMessages = initiatingSessionState.bufferedMessages + Pair(deduplicationId, sessionMessage)
             newSessions[sourceSessionId] = initiatingSessionState.copy(bufferedMessages = newBufferedMessages)
         }
-        val sendExistingActions = messagesByType[SessionState.Initiated::class]?.mapNotNull {(_, sessionState, message) ->
+        val sendExistingActions = messagesByType[SessionState.Initiated::class]?.map {(_, sessionState, message) ->
             val initiatedSessionState = sessionState as SessionState.Initiated
-            if (initiatedSessionState.initiatedState !is InitiatedSessionState.Live)
-                null
-            else {
-                val sessionMessage = DataSessionMessage(message)
-                val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, initiatedSessionState)
-                val sinkSessionId = initiatedSessionState.initiatedState.peerSinkSessionId
-                val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
-            }
+            val sessionMessage = DataSessionMessage(message)
+            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, initiatedSessionState)
+            val sinkSessionId = initiatedSessionState.peerSinkSessionId
+            val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
+            Action.SendExisting(initiatedSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
         } ?: emptyList()
 
         if (sendInitialActions.isNotEmpty() || sendExistingActions.isNotEmpty()) {
@@ -309,21 +367,68 @@ class StartedFlowTransition(
         return (session as FlowSessionImpl).sourceSessionId
     }
 
-    private fun collectErroredSessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
-        return sessionIds.flatMap { sessionId ->
-            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
-            when (sessionState) {
-                is SessionState.Uninitiated -> emptyList()
-                is SessionState.Initiating -> {
-                    if (sessionState.rejectionError == null) {
-                        emptyList()
-                    } else {
-                        listOf(sessionState.rejectionError.exception)
+    private fun collectErroredSessionErrors(startingState: StateMachineState, sessionIds: Collection<SessionId>): Pair<StateMachineState, List<Throwable>> {
+        var newState = startingState
+        val errors = sessionIds.filter { sessionId ->
+                    startingState.checkpoint.checkpointState.sessions.containsKey(sessionId)
+                }.flatMap { sessionId ->
+                    val sessionState = startingState.checkpoint.checkpointState.sessions[sessionId]!!
+                    when (sessionState) {
+                        is SessionState.Uninitiated -> emptyList()
+                        is SessionState.Initiating -> {
+                            if (sessionState.rejectionError == null) {
+                                emptyList()
+                            } else {
+                                listOf(sessionState.rejectionError.exception)
+                            }
+                        }
+                        is SessionState.Initiated -> {
+                            if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is ErrorSessionMessage) {
+                                val errorMessage = sessionState.receivedMessages.first() as ErrorSessionMessage
+                                val exception = convertErrorMessageToException(errorMessage, sessionState.peerParty)
+                                val newSessionState = sessionState.copy(receivedMessages = sessionState.receivedMessages.subList(1, sessionState.receivedMessages.size), otherSideErrored = true)
+                                val newCheckpoint = startingState.checkpoint.addSession(sessionId to newSessionState)
+                                newState = startingState.copy(checkpoint = newCheckpoint)
+                                listOf(exception)
+                            } else {
+                                emptyList()
+                            }
+                        }
                     }
                 }
-                is SessionState.Initiated -> sessionState.errors.map(FlowError::exception)
-            }
+        return Pair(newState, errors)
+    }
+
+    private fun convertErrorMessageToException(errorMessage: ErrorSessionMessage, peer: Party): Throwable {
+        val exception: Throwable = if (errorMessage.flowException == null) {
+            UnexpectedFlowEndException("Counter-flow errored", cause = null, originalErrorId = errorMessage.errorId)
+        } else {
+            errorMessage.flowException.originalErrorId = errorMessage.errorId
+            errorMessage.flowException
         }
+        when (exception) {
+            // reflection used to access private field
+            is UnexpectedFlowEndException -> DeclaredField<Party?>(
+                    UnexpectedFlowEndException::class.java,
+                    "peer",
+                    exception
+            ).value = peer
+            is FlowException -> DeclaredField<Party?>(FlowException::class.java, "peer", exception).value = peer
+        }
+        return exception
+    }
+
+    private fun collectUncloseableSessions(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
+        val uninitialisedSessions = sessionIds.mapNotNull { sessionId ->
+                    if (!checkpoint.checkpointState.sessions.containsKey(sessionId))
+                        null
+                    else
+                        sessionId to checkpoint.checkpointState.sessions[sessionId]
+                }
+                .filter { (_, sessionState) -> sessionState !is SessionState.Initiated }
+                .map { it.first }
+
+        return uninitialisedSessions.map { PrematureSessionCloseException(it) }
     }
 
     private fun collectErroredInitiatingSessionErrors(checkpoint: Checkpoint): List<Throwable> {
@@ -333,77 +438,64 @@ class StartedFlowTransition(
     }
 
     private fun collectEndedSessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
-        return sessionIds.mapNotNull { sessionId ->
-            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
-            when (sessionState) {
-                is SessionState.Initiated -> {
-                    if (sessionState.initiatedState === InitiatedSessionState.Ended) {
-                        UnexpectedFlowEndException(
-                                "Tried to access ended session $sessionId",
-                                cause = null,
-                                originalErrorId = context.secureRandom.nextLong()
-                        )
-                    } else {
-                        null
-                    }
-                }
-                else -> null
-            }
+        return sessionIds.filter { sessionId ->
+            !checkpoint.checkpointState.sessions.containsKey(sessionId)
+        }.map {sessionId ->
+            UnexpectedFlowEndException(
+                    "Tried to access ended session $sessionId",
+                    cause = null,
+                    originalErrorId = context.secureRandom.nextLong()
+            )
         }
     }
 
-    private fun collectEndedEmptySessionErrors(sessionIds: Collection<SessionId>, checkpoint: Checkpoint): List<Throwable> {
-        return sessionIds.mapNotNull { sessionId ->
-            val sessionState = checkpoint.checkpointState.sessions[sessionId]!!
-            when (sessionState) {
-                is SessionState.Initiated -> {
-                    if (sessionState.initiatedState === InitiatedSessionState.Ended &&
-                            sessionState.receivedMessages.isEmpty()) {
-                        UnexpectedFlowEndException(
-                                "Tried to access ended session $sessionId with empty buffer",
-                                cause = null,
-                                originalErrorId = context.secureRandom.nextLong()
-                        )
-                    } else {
-                        null
-                    }
-                }
-                else -> null
-            }
-        }
-    }
-
-    private fun collectRelevantErrorsToThrow(flowIORequest: FlowIORequest<*>, checkpoint: Checkpoint): List<Throwable> {
+    private fun collectRelevantErrorsToThrow(startingState: StateMachineState, flowIORequest: FlowIORequest<*>): Pair<StateMachineState, List<Throwable>> {
         return when (flowIORequest) {
             is FlowIORequest.Send -> {
                 val sessionIds = flowIORequest.sessionToMessage.keys.map(this::sessionToSessionId)
-                collectErroredSessionErrors(sessionIds, checkpoint) + collectEndedSessionErrors(sessionIds, checkpoint)
+                val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
+                val endedSessionErrors = collectEndedSessionErrors(sessionIds, startingState.checkpoint)
+                Pair(newState, erroredSessionErrors + endedSessionErrors)
             }
             is FlowIORequest.Receive -> {
                 val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)
-                collectErroredSessionErrors(sessionIds, checkpoint) + collectEndedEmptySessionErrors(sessionIds, checkpoint)
+                val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
+                val endedSessionErrors = collectEndedSessionErrors(sessionIds, startingState.checkpoint)
+                Pair(newState, erroredSessionErrors + endedSessionErrors)
             }
             is FlowIORequest.SendAndReceive -> {
                 val sessionIds = flowIORequest.sessionToMessage.keys.map(this::sessionToSessionId)
-                collectErroredSessionErrors(sessionIds, checkpoint) + collectEndedSessionErrors(sessionIds, checkpoint)
+                val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
+                val endedSessionErrors = collectEndedSessionErrors(sessionIds, startingState.checkpoint)
+                Pair(newState, erroredSessionErrors + endedSessionErrors)
             }
             is FlowIORequest.WaitForLedgerCommit -> {
-                collectErroredSessionErrors(checkpoint.checkpointState.sessions.keys, checkpoint)
+                return collectErroredSessionErrors(startingState, startingState.checkpoint.checkpointState.sessions.keys)
             }
             is FlowIORequest.GetFlowInfo -> {
-                collectErroredSessionErrors(flowIORequest.sessions.map(this::sessionToSessionId), checkpoint)
+                val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)
+                val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
+                val endedSessionErrors = collectEndedSessionErrors(sessionIds, startingState.checkpoint)
+                Pair(newState, erroredSessionErrors + endedSessionErrors)
+            }
+            is FlowIORequest.CloseSessions -> {
+                val sessionIds = flowIORequest.sessions.map(this::sessionToSessionId)
+                val (newState, erroredSessionErrors) = collectErroredSessionErrors(startingState, sessionIds)
+                val uncloseableSessionErrors = collectUncloseableSessions(sessionIds, startingState.checkpoint)
+                Pair(newState, erroredSessionErrors + uncloseableSessionErrors)
             }
             is FlowIORequest.Sleep -> {
-                emptyList()
+                Pair(startingState, emptyList())
             }
             is FlowIORequest.WaitForSessionConfirmations -> {
-                collectErroredInitiatingSessionErrors(checkpoint)
+                val errors = collectErroredInitiatingSessionErrors(startingState.checkpoint)
+                Pair(startingState, errors)
             }
             is FlowIORequest.ExecuteAsyncOperation<*> -> {
-                emptyList()
+                Pair(startingState, emptyList())
             }
             FlowIORequest.ForceCheckpoint -> {
-                emptyList()
+                Pair(startingState, emptyList())
             }
         }
     }
