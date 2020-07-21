@@ -276,20 +276,23 @@ internal class SingleThreadedStateMachineManager(
 
         val clientId = context.clientId
         if (clientId != null) {
-            var existingFuture: CordaFuture<out FlowStateMachineHandle<out Any?>>? = null
+            var existingStatus: FlowWithClientIdStatus? = null
             innerState.withLock {
-                clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
-                    if (existingStatus != null) {
-                        existingFuture = activeOrRemovedClientIdFuture(existingStatus, clientId)
-                        existingStatus
+                clientIdsToFlowIds.compute(clientId) { _, _existingStatus ->
+                    if (_existingStatus != null) {
+                        existingStatus = _existingStatus
+                        _existingStatus
                     } else {
                         newFuture = openFuture()
                         FlowWithClientIdStatus.Active(newFuture!!)
                     }
                 }
             }
-            if (existingFuture != null) return uncheckedCast(existingFuture)
 
+            existingStatus?.let {
+                val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
+                return@startFlow uncheckedCast(existingFuture)
+            }
             onClientIDNotFound?.invoke()
         }
 
