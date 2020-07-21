@@ -230,9 +230,11 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
      * */
     override fun trackWithPagingSpec(paging: PageSpecification): DataFeed<TransactionStorage.Page, SignedTransaction> {
         return database.transaction {
+            var totalTransactions = 0L
             txStorage.locked {
-                DataFeed(pagedSnapshot(paging), updates.bufferUntilSubscribed())
+                totalTransactions = txStorage.content.size
             }
+            DataFeed(pagedSnapshot(paging, totalTransactions), updates.bufferUntilSubscribed())
         }
     }
 
@@ -274,24 +276,19 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     /**
      * returns a Paged Snapshot with give paging spec by querying transaction db
      */
-    private fun pagedSnapshot(paging_: PageSpecification): TransactionStorage.Page {
+    private fun pagedSnapshot(paging_: PageSpecification, totalTransactions: Long): TransactionStorage.Page {
         val paging = if (paging_.pageSize == Integer.MAX_VALUE) {
             paging_.copy(pageSize = Integer.MAX_VALUE - 1)
         } else {
             paging_
         }
-        log.info("Paging spec for transaction snapshot: $paging")
-        // calculate total transactions where a page specification has been defined
-        var  totalTransactions = txStorage.content.size;
-
+        log.debug("Paging spec for transaction snapshot: $paging")
         // pagination checks
         if (!paging.isDefault) {
             // pagination
             if (paging.pageNumber < DEFAULT_PAGE_NUM) throw TransactionStorage.TransactionsQueryException("invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
             if (paging.pageSize < 1) throw TransactionStorage.TransactionsQueryException("invalid page size ${paging.pageSize} [minimum is 1]")
-            if (paging.pageSize > MAX_PAGE_SIZE) throw TransactionStorage.TransactionsQueryException("invalid page size ${paging.pageSize} [maximum is $MAX_PAGE_SIZE]")
         }
-
         //query
         val session = currentDBSession()
         val cb = session.criteriaBuilder
@@ -303,17 +300,17 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
         val pageSize = paging.pageSize + 1
-        query.maxResults = if (pageSize > 0) pageSize else Integer.MAX_VALUE // detection too many results, protected against overflow
+        query.maxResults = if (pageSize > 0) pageSize else DEFAULT_PAGE_SIZE// detection too many results, protected against overflow
 
-        // final pagination check (fail-fast on too many results when no pagination specified)
-        if (paging.isDefault && query.maxResults > DEFAULT_PAGE_SIZE) {
-            throw TransactionStorage.TransactionsQueryException("There are ${query.maxResults} results, which exceeds the limit of $DEFAULT_PAGE_SIZE for queries that do not specify paging. In order to retrieve these results, provide a `PageSpecification(pageNumber, pageSize)` to the method invoked.")
+        // final pagination check
+        if (query.maxResults > MAX_PAGE_SIZE) {
+            throw TransactionStorage.TransactionsQueryException("There are ${query.maxResults} results, which exceeds the limit of $MAX_PAGE_SIZE")
         }
         //execute
         val results = query.resultList
         val recordedTransactions: MutableList<TransactionStorage.RecordedTransaction> = mutableListOf()
         results.asSequence().forEachIndexed { index, dbTransaction ->
-            if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
+            if (index == paging.pageSize) // skip last result
                 return@forEachIndexed
             recordedTransactions.add(TransactionStorage.RecordedTransaction(dbTransaction.transaction.deserialize(context = contextToUse()), dbTransaction.timestamp, dbTransaction.status.isVerified()))
         }
