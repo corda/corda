@@ -7,26 +7,8 @@ class DifficultToSerialize {
     // Broken Map
     // This map breaks the rules for the put method. Making the normal map serializer fail.
 
-    open class BrokenMapBaseImpl<K,V> : MutableMap<K,V>{
-        private val map = HashMap<K,V>()
-
-        override val size: Int
-            get() = map.size
-        override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
-            get() = map.entries
-        override val keys: MutableSet<K>
-            get() = map.keys
-        override val values: MutableCollection<V>
-            get() = map.values
-
-        override fun containsKey(key: K): Boolean = map.containsKey(key)
-        override fun containsValue(value: V): Boolean = map.containsValue(value)
-        override fun get(key: K): V? = map.get(key)
-        override fun isEmpty(): Boolean = map.isEmpty()
-        override fun clear() = map.clear()
+    open class BrokenMapBaseImpl<K,V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K,V> by delegate {
         override fun put(key: K, value: V): V? = throw FlowException("Broken on purpose")
-        override fun putAll(from: Map<out K, V>) = map.putAll(from)
-        override fun remove(key: K): V? = map.remove(key)
     }
 
     // A class to test custom serializers applied to implementations
