@@ -164,14 +164,14 @@ fun <S, E : Any> S.genericExpectEvents(
         }
         val next = state.nextState(event)
         val expectedStates = state.getExpectedEvents()
-        log.info("$event :: ${expectedStates.map { it.simpleName }} -> ${next?.second?.getExpectedEvents()?.map { it.simpleName }}")
+        log.debug("$event :: ${expectedStates.map { it.simpleName }} -> ${next?.second?.getExpectedEvents()?.map { it.simpleName }}")
         if (next == null) {
             val message = "Got $event, did not match any expectations of type ${expectedStates.map { it.simpleName }}"
             if (isStrict) {
                 finishFuture.setException(Exception(message))
                 state = ExpectComposeState.Finished()
             } else {
-                log.info("$message, discarding event as isStrict=false")
+                log.debug("$message, discarding event as isStrict=false")
             }
         } else {
             state = next.second

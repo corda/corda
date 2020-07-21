@@ -7,6 +7,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /opt/corda/cordapps && \
     mkdir -p /opt/corda/persistence && \
+    mkdir -p /opt/corda/artemis && \
     mkdir -p /opt/corda/certificates && \
     mkdir -p /opt/corda/drivers && \
     mkdir -p /opt/corda/logs && \
@@ -20,6 +21,7 @@ RUN apt-get update && \
 
 ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
     PERSISTENCE_FOLDER="/opt/corda/persistence" \
+    ARTEMIS_FOLDER="/opt/corda/artemis" \
     CERTIFICATES_FOLDER="/opt/corda/certificates" \
     DRIVERS_FOLDER="/opt/corda/drivers" \
     CONFIG_FOLDER="/etc/corda" \
@@ -34,6 +36,8 @@ ENV CORDAPPS_FOLDER="/opt/corda/cordapps" \
 VOLUME ["/opt/corda/cordapps"]
 ##PERSISTENCE FOLDER
 VOLUME ["/opt/corda/persistence"]
+##ARTEMIS FOLDER
+VOLUME ["/opt/corda/artemis"]
 ##CERTS FOLDER
 VOLUME ["/opt/corda/certificates"]
 ##OPTIONAL JDBC DRIVERS FOLDER

@@ -8,12 +8,13 @@ pipeline {
         dockerfile {
             label 'k8s'
             additionalBuildArgs "--build-arg USER=stresstester"
-            filename '.ci/dev/compatibility/DockerfileJDK11Compile'
+            filename '.ci/dev/compatibility/DockerfileJDK11'
         }
     }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     stages {

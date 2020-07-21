@@ -50,8 +50,8 @@ class DBCheckpointStorage(
         private const val HMAC_SIZE_BYTES = 16
 
         @VisibleForTesting
-        const val MAX_STACKTRACE_LENGTH = 4000
-        private const val MAX_EXC_MSG_LENGTH = 4000
+        const val MAX_STACKTRACE_LENGTH = 2000
+        private const val MAX_EXC_MSG_LENGTH = 2000
         private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
         private const val MAX_PROGRESS_STEP_LENGTH = 256
@@ -461,6 +461,7 @@ class DBCheckpointStorage(
         return session.createQuery(delete).executeUpdate()
     }
 
+    @Throws(SQLException::class)
     override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
         return getDBCheckpoint(id)?.toSerializedCheckpoint()
     }
@@ -496,6 +497,11 @@ class DBCheckpointStorage(
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
+    }
+
+    override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
+        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
+        currentDBSession().createNativeQuery(update).executeUpdate()
     }
 
     private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {

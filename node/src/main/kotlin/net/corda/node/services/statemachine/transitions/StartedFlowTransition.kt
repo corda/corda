@@ -105,11 +105,12 @@ class StartedFlowTransition(
         // This ensures that the [WaitForLedgerCommit] request is not executed multiple times if extra
         // [DoRemainingWork] events are pushed onto the fiber's event queue before the flow has really woken up
         return if (!startingState.isWaitingForFuture) {
+            val state = startingState.copy(isWaitingForFuture = true)
             TransitionResult(
-                newState = startingState.copy(isWaitingForFuture = true),
+                newState = state,
                 actions = listOf(
                     Action.CreateTransaction,
-                    Action.TrackTransaction(flowIORequest.hash),
+                    Action.TrackTransaction(flowIORequest.hash, state),
                     Action.CommitTransaction
                 )
             )
@@ -432,8 +433,8 @@ class StartedFlowTransition(
                 // The `numberOfSuspends` is added to the deduplication ID in case an async
                 // operation is executed multiple times within the same flow.
                 val deduplicationId = context.id.toString() + ":" + currentState.checkpoint.checkpointState.numberOfSuspends.toString()
-                actions.add(Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation))
                 currentState = currentState.copy(isWaitingForFuture = true)
+                actions += Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation, currentState)
                 FlowContinuation.ProcessEvents
             }
         } else {

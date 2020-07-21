@@ -35,7 +35,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         project(':testing:testserver').tasks.jar,
         project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
         project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
-        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
     )
@@ -64,9 +64,8 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
     }
 }
 
-assemble.dependsOn buildWebserverJar
-
 artifacts {
+    archives buildWebserverJar
     runtimeArtifacts buildWebserverJar
     publish buildWebserverJar {
         classifier ''

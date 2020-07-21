@@ -25,10 +25,10 @@ import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
+import java.lang.IllegalStateException
 import java.net.ConnectException
 import java.net.URL
 import java.nio.file.Path
-import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -63,6 +63,7 @@ open class NetworkRegistrationHelper(
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
     protected val rootCert: X509Certificate
+    private val notaryServiceConfig: NotaryServiceConfig? = config.notaryServiceConfig
 
     init {
         require(networkRootTrustStorePath.exists()) {
@@ -95,34 +96,70 @@ open class NetworkRegistrationHelper(
             return
         }
 
+        notaryServiceConfig?.let { validateNotaryServiceKeyAndCert(certStore, it.notaryServiceKeyAlias, it.notaryServiceLegalName) }
+
         val tlsCrlIssuerCert = getTlsCrlIssuerCert()
 
         // We use SELF_SIGNED_PRIVATE_KEY as progress indicator so we just store a dummy key and cert.
         // When registration succeeds, this entry should be deleted.
         certStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), certificateStore.entryPassword) }
 
-        val nodeCaPublicKey = loadOrGenerateKeyPair()
+        val (entityPublicKey, receivedCertificates) = generateKeyPairAndCertificate(nodeCaKeyAlias, myLegalName, certRole, certStore)
 
-        val requestId = submitOrResumeCertificateSigningRequest(nodeCaPublicKey, cryptoService.getSigner(nodeCaKeyAlias))
-
-        val nodeCaCertificates = pollServerForCertificates(requestId)
-        validateCertificates(nodeCaPublicKey, nodeCaCertificates)
-
-        certStore.setCertPathOnly(nodeCaKeyAlias, nodeCaCertificates)
-        certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
-        certStore.value.save()
-        logProgress("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
-
-        onSuccess(nodeCaPublicKey, cryptoService.getSigner(nodeCaKeyAlias), nodeCaCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
+        onSuccess(entityPublicKey, cryptoService.getSigner(nodeCaKeyAlias), receivedCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
 
-    private fun loadOrGenerateKeyPair(): PublicKey {
-        return if (cryptoService.containsKey(nodeCaKeyAlias)) {
-            cryptoService.getPublicKey(nodeCaKeyAlias)!!
+    private fun generateKeyPairAndCertificate(keyAlias: String, legalName: CordaX500Name, certificateRole: CertRole, certStore: CertificateStore): Pair<PublicKey, List<X509Certificate>> {
+        val entityPublicKey = loadOrGenerateKeyPair(keyAlias)
+
+        val requestId = submitOrResumeCertificateSigningRequest(entityPublicKey, legalName, certificateRole, cryptoService.getSigner(keyAlias))
+
+        val receivedCertificates = pollServerForCertificates(requestId)
+        validateCertificates(entityPublicKey, legalName, certificateRole, receivedCertificates)
+
+        certStore.setCertPathOnly(keyAlias, receivedCertificates)
+        certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
+        certStore.value.save()
+        logProgress("Private key '$keyAlias' and its certificate-chain stored successfully.")
+        return Pair(entityPublicKey, receivedCertificates)
+    }
+
+    /**
+     * Used when registering a notary to validate that the shared notary service key and certificate can be accessed.
+     *
+     * In the case that the notary service certificate and key is not available, a new key key is generated and a separate CSR is
+     * submitted to the Identity Manager.
+     *
+     * If this method successfully completes then the [cryptoService] will contain the notary service key and the [certStore] will contain
+     * the notary service certificate chain.
+     *
+     * @throws IllegalStateException If the notary service certificate already exists but the private key is not available.
+     */
+    private fun validateNotaryServiceKeyAndCert(certStore: CertificateStore, notaryServiceKeyAlias: String, notaryServiceLegalName: CordaX500Name) {
+        if (certStore.contains(notaryServiceKeyAlias) && !cryptoService.containsKey(notaryServiceKeyAlias)) {
+            throw IllegalStateException("Notary service identity certificate exists but key pair missing. " +
+                    "Please check no old certificates exist in the certificate store.")
+        }
+
+        if (certStore.contains(notaryServiceKeyAlias)) {
+            logProgress("Notary service certificate already exists. Continuing with node registration...")
+            return
+        }
+
+        logProgress("Generating notary service identity for $notaryServiceLegalName...")
+        generateKeyPairAndCertificate(notaryServiceKeyAlias, notaryServiceLegalName, CertRole.SERVICE_IDENTITY, certStore)
+        // The request id store is reused for the next step - registering the node identity.
+        // Therefore we can remove this to enable it to be reused.
+        requestIdStore.deleteIfExists()
+    }
+
+    private fun loadOrGenerateKeyPair(keyAlias: String): PublicKey {
+        return if (cryptoService.containsKey(keyAlias)) {
+            cryptoService.getPublicKey(keyAlias)!!
         } else {
-            cryptoService.generateKeyPair(nodeCaKeyAlias, cryptoService.defaultTLSSignatureScheme())
+            cryptoService.generateKeyPair(keyAlias, cryptoService.defaultTLSSignatureScheme())
         }
     }
 
@@ -137,26 +174,31 @@ open class NetworkRegistrationHelper(
         return tlsCrlIssuerCert
     }
 
-    private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List<X509Certificate>) {
-        val nodeCACertificate = certificates.first()
+    private fun validateCertificates(
+            registeringPublicKey: PublicKey,
+            registeringLegalName: CordaX500Name,
+            expectedCertRole: CertRole,
+            certificates: List<X509Certificate>
+    ) {
+        val receivedCertificate = certificates.first()
 
-        val nodeCaSubject = try {
-            CordaX500Name.build(nodeCACertificate.subjectX500Principal)
+        val certificateSubject = try {
+            CordaX500Name.build(receivedCertificate.subjectX500Principal)
         } catch (e: IllegalArgumentException) {
-            throw CertificateRequestException("Received node CA cert has invalid subject name: ${e.message}")
+            throw CertificateRequestException("Received cert has invalid subject name: ${e.message}")
         }
-        if (nodeCaSubject != myLegalName) {
-            throw CertificateRequestException("Subject of received node CA cert doesn't match with node legal name: $nodeCaSubject")
+        if (certificateSubject != registeringLegalName) {
+            throw CertificateRequestException("Subject of received cert doesn't match with legal name: $certificateSubject")
         }
 
-        val nodeCaCertRole = try {
-            CertRole.extract(nodeCACertificate)
+        val receivedCertRole = try {
+            CertRole.extract(receivedCertificate)
         } catch (e: IllegalArgumentException) {
-            throw CertificateRequestException("Unable to extract cert role from received node CA cert: ${e.message}")
+            throw CertificateRequestException("Unable to extract cert role from received cert: ${e.message}")
         }
 
-        if (certRole != nodeCaCertRole) {
-            throw CertificateRequestException("Received certificate contains invalid cert role, expected '$certRole', got '$nodeCaCertRole'.")
+        if (expectedCertRole != receivedCertRole) {
+            throw CertificateRequestException("Received certificate contains invalid cert role, expected '$expectedCertRole', got '$receivedCertRole'.")
         }
 
         // Validate returned certificate is for the correct public key.
@@ -167,22 +209,6 @@ open class NetworkRegistrationHelper(
         // Validate certificate chain returned from the doorman with the root cert obtained via out-of-band process, to prevent MITM attack on doorman server.
         X509Utilities.validateCertificateChain(rootCert, certificates)
         logProgress("Certificate signing request approved, storing private key with the certificate chain.")
-    }
-
-    private fun CertificateStore.loadOrCreateKeyPair(alias: String, entryPassword: String = password): KeyPair {
-        // Create or load self signed keypair from the key store.
-        // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
-        if (alias !in this) {
-            // NODE_CA should be TLS compatible due to the cert hierarchy structure.
-            val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val selfSignCert = X509Utilities.createSelfSignedCACertificate(myLegalName.x500Principal, keyPair)
-            // Save to the key store.
-            with(value) {
-                setPrivateKey(alias, keyPair.private, listOf(selfSignCert), keyPassword = entryPassword)
-                save()
-            }
-        }
-        return query { getCertificateAndKeyPair(alias, entryPassword) }.keyPair
     }
 
     /**
@@ -226,20 +252,27 @@ open class NetworkRegistrationHelper(
      * Submit Certificate Signing Request to Certificate signing service if request ID not found in file system.
      * New request ID will be stored in requestId.txt
      * @param publicKey public key for which we need a certificate.
+     * @param legalName legal name of the entity for which we need a certificate.
+     * @param certRole desired role of the entities certificate.
      * @param contentSigner the [ContentSigner] that will sign the CSR.
      * @return Request ID return from the server.
      */
-    private fun submitOrResumeCertificateSigningRequest(publicKey: PublicKey, contentSigner: ContentSigner): String {
+    private fun submitOrResumeCertificateSigningRequest(
+            publicKey: PublicKey,
+            legalName: CordaX500Name,
+            certRole: CertRole,
+            contentSigner: ContentSigner
+    ): String {
         try {
             // Retrieve request id from file if exists, else post a request to server.
             return if (!requestIdStore.exists()) {
-                val request = X509Utilities.createCertificateSigningRequest(myLegalName.x500Principal, emailAddress, publicKey, contentSigner, certRole)
+                val request = X509Utilities.createCertificateSigningRequest(legalName.x500Principal, emailAddress, publicKey, contentSigner, certRole)
                 val writer = StringWriter()
                 JcaPEMWriter(writer).use {
                     it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
                 }
                 logProgress("Certificate signing request with the following information will be submitted to the Corda certificate signing server.")
-                logProgress("Legal Name: $myLegalName")
+                logProgress("Legal Name: $legalName")
                 logProgress("Email: $emailAddress")
                 logProgress("Public Key: $publicKey")
                 logProgress("$writer")
@@ -277,7 +310,8 @@ class NodeRegistrationConfiguration(
         val certificatesDirectory: Path,
         val emailAddress: String,
         val cryptoService: CryptoService,
-        val certificateStore: CertificateStore) {
+        val certificateStore: CertificateStore,
+        val notaryServiceConfig: NotaryServiceConfig? = null) {
 
     constructor(config: NodeConfiguration) : this(
             p2pSslOptions = config.p2pSslOptions,
@@ -287,9 +321,28 @@ class NodeRegistrationConfiguration(
             certificatesDirectory = config.certificatesDirectory,
             emailAddress = config.emailAddress,
             cryptoService = BCCryptoService(config.myLegalName.x500Principal, config.signingCertificateStore),
-            certificateStore = config.signingCertificateStore.get(true)
+            certificateStore = config.signingCertificateStore.get(true),
+            notaryServiceConfig = config.notary?.let {
+                // Validation of the presence of the notary service legal name is only done here and not in the top level configuration
+                // file. This is to maintain backwards compatibility with older notaries using the legacy identity structure. Older
+                // notaries will be signing requests using the nodes legal identity key and therefore no separate notary service entity
+                // exists. Just having the validation here prevents any new notaries from being created with the legacy identity scheme
+                // but still allows drop in JAR replacements for old notaries.
+                requireNotNull(it.serviceLegalName) {
+                    "The notary service legal name must be provided via the 'notary.serviceLegalName' configuration parameter"
+                }
+                require(it.serviceLegalName != config.myLegalName) {
+                    "The notary service legal name must be different from the node legal name"
+                }
+                NotaryServiceConfig(X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS, it.serviceLegalName!!)
+            }
     )
 }
+
+data class NotaryServiceConfig(
+        val notaryServiceKeyAlias: String,
+        val notaryServiceLegalName: CordaX500Name
+)
 
 class NodeRegistrationException(
         message: String?,

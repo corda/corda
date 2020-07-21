@@ -9,6 +9,7 @@ pipeline {
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -16,6 +17,9 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_USE_CACHE = "corda-remotes"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
     }
 
     stages {
@@ -26,8 +30,11 @@ pipeline {
                             "-Dkubenetize=true " +
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_USE_CACHE=\"${CORDA_USE_CACHE}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
-                            " clean jar deployNodes pushBuildImage preAllocateForAllParallelIntegrationTest preAllocateForAllParallelIntegrationTest --stacktrace"
+                            " clean preAllocateForAllParallelUnitTest preAllocateForAllParallelIntegrationTest pushBuildImage --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -72,7 +79,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true, allowEmptyResults: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */

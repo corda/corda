@@ -11,8 +11,8 @@ pipeline {
         timestamps()
         ansiColor('xterm')
         overrideIndexTriggers(false)
-        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {

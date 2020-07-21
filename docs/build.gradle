@@ -1,0 +1,122 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
+
+def internalPackagePrefixes(sourceDirs) {
+    def prefixes = []
+    // Kotlin allows packages to deviate from the directory structure, but let's assume they don't:
+    sourceDirs.collect { sourceDir ->
+        sourceDir.traverse(type: groovy.io.FileType.DIRECTORIES) {
+            if (it.name == 'internal') {
+                prefixes.add sourceDir.toPath().relativize(it.toPath()).toString().replace(File.separator, '.')
+            }
+        }
+    }
+    prefixes
+}
+
+ext {
+    // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
+    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
+            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+    internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
+    archivedApiDocsBaseFilename = 'api-docs'
+}
+
+dokka {
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
+}
+
+task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+    outputFormat = "javadoc"
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
+}
+
+[dokka, dokkaJavadoc].collect {
+    it.configure {
+        moduleName = 'corda'
+        processConfigurations = ['compile']
+        sourceDirs = dokkaSourceDirs
+        includes = ['packages.md']
+        jdkVersion = 8
+        externalDocumentationLink {
+            url = new URL("http://fasterxml.github.io/jackson-core/javadoc/2.9/")
+        }
+        externalDocumentationLink {
+            url = new URL("https://docs.oracle.com/javafx/2/api/")
+        }
+        externalDocumentationLink {
+            url = new URL("http://www.bouncycastle.org/docs/docs1.5on/")
+        }
+        internalPackagePrefixes.collect { packagePrefix ->
+            packageOptions {
+                prefix = packagePrefix
+                suppress = true
+            }
+        }
+    }
+}
+
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc']) {
+    group "Documentation"
+    description "Build API documentation"
+}
+
+task makeHTMLDocs(type: Exec){
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-html.sh"
+    } else {
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-html.sh"
+    }
+}
+
+task makePDFDocs(type: Exec){
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-pdf.sh"
+    } else {
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-pdf.sh"
+    }
+}
+
+task makeDocs(dependsOn: ['makeHTMLDocs', 'makePDFDocs'])
+apidocs.shouldRunAfter makeDocs
+
+task archiveApiDocs(type: Tar) {
+    dependsOn apidocs
+    from buildDir
+    include 'html/**'
+    extension 'tgz'
+    compression Compression.GZIP
+}
+
+publishing {
+    publications {
+        if (System.getProperty('publishApiDocs') != null) {
+            archivedApiDocs(MavenPublication) {
+                artifact archiveApiDocs {
+                    artifactId archivedApiDocsBaseFilename
+                }
+            }
+        }
+    }
+}
+
+artifactoryPublish {
+    publications('archivedApiDocs')
+    version = version.replaceAll('-SNAPSHOT', '')
+    publishPom = false
+}
+
+artifactory {
+    publish {
+        contextUrl = artifactory_contextUrl
+        repository {
+            repoKey = 'corda-dependencies-dev'
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+    }
+}

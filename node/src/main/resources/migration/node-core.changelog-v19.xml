@@ -69,13 +69,13 @@
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="NVARCHAR(255)">
+            <column name="type" type="NVARCHAR(256)">
                 <constraints nullable="false"/>
             </column>
-            <column name="exception_message" type="NVARCHAR(4000)">
+            <column name="exception_message" type="NVARCHAR(2000)">
                 <constraints nullable="true"/>
             </column>
-            <column name="stack_trace" type="NVARCHAR(4000)">
+            <column name="stack_trace" type="NVARCHAR(2000)">
                 <constraints nullable="false"/>
             </column>
             <column name="exception_value" type="blob">

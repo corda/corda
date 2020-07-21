@@ -39,9 +39,9 @@ capsule {
 def nodeProject = project(':node')
 
 task buildCordaJAR(type: FatCapsule, dependsOn: [
-        nodeProject.tasks.jar,
-        project(':core-deterministic').tasks.assemble,
-        project(':serialization-deterministic').tasks.assemble
+        nodeProject.tasks.named('jar'),
+        project(':core-deterministic').tasks.named('assemble'),
+        project(':serialization-deterministic').tasks.named('assemble')
     ]) {
     applicationClass 'net.corda.node.Corda'
     archiveBaseName = 'corda'
@@ -51,7 +51,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     applicationSource = files(
         nodeProject.configurations.runtimeClasspath,
         nodeProject.tasks.jar,
-        nodeProject.buildDir.toString() + '/resources/main/reference.conf',
+        nodeProject.buildDir.toString() + '/resources/main/corda-reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         'NOTICE' // Copy CDDL notice
     )
@@ -119,9 +119,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: [
     }
 }
 
-assemble.dependsOn buildCordaJAR
-
 artifacts {
+    archives buildCordaJAR
     runtimeArtifacts buildCordaJAR
     publish buildCordaJAR {
         classifier ''

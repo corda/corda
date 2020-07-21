@@ -1,5 +1,8 @@
 package net.corda.core.serialization.internal
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -21,6 +24,7 @@ import java.lang.ref.WeakReference
 import java.net.*
 import java.security.Permission
 import java.util.*
+import java.util.function.Function
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -289,31 +293,27 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    private const val CACHE_SIZE = 1000
+    const val CACHE_SIZE = 16
 
-    // We use a set here because the ordering of attachments doesn't affect code execution, due to the no
-    // overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
-    // can just do unordered comparisons here. But the same attachments run with different network parameters
-    // may behave differently, so that has to be a part of the cache key.
-    private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
-
-    // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Key, SerializationContext> = createSimpleCache<Key, SerializationContext>(CACHE_SIZE).toSynchronised()
+    private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
+    @Suppress("LongParameterList")
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
+        val cache = attachmentsClassLoaderCache ?: fallBackCache
+        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
             val serializers = try {
@@ -336,7 +336,7 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        }
+        })
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
@@ -419,6 +419,36 @@ private class AttachmentsHolderImpl : AttachmentsHolder {
         attachments[key] = WeakReference(key) to value
     }
 }
+
+interface AttachmentsClassLoaderCache {
+    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
+}
+
+@DeleteForDJVM
+class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
+
+    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
+
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
+    }
+}
+
+class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int) : AttachmentsClassLoaderCache {
+
+    private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
+            = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(cacheSize).toSynchronised()
+
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        return cache.computeIfAbsent(key, mappingFunction)
+    }
+}
+
+// We use a set here because the ordering of attachments doesn't affect code execution, due to the no
+// overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
+// can just do unordered comparisons here. But the same attachments run with different network parameters
+// may behave differently, so that has to be a part of the cache key.
+data class AttachmentsClassLoaderKey(val hashes: Set<SecureHash>, val params: NetworkParameters)
 
 private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
     override fun getContentLengthLong(): Long = attachment.size.toLong()

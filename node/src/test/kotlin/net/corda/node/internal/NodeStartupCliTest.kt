@@ -22,11 +22,13 @@ class NodeStartupCliTest {
 
     companion object {
         private lateinit var workingDirectory: Path
-
+        private lateinit var rootDirectory: Path
+        private var customNodeConf = "custom_node.conf"
         @BeforeClass
         @JvmStatic
         fun initDirectories() {
             workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+            rootDirectory = Paths.get("/").normalize().toAbsolutePath()
         }
     }
 
@@ -54,6 +56,18 @@ class NodeStartupCliTest {
         Assertions.assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
         Assertions.assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
+    }
+
+    @Test(timeout=300_000)
+    fun `--nodeconf using relative path will be changed to absolute path`() {
+        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, customNodeConf)
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / customNodeConf)
+    }
+
+    @Test(timeout=300_000)
+    fun `--nodeconf using absolute path will not be changed`() {
+        CommandLine.populateCommand(startup, CommonCliConstants.CONFIG_FILE, (rootDirectory / customNodeConf).toString())
+        Assertions.assertThat(startup.cmdLineOptions.configFile).isEqualTo(rootDirectory / customNodeConf)
     }
 
     @Test(timeout=3_000)

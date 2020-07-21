@@ -56,7 +56,7 @@ jar {
     }
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
     systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
     systemProperty 'sandbox-libraries.path', configurations.sandboxTesting.asPath

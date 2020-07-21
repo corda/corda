@@ -2,9 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
-import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
@@ -14,7 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 
-class FlowsExecutionModeTests : NodeBasedTest(emptyList()) {
+class FlowsExecutionModeTests : NodeBasedTest() {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     private lateinit var node: NodeWithInfo

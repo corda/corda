@@ -3,11 +3,31 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+/**
+ * Sense environment
+ */
+boolean isReleaseTag = (env.TAG_NAME =~ /^release.*JDK11$/)
+
+/*
+** calculate the stage for NexusIQ evaluation
+**  * build for snapshots
+**  * stage-release:  for release candidates and for health checks
+**  * operate: for final release
+*/
+def nexusIqStage = "build"
+if (isReleaseTag) {
+    switch (env.TAG_NAME) {
+        case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        default: nexusIqStage = "operate"
+    }
+}
 pipeline {
-    agent { label 'k8s' }
+    agent {
+        label 'k8s'
+    }
     options {
         timestamps()
-        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         timeout(time: 3, unit: 'HOURS')
     }
 
@@ -16,10 +36,33 @@ pipeline {
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_BUILD_NAME = "Corda / Publish / Publish JDK 11 Release to Artifactory".replaceAll("/", "::")
+        CORDA_USE_CACHE = "corda-remotes"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
     }
 
     stages {
-        stage('Corda Pull Request - Generate Build Image') {
+        stage('Sonatype Check') {
+            steps {
+                sh "./gradlew --no-daemon clean jar"
+                script {
+                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
+                    def artifactId = 'corda'
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-jdk11-${version}"
+                }
+                nexusPolicyEvaluation (
+                        failBuildOnNetworkError: false,
+                        iqApplication: manualApplication(nexusAppId),
+                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
+                        iqStage: nexusIqStage
+                )
+            }
+        }
+
+        stage('Generate Build Image') {
             steps {
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew " +
@@ -28,8 +71,11 @@ pipeline {
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\" " +
                             "-Ddocker.buildbase.tag=11latest " +
+                            "-Ddocker.container.env.parameter.CORDA_USE_CACHE=\"${CORDA_USE_CACHE}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.dockerfile=DockerfileJDK11Azul" +
-                            " clean pushBuildImage --stacktrace"
+                            " clean pushBuildImage preAllocateForParallelRegressionTest preAllocateForAllParallelSlowIntegrationTest --stacktrace"
                 }
                 sh "kubectl auth can-i get pods"
             }
@@ -65,12 +111,49 @@ pipeline {
                 }
             }
         }
+
+        stage('Publish to Artifactory') {
+            agent {
+                dockerfile {
+                    reuseNode true
+                    additionalBuildArgs "--build-arg USER=stresstester"
+                    filename '.ci/dev/compatibility/DockerfileJDK11'
+                }
+            }
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                rtServer(
+                        id: 'R3-Artifactory',
+                        url: 'https://software.r3.com/artifactory',
+                        credentialsId: 'artifactory-credentials'
+                )
+                rtGradleDeployer(
+                        id: 'deployer',
+                        serverId: 'R3-Artifactory',
+                        repo: 'r3-corda-releases'
+                )
+                rtGradleRun(
+                        usesPlugin: true,
+                        useWrapper: true,
+                        switches: '-s --info',
+                        tasks: 'artifactoryPublish',
+                        deployerId: 'deployer',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+                rtPublishBuildInfo(
+                        serverId: 'R3-Artifactory',
+                        buildName: env.ARTIFACTORY_BUILD_NAME
+                )
+            }
+        }
     }
 
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', allowEmptyResults: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */
