@@ -673,14 +673,9 @@ internal class SingleThreadedStateMachineManager(
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
             val existingCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
             existingCheckpoint?.let { serializedCheckpoint ->
-                tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return openFuture<FlowStateMachine<A>>().also {
-                    it.setException(
-                        IllegalStateException(
-                            "Unable to deserialize database checkpoint for flow $flowId. " +
-                                    "Something is very wrong. The flow will not retry."
-                        )
-                    )
-                }
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: throw IllegalStateException(
+                    "Unable to deserialize database checkpoint for flow $flowId. Something is very wrong. The flow will not retry."
+                )
             }
         } else {
             // This is a brand new flow
@@ -885,9 +880,7 @@ internal class SingleThreadedStateMachineManager(
                 null
             }
             if (serializedFlowResultOrException == null) {
-                openFuture<FlowStateMachineHandle<Any>>().also {
-                    it.setException(IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong."))
-                }
+                throw IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong.")
             } else {
                 val flowResult = try {
                     serializedFlowResultOrException.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
@@ -895,9 +888,7 @@ internal class SingleThreadedStateMachineManager(
                     null
                 }
                 if (flowResult == null) {
-                    openFuture<FlowStateMachineHandle<Any>>().also {
-                        it.setException(IllegalStateException("Unable to deserialize flow's result for flow $flowId."))
-                    }
+                    throw IllegalStateException("Unable to deserialize flow's result for flow $flowId.")
                 } else {
                     doneClientIdFuture(flowId, doneFuture(flowResult), clientId)
                 }
