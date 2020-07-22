@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -21,9 +22,13 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.common.BatchSignature
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.notary.experimental.raft.RaftUniquenessProvider
+import net.corda.notary.jpa.JPANotaryConfiguration
+import net.corda.notary.jpa.JPANotarySchemaV1
+import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
@@ -52,8 +57,9 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun data(): Collection<UniquenessProviderFactory> = listOf(
-                PersistentUniquenessProviderFactory(),
-                RaftUniquenessProviderFactory()
+                JPAUniquenessProviderFactory()
+                // TODO: re-enable raft
+                //RaftUniquenessProviderFactory()
         )
     }
 
@@ -641,6 +647,37 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun cleanUp() {
         provider?.stop()
+        database?.close()
+    }
+}
+
+fun signBatch(it: Iterable<SecureHash>): BatchSignature {
+    val root = MerkleTree.getMerkleTree(it.map { it.sha256() })
+
+    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
+    val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
+    return BatchSignature(signature, root)
+}
+
+class JPAUniquenessProviderFactory : UniquenessProviderFactory {
+    private var database: CordaPersistence? = null
+    private val notaryConfig = JPANotaryConfiguration(maxInputStates = 10)
+    private val notaryWorkerName = CordaX500Name.parse("CN=NotaryWorker, O=Corda, L=London, C=GB")
+
+    override fun create(clock: Clock): UniquenessProvider {
+        database?.close()
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
+        return JPAUniquenessProvider(
+                MetricRegistry(),
+                clock,
+                database!!,
+                notaryConfig,
+                notaryWorkerName,
+                ::signBatch
+        )
+    }
+
+    override fun cleanUp() {
         database?.close()
     }
 }

@@ -12,6 +12,8 @@ import net.corda.notary.experimental.bftsmart.BFTSmartNotarySchemaV1
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.notary.experimental.raft.RaftNotaryService
+import net.corda.notary.jpa.JPANotarySchemaV1
+import net.corda.notary.jpa.JPANotaryService
 
 internal object VirtualCordapp {
     /** A list of the core RPC flows present in Corda */
@@ -64,6 +66,31 @@ internal object VirtualCordapp {
                 targetPlatformVersion = versionInfo.platformVersion,
                 notaryService = SimpleNotaryService::class.java,
                 isLoaded = false
+        )
+    }
+
+    /** A Cordapp for the built-in notary service implementation. */
+    fun generateJPANotary(versionInfo: VersionInfo): CordappImpl {
+        return CordappImpl(
+                contractClassNames = listOf(),
+                initiatedFlows = listOf(),
+                rpcFlows = listOf(),
+                serviceFlows = listOf(),
+                schedulableFlows = listOf(),
+                services = listOf(),
+                serializationWhitelists = listOf(),
+                serializationCustomSerializers = listOf(),
+                customSchemas = setOf(JPANotarySchemaV1),
+                // TODO: Update licence.
+                info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Copyright 2019 R3. Licensed use only"),
+                allFlows = listOf(),
+                jarPath = JPANotaryService::class.java.location,
+                jarHash = SecureHash.allOnesHash,
+                minimumPlatformVersion = versionInfo.platformVersion,
+                targetPlatformVersion = versionInfo.platformVersion,
+                notaryService = JPANotaryService::class.java,
+                isLoaded = false,
+                isVirtual = true
         )
     }
 
