@@ -1,5 +1,9 @@
 package net.corda.node.services.statemachine
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.Destination
@@ -15,6 +19,7 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.concurrent.Future
 
@@ -55,7 +60,15 @@ data class StateMachineState(
     @Volatile
     var isKilled: Boolean,
     val senderUUID: String?
-)
+) : KryoSerializable {
+    override fun write(kryo: Kryo?, output: Output?) {
+        throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be serialized")
+    }
+
+    override fun read(kryo: Kryo?, input: Input?) {
+        throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be deserialized")
+    }
+}
 
 /**
  * @param checkpointState the state of the checkpoint
