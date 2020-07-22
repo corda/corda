@@ -203,8 +203,8 @@ class DBCheckpointStorage(
         var flow_id: String,
 
         @Type(type = "corda-blob")
-        @Column(name = "result_value", nullable = false)
-        var value: ByteArray = EMPTY_BYTE_ARRAY,
+        @Column(name = "result_value", nullable = true)
+        var value: ByteArray? = null,
 
         @Column(name = "timestamp")
         val persistedInstant: Instant
@@ -216,7 +216,9 @@ class DBCheckpointStorage(
             other as DBFlowResult
 
             if (flow_id != other.flow_id) return false
-            if (!value.contentEquals(other.value)) return false
+            if (!(value ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.value ?: EMPTY_BYTE_ARRAY)) {
+                return false
+            }
             if (persistedInstant != other.persistedInstant) return false
 
             return true
@@ -224,7 +226,7 @@ class DBCheckpointStorage(
 
         override fun hashCode(): Int {
             var result = flow_id.hashCode()
-            result = 31 * result + value.contentHashCode()
+            result = 31 * result + (value?.contentHashCode() ?: 0)
             result = 31 * result + persistedInstant.hashCode()
             return result
         }
@@ -424,8 +426,10 @@ class DBCheckpointStorage(
             )
         }
 
-        val dbFlowResult = checkpoint.result?.let {
-            createDBFlowResult(flowId, it, now)
+        val dbFlowResult = if (checkpoint.status == FlowStatus.COMPLETED) {
+            createDBFlowResult(flowId, checkpoint.result, now)
+        } else {
+            null
         }
 
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
@@ -434,7 +438,7 @@ class DBCheckpointStorage(
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
-            result = null,
+            result = dbFlowResult,
             exceptionDetails = exceptionDetails,
             flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
             status = checkpoint.status,
@@ -513,7 +517,7 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
-    private fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
+    fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
         return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
     }
 
@@ -527,10 +531,6 @@ class DBCheckpointStorage(
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
-    }
-
-    override fun getFlowResult(id: StateMachineRunId): SerializedBytes<Any>? {
-        return getDBFlowResult(id)?.value?.let { SerializedBytes(it) }
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
@@ -574,10 +574,10 @@ class DBCheckpointStorage(
         )
     }
 
-    private fun createDBFlowResult(flowId: String, result: Any, now: Instant): DBFlowResult {
+    private fun createDBFlowResult(flowId: String, result: Any?, now: Instant): DBFlowResult {
         return DBFlowResult(
             flow_id = flowId,
-            value = result.storageSerialize().bytes,
+            value = result?.storageSerialize()?.bytes,
             persistedInstant = now
         )
     }
@@ -656,7 +656,7 @@ class DBCheckpointStorage(
             // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
             errorState = ErrorState.Clean,
             // A checkpoint with a result should not normally be loaded (it should be [null] most of the time)
-            result = result?.let { SerializedBytes<Any>(it.value) },
+            result = result?.let { dbFlowResult -> dbFlowResult.value?.let { SerializedBytes<Any>(it) } },
             status = status,
             progressStep = progressStep,
             flowIoRequest = ioRequestType,

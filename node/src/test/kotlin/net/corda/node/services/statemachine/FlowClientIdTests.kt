@@ -20,6 +20,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import rx.Observable
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.util.UUID
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FlowClientIdTests {
@@ -109,6 +111,15 @@ class FlowClientIdTests {
         assertFailsWith<IllegalStateException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         }
+    }
+
+    @Test
+    fun `flow returning null gets retrieved after flow's lifetime when started with client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null)).resultFuture.getOrThrow()
+
+        val flowResult = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null)).resultFuture.getOrThrow()
+        assertNull(flowResult)
     }
 
     @Test(timeout=300_000)
@@ -427,6 +438,13 @@ class FlowClientIdTests {
 //        }
 //
 //        assertEquals(0, counter)
+//    }
+
+//    @Test
+//    fun `flow fails to serialize`() {
+//        val clientId = UUID.randomUUID().toString()
+//        aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty()))
+//
 //    }
 }
 

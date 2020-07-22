@@ -55,7 +55,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="result_value" type="varbinary(33554432)">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>

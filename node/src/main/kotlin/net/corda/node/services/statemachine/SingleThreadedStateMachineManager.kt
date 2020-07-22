@@ -25,6 +25,7 @@ import net.corda.core.internal.mapNotNull
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
@@ -37,6 +38,7 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
@@ -873,26 +875,20 @@ internal class SingleThreadedStateMachineManager(
         is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
         is FlowWithClientIdStatus.Removed -> {
             val flowId = existingStatus.flowId
+
             val serializedFlowResultOrException = if (existingStatus.succeeded) {
-                database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId) }
+                val dbFlowResult = database.transaction {
+                    (checkpointStorage as DBCheckpointStorage).getDBFlowResult(existingStatus.flowId)
+                        ?: throw IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong.")
+                }
+                dbFlowResult.value?.let { SerializedBytes<Any>(it) }
             } else {
                 // this block will be implemented upon implementing CORDA-3681
                 null
             }
-            if (serializedFlowResultOrException == null) {
-                throw IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong.")
-            } else {
-                val flowResult = try {
-                    serializedFlowResultOrException.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
-                } catch (e: Exception) {
-                    null
-                }
-                if (flowResult == null) {
-                    throw IllegalStateException("Unable to deserialize flow's result for flow $flowId.")
-                } else {
-                    doneClientIdFuture(flowId, doneFuture(flowResult), clientId)
-                }
-            }
+
+            val flowResult = serializedFlowResultOrException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            doneClientIdFuture(flowId, doneFuture(flowResult), clientId)
         }
     }
 
