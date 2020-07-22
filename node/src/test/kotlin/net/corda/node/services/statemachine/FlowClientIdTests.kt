@@ -122,6 +122,15 @@ class FlowClientIdTests {
         assertNull(flowResult)
     }
 
+    @Test
+    fun `flow returning Unit gets retrieved after flow's lifetime when started with client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()
+
+        val flowResult = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()
+        assertEquals(Unit, flowResult)
+    }
+
     @Test(timeout=300_000)
     fun `flow's result is available if reconnect after flow had retried from previous checkpoint, when flow is started with a client id`() {
         var firstRun = true
