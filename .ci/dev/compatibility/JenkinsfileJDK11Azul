@@ -1,3 +1,14 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS release with JDK11
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
@@ -22,13 +33,13 @@ if (isReleaseTag) {
         default: nexusIqStage = "operate"
     }
 }
+
 pipeline {
-    agent {
-        label 'k8s'
-    }
+    agent { label 'k8s' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -48,14 +59,15 @@ pipeline {
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
                     nexusAppId = "jenkins-${groupId}-${artifactId}-jdk11-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
-                        iqApplication: manualApplication(nexusAppId),
+                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
                         iqStage: nexusIqStage
                 )
@@ -132,7 +144,7 @@ pipeline {
                 rtGradleDeployer(
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'r3-corda-releases'
+                        repo: 'corda-releases'
                 )
                 rtGradleRun(
                         usesPlugin: true,
