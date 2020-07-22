@@ -49,14 +49,15 @@ pipeline {
                 sh "./gradlew --no-daemon clean jar"
                 script {
                     sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
-                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
                     nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
-                        iqApplication: manualApplication(nexusAppId),
+                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
                         iqStage: nexusIqStage
                 )
