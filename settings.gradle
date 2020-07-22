@@ -23,6 +23,11 @@ pluginManagement {
             gradlePluginPortal()
             maven { url "${artifactory_contextUrl}/corda-dependencies" }
         }
+
+        plugins {
+            id "org.springframework.boot" version "1.5.21.RELEASE"
+            id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+        }
     }
 }
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
