@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -52,6 +53,7 @@ class FlowClientIdTests {
         mockNet.stopNodes()
         ResultFlow.hook = null
         ResultFlow.suspendableHook = null
+        UnSerializableResultFlow.firstRun = true
         SingleThreadedStateMachineManager.beforeClientIDCheck = null
         SingleThreadedStateMachineManager.onClientIDNotFound = null
         SingleThreadedStateMachineManager.onCallingStartFlowInternal = null
@@ -449,12 +451,19 @@ class FlowClientIdTests {
 //        assertEquals(0, counter)
 //    }
 
-//    @Test
-//    fun `flow fails to serialize`() {
-//        val clientId = UUID.randomUUID().toString()
-//        aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty()))
-//
-//    }
+    @Test
+    fun `flow fails to serialize`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty()))
+
+    }
+
+    @Test
+    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
+        val clientId = UUID.randomUUID().toString()
+        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow(5)).resultFuture.getOrThrow()
+        assertEquals(5, result)
+    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
@@ -468,5 +477,22 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
         hook?.invoke()
         suspendableHook?.let { subFlow(it) }
         return result
+    }
+}
+
+internal class UnSerializableResultFlow(private val serializableObject: Int): FlowLogic<Any>() {
+    companion object {
+        var firstRun = true
+    }
+
+    @Suspendable
+    override fun call(): Any {
+        stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+        return if (firstRun) {
+            firstRun = false
+            Observable.empty<Any>()
+        } else {
+            serializableObject
+        }
     }
 }
