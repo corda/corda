@@ -23,7 +23,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 boolean isReleaseBranch = (env.BRANCH_NAME =~ /^release\/os\/.*/)
 
 pipeline {
-    agent none
+    agent { label 'mswin' }
     options {
         ansiColor('xterm')
         timestamps()
@@ -54,7 +54,6 @@ pipeline {
         stage('Tests') {
             parallel {
                 stage('Unit Tests') {
-                    agent { label 'mswin' }
                     steps {
                         bat "./gradlew --no-daemon " +
                                 "--stacktrace " +
