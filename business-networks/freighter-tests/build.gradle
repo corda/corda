@@ -44,6 +44,8 @@ configurations {
     freighterTestRuntime.extendsFrom testRuntime
 }
 dependencies {
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
     freighterTestCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     freighterTestCompile "freighter:freighter-testing-core-junit5:0.5.0-SNAPSHOT"
     //depend on jar files, not projects - this prevents core and other internal things being dragged into our sandbox

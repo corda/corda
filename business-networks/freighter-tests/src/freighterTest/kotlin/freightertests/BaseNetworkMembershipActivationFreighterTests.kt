@@ -41,14 +41,8 @@ abstract class BaseNetworkMembershipActivationFreighterTests : RemoteMachineBase
         val networkId = UniqueIdentifier()
         val groupId = UniqueIdentifier()
 
-        bnoNode.startNode()
         val memberShipStateNetworkId = createBusinessNetwork(bnoNode, networkId, groupId)
-
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticpants, nodeGenerator)
-        listOfGroupMembers.forEach {
-            println("Starting Node " + it.name)
-            it.startNode()
-        }
 
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = listOfGroupMembers.associateBy(
                 { it },
@@ -72,9 +66,7 @@ abstract class BaseNetworkMembershipActivationFreighterTests : RemoteMachineBase
 
 
         val holderCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.ACTIVE))
-
         val membershipActiveTime =  measureTimeMillis{ waitForStatusUpdate(listOfGroupMembers, holderCriteria, bnoNode)}
-
         val subsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size/2).first()
 
         val membershipUpdateTime =  measureTimeMillis {
@@ -88,24 +80,14 @@ abstract class BaseNetworkMembershipActivationFreighterTests : RemoteMachineBase
         val suspendedStatusCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))
         val membershipSuspendTime =  measureTimeMillis{ waitForStatusUpdate(subsetGroupMembers, suspendedStatusCriteria, bnoNode)}
 
-
-
-//        bnoNode.rpc {
-//            startFlow(::CreateGroupFlow,
-//                    memberShipStateNetworkId,
-//                    newGroupId,
-//                    newGroupName,
-//                    subsetGroupMembers.map { it.linearId }.toSet(),
-//                    null
-//                    )
-//        }
-
         bnoNode.nodeMachine.stopNode()
         listOfGroupMembers.forEach { it.stopNode() }
 
         return BenchMarkResult(membershipActiveTime,membershipUpdateTime, membershipSuspendTime)
 
     }
+
+
 
     private fun getMembershipStatusQueryCriteria(listOfMemberShipStatus:List<MembershipStatus>): QueryCriteria {
         return QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
@@ -138,16 +120,13 @@ abstract class BaseNetworkMembershipActivationFreighterTests : RemoteMachineBase
                     null).returnValue.getOrThrow()
         }
 
-        val memberShipStateNetworkId = (output.tx.outputStates.single() as MembershipState).networkId
-        return memberShipStateNetworkId
+        return (output.tx.outputStates.single() as MembershipState).networkId
     }
 
-    private fun buildGroupMembershipNodes(numberOfParticpants: Int, nodeGenerator: () -> CompletableFuture<SingleNodeDeployed>): ArrayList<SingleNodeDeployed> {
-        return arrayListOf<SingleNodeDeployed>().apply {
-            (0 until numberOfParticpants).forEach {
-                add(nodeGenerator().getOrThrow())
-            }
-        }
+    private fun buildGroupMembershipNodes(numberOfParticpants: Int, nodeGenerator: () -> CompletableFuture<SingleNodeDeployed>): List<SingleNodeDeployed> {
+        return (0 until numberOfParticpants).map{
+            nodeGenerator()
+        }.map{it.getOrThrow()}
     }
 
     private fun createDeploymentGenerator(
