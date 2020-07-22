@@ -403,7 +403,9 @@ class DBCheckpointStorage(
     }
 
     override fun updateCheckpoint(
-        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
+        id: StateMachineRunId,
+        checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
         val now = clock.instant()
