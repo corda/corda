@@ -30,7 +30,7 @@ if (isReleaseTag) {
     switch (env.TAG_NAME) {
         case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
         case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        default: nexusIqStage = "operate"
+        default: nexusIqStage = "release"
     }
 }
 
