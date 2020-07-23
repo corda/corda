@@ -125,7 +125,7 @@ data class NodeConfigurationImpl(
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
         val quasarExcludePackages: List<String> = emptyList()
-        const val reloadCheckpointAfterSuspend: Boolean = false
+        val reloadCheckpointAfterSuspend: Boolean = System.getProperty("reloadCheckpointAfterSuspend", "false")!!.toBoolean()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
