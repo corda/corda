@@ -661,21 +661,21 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                  RULE Create Counter
-                 CLASS ${FlowMessaging::class.java.name}
+                 CLASS ${PersistentNetworkMapCache::class.java.name}
                  METHOD getPartyInfo
-                 AT ENTRY
+                 AT EXIT
                  IF createCounter("counter", $counter)
                  DO traceln("Counter created")
                  ENDRULE
                  
                  RULE Set flag when getPartyInfo
-                 CLASS ${FlowMessaging::class.java.name}
+                 CLASS ${PersistentNetworkMapCache::class.java.name}
                  METHOD getPartyInfo
-                 AT ENTRY
+                 AT EXIT
                  IF readCounter("counter") < 1
                  DO incrementCounter("counter"); 
-                 traceln("Setting flag to true and throwing exception"); 
-                 throw new ${PartyNotFoundException::class.java.name}("Some message", new ${CordaX500Name::class.java.simpleName}("Charlie Ltd", "Athens", "GR"))
+                 traceln("Setting flag to true and returning null to get PartyNotFoundException"); 
+                 RETURN NULL
                  ENDRULE
              """.trimIndent()
 
@@ -715,10 +715,10 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                  RULE Set flag when getPartyInfo
                  CLASS ${PersistentNetworkMapCache::class.java.name}
                  METHOD getPartyInfo
-                 AT ENTRY
+                 AT EXIT
                  IF flagged("suspend_flag") && !flagged("party_not_found_flag") && !flagged("commit_exception_flag")
-                 DO flag("party_not_found_flag"); traceln("Setting flag to true and throwing exception"); 
-                 throw new ${PartyNotFoundException::class.java.name}("Some message", new ${CordaX500Name::class.java.simpleName}("Charlie Ltd", "Athens", "GR"))
+                 DO flag("party_not_found_flag"); traceln("Setting flag to true and returning null to get PartyNotFoundException"); 
+                 RETURN NULL
                  ENDRULE
 
                  RULE Throw exception on retry
