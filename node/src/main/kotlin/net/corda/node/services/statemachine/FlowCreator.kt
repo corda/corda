@@ -36,20 +36,22 @@ class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint) 
 }
 
 class FlowCreator(
-    val checkpointSerializationContext: CheckpointSerializationContext,
+    private val checkpointSerializationContext: CheckpointSerializationContext,
     private val checkpointStorage: CheckpointStorage,
-    val scheduler: FiberScheduler,
-    val database: CordaPersistence,
-    val transitionExecutor: TransitionExecutor,
-    val actionExecutor: ActionExecutor,
-    val secureRandom: SecureRandom,
-    val serviceHub: ServiceHubInternal,
-    val unfinishedFibers: ReusableLatch,
-    val resetCustomTimeout: (StateMachineRunId, Long) -> Unit) {
+    private val scheduler: FiberScheduler,
+    private val database: CordaPersistence,
+    private val transitionExecutor: TransitionExecutor,
+    private val actionExecutor: ActionExecutor,
+    private val secureRandom: SecureRandom,
+    private val serviceHub: ServiceHubInternal,
+    private val unfinishedFibers: ReusableLatch,
+    private val resetCustomTimeout: (StateMachineRunId, Long) -> Unit) {
 
     companion object {
         private val logger = contextLogger()
     }
+
+    private val reloadCheckpointAfterSuspend = serviceHub.configuration.reloadCheckpointAfterSuspend
 
     fun createFlowFromNonResidentFlow(nonResidentFlow: NonResidentFlow): Flow<*>? {
         // As for paused flows we don't extract the serialized flow state we need to re-extract the checkpoint from the database.
@@ -65,13 +67,23 @@ class FlowCreator(
         return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint)
     }
 
-    fun createFlowFromCheckpoint(runId: StateMachineRunId, oldCheckpoint: Checkpoint, reloadCheckpointAfterSuspend: Boolean = false): Flow<*>? {
+    fun createFlowFromCheckpoint(
+        runId: StateMachineRunId,
+        oldCheckpoint: Checkpoint,
+        reloadCheckpointAfterSuspendCount: Int? = null
+    ): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId, reloadCheckpointAfterSuspend) ?: return null
         val resultFuture = openFuture<Any?>()
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
-        val state = createStateMachineState(checkpoint, fiber, true)
+        val state = createStateMachineState(
+            checkpoint = checkpoint,
+            fiber = fiber,
+            anyCheckpointPersisted = true,
+            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
+                ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null
+        )
         fiber.transientValues = createTransientValues(runId, resultFuture)
         fiber.transientState = state
         return Flow(fiber, resultFuture)
@@ -108,11 +120,13 @@ class FlowCreator(
         ).getOrThrow()
 
         val state = createStateMachineState(
-            checkpoint,
-            flowStateMachineImpl,
-            existingCheckpoint != null,
-             deduplicationHandler,
-             senderUUID)
+            checkpoint = checkpoint,
+            fiber = flowStateMachineImpl,
+            anyCheckpointPersisted = existingCheckpoint != null,
+            reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
+            deduplicationHandler = deduplicationHandler,
+            senderUUID = senderUUID
+        )
         flowStateMachineImpl.transientState = state
         return  Flow(flowStateMachineImpl, resultFuture)
     }
@@ -128,7 +142,7 @@ class FlowCreator(
             }
             is FlowState.Started -> tryCheckpointDeserialize(this.flowState.frozenFiber, runId, reloadCheckpointAfterSuspend) ?: return null
             // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-            else ->  null
+            else -> null
         }
     }
 
@@ -183,11 +197,13 @@ class FlowCreator(
     }
 
     private fun createStateMachineState(
-            checkpoint: Checkpoint,
-            fiber: FlowStateMachineImpl<*>,
-            anyCheckpointPersisted: Boolean,
-            deduplicationHandler: DeduplicationHandler? = null,
-            senderUUID: String? = null): StateMachineState {
+        checkpoint: Checkpoint,
+        fiber: FlowStateMachineImpl<*>,
+        anyCheckpointPersisted: Boolean,
+        reloadCheckpointAfterSuspendCount: Int?,
+        deduplicationHandler: DeduplicationHandler? = null,
+        senderUUID: String? = null
+    ): StateMachineState {
         return StateMachineState(
             checkpoint = checkpoint,
             pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -200,7 +216,7 @@ class FlowCreator(
             isKilled = false,
             flowLogic = fiber.logic,
             senderUUID = senderUUID,
-            reloadCheckpointAfterSuspend = false
+            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
         )
     }
 }

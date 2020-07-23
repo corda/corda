@@ -536,13 +536,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             }
         }
 
-        if (transientState!!.value.reloadCheckpointAfterSuspend) {
-            onReloadFlowFromCheckpoint?.invoke(id)
-            processEventImmediately(
-                Event.RetryFlowFromSafePoint,
-                isDbTransactionOpenOnEntry = false,
-                isDbTransactionOpenOnExit = false
-            )
+        transientState!!.value.reloadCheckpointAfterSuspendCount?.let { count ->
+            if (count < transientState!!.value.checkpoint.checkpointState.numberOfSuspends) {
+                onReloadFlowFromCheckpoint?.invoke(id)
+                processEventImmediately(
+                    Event.RetryFlowFromSafePoint,
+                    isDbTransactionOpenOnEntry = false,
+                    isDbTransactionOpenOnExit = false
+                )
+            }
         }
 
         return uncheckedCast(processEventsUntilFlowIsResumed(

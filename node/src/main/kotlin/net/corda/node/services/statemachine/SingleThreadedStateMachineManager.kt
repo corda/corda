@@ -388,7 +388,7 @@ internal class SingleThreadedStateMachineManager(
 
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
             // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspend) ?: return
+            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspendCount) ?: return
         } else {
             // Just flow initiation message
             null

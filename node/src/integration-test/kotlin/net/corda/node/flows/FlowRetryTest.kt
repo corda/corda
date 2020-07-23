@@ -5,6 +5,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -14,7 +15,10 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -32,6 +36,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
@@ -46,10 +51,13 @@ import java.time.temporal.ChronoUnit
 import java.util.Collections
 import java.util.HashSet
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class FlowRetryTest {
 
@@ -198,121 +206,6 @@ class FlowRetryTest {
             }.withMessageStartingWith("User not authorized to perform RPC call")
             // This stays at -1 since the flow never even got called
             assertEquals(-1, GeneralExternalFailureFlow.retryCount)
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true`() {
-        val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
-            reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
-            val nodeAHandle = startNode(
-                providedName = ALICE_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-            val nodeBHandle = startNode(
-                providedName = BOB_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, false)
-            val flowStartedByAlice = handle.id
-            handle.returnValue.getOrThrow()
-            assertEquals(4, reloadCounts[flowStartedByAlice])
-            assertEquals(5, reloadCounts[ReloadFromCheckpointResponder.flowId])
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `flow will not reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is false`() {
-        val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
-            reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
-            val nodeAHandle = startNode(
-                providedName = ALICE_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to false)
-            ).getOrThrow()
-            val nodeBHandle = startNode(
-                providedName = BOB_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to false)
-            ).getOrThrow()
-
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, false)
-            val flowStartedByAlice = handle.id
-            handle.returnValue.getOrThrow()
-            assertEquals(null, reloadCounts[flowStartedByAlice])
-            assertEquals(null, reloadCounts[ReloadFromCheckpointResponder.flowId])
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true and throw an error for failed deserialization`() {
-        val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
-            reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
-            val nodeAHandle = startNode(
-                providedName = ALICE_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-            val nodeBHandle = startNode(
-                providedName = BOB_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), true, false)
-            val flowStartedByAlice = handle.id
-            assertThatExceptionOfType(StateTransitionException::class.java).isThrownBy { handle.returnValue.getOrThrow() }
-                .withCauseExactlyInstanceOf(ReloadFlowFromCheckpointException::class.java)
-                .withRootCauseExactlyInstanceOf(CordaRuntimeException::class.java)
-                .withMessageContaining(
-                    "Could not reload flow from checkpoint. This is likely due to a discrepancy " +
-                            "between the serialization and deserialization of an object in the flow's checkpoint"
-                )
-            assertEquals(4, reloadCounts[flowStartedByAlice])
-            assertEquals(4, reloadCounts[ReloadFromCheckpointResponder.flowId])
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `counterparty flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true and throw an error for failed deserialization to other nodes`() {
-        val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
-            reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
-        }
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
-            val nodeAHandle = startNode(
-                providedName = ALICE_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-            val nodeBHandle = startNode(
-                providedName = BOB_NAME,
-                rpcUsers = listOf(user),
-                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-            ).getOrThrow()
-
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, true)
-            val flowStartedByAlice = handle.id
-            assertFailsWith<UnexpectedFlowEndException> { handle.returnValue.getOrThrow() }
-            assertEquals(4, reloadCounts[flowStartedByAlice])
-            assertEquals(4, reloadCounts[ReloadFromCheckpointResponder.flowId])
         }
     }
 }
@@ -576,57 +469,9 @@ class GeneralExternalFailureResponder(private val session: FlowSession) : FlowLo
 }
 
 @StartableByRPC
-@InitiatingFlow
-class ReloadFromCheckpointFlow(
-    private val party: Party,
-    private val shouldHaveDeserializationError: Boolean,
-    private val counterPartyHasDeserializationError: Boolean
-) : FlowLogic<Unit>() {
-
-    @Suspendable
-    override fun call() {
-        val session = initiateFlow(party)
-        session.send(counterPartyHasDeserializationError)
-        logger.info("completed the send")
-        val s = session.receive<String>().unwrap { it }
-        logger.info("received your message = $s")
-        sleep(1.seconds)
-        val map = if (shouldHaveDeserializationError) {
-            BrokenMap(mutableMapOf("i dont want" to "this to work"))
-        } else {
-            mapOf("i dont want" to "this to work")
-        }
-        session.sendAndReceive<String>("hey I made it this far")
-    }
-}
-
-@InitiatedBy(ReloadFromCheckpointFlow::class)
-class ReloadFromCheckpointResponder(private val session: FlowSession) : FlowLogic<Unit>() {
-
-    companion object {
-        var flowId: StateMachineRunId? = null
-    }
-
-    @Suspendable
-    override fun call() {
-        flowId = runId
-        val counterPartyHasDeserializationError = session.receive<Boolean>().unwrap { it }
-        logger.info("completed the receive = $counterPartyHasDeserializationError")
-        session.send("hello there 12312311")
-        logger.info("completed the send 2")
-        sleep(1.seconds)
-        val map = if (counterPartyHasDeserializationError) {
-            BrokenMap(mutableMapOf("i dont want" to "this to work"))
-        } else {
-            mapOf("i dont want" to "this to work")
-        }
-        session.receive<String>().unwrap { it }
-        session.send("sending back a message")
-    }
-}
-
-@StartableByRPC
 class GetCheckpointNumberOfStatusFlow(private val flowStatus: Checkpoint.FlowStatus) : FlowLogic<Long>() {
+
+    @Suspendable
     override fun call(): Long {
         val sqlStatement =
             "select count(*) " +
