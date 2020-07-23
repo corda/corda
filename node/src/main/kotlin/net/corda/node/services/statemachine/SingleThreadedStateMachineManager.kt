@@ -29,6 +29,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -876,19 +877,21 @@ internal class SingleThreadedStateMachineManager(
         is FlowWithClientIdStatus.Removed -> {
             val flowId = existingStatus.flowId
 
-            val serializedFlowResultOrException = if (existingStatus.succeeded) {
+            val resultFuture = if (existingStatus.succeeded) {
                 val dbFlowResult = database.transaction {
                     (checkpointStorage as DBCheckpointStorage).getDBFlowResult(existingStatus.flowId)
                         ?: throw IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong.")
                 }
-                dbFlowResult.value?.let { SerializedBytes<Any>(it) }
+                val serializedFlowResult = dbFlowResult.value?.let { SerializedBytes<Any>(it) }
+                val flowResult = serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                doneFuture(flowResult)
             } else {
-                // this block will be implemented upon implementing CORDA-3681
-                null
+                // this block will be implemented upon implementing CORDA-3681 - for now just return a dummy exception
+                val flowException = StateTransitionException(MissingSerializerException("dummy", "dummy"))
+                openFuture<Any?>().apply { setException(flowException) }
             }
 
-            val flowResult = serializedFlowResultOrException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
-            doneClientIdFuture(flowId, doneFuture(flowResult), clientId)
+            doneClientIdFuture(flowId, resultFuture, clientId)
         }
     }
 

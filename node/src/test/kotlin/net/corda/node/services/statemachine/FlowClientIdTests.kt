@@ -452,18 +452,24 @@ class FlowClientIdTests {
 //    }
 
     @Test
-    fun `flow fails to serialize`() {
+    fun `if flow fails to serialize its result then result gets converted to an exception result`() {
         val clientId = UUID.randomUUID().toString()
-        aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty()))
+        assertFailsWith<StateTransitionException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
+        }
 
+        assertFailsWith<StateTransitionException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
+        }
     }
 
-    @Test
-    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
-        val clientId = UUID.randomUUID().toString()
-        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow(5)).resultFuture.getOrThrow()
-        assertEquals(5, result)
-    }
+    // This test is now redundant since, upon error at serialization of result we error and propagate
+//    @Test
+//    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
+//        val clientId = UUID.randomUUID().toString()
+//        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow(5)).resultFuture.getOrThrow()
+//        assertEquals(5, result)
+//    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
