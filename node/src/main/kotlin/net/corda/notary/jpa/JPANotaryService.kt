@@ -20,6 +20,8 @@ class JPANotaryService(
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
+
+    @Suppress("TooGenericExceptionCaught")
     override val uniquenessProvider = with(services) {
         val jpaNotaryConfig = try {
             notaryConfig.extraConfig?.parseAs() ?: JPANotaryConfiguration()

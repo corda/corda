@@ -57,7 +57,7 @@ class JPAUniquenessProvider(
         val notaryWorkerName: CordaX500Name,
         val signBatch: BatchSigningFunction
 ) : UniquenessProvider, SingletonSerializeAsToken() {
-    
+
     // This is the prefix of the ID in the request log table, to allow running multiple instances that access the
     // same table.
     private val instanceId = UUID.randomUUID()
@@ -127,7 +127,8 @@ class JPAUniquenessProvider(
                 processRequests(buffer)
                 buffer.clear()
             }
-        } catch (e: InterruptedException) {
+        } catch (_: InterruptedException) {
+            log.debug { "Process interrupted."}
         }
         log.debug { "Shutting down with ${requestQueue.size} in-flight requests unprocessed." }
     }
@@ -343,6 +344,7 @@ class JPAUniquenessProvider(
         return session.find(CommittedTransaction::class.java, txId.toString()) != null
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun processRequests(requests: List<CommitRequest>) {
         try {
             // Note that there is an additional retry mechanism within the transaction itself.

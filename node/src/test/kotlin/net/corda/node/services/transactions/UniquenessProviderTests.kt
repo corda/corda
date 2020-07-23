@@ -57,9 +57,8 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun data(): Collection<UniquenessProviderFactory> = listOf(
-                JPAUniquenessProviderFactory()
-                // TODO: re-enable raft
-                //RaftUniquenessProviderFactory()
+                JPAUniquenessProviderFactory(),
+                RaftUniquenessProviderFactory()
         )
     }
 
