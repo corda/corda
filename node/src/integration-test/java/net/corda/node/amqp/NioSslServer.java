@@ -1,5 +1,7 @@
 package net.corda.node.amqp;
 
+import net.corda.nodeapi.internal.protonwrapper.netty.SSLHelperKt;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -8,14 +10,15 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.security.SecureRandom;
 import java.util.Iterator;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManagerFactory;
 
 /**
  * An SSL/TLS server, that will listen to a specific address and port and serve SSL/TLS connections
@@ -53,15 +56,13 @@ public class NioSslServer extends NioSslPeer {
     /**
      * Server is designed to apply an SSL/TLS protocol and listen to an IP address and port.
      *
-     * @param protocol - the SSL/TLS protocol that this server will be configured to apply.
      * @param hostAddress - the IP address this server will listen to.
      * @param port - the port this server will listen to.
      * @throws Exception
      */
-    public NioSslServer(String protocol, String hostAddress, int port) throws Exception {
+    public NioSslServer(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, String hostAddress, int port) throws Exception {
 
-        context = SSLContext.getInstance(protocol);
-        context.init(createKeyManagers("./src/main/resources/server.jks", "storepass", "keypass"), createTrustManagers("./src/main/resources/trustedCerts.jks", "storepass"), new SecureRandom());
+        context = SSLHelperKt.createAndInitSslContext(keyManagerFactory, trustManagerFactory);
 
         SSLSession dummySession = context.createSSLEngine().getSession();
         myAppData = ByteBuffer.allocate(dummySession.getApplicationBufferSize());
