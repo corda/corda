@@ -57,9 +57,7 @@ class JPAUniquenessProvider(
         val notaryWorkerName: CordaX500Name,
         val signBatch: BatchSigningFunction
 ) : UniquenessProvider, SingletonSerializeAsToken() {
-
-    // TODO: test vs. MySQLUniquenessProvider
-
+    
     // This is the prefix of the ID in the request log table, to allow running multiple instances that access the
     // same table.
     private val instanceId = UUID.randomUUID()

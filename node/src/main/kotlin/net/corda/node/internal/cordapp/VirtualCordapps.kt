@@ -81,8 +81,7 @@ internal object VirtualCordapp {
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(JPANotarySchemaV1),
-                // TODO: Update licence.
-                info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Copyright 2019 R3. Licensed use only"),
+                info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
                 allFlows = listOf(),
                 jarPath = JPANotaryService::class.java.location,
                 jarHash = SecureHash.allOnesHash,
