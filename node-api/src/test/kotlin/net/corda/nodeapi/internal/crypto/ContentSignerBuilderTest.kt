@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import java.math.BigInteger
 import java.security.InvalidKeyException
@@ -18,11 +19,15 @@ class ContentSignerBuilderTest {
         ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
     }
 
-    @Test(expected = InvalidKeyException::class, timeout = 300_000)
+    @Test(timeout = 300_000)
     fun `should fail to build content signer for incorrect key type`() {
         val signatureScheme = Crypto.EDDSA_ED25519_SHA512
         val provider = Crypto.findProvider(signatureScheme.providerName)
         val issuerKeyPair = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger(entropy))
-        ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
+        assertThatExceptionOfType(InvalidKeyException::class.java)
+                .isThrownBy {
+                    ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
+                }
+                .withMessage("Incorrect key type EC for signature scheme NONEwithEdDSA")
     }
 }
