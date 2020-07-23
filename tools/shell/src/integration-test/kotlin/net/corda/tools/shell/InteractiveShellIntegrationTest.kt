@@ -16,6 +16,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
@@ -364,8 +365,10 @@ class InteractiveShellIntegrationTest {
 	fun `dumpCheckpoints creates zip with json file for suspended flow`() {
         val user = User("u", "p", setOf(all()))
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()))) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             bobNode.stop()
 
             // Create logs directory since the driver is not creating it

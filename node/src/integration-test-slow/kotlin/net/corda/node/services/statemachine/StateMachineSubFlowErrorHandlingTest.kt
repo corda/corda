@@ -40,8 +40,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `initiating subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -119,8 +118,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `initiating subflow - error during transition with CommitTransaction action that occurs after the first receive will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -190,8 +188,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first send will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
@@ -253,8 +250,7 @@ class StateMachineSubFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `inline subflow - error during transition with CommitTransaction action that occurs during the first receive will retry and complete successfully`() {
         startDriver {
-            val charlie = createNode(CHARLIE_NAME)
-            val (alice, port) = createBytemanNode(ALICE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
