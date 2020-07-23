@@ -10,7 +10,7 @@ class ContentSignerBuilderTest {
         private const val entropy = "20200723"
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `should build content signer for valid eddsa key`() {
         val signatureScheme = Crypto.EDDSA_ED25519_SHA512
         val provider = Crypto.findProvider(signatureScheme.providerName)
@@ -18,7 +18,7 @@ class ContentSignerBuilderTest {
         ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
     }
 
-    @Test(expected = InvalidKeyException::class)
+    @Test(expected = InvalidKeyException::class, timeout = 300_000)
     fun `should fail to build content signer for incorrect key type`() {
         val signatureScheme = Crypto.EDDSA_ED25519_SHA512
         val provider = Crypto.findProvider(signatureScheme.providerName)
