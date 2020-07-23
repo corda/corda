@@ -173,6 +173,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
             it.join()
         }
         running = false
+        stateHelper.active = false
         network.netNodeHasShutdown(myAddress)
     }
 
