@@ -139,13 +139,13 @@ internal class CordaRPCOpsImpl(
         return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
-    override fun getTransactionsSnapshotWithPagingSpec(pagingSpec: PageSpecification): TransactionStorage.Page {
-        val (snapshot, updates) = getTransactionsFeedWithPagingSpec(pagingSpec)
+    override fun transactionsSnapshotWithPagingSpec(pagingSpec: PageSpecification): TransactionStorage.Page {
+        val (snapshot, updates) = transactionsFeedWithPagingSpec(pagingSpec)
         updates.notUsed()
         return snapshot
     }
 
-    override fun getTransactionsFeedWithPagingSpec(pagingSpec: PageSpecification): DataFeed<TransactionStorage.Page, SignedTransaction> {
+    override fun transactionsFeedWithPagingSpec(pagingSpec: PageSpecification): DataFeed<TransactionStorage.Page, SignedTransaction> {
         return services.validatedTransactions.trackWithPagingSpec(pagingSpec)
     }
 

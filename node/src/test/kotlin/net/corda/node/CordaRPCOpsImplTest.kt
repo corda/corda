@@ -269,18 +269,18 @@ class CordaRPCOpsImplTest {
     }
 
     @Test(timeout=300_000)
-    fun `test getTransactionsFeedWithPagingSpec`() {
+    fun `test transactionsFeedWithPagingSpec`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
                 invokeRpc(CordaRPCOps::stateMachinesFeed),
-                invokeRpc(CordaRPCOps::getTransactionsFeedWithPagingSpec),
+                invokeRpc(CordaRPCOps::transactionsFeedWithPagingSpec),
                 invokeRpc("vaultTrackBy"),
                 startFlow<CashIssueFlow>(),
                 startFlow<CashPaymentFlow>()
         ) {
             aliceNode.database.transaction {
                 stateMachineUpdates = rpc.stateMachinesFeed().updates
-                transactions = rpc.getTransactionsFeedWithPagingSpec(PageSpecification(1, 2)).updates
+                transactions = rpc.transactionsFeedWithPagingSpec(PageSpecification(1, 2)).updates
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
             }
 
@@ -363,10 +363,10 @@ class CordaRPCOpsImplTest {
     }
 
     @Test(timeout=300_000)
-    fun `test getTransactionsSnapshotWithPagingSpec`() {
+    fun `test transactionsSnapshotWithPagingSpec`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(
-                invokeRpc(CordaRPCOps::getTransactionsSnapshotWithPagingSpec),
+                invokeRpc(CordaRPCOps::transactionsSnapshotWithPagingSpec),
                 startFlow<CashIssueFlow>(),
                 startFlow<CashPaymentFlow>()
         ) {
@@ -374,7 +374,7 @@ class CordaRPCOpsImplTest {
             mockNet.runNetwork()
             rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, alice)
             mockNet.runNetwork()
-            val txPagedSnapshot = rpc.getTransactionsSnapshotWithPagingSpec(PageSpecification(1, 2))
+            val txPagedSnapshot = rpc.transactionsSnapshotWithPagingSpec(PageSpecification(1, 2))
             assertEquals(txPagedSnapshot.totalTransactionsAvailable, 2)
             // verify payment tx details
             assertEquals(txPagedSnapshot.transactions[0].signedTransaction.tx.inputs.size, 1)

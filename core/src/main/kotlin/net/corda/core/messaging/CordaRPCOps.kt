@@ -187,7 +187,7 @@ interface CordaRPCOps : RPCOps {
     // DOCEND VaultTrackAPIHelpers
 
     /**
-    Returns a paged snapshot of transactions ordered by timestamp (In Ascending order) for a given paging specification
+     * Returns a paged snapshot of transactions ordered by timestamp (In Ascending order) for a given paging specification
      *
      *  returns a [TransactionStorage.Page] object containing the following:
      *  1. signedTransactions as a List of <TransactionStorage.RecordedTransaction> (page number and size defined by [PageSpecification])
@@ -195,7 +195,7 @@ interface CordaRPCOps : RPCOps {
      *
      * @throws TransactionStorage.TransactionsQueryException if there are paging errors
      */
-    fun getTransactionsSnapshotWithPagingSpec(pagingSpec: PageSpecification): TransactionStorage.Page
+    fun transactionsSnapshotWithPagingSpec(pagingSpec: PageSpecification): TransactionStorage.Page
 
     /**
      * Returns a paged snapshot of transactions ordered by timestamp (In Ascending order), with paging spec., and observable for future transactions
@@ -203,7 +203,7 @@ interface CordaRPCOps : RPCOps {
      * @throws TransactionStorage.TransactionsQueryException if there are paging errors
      */
     @RPCReturnsObservables
-    fun getTransactionsFeedWithPagingSpec(pagingSpec: PageSpecification): DataFeed<TransactionStorage.Page, SignedTransaction>
+    fun transactionsFeedWithPagingSpec(pagingSpec: PageSpecification): DataFeed<TransactionStorage.Page, SignedTransaction>
 
     /**
      * @suppress Returns a list of all recorded transactions.
