@@ -6,8 +6,8 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.logging.logFile
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.logFile
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.time.Duration

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="info" packages="net.corda.common.logging">
+<Configuration status="info">
 
     <Properties>
         <Property name="log-path">${sys:log-path:-logs}</Property>
@@ -63,17 +63,14 @@
 
         <Rewrite name="Console-ErrorCode-Appender">
             <AppenderRef ref="Console-Appender"/>
-            <ErrorCodeRewritePolicy/>
         </Rewrite>
 
         <Rewrite name="Console-ErrorCode-Appender-Println">
             <AppenderRef ref="Console-Appender-Println"/>
-            <ErrorCodeRewritePolicy/>
         </Rewrite>
 
         <Rewrite name="RollingFile-ErrorCode-Appender">
             <AppenderRef ref="RollingFile-Appender"/>
-            <ErrorCodeRewritePolicy/>
         </Rewrite>
     </Appenders>
 
