@@ -96,12 +96,12 @@ internal class FlowMonitor(
     private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
 
     private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        return transientState?.value?.checkpoint?.timestamp?.let { Duration.between(it, now) } ?: Duration.ZERO
+        return transientState.checkpoint.timestamp.let { Duration.between(it, now) } ?: Duration.ZERO
     }
 
     private fun FlowStateMachineImpl<*>.isSuspended() = !snapshot().isFlowResumed
 
-    private fun FlowStateMachineImpl<*>.isStarted() = transientState?.value?.checkpoint?.flowState is FlowState.Started
+    private fun FlowStateMachineImpl<*>.isStarted() = transientState.checkpoint.flowState is FlowState.Started
 
     private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 }

@@ -39,18 +39,14 @@ class FlowDefaultUncaughtExceptionHandler(
         val id = fiber.id
         if (!fiber.resultFuture.isDone) {
             fiber.transientState.let { state ->
-                if (state != null) {
-                    fiber.logger.warn("Forcing flow $id into overnight observation")
-                    flowHospital.forceIntoOvernightObservation(state.value, listOf(throwable))
-                    val hospitalizedCheckpoint = state.value.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
-                    val hospitalizedState = state.value.copy(checkpoint = hospitalizedCheckpoint)
-                    fiber.transientState = TransientReference(hospitalizedState)
-                } else {
-                    fiber.logger.warn("The fiber's transient state is not set, cannot force flow $id into in-memory overnight observation, status will still be updated in database")
-                }
+                fiber.logger.warn("Forcing flow $id into overnight observation")
+                flowHospital.forceIntoOvernightObservation(state, listOf(throwable))
+                val hospitalizedCheckpoint = state.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+                val hospitalizedState = state.copy(checkpoint = hospitalizedCheckpoint)
+                fiber.transientState = hospitalizedState
             }
-            scheduledExecutor.schedule({ setFlowToHospitalizedRescheduleOnFailure(id) }, 0, TimeUnit.SECONDS)
         }
+        scheduledExecutor.schedule({ setFlowToHospitalizedRescheduleOnFailure(id) }, 0, TimeUnit.SECONDS)
     }
 
     @Suppress("TooGenericExceptionCaught")

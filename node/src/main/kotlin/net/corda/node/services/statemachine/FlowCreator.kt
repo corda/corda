@@ -69,11 +69,11 @@ class FlowCreator(
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
         val resultFuture = openFuture<Any?>()
-        fiber.transientValues = TransientReference(createTransientValues(runId, resultFuture))
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
         val state = createStateMachineState(checkpoint, fiber, true)
-        fiber.transientState = TransientReference(state)
+        fiber.transientValues = createTransientValues(runId, resultFuture)
+        fiber.transientState = state
         return Flow(fiber, resultFuture)
     }
 
@@ -91,7 +91,7 @@ class FlowCreator(
         // have access to the fiber (and thereby the service hub)
         val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
         val resultFuture = openFuture<Any?>()
-        flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
+        flowStateMachineImpl.transientValues = createTransientValues(flowId, resultFuture)
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).checkpointSerialize(context = checkpointSerializationContext)
         val flowCorDappVersion = FlowStateMachineImpl.createSubFlowVersion(
@@ -113,7 +113,7 @@ class FlowCreator(
             existingCheckpoint != null,
              deduplicationHandler,
              senderUUID)
-        flowStateMachineImpl.transientState = TransientReference(state)
+        flowStateMachineImpl.transientState = state
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 

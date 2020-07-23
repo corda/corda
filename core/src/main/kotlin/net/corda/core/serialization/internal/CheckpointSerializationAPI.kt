@@ -56,6 +56,10 @@ interface CheckpointSerializationContext {
      * otherwise they appear as new copies of the object.
      */
     val objectReferencesEnabled: Boolean
+    /**
+     * User defined custom serializers for use in checkpoint serialization.
+     */
+    val checkpointCustomSerializers: Iterable<CheckpointCustomSerializer<*,*>>
 
     /**
      * Helper method to return a new context based on this context with the property added.
@@ -86,6 +90,11 @@ interface CheckpointSerializationContext {
      * A shallow copy of this context but with the given encoding whitelist.
      */
     fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist): CheckpointSerializationContext
+
+    /**
+     * A shallow copy of this context but with the given custom serializers.
+     */
+    fun withCheckpointCustomSerializers(checkpointCustomSerializers: Iterable<CheckpointCustomSerializer<*, *>>): CheckpointSerializationContext
 }
 
 /*

@@ -261,14 +261,9 @@ internal class SingleThreadedStateMachineManager(
                 unfinishedFibers.countDown()
 
                 val state = flow.fiber.transientState
-                return@withLock if (state != null) {
-                    state.value.isKilled = true
-                    flow.fiber.scheduleEvent(Event.DoRemainingWork)
-                    true
-                } else {
-                    logger.info("Flow $id has not been initialised correctly and cannot be killed")
-                    false
-                }
+                state.isKilled = true
+                flow.fiber.scheduleEvent(Event.DoRemainingWork)
+                true
             } else {
                 // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
                 database.transaction { checkpointStorage.removeCheckpoint(id) }
@@ -386,7 +381,7 @@ internal class SingleThreadedStateMachineManager(
         currentState.cancelFutureIfRunning()
         // Get set of external events
         val flowId = currentState.flowLogic.runId
-        val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.value?.eventQueue
+        val oldFlowLeftOver = innerState.withLock { flows[flowId] }?.fiber?.transientValues?.eventQueue
         if (oldFlowLeftOver == null) {
             logger.error("Unable to find flow for flow $flowId. Something is very wrong. The flow will not retry.")
             return
@@ -592,7 +587,7 @@ internal class SingleThreadedStateMachineManager(
     ): CordaFuture<FlowStateMachine<A>> {
 
         val existingFlow = innerState.withLock { flows[flowId] }
-        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState?.value?.isAnyCheckpointPersisted == true) {
+        val existingCheckpoint = if (existingFlow != null && existingFlow.fiber.transientState.isAnyCheckpointPersisted) {
             // Load the flow's checkpoint
             // The checkpoint will be missing if the flow failed before persisting the original checkpoint
             // CORDA-3359 - Do not start/retry a flow that failed after deleting its checkpoint (the whole of the flow might replay)
@@ -756,7 +751,7 @@ internal class SingleThreadedStateMachineManager(
     // The flow's event queue may be non-empty in case it shut down abruptly. We handle outstanding events here.
     private fun drainFlowEventQueue(flow: Flow<*>) {
         while (true) {
-            val event = flow.fiber.transientValues!!.value.eventQueue.tryReceive() ?: return
+            val event = flow.fiber.transientValues.eventQueue.tryReceive() ?: return
             when (event) {
                 is Event.DoRemainingWork -> {}
                 is Event.DeliverSessionMessage -> {
