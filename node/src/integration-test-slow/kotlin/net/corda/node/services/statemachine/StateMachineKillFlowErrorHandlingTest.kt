@@ -33,7 +33,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `error during transition due to killing a flow will terminate the flow`() {
         startDriver {
-            val alice = createNode(ALICE_NAME)
+            val alice = createNode()
 
             val flow = alice.rpc.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::SleepFlow)
 
@@ -70,7 +70,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `flow killed during user code execution stops and removes the flow correctly`() {
         startDriver {
-            val alice = createNode(ALICE_NAME)
+            val alice = createNode()
 
             val flow = alice.rpc.startTrackedFlow(StateMachineKillFlowErrorHandlingTest::ThreadSleepFlow)
 
@@ -103,8 +103,8 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
-            val charlie = createNode(CHARLIE_NAME)
+            val (alice, port) = createBytemanNode()
+            val charlie = createNode()
 
             val rules = """
                 RULE Create Counter

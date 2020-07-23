@@ -22,6 +22,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.ReusableDriver
 import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
@@ -64,6 +65,8 @@ interface NodeHandle : AutoCloseable {
      * Stops the referenced node.
      */
     fun stop()
+
+    fun running(): Boolean;
 }
 
 /** Interface which represents an out of process node and exposes its process handle. **/
@@ -71,6 +74,8 @@ interface NodeHandle : AutoCloseable {
 interface OutOfProcess : NodeHandle {
     /** The process in which this node is running **/
     val process: Process
+
+    override fun running(): Boolean = process.isAlive
 }
 
 /** Interface which represents an in process node and exposes available services. **/
@@ -161,6 +166,14 @@ constructor(
         @JvmStatic
         fun defaultEnabled(): JmxPolicy = JmxPolicy(true)
     }
+}
+interface ReusableDriverDsl: DriverDSL {
+    fun recoverBy(recovery: () -> Unit);
+}
+
+fun <A> reusableDriver (parameters: DriverParameters = DriverParameters(), dsl: ReusableDriverDsl.() -> A): A {
+    return ReusableDriver(parameters)
+            .use(dsl)
 }
 
 /**
