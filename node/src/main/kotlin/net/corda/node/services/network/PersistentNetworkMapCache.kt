@@ -2,7 +2,6 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
-import net.corda.core.flows.PartyNotFoundException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -101,7 +100,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
         return when {
-            nodes.isEmpty() -> throw PartyNotFoundException("Could not find party: $party", party.name)
             nodes.size == 1 && nodes[0].isLegalIdentity(party) -> PartyInfo.SingleNode(party, nodes[0].addresses)
             else -> nodes.firstOrNull { it.isLegalIdentity(party) }?.let { PartyInfo.DistributedNode(party) }
         }

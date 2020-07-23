@@ -661,7 +661,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
 
             val rules = """
                  RULE Create Counter
-                 CLASS ${PersistentNetworkMapCache::class.java.name}
+                 CLASS ${FlowMessaging::class.java.name}
                  METHOD getPartyInfo
                  AT ENTRY
                  IF createCounter("counter", $counter)
@@ -669,7 +669,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                  ENDRULE
                  
                  RULE Set flag when getPartyInfo
-                 CLASS ${PersistentNetworkMapCache::class.java.name}
+                 CLASS ${FlowMessaging::class.java.name}
                  METHOD getPartyInfo
                  AT ENTRY
                  IF readCounter("counter") < 1

@@ -52,7 +52,7 @@ class FlowWaitsForNetworkMapRefreshTest {
             val user = User(
                     "mark",
                     "dadada",
-                    setOf(Permissions.startFlow<HelloExceptionFlow>(), Permissions.startFlow<HelloFlow>())
+                    setOf(Permissions.startFlow<HelloFlow>())
             )
 
             val nodeCHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
@@ -75,7 +75,7 @@ class FlowWaitsForNetworkMapRefreshTest {
             val user = User(
                     "mark",
                     "dadada",
-                    setOf(Permissions.startFlow<HelloExceptionFlow>(), Permissions.startFlow<HelloFlow>())
+                    setOf(Permissions.startFlow<HelloExceptionFlow>())
             )
 
             val nodeAHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
