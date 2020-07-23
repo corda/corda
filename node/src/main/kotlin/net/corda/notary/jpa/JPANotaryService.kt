@@ -29,7 +29,6 @@ class JPANotaryService(
             throw IllegalArgumentException("Failed to register ${JPANotaryService::class.java}: extra notary configuration parameters invalid")
         }
         JPAUniquenessProvider(
-                monitoringService.metrics,
                 clock,
                 database,
                 jpaNotaryConfig,

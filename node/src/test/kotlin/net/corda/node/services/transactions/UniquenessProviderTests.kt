@@ -667,7 +667,6 @@ class JPAUniquenessProviderFactory : UniquenessProviderFactory {
         database?.close()
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
         return JPAUniquenessProvider(
-                MetricRegistry(),
                 clock,
                 database!!,
                 notaryConfig,

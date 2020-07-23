@@ -50,7 +50,6 @@ import kotlin.concurrent.thread
 @Suppress("MagicNumber") // database column length
 @ThreadSafe
 class JPAUniquenessProvider(
-        metricsRegistry: MetricRegistry,
         val clock: Clock,
         val database: CordaPersistence,
         val config: JPANotaryConfiguration = JPANotaryConfiguration(),
