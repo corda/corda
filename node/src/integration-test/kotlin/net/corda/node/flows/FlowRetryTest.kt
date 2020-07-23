@@ -126,6 +126,7 @@ class FlowRetryTest {
                 .map { startNode(providedName = it, rpcUsers = listOf(user)) }
                 .transpose()
                 .getOrThrow()
+
             assertFailsWith<TimeoutException> {
                 nodeAHandle.rpc.startFlow(::TransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
                     .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -146,6 +147,7 @@ class FlowRetryTest {
                 .map { startNode(providedName = it, rpcUsers = listOf(user)) }
                 .transpose()
                 .getOrThrow()
+
             assertFailsWith<TimeoutException> {
                 nodeAHandle.rpc.startFlow(::WrappedTransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
                     .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
@@ -163,9 +165,9 @@ class FlowRetryTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
-                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
-                    .transpose()
-                    .getOrThrow()
+                .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                .transpose()
+                .getOrThrow()
 
             assertFailsWith<CordaRuntimeException> {
                 nodeAHandle.rpc.startFlow(
