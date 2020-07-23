@@ -196,6 +196,7 @@ class FlowCreator(
         )
     }
 
+    @Suppress("LongParameterList")
     private fun createStateMachineState(
         checkpoint: Checkpoint,
         fiber: FlowStateMachineImpl<*>,
