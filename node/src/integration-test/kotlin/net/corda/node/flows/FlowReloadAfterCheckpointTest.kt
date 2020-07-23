@@ -330,15 +330,14 @@ class FlowReloadAfterCheckpointTest {
         override fun call() {
             val session = initiateFlow(party)
             session.send(counterPartyHasDeserializationError, skipCheckpoints)
-            logger.info("completed the send")
             val s = session.receive(String::class.java, skipCheckpoints).unwrap { it }
-            logger.info("received your message = $s")
             sleep(1.seconds, skipCheckpoints)
             val map = if (shouldHaveDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
             } else {
                 mapOf("i dont want" to "this to work")
             }
+            logger.info("I need to use my variable to pass the build!: $map")
             session.sendAndReceive<String>("hey I made it this far")
         }
     }
@@ -354,15 +353,14 @@ class FlowReloadAfterCheckpointTest {
         override fun call() {
             flowId = runId
             val counterPartyHasDeserializationError = session.receive<Boolean>().unwrap { it }
-            logger.info("completed the receive = $counterPartyHasDeserializationError")
             session.send("hello there 12312311")
-            logger.info("completed the send 2")
             sleep(1.seconds)
             val map = if (counterPartyHasDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
             } else {
                 mapOf("i dont want" to "this to work")
             }
+            logger.info("I need to use my variable to pass the build!: $map")
             session.receive<String>().unwrap { it }
             session.send("sending back a message")
         }
@@ -381,6 +379,7 @@ class FlowReloadAfterCheckpointTest {
             } else {
                 mapOf("i dont want" to "this to work")
             }
+            logger.info("I need to use my variable to pass the build!: $map")
             sleep(1.seconds)
             sleep(1.seconds)
         }
@@ -400,7 +399,6 @@ class FlowReloadAfterCheckpointTest {
             sleep(1.seconds)
             if (!thrown) {
                 thrown = true
-                logger.info("throwing exception")
                 throw HospitalizeFlowException("i want to try again")
             }
             sleep(1.seconds)
