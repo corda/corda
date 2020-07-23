@@ -30,7 +30,7 @@ if (isReleaseTag) {
     switch (env.TAG_NAME) {
         case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
         case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        default: nexusIqStage = "operate"
+        default: nexusIqStage = "release"
     }
 }
 
@@ -165,7 +165,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
-            junit testResults: '**/build/test-results-xml/**/*.xml'
+            junit testResults: '**/build/test-results-xml/**/*.xml', keepLongStdio: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */
