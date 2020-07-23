@@ -52,16 +52,16 @@ class FlowReloadAfterCheckpointTest {
         }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, false, false)
+            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, false)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
             assertEquals(5, reloadCounts[flowStartedByAlice])
@@ -77,16 +77,16 @@ class FlowReloadAfterCheckpointTest {
         }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to false)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to false)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, false, false)
+            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, false)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
             assertEquals(null, reloadCounts[flowStartedByAlice])
@@ -102,16 +102,16 @@ class FlowReloadAfterCheckpointTest {
         }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), true, false, false)
+            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), true, false, false)
             val flowStartedByAlice = handle.id
             Assertions.assertThatExceptionOfType(StateTransitionException::class.java).isThrownBy { handle.returnValue.getOrThrow() }
                 .withCauseExactlyInstanceOf(ReloadFlowFromCheckpointException::class.java)
@@ -133,16 +133,16 @@ class FlowReloadAfterCheckpointTest {
         }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, false, true)
+            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, true)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
             assertEquals(5, reloadCounts[flowStartedByAlice])
@@ -159,18 +159,18 @@ class FlowReloadAfterCheckpointTest {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 rpcUsers = listOf(user),
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 rpcUsers = listOf(user),
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(::ReloadFromCheckpointFlow, nodeBHandle.nodeInfo.singleIdentity(), false, true, false)
+            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, true, false)
             val flowStartedByAlice = handle.id
             assertFailsWith<UnexpectedFlowEndException> { handle.returnValue.getOrThrow() }
             assertEquals(4, reloadCounts[flowStartedByAlice])
@@ -184,12 +184,12 @@ class FlowReloadAfterCheckpointTest {
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            nodeAHandle.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
+            alice.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
             assertEquals(5, reloadCount)
         }
     }
@@ -200,12 +200,12 @@ class FlowReloadAfterCheckpointTest {
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            nodeAHandle.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
+            alice.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
             assertEquals(5, reloadCount)
         }
     }
@@ -223,15 +223,15 @@ class FlowReloadAfterCheckpointTest {
             )
         ) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            nodeAHandle.rpc.startFlow(::MyRestartingFlow)
+            alice.rpc.startFlow(::MyRestartingFlow)
             Thread.sleep(10.seconds.toMillis())
 
-            nodeAHandle.stop()
+            alice.stop()
 
             startNode(
                 providedName = ALICE_NAME,
@@ -257,15 +257,15 @@ class FlowReloadAfterCheckpointTest {
             )
         ) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            nodeAHandle.rpc.startFlow(::IdempotentRestartingFlow)
+            alice.rpc.startFlow(::IdempotentRestartingFlow)
             Thread.sleep(10.seconds.toMillis())
 
-            nodeAHandle.stop()
+            alice.stop()
 
             startNode(
                 providedName = ALICE_NAME,
@@ -288,26 +288,26 @@ class FlowReloadAfterCheckpointTest {
         }
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
 
-            val nodeAHandle = startNode(
+            val alice = startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
-            val nodeBHandle = startNode(
+            val bob = startNode(
                 providedName = BOB_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            val handle = nodeAHandle.rpc.startFlow(
+            val handle = alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
                 500.DOLLARS,
                 OpaqueBytes.of(0x01),
-                nodeBHandle.nodeInfo.singleIdentity(),
+                bob.nodeInfo.singleIdentity(),
                 false,
                 defaultNotaryIdentity
             )
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow(30.seconds)
-            val flowStartedByBob = nodeBHandle.rpc.stateMachineRecordedTransactionMappingSnapshot()
+            val flowStartedByBob = bob.rpc.stateMachineRecordedTransactionMappingSnapshot()
                 .map(StateMachineTransactionMapping::stateMachineRunId)
                 .toSet()
                 .single()
@@ -330,7 +330,7 @@ class FlowReloadAfterCheckpointTest {
         override fun call() {
             val session = initiateFlow(party)
             session.send(counterPartyHasDeserializationError, skipCheckpoints)
-            val s = session.receive(String::class.java, skipCheckpoints).unwrap { it }
+            session.receive(String::class.java, skipCheckpoints).unwrap { it }
             sleep(1.seconds, skipCheckpoints)
             val map = if (shouldHaveDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
