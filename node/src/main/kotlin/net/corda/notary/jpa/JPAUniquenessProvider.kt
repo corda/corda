@@ -1,6 +1,5 @@
 package net.corda.notary.jpa
 
-import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Queues
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef

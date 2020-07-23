@@ -25,7 +25,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
