@@ -8,6 +8,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.list
 import net.corda.core.internal.readAllLines
 import net.corda.core.messaging.CordaRPCOps
@@ -69,26 +70,23 @@ abstract class StateMachineErrorHandlingTest {
         }
     }
 
-    internal fun ReusableDriverDsl.createBytemanNode(
-        additionalCordapps: Collection<TestCordapp> = emptyList()
-    ): Pair<NodeHandle, Int> {
+    internal fun ReusableDriverDsl.createBytemanNode(): Pair<NodeHandle, Int> {
         val port = bytemanPorts.computeIfAbsent(this) { nextPort() }
-        val nodeHandle = (this as InternalDriverDSL).startNode(
+        val bytemanNodeHandle = (this as InternalDriverDSL).startNode(
             NodeParameters(
                 providedName = CHARLIE_NAME,
-                rpcUsers = listOf(rpcUser),
-                additionalCordapps = additionalCordapps
+                rpcUsers = listOf(rpcUser)
             ),
-            bytemanPort = port
+                bytemanPort = port
         ).getOrThrow()
         recoverBy {
             Submit("localhost", port)
                     .deleteAllRules()
         }
         recoverBy {
-            resetCounters(nodeHandle)
+            resetCounters(bytemanNodeHandle)
         }
-        return NodeWithReusableNumberOfStateMachine(nodeHandle) to port
+        return NodeWithReusableNumberOfStateMachine(bytemanNodeHandle) to port
     }
 
     internal fun ReusableDriverDsl.createNode(additionalCordapps: Collection<TestCordapp> = emptyList()): NodeHandle {
@@ -114,6 +112,37 @@ abstract class StateMachineErrorHandlingTest {
                     }
                 }
             }
+    }
+
+    internal fun ReusableDriverDsl.createNodeAndBytemanNode(
+            additionalCordapps: Collection<TestCordapp> = emptyList()
+    ): Triple<NodeHandle, NodeHandle, Int> {
+        val port = bytemanPorts.computeIfAbsent(this) { nextPort() }
+        val (alice, charlie) = listOf(
+                (this as InternalDriverDSL).startNode(
+                        NodeParameters(
+                                providedName = ALICE_NAME,
+                                rpcUsers = listOf(rpcUser),
+                                additionalCordapps = additionalCordapps
+                        )),
+                startNode(
+                        NodeParameters(
+                                providedName = CHARLIE_NAME,
+                                rpcUsers = listOf(rpcUser),
+                                additionalCordapps = additionalCordapps
+                        ),
+                        bytemanPort = port))
+                .transpose()
+                .getOrThrow()
+                .onEach {  recoverBy { resetCounters(it) } }
+                .map { NodeWithReusableNumberOfStateMachine(it) }
+
+        recoverBy {
+            Submit("localhost", port)
+                    .deleteAllRules()
+        }
+
+        return Triple(alice, charlie, port)
     }
 
     internal fun submitBytemanRules(rules: String, port: Int) {

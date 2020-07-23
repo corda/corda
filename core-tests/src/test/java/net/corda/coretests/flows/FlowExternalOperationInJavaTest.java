@@ -8,6 +8,7 @@ import net.corda.core.identity.Party;
 import net.corda.core.utilities.KotlinUtilsKt;
 import net.corda.testing.core.TestConstants;
 import net.corda.testing.core.TestUtils;
+import net.corda.testing.driver.DriverDSL;
 import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
 import net.corda.testing.driver.NodeParameters;
@@ -19,8 +20,11 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import static net.corda.testing.driver.Driver.driver;
 
@@ -29,14 +33,9 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            List<NodeHandle> aliceAndBob = aliceAndBob(driver);
+            NodeHandle alice = aliceAndBob.get(0);
+            NodeHandle bob = aliceAndBob.get(1);
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
@@ -47,14 +46,9 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalAsyncOperationInJava() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            List<NodeHandle> aliceAndBob = aliceAndBob(driver);
+            NodeHandle alice = aliceAndBob.get(0);
+            NodeHandle bob = aliceAndBob.get(1);
             return KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalAsyncOperationInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
@@ -65,14 +59,9 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
     @Test
     public void awaitFlowExternalOperationInJavaCanBeRetried() {
         driver(new DriverParameters().withStartNodesInProcess(true), driver -> {
-            NodeHandle alice = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.ALICE_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
-            NodeHandle bob = KotlinUtilsKt.getOrThrow(
-                    driver.startNode(new NodeParameters().withProvidedName(TestConstants.BOB_NAME)),
-                    Duration.of(1, ChronoUnit.MINUTES)
-            );
+            List<NodeHandle> aliceAndBob = aliceAndBob(driver);
+            NodeHandle alice = aliceAndBob.get(0);
+            NodeHandle bob = aliceAndBob.get(1);
             KotlinUtilsKt.getOrThrow(alice.getRpc().startFlowDynamic(
                     FlowWithExternalOperationThatGetsRetriedInJava.class,
                     TestUtils.singleIdentity(bob.getNodeInfo())
@@ -189,5 +178,16 @@ public class FlowExternalOperationInJavaTest extends AbstractFlowExternalOperati
         public R execute(@NotNull String deduplicationId) {
             return operation.apply(futureService, deduplicationId);
         }
+    }
+
+    private List<NodeHandle> aliceAndBob(DriverDSL driver) {
+        return Arrays.asList(TestConstants.ALICE_NAME, TestConstants.BOB_NAME)
+                .stream()
+                .map(nm -> driver.startNode(new NodeParameters().withProvidedName(nm)))
+                .collect(Collectors.toList())
+                .stream()
+                .map(future -> KotlinUtilsKt.getOrThrow(future,
+                        Duration.of(1, ChronoUnit.MINUTES)))
+                .collect(Collectors.toList());
     }
 }
