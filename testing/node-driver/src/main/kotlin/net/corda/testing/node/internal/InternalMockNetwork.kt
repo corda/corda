@@ -639,6 +639,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
+        doReturn(false).whenever(it).reloadCheckpointAfterSuspend
     }
 }
 
