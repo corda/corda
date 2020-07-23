@@ -5,39 +5,28 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowExternalAsyncOperation
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.FlowTimeoutException
-import net.corda.node.services.statemachine.ReloadFlowFromCheckpointException
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.statemachine.StateTransitionException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
@@ -51,18 +40,16 @@ import java.time.temporal.ChronoUnit
 import java.util.Collections
 import java.util.HashSet
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class FlowRetryTest {
 
     private companion object {
         val user = User("mark", "dadada", setOf(Permissions.all()))
+        val cordapps = listOf(enclosedCordapp())
     }
 
     @Before
@@ -105,7 +92,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `async operation deduplication id is stable accross retries`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             nodeAHandle.rpc.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
         }
@@ -113,7 +100,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             assertFailsWith<CordaRuntimeException> {
                 nodeAHandle.rpc.startFlow(::RetryFlow).returnValue.getOrThrow()
@@ -123,7 +110,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
             assertFailsWith<CordaRuntimeException> {
                 nodeAHandle.rpc.startFlow(::ThrowingFlow).returnValue.getOrThrow()
@@ -133,7 +120,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
                 .map { startNode(providedName = it, rpcUsers = listOf(user)) }
@@ -153,7 +140,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `Specific exception still detected even if it is nested inside another exception`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
                 .map { startNode(providedName = it, rpcUsers = listOf(user)) }
@@ -173,7 +160,7 @@ class FlowRetryTest {
 
     @Test(timeout = 300_000)
     fun `General external exceptions are not retried and propagate`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
                     .map { startNode(providedName = it, rpcUsers = listOf(user)) }
@@ -197,7 +184,7 @@ class FlowRetryTest {
     @Test(timeout = 300_000)
     fun `Permission exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf())
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
