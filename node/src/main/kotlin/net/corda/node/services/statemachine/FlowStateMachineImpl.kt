@@ -498,7 +498,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(transientValues.checkpointSerializationContext)
         val transaction = extractThreadLocalTransaction()
-        val serviceHub = TransientReference(transientValues.serviceHub)
         parkAndSerialize { _, _ ->
             setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
@@ -512,8 +511,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     ioRequest = ioRequest,
                     maySkipCheckpoint = skipPersistingCheckpoint,
                     fiber = this.checkpointSerialize(context = serializationContext.value),
-                    progressStep = logic.progressTracker?.currentStep,
-                    reloadCheckpointAfterSuspend = serviceHub.value.configuration.reloadCheckpointAfterSuspend
+                    progressStep = logic.progressTracker?.currentStep
                 )
             } catch (exception: Exception) {
                 Event.Error(exception)
