@@ -10,6 +10,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
@@ -56,9 +57,10 @@ class FlowIsKilledTest {
     @Test(timeout = 300_000)
     fun `manually handled killed flows propagate error to counter parties`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
-            val charlie = startNode(providedName = CHARLIE_NAME).getOrThrow()
+            val (alice, bob, charlie) = listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             alice.rpc.let { rpc ->
                 val handle = rpc.startFlow(
                     ::AFlowThatWantsToDieAndKillsItsFriends,
@@ -85,8 +87,11 @@ class FlowIsKilledTest {
     @Test(timeout = 300_000)
     fun `a manually killed initiated flow will propagate the killed error to the initiator and its counter parties`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
+
             val handle = alice.rpc.startFlow(
                 ::AFlowThatGetsMurderedByItsFriend,
                 bob.nodeInfo.singleIdentity()

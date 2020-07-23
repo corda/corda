@@ -103,8 +103,7 @@ class StateMachineKillFlowErrorHandlingTest : StateMachineErrorHandlingTest() {
     @Test(timeout = 300_000)
     fun `flow killed when it is in the flow hospital for observation is removed correctly`() {
         startDriver {
-            val (alice, port) = createBytemanNode(ALICE_NAME)
-            val charlie = createNode(CHARLIE_NAME)
+            val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
 
             val rules = """
                 RULE Create Counter
