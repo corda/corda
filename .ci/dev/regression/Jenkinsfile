@@ -174,7 +174,6 @@ pipeline {
         }
     }
 
-
     post {
         always {
             archiveArtifacts artifacts: '**/pod-logs/**/*.log', fingerprint: false
