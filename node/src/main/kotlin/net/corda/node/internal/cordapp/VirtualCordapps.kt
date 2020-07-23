@@ -82,6 +82,7 @@ internal object VirtualCordapp {
                 services = listOf(),
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
+                checkpointCustomSerializers = listOf(),
                 customSchemas = setOf(JPANotarySchemaV1),
                 info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
                 allFlows = listOf(),
