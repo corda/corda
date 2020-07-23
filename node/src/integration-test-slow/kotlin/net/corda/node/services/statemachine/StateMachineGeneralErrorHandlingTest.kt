@@ -2,8 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
-import net.corda.core.flows.PartyNotFoundException
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
