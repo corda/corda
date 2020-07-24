@@ -93,6 +93,7 @@ internal class SingleThreadedStateMachineManager(
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
     private val transitionExecutor = makeTransitionExecutor()
+    private val reloadCheckpointAfterSuspend = serviceHub.configuration.reloadCheckpointAfterSuspend
 
     override val allStateMachines: List<FlowLogic<*>>
         get() = innerState.withLock { flows.values.map { it.fiber.logic } }
@@ -623,8 +624,16 @@ internal class SingleThreadedStateMachineManager(
         return try {
             serializedCheckpoint.deserialize(checkpointSerializationContext!!)
         } catch (e: Exception) {
-            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-            null
+            if (reloadCheckpointAfterSuspend) {
+                logger.error(
+                    "Unable to deserialize checkpoint for flow $flowId. [reloadCheckpointAfterSuspend] is turned on, throwing exception",
+                    e
+                )
+                throw ReloadFlowFromCheckpointException(e)
+            } else {
+                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+                null
+            }
         }
     }
 

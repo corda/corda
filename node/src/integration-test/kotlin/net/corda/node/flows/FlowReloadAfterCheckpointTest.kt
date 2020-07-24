@@ -32,6 +32,7 @@ import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.util.concurrent.Semaphore
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class FlowReloadAfterCheckpointTest {
 
@@ -86,8 +87,8 @@ class FlowReloadAfterCheckpointTest {
             val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, false, false)
             val flowStartedByAlice = handle.id
             handle.returnValue.getOrThrow()
-            assertEquals(null, reloadCounts[flowStartedByAlice])
-            assertEquals(null, reloadCounts[ReloadFromCheckpointResponder.flowId])
+            assertNull(reloadCounts[flowStartedByAlice])
+            assertNull(reloadCounts[ReloadFromCheckpointResponder.flowId])
         }
     }
 
@@ -290,6 +291,10 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
+    /**
+     * Has 4 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 5.
+     * Therefore this flow should reload 5 times when completed without errors or restarts.
+     */
     @StartableByRPC
     @InitiatingFlow
     class ReloadFromCheckpointFlow(
@@ -315,6 +320,10 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
+    /**
+     * Has 5 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 6.
+     * Therefore this flow should reload 6 times when completed without errors or restarts.
+     */
     @InitiatedBy(ReloadFromCheckpointFlow::class)
     class ReloadFromCheckpointResponder(private val session: FlowSession) : FlowLogic<Unit>() {
 
@@ -339,6 +348,10 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
+    /**
+     * Has 4 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 5.
+     * Therefore this flow should reload 5 times when completed without errors or restarts.
+     */
     @StartableByRPC
     @InitiatingFlow
     class MyIdempotentFlow(private val shouldHaveDeserializationError: Boolean) : FlowLogic<Unit>(), IdempotentFlow {
@@ -358,6 +371,10 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
+    /**
+     * Has 4 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 5.
+     * Therefore this flow should reload 5 times when completed without errors or restarts.
+     */
     @StartableByRPC
     @InitiatingFlow
     class MyRestartingFlow : FlowLogic<Unit>() {
@@ -379,6 +396,10 @@ class FlowReloadAfterCheckpointTest {
         }
     }
 
+    /**
+     * Has 4 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 5.
+     * Therefore this flow should reload 5 times when completed without errors or restarts.
+     */
     @StartableByRPC
     @InitiatingFlow
     class IdempotentRestartingFlow : FlowLogic<Unit>(), IdempotentFlow {

@@ -73,7 +73,7 @@ class FlowCreator(
         reloadCheckpointAfterSuspendCount: Int? = null
     ): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-        val fiber = checkpoint.getFiberFromCheckpoint(runId, reloadCheckpointAfterSuspend) ?: return null
+        val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
         val resultFuture = openFuture<Any?>()
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
@@ -131,27 +131,20 @@ class FlowCreator(
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 
-    private fun Checkpoint.getFiberFromCheckpoint(
-        runId: StateMachineRunId,
-        reloadCheckpointAfterSuspend: Boolean
-    ): FlowStateMachineImpl<*>? {
+    private fun Checkpoint.getFiberFromCheckpoint(runId: StateMachineRunId): FlowStateMachineImpl<*>? {
         return when (this.flowState) {
             is FlowState.Unstarted -> {
-                val logic = tryCheckpointDeserialize(this.flowState.frozenFlowLogic, runId, reloadCheckpointAfterSuspend) ?: return null
+                val logic = tryCheckpointDeserialize(this.flowState.frozenFlowLogic, runId) ?: return null
                 FlowStateMachineImpl(runId, logic, scheduler)
             }
-            is FlowState.Started -> tryCheckpointDeserialize(this.flowState.frozenFiber, runId, reloadCheckpointAfterSuspend) ?: return null
+            is FlowState.Started -> tryCheckpointDeserialize(this.flowState.frozenFiber, runId) ?: return null
             // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
             else -> null
         }
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private inline fun <reified T : Any> tryCheckpointDeserialize(
-        bytes: SerializedBytes<T>,
-        flowId: StateMachineRunId,
-        reloadCheckpointAfterSuspend: Boolean
-    ): T? {
+    private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
         return try {
             bytes.checkpointDeserialize(context = checkpointSerializationContext)
         } catch (e: Exception) {
