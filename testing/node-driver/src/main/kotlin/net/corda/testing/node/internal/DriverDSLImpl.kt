@@ -542,8 +542,7 @@ class DriverDSLImpl(
             rootCert: X509Certificate,
             compatibilityZone: CompatibilityZoneParams
     ): CordaFuture<Pair<NodeConfig,NotaryInfo>> {
-        val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
-        val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
+        val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
         return createSchema(createConfig(spec.name, parameters), false).flatMap { config ->
             startNodeRegistration(config, rootCert, compatibilityZone.config())}.flatMap { config ->
                 // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
@@ -551,7 +550,7 @@ class DriverDSLImpl(
                 if (startNodesInProcess) {
                     executorService.fork {
                         val nodeInfo = Node(config.corda, MOCK_VERSION_INFO, initialiseSerialization = false).generateAndSaveNodeInfo()
-                        Pair(config, NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                        Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                     }
                 } else {
                     // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
@@ -563,7 +562,7 @@ class DriverDSLImpl(
                                     .get()
                         }
                         val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
-                        Pair(config,NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                        Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                     }
                 }
             }
@@ -817,6 +816,10 @@ class DriverDSLImpl(
      */
     private class NodeConfig(val typesafe: Config) {
         val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().value()
+    }
+
+    private fun NodeConfig.withNotaryDefinition(validating: Boolean): NodeConfig {
+        return NodeConfig(this.typesafe.plus(mapOf("notary" to mapOf("validating" to validating))))
     }
 
     companion object {
