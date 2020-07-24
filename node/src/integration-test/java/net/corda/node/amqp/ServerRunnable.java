@@ -48,4 +48,8 @@ public class ServerRunnable implements Runnable {
     public void stop() {
         server.stop();
     }
+
+    public boolean isActive() {
+        return server.isActive();
+    }
 }

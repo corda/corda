@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
+import kotlin.test.assertFalse
 
 class AMQPClientSslErrorsTest {
 
@@ -107,7 +108,7 @@ class AMQPClientSslErrorsTest {
     fun trivialClientServerExchange() {
         val serverPort = portAllocation.nextPort()
         val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
-        val serverThread = Thread(serverRunnable)
+        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
         serverThread.start()
 
         //System.setProperty("javax.net.debug", "all");
@@ -137,6 +138,7 @@ class AMQPClientSslErrorsTest {
         client4.shutdown()
 
         serverRunnable.stop()
-        serverThread.join()
+        serverThread.join(10000)
+        assertFalse(serverRunnable.isActive)
     }
 }

@@ -210,7 +210,7 @@ public abstract class NioSslPeer {
                             myNetData = enlargePacketBuffer(engine, myNetData);
                             break;
                         case BUFFER_UNDERFLOW:
-                            throw new SSLException("Buffer underflow occured after a wrap. I don't think we should ever get here.");
+                            throw new SSLException("Buffer underflow occurred after a wrap. I don't think we should ever get here.");
                         case CLOSED:
                             try {
                                 myNetData.flip();
@@ -243,6 +243,7 @@ public abstract class NioSslPeer {
                     throw new IllegalStateException("Invalid SSL status: " + handshakeStatus);
             }
         }
+        log.debug("Handshake status: " + handshakeStatus);
 
         return true;
 

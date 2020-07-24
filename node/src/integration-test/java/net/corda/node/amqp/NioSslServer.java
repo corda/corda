@@ -249,7 +249,7 @@ public class NioSslServer extends NioSslPeer {
      *
      * @return if the server is active or not.
      */
-    private boolean isActive() {
+    public boolean isActive() {
         return active;
     }
 
