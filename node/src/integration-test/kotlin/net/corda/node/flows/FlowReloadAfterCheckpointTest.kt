@@ -1,7 +1,6 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.HospitalizeFlowException
@@ -9,7 +8,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.concurrent.transpose
@@ -23,8 +21,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.ReloadFlowFromCheckpointException
-import net.corda.node.services.statemachine.StateTransitionException
+import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -32,10 +29,9 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
-import org.assertj.core.api.Assertions
 import org.junit.Test
+import java.util.concurrent.Semaphore
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class FlowReloadAfterCheckpointTest {
 
@@ -96,10 +92,16 @@ class FlowReloadAfterCheckpointTest {
     }
 
     @Test(timeout = 300_000)
-    fun `flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true and throw an error for failed deserialization`() {
+    fun `flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true and be kept for observation due to failed deserialization`() {
         val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
             reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
+        }
+        lateinit var flowKeptForObservation: StateMachineRunId
+        val lock = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { id, _ ->
+            flowKeptForObservation = id
+            lock.release()
         }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
@@ -115,20 +117,15 @@ class FlowReloadAfterCheckpointTest {
 
             val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), true, false, false)
             val flowStartedByAlice = handle.id
-            Assertions.assertThatExceptionOfType(StateTransitionException::class.java).isThrownBy { handle.returnValue.getOrThrow() }
-                .withCauseExactlyInstanceOf(ReloadFlowFromCheckpointException::class.java)
-                .withRootCauseExactlyInstanceOf(CordaRuntimeException::class.java)
-                .withMessageContaining(
-                    "Could not reload flow from checkpoint. This is likely due to a discrepancy " +
-                            "between the serialization and deserialization of an object in the flow's checkpoint"
-                )
+            lock.acquire()
+            assertEquals(flowStartedByAlice, flowKeptForObservation)
             assertEquals(4, reloadCounts[flowStartedByAlice])
             assertEquals(4, reloadCounts[ReloadFromCheckpointResponder.flowId])
         }
     }
 
     @Test(timeout = 300_000)
-    fun `flow will reload from a previous checkpoint after calling suspending function and skipping the persisting the checkpoint when reloadCheckpointAfterSuspend is true`() {
+    fun `flow will reload from a previous checkpoint after calling suspending function and skipping the persisting the current checkpoint when reloadCheckpointAfterSuspend is true`() {
         val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
             reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
@@ -150,32 +147,6 @@ class FlowReloadAfterCheckpointTest {
             handle.returnValue.getOrThrow()
             assertEquals(5, reloadCounts[flowStartedByAlice])
             assertEquals(6, reloadCounts[ReloadFromCheckpointResponder.flowId])
-        }
-    }
-
-    @Test(timeout = 300_000)
-    fun `counterparty flow will reload from its checkpoint after suspending when reloadCheckpointAfterSuspend is true and throw an error for failed deserialization to other nodes`() {
-        val reloadCounts = mutableMapOf<StateMachineRunId, Int>()
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { id ->
-            reloadCounts.compute(id) { _, value -> value?.plus(1) ?: 1 }
-        }
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
-
-            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
-                .map {
-                    startNode(
-                        providedName = it,
-                        customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
-                    )
-                }
-                .transpose()
-                .getOrThrow()
-
-            val handle = alice.rpc.startFlow(::ReloadFromCheckpointFlow, bob.nodeInfo.singleIdentity(), false, true, false)
-            val flowStartedByAlice = handle.id
-            assertFailsWith<UnexpectedFlowEndException> { handle.returnValue.getOrThrow() }
-            assertEquals(4, reloadCounts[flowStartedByAlice])
-            assertEquals(4, reloadCounts[ReloadFromCheckpointResponder.flowId])
         }
     }
 

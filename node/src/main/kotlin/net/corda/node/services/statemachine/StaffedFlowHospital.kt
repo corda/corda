@@ -55,8 +55,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             TransitionErrorGeneralPractitioner,
             SedationNurse,
             NotaryDoctor,
-            ResuscitationSpecialist,
-            DeserializationEuthanizer
+            ResuscitationSpecialist
         )
 
         private const val MAX_BACKOFF_TIME = 110.0 // Totals to 2 minutes when calculating the backoff time
@@ -590,6 +589,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
                 when {
                     newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java) -> Diagnosis.OVERNIGHT_OBSERVATION
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
@@ -661,25 +661,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         ): Diagnosis {
             return if (newError is ErrorStateTransitionException) {
                 Diagnosis.RESUSCITATE
-            } else {
-                Diagnosis.NOT_MY_SPECIALTY
-            }
-        }
-    }
-
-    /**
-     * Makes sure that if a flow has failed due to a [ReloadFlowFromCheckpointException] that the flow fails. This staff member is only
-     * used when [NodeConfiguration.reloadCheckpointAfterSuspend] == true.
-     */
-    object DeserializationEuthanizer : Staff {
-        override fun consult(
-            flowFiber: FlowFiber,
-            currentState: StateMachineState,
-            newError: Throwable,
-            history: FlowMedicalHistory
-        ): Diagnosis {
-            return if (newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java)) {
-                Diagnosis.TERMINAL
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
