@@ -7,7 +7,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -21,35 +20,39 @@ import net.corda.core.transactions.TransactionBuilder
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
-@StartableByRPC
-class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
+class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        val membership = databaseService.getMembership(membershipId)
+        val service = serviceHub.businessNetworksService as? VaultBusinessNetworksService
+                ?: throw FlowException("Business Network Service not initialised")
+        val membership = service.membershipStorage.getMembership(membershipId)
                 ?: throw MembershipNotFoundException("Membership state with $membershipId linear ID doesn't exist")
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
-        authorise(networkId, databaseService) { it.canRevokeMembership() }
+        authorise(networkId, service.membershipStorage) { it.toBusinessNetworkMembership().canRevokeMembership() }
 
         // fetch signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
+        val authorisedMemberships = service.membershipStorage.getMembersAuthorisedToModifyMembership(networkId)
+        val signers = authorisedMemberships.filter {
+            it.state.data.toBusinessNetworkMembership().isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        } - membership.state.data.identity.cordaIdentity
 
         // remove revoked member from all the groups he is participant of
         val revokedMemberIdentity = membership.state.data.identity.cordaIdentity
-        databaseService.getAllBusinessNetworkGroups(networkId).filter {
+        service.groupStorage.getAllBusinessNetworkGroups(networkId).filter {
             revokedMemberIdentity in it.state.data.participants
         }.map { group ->
             val memberships = (group.state.data.participants - revokedMemberIdentity).map {
-                databaseService.getMembership(networkId, it)
+                service.membershipStorage.getMembership(networkId, it)
                         ?: throw MembershipNotFoundException("Cannot find membership with $it linear ID")
             }.toSet()
 
             subFlow(ModifyGroupInternalFlow(group.state.data.linearId, null, memberships.map { it.state.data.linearId }.toSet(), false, notary))
-            syncMembershipsParticipants(networkId, memberships, signers, databaseService, notary)
+            syncMembershipsParticipants(networkId, memberships, signers, service.groupStorage, notary)
         }
 
         // building transaction
@@ -66,7 +69,7 @@ class RevokeMembershipFlow(private val membershipId: UniqueIdentifier, private v
 }
 
 @InitiatedBy(RevokeMembershipFlow::class)
-class RevokeMembershipFlowResponder(val session: FlowSession) : MembershipManagementFlow<Unit>() {
+class RevokeMembershipFlowResponder(val session: FlowSession) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {

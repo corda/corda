@@ -4,11 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.GroupContract
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -25,13 +23,12 @@ import net.corda.core.transactions.TransactionBuilder
  * @property participants New participants of modified group.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
-@StartableByRPC
 class ModifyGroupFlow(
         private val groupId: UniqueIdentifier,
         private val name: String? = null,
         private val participants: Set<UniqueIdentifier>? = null,
         private val notary: Party? = null
-) : FlowLogic<SignedTransaction>() {
+) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -46,7 +43,7 @@ class ModifyGroupInternalFlow(
         private val participants: Set<UniqueIdentifier>? = null,
         private val syncMembershipsParticipants: Boolean = true,
         private val notary: Party? = null
-) : MembershipManagementFlow<SignedTransaction>() {
+) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -56,23 +53,24 @@ class ModifyGroupInternalFlow(
         }
 
         // fetch group state with groupId linear ID
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        val group = databaseService.getBusinessNetworkGroup(groupId)
+        val service = serviceHub.businessNetworksService as? VaultBusinessNetworksService
+                ?: throw FlowException("Business Network Service not initialised")
+        val group = service.groupStorage.getBusinessNetworkGroup(groupId)
                 ?: throw BusinessNetworkGroupNotFoundException("Business Network group with $groupId linear ID doesn't exist")
 
         // check whether party is authorised to initiate flow
         val networkId = group.state.data.networkId
-        authorise(networkId, databaseService) { it.canModifyGroups() }
+        authorise(networkId, service.membershipStorage) { it.toBusinessNetworkMembership().canModifyGroups() }
 
         // get all new participants' memberships from provided membership ids
         val participantsMemberships = participants?.map {
-            databaseService.getMembership(it)
+            service.membershipStorage.getMembership(it)
                     ?: throw MembershipNotFoundException("Cannot find membership with $it linear ID")
         }
 
         // get all new participants' identities from provided memberships
         val participantsIdentities = participantsMemberships?.map {
-            if (it.state.data.isPending()) {
+            if (it.state.data.toBusinessNetworkMembership().isPending()) {
                 throw IllegalMembershipStatusException("$it can't be participant of Business Network groups since it has pending status")
             }
 
@@ -93,10 +91,10 @@ class ModifyGroupInternalFlow(
             )
         }
         val oldParticipantsMemberships = (group.state.data.participants - outputGroup.participants).map {
-            databaseService.getMembership(networkId, it)
+            service.membershipStorage.getMembership(networkId, it)
                     ?: throw MembershipNotFoundException("Cannot find membership with $it linear ID")
         }.toSet()
-        val allGroups = databaseService.getAllBusinessNetworkGroups(networkId)
+        val allGroups = service.groupStorage.getAllBusinessNetworkGroups(networkId)
         val membersWithoutGroup = oldParticipantsMemberships.filter { membership ->
             membership.state.data.identity.cordaIdentity !in (allGroups - group).flatMap { it.state.data.participants }
         }
@@ -105,8 +103,12 @@ class ModifyGroupInternalFlow(
         }
 
         // fetch signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity }
+        val authorisedMemberships = service.membershipStorage.getMembersAuthorisedToModifyMembership(networkId)
+        val signers = authorisedMemberships.filter {
+            it.state.data.toBusinessNetworkMembership().isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        }
 
         // building transaction
         val requiredSigners = signers.map { it.owningKey }
@@ -132,7 +134,7 @@ class ModifyGroupInternalFlow(
                     networkId,
                     oldParticipantsMemberships + (participantsMemberships ?: emptyList()),
                     signers,
-                    databaseService,
+                    service.groupStorage,
                     notary
             )
         }
@@ -142,7 +144,7 @@ class ModifyGroupInternalFlow(
 }
 
 @InitiatedBy(ModifyGroupInternalFlow::class)
-class ModifyGroupResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+class ModifyGroupResponderFlow(private val session: FlowSession) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {

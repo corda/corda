@@ -1,9 +1,9 @@
 package net.corda.bn.flows
 
 import net.corda.bn.contracts.MembershipContract
-import net.corda.bn.states.BNORole
 import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.node.services.bn.BNORole
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

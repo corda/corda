@@ -1,8 +1,8 @@
 package net.corda.bn.schemas
 
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.identity.Party
+import net.corda.core.node.services.bn.MembershipStatus
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable

@@ -26,7 +26,7 @@ class ModifyParticipantsFlow(
         private val participants: List<AbstractParty>,
         private val signers: List<Party>,
         private val notary: Party?
-) : MembershipManagementFlow<Unit>() {
+) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {
@@ -44,7 +44,7 @@ class ModifyParticipantsFlow(
 }
 
 @InitiatedBy(ModifyParticipantsFlow::class)
-class ModifyParticipantsResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+class ModifyParticipantsResponderFlow(private val session: FlowSession) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {

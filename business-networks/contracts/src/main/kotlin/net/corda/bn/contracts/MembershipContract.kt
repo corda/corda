@@ -144,7 +144,7 @@ open class MembershipContract : Contract {
      */
     open fun verifyRequest(tx: LedgerTransaction, command: CommandWithParties<Commands>, outputMembership: MembershipState) = requireThat {
         "Membership request transaction shouldn't contain any inputs" using (tx.inputs.isEmpty())
-        "Membership request transaction should contain output state in PENDING status" using (outputMembership.isPending())
+        "Membership request transaction should contain output state in PENDING status" using (outputMembership.toBusinessNetworkMembership().isPending())
         "Membership request transaction should issue membership with empty roles set" using (outputMembership.roles.isEmpty())
         "Pending membership owner should be required signer of membership request transaction" using (outputMembership.identity.cordaIdentity.owningKey in command.value.requiredSigners)
     }
@@ -164,8 +164,8 @@ open class MembershipContract : Contract {
             inputMembership: MembershipState,
             outputMembership: MembershipState
     ) = requireThat {
-        "Input state of membership activation transaction shouldn't be already active" using (!inputMembership.isActive())
-        "Output state of membership activation transaction should be active" using (outputMembership.isActive())
+        "Input state of membership activation transaction shouldn't be already active" using (!inputMembership.toBusinessNetworkMembership().isActive())
+        "Output state of membership activation transaction should be active" using (outputMembership.toBusinessNetworkMembership().isActive())
         "Input and output state of membership activation transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
         "Input and output state of membership activation transaction should have same business identity" using (inputMembership.identity.businessIdentity == outputMembership.identity.businessIdentity)
         "Input and output state of membership activation transaction should have same participants" using (inputMembership.participants.toSet() == outputMembership.participants.toSet())
@@ -189,8 +189,8 @@ open class MembershipContract : Contract {
             inputMembership: MembershipState,
             outputMembership: MembershipState
     ) = requireThat {
-        "Input state of membership suspension transaction shouldn't be already suspended" using (!inputMembership.isSuspended())
-        "Output state of membership suspension transaction should be suspended" using (outputMembership.isSuspended())
+        "Input state of membership suspension transaction shouldn't be already suspended" using (!inputMembership.toBusinessNetworkMembership().isSuspended())
+        "Output state of membership suspension transaction should be suspended" using (outputMembership.toBusinessNetworkMembership().isSuspended())
         "Input and output state of membership suspension transaction should have same roles set" using (inputMembership.roles == outputMembership.roles)
         "Input and output state of membership suspension transaction should have same business identity" using (inputMembership.identity.businessIdentity == outputMembership.identity.businessIdentity)
         "Input and output state of membership suspension transaction should have same participants" using (inputMembership.participants.toSet() == outputMembership.participants.toSet())
@@ -230,7 +230,7 @@ open class MembershipContract : Contract {
             outputMembership: MembershipState
     ) = requireThat {
         "Input and output state of membership roles modification transaction should have same status" using (inputMembership.status == outputMembership.status)
-        "Membership roles modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
+        "Membership roles modification transaction can only be performed on active or suspended state" using (inputMembership.toBusinessNetworkMembership().isActive() || inputMembership.toBusinessNetworkMembership().isSuspended())
         "Input and output state of membership roles modification transaction should have different set of roles" using (inputMembership.roles != outputMembership.roles)
         "Input and output state of membership roles modification transaction should have same business identity" using (inputMembership.identity.businessIdentity == outputMembership.identity.businessIdentity)
         "Input and output state of membership roles modification transaction should have same participants" using (inputMembership.participants.toSet() == outputMembership.participants.toSet())
@@ -255,7 +255,7 @@ open class MembershipContract : Contract {
             outputMembership: MembershipState
     ) = requireThat {
         "Input and output state of membership business identity modification transaction should have same status" using (inputMembership.status == outputMembership.status)
-        "Membership business identity modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
+        "Membership business identity modification transaction can only be performed on active or suspended state" using (inputMembership.toBusinessNetworkMembership().isActive() || inputMembership.toBusinessNetworkMembership().isSuspended())
         "Input and output state of membership business identity modification transaction should have same roles" using (inputMembership.roles == outputMembership.roles)
         "Input and output state of membership business identity modification transaction should have different business identity" using (inputMembership.identity.businessIdentity != outputMembership.identity.businessIdentity)
         "Input and output state of membership business identity modification transaction should have same participants" using (inputMembership.participants.toSet() == outputMembership.participants.toSet())
@@ -283,7 +283,7 @@ open class MembershipContract : Contract {
             outputMembership: MembershipState
     ) = requireThat {
         "Input and output state of membership participants modification transaction should have same status" using (inputMembership.status == outputMembership.status)
-        "Membership participants modification transaction can only be performed on active or suspended state" using (inputMembership.isActive() || inputMembership.isSuspended())
+        "Membership participants modification transaction can only be performed on active or suspended state" using (inputMembership.toBusinessNetworkMembership().isActive() || inputMembership.toBusinessNetworkMembership().isSuspended())
         "Input and output state of membership participants modification transaction should have same roles" using (inputMembership.roles == outputMembership.roles)
         "Input and output state of membership participants modification transaction should have same business identity" using (inputMembership.identity.businessIdentity == outputMembership.identity.businessIdentity)
     }

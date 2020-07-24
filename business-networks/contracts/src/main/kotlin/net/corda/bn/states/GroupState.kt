@@ -6,12 +6,13 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
+import net.corda.core.node.services.bn.BusinessNetworkGroup
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.QueryableState
 import java.time.Instant
 
 /**
- * Represents a Business Network groups on ledger.
+ * Represents [BusinessNetworkGroup] on ledger.
  *
  * @property networkId Unique identifier of a Business Network group belongs to.
  * @property name Name of group, more descriptive way to distinct groups rather than linear ID.
@@ -27,6 +28,16 @@ data class GroupState(
         override val linearId: UniqueIdentifier = UniqueIdentifier(),
         override val participants: List<Party>
 ) : LinearState, QueryableState {
+
+    /** Converts [GroupState] to [BusinessNetworkGroup]. **/
+    fun toBusinessNetworkGroup(): BusinessNetworkGroup = BusinessNetworkGroup(
+            networkId = networkId,
+            name = name,
+            issued = issued,
+            modified = modified,
+            groupId = linearId,
+            participants = participants
+    )
 
     override fun generateMappedObject(schema: MappedSchema) = when (schema) {
         is GroupStateSchemaV1 -> GroupStateSchemaV1.PersistentGroupState(networkId = networkId)

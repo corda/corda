@@ -3,19 +3,19 @@ package net.corda.bn.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.contracts.GroupContract
-import net.corda.bn.states.BNIdentity
-import net.corda.bn.states.BNORole
 import net.corda.bn.states.GroupState
-import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.node.services.bn.BNIdentity
+import net.corda.core.node.services.bn.BNORole
+import net.corda.core.node.services.bn.BusinessNetworksService
+import net.corda.core.node.services.bn.MembershipIdentity
+import net.corda.core.node.services.bn.MembershipStatus
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -24,7 +24,7 @@ import net.corda.core.transactions.TransactionBuilder
  * initiate this flow. Also creates initial Business Network group in form of [GroupState].
  *
  * @property networkId Custom ID to be given to the new Business Network. If not specified, randomly selected one will be used.
- * @property businessIdentity Custom business identity to be given to membership.
+ * @property businessIdentity Optional custom business identity to be given to membership.
  * @property groupId Custom ID to be given to the initial Business Network group. If not specified, randomly selected one will be used.
  * @property groupName Optional name to be given to Business Network group.
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
@@ -33,28 +33,27 @@ import net.corda.core.transactions.TransactionBuilder
  * @throws DuplicateBusinessNetworkGroupException If Business Network Group with [groupId] ID already exists.
  */
 @InitiatingFlow
-@StartableByRPC
 class CreateBusinessNetworkFlow(
         private val networkId: UniqueIdentifier = UniqueIdentifier(),
         private val businessIdentity: BNIdentity? = null,
         private val groupId: UniqueIdentifier = UniqueIdentifier(),
         private val groupName: String? = null,
         private val notary: Party? = null
-) : FlowLogic<SignedTransaction>() {
+) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     /**
      * Issues pending membership (with new unique Business Network ID) on initiator's ledger.
      *
-     * @param databaseService Service used to query vault for memberships.
+     * @param service Service used to query vault for memberships.
      *
      * @return Signed membership issuance transaction.
      *
      * @throws DuplicateBusinessNetworkException If Business Network with [networkId] ID already exists.
      */
     @Suspendable
-    private fun createMembershipRequest(databaseService: DatabaseService): SignedTransaction {
+    private fun createMembershipRequest(service: BusinessNetworksService): SignedTransaction {
         // check if business network with networkId already exists
-        if (databaseService.businessNetworkExists(networkId.toString())) {
+        if (service.businessNetworkExists(networkId.toString())) {
             throw DuplicateBusinessNetworkException(networkId)
         }
 
@@ -115,14 +114,14 @@ class CreateBusinessNetworkFlow(
     /**
      * Issues initial Business Network Group on initiator's ledger.
      *
-     * @param databaseService Service used to query vault for memberships.
+     * @param service Service used to query vault for memberships.
      *
      * @return Signed group issuance transaction.
      */
     @Suspendable
-    private fun createBusinessNetworkGroup(databaseService: DatabaseService): SignedTransaction {
+    private fun createBusinessNetworkGroup(service: BusinessNetworksService): SignedTransaction {
         // check if business network group with groupId already exists
-        if (databaseService.businessNetworkGroupExists(groupId)) {
+        if (service.businessNetworkGroupExists(groupId)) {
             throw DuplicateBusinessNetworkGroupException(groupId)
         }
 
@@ -138,15 +137,15 @@ class CreateBusinessNetworkFlow(
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
+        val service = serviceHub.businessNetworksService ?: throw FlowException("Business Network Service not initialised")
         // first issue membership with PENDING status
-        val pendingMembership = createMembershipRequest(databaseService).tx.outRefsOfType(MembershipState::class.java).single()
+        val pendingMembership = createMembershipRequest(service).tx.outRefsOfType(MembershipState::class.java).single()
         // after that activate the membership
         val activeMembership = activateMembership(pendingMembership).tx.outRefsOfType(MembershipState::class.java).single()
         // give all administrative permissions to the membership
         return authoriseMembership(activeMembership).apply {
             // in the end create initial business network group
-            createBusinessNetworkGroup(databaseService)
+            createBusinessNetworkGroup(service)
         }
     }
 }

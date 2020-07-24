@@ -2,14 +2,13 @@ package net.corda.bn.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.bn.contracts.MembershipContract
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.node.services.bn.MembershipStatus
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -25,22 +24,26 @@ import net.corda.core.transactions.TransactionBuilder
  * @property notary Identity of the notary to be used for transactions notarisation. If not specified, first one from the whitelist will be used.
  */
 @InitiatingFlow
-@StartableByRPC
-class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : MembershipManagementFlow<SignedTransaction>() {
+class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private val notary: Party? = null) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        val membership = databaseService.getMembership(membershipId)
+        val storage = (serviceHub.businessNetworksService as? VaultBusinessNetworksService)?.membershipStorage
+                ?: throw FlowException("Business Network Service not initialised")
+        val membership = storage.getMembership(membershipId)
                 ?: throw MembershipNotFoundException("Membership state with $membershipId linear ID doesn't exist")
 
         // check whether party is authorised to initiate flow
         val networkId = membership.state.data.networkId
-        authorise(networkId, databaseService) { it.canSuspendMembership() }
+        authorise(networkId, storage) { it.toBusinessNetworkMembership().canSuspendMembership() }
 
         // fetch signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
+        val authorisedMemberships = storage.getMembersAuthorisedToModifyMembership(networkId).toSet()
+        val signers = authorisedMemberships.filter {
+            it.state.data.toBusinessNetworkMembership().isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        } - membership.state.data.identity.cordaIdentity
 
         // building transaction
         val outputMembership = membership.state.data.copy(status = MembershipStatus.SUSPENDED, modified = serviceHub.clock.instant())
@@ -58,7 +61,7 @@ class SuspendMembershipFlow(private val membershipId: UniqueIdentifier, private 
 }
 
 @InitiatedBy(SuspendMembershipFlow::class)
-class SuspendMembershipFlowResponder(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+class SuspendMembershipFlowResponder(private val session: FlowSession) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {

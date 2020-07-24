@@ -1,16 +1,18 @@
 package net.corda.bn.flows
 
-import net.corda.bn.states.BNIdentity
-import net.corda.bn.states.BNRole
 import net.corda.bn.states.GroupState
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.services.bn.BNIdentity
+import net.corda.core.node.services.bn.BNRole
+import net.corda.core.node.services.bn.MembershipStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.config.BusinessNetworksConfig
+import net.corda.node.services.config.BusinessNetworksServiceType
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters
@@ -51,7 +53,10 @@ abstract class MembershipManagementFlowTest(
         mockNetwork.stopNodes()
     }
 
-    private fun createNode(name: CordaX500Name) = mockNetwork.createNode(MockNodeParameters(legalName = name))
+    private fun createNode(name: CordaX500Name) = mockNetwork.createNode(MockNodeParameters(
+            legalName = name,
+            businessNetworks = BusinessNetworksConfig(BusinessNetworksServiceType.VAULT, "net.corda.bn.flows.VaultBusinessNetworksService")
+    ))
 
     @Suppress("LongParameterList")
     protected fun runCreateBusinessNetworkFlow(
@@ -168,12 +173,12 @@ abstract class MembershipManagementFlowTest(
     }
 
     private fun addMemberToInitialGroup(initiator: StartedMockNode, networkId: String, membership: MembershipState, notary: Party?) {
-        val databaseService = initiator.services.cordaService(DatabaseService::class.java)
-        val group = databaseService.getAllBusinessNetworkGroups(networkId).minBy { it.state.data.issued }?.state?.data
+        val databaseService = initiator.services.businessNetworksService as VaultBusinessNetworksService
+        val group = databaseService.groupStorage.getAllBusinessNetworkGroups(networkId).minBy { it.state.data.issued }?.state?.data
         assertNotNull(group)
 
         val participants = (group!!.participants + membership.identity.cordaIdentity).map {
-            val participantMembership = databaseService.getMembership(networkId, it)
+            val participantMembership = databaseService.membershipStorage.getMembership(networkId, it)
             assertNotNull(participantMembership)
 
             participantMembership!!.state.data.linearId
@@ -182,8 +187,8 @@ abstract class MembershipManagementFlowTest(
     }
 
     protected fun getAllMembershipsFromVault(node: StartedMockNode, networkId: String): List<MembershipState> {
-        val databaseService = node.services.cordaService(DatabaseService::class.java)
-        return databaseService.getAllMembershipsWithStatus(
+        val databaseService = node.services.businessNetworksService as VaultBusinessNetworksService
+        return databaseService.membershipStorage.getAllMembershipsWithStatus(
                 networkId,
                 MembershipStatus.PENDING, MembershipStatus.ACTIVE, MembershipStatus.SUSPENDED
         ).map {
@@ -192,8 +197,8 @@ abstract class MembershipManagementFlowTest(
     }
 
     protected fun getAllGroupsFromVault(node: StartedMockNode, networkId: String): List<GroupState> {
-        val databaseService = node.services.cordaService(DatabaseService::class.java)
-        return databaseService.getAllBusinessNetworkGroups(networkId).map { it.state.data }
+        val databaseService = node.services.businessNetworksService as VaultBusinessNetworksService
+        return databaseService.groupStorage.getAllBusinessNetworkGroups(networkId).map { it.state.data }
     }
 }
 

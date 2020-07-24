@@ -8,7 +8,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -29,35 +28,35 @@ import net.corda.core.transactions.TransactionBuilder
  * @throws DuplicateBusinessNetworkGroupException If Business Network Group with [groupId] ID already exists.
  */
 @InitiatingFlow
-@StartableByRPC
 class CreateGroupFlow(
         private val networkId: String,
         private val groupId: UniqueIdentifier = UniqueIdentifier(),
         private val groupName: String? = null,
         private val additionalParticipants: Set<UniqueIdentifier> = emptySet(),
         private val notary: Party? = null
-) : MembershipManagementFlow<SignedTransaction>() {
+) : AbstractMembershipManagementFlow<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
         // check whether party is authorised to initiate flow
-        val databaseService = serviceHub.cordaService(DatabaseService::class.java)
-        val ourMembership = authorise(networkId, databaseService) { it.canModifyGroups() }
+        val service = serviceHub.businessNetworksService as? VaultBusinessNetworksService
+                ?: throw FlowException("Business Network Service not initialised")
+        val ourMembership = authorise(networkId, service.membershipStorage) { it.toBusinessNetworkMembership().canModifyGroups() }
 
         // check whether group with groupId already exists
-        if (databaseService.businessNetworkGroupExists(groupId)) {
+        if (service.businessNetworkGroupExists(groupId)) {
             throw DuplicateBusinessNetworkGroupException(groupId)
         }
 
         // get all additional participants' memberships from provided membership ids
         val additionalParticipantsMemberships = additionalParticipants.map {
-            databaseService.getMembership(it)
+            service.membershipStorage.getMembership(it)
                     ?: throw MembershipNotFoundException("Cannot find membership with $it linear ID")
         }.toSet()
 
         // get all additional participants' identities from provided memberships
         val additionalParticipantsIdentities = additionalParticipantsMemberships.map {
-            if (it.state.data.isPending()) {
+            if (it.state.data.toBusinessNetworkMembership().isPending()) {
                 throw IllegalMembershipStatusException("$it can't be participant of Business Network groups since it has pending status")
             }
 
@@ -65,8 +64,12 @@ class CreateGroupFlow(
         }.toSet()
 
         // fetch signers
-        val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId)
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity }
+        val authorisedMemberships = service.membershipStorage.getMembersAuthorisedToModifyMembership(networkId)
+        val signers = authorisedMemberships.filter {
+            it.state.data.toBusinessNetworkMembership().isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        }
 
         // building transaction
         val group = GroupState(networkId = networkId, name = groupName, linearId = groupId, participants = (additionalParticipantsIdentities + ourIdentity).toList())
@@ -85,14 +88,14 @@ class CreateGroupFlow(
         sendMemberships(additionalParticipantsMemberships + ourMembership, observerSessions, observerSessions.toHashSet())
 
         // sync memberships' participants according to new participants of the groups member is part of
-        syncMembershipsParticipants(networkId, (additionalParticipantsMemberships + ourMembership).toList(), signers, databaseService, notary)
+        syncMembershipsParticipants(networkId, (additionalParticipantsMemberships + ourMembership).toList(), signers, service.groupStorage, notary)
 
         return finalisedTransaction
     }
 }
 
 @InitiatedBy(CreateGroupFlow::class)
-class CreateGroupResponderFlow(private val session: FlowSession) : MembershipManagementFlow<Unit>() {
+class CreateGroupResponderFlow(private val session: FlowSession) : AbstractMembershipManagementFlow<Unit>() {
 
     @Suspendable
     override fun call() {

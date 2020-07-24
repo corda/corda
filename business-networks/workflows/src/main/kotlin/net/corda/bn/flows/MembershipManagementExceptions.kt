@@ -20,41 +20,41 @@ class DuplicateBusinessNetworkException(val networkId: UniqueIdentifier) : FlowE
 class DuplicateBusinessNetworkGroupException(val groupId: UniqueIdentifier) : FlowException("Business Network Group with $groupId already exists.")
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever Business Network with provided [MembershipState.networkId] doesn't exist.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever Business Network with provided [MembershipState.networkId] doesn't exist.
  */
 class BusinessNetworkNotFoundException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever provided parties membership doesn't exist.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever provided parties membership doesn't exist.
  */
 class MembershipNotFoundException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever provided member's state is not appropriate for the context.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever provided member's state is not appropriate for the context.
  */
 class IllegalMembershipStatusException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever membership fails role based authorisation.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever membership fails role based authorisation.
  */
 class MembershipAuthorisationException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever Business Network group with provided [GroupState.linearId] doesn't exist.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever Business Network group with provided [GroupState.linearId] doesn't exist.
  */
 class BusinessNetworkGroupNotFoundException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever member remains without participation in any Business Network Group.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever member remains without participation in any Business Network Group.
  */
 class MembershipMissingGroupParticipationException(message: String) : FlowException(message)
 
 /**
- * [MembershipManagementFlow] version of [IllegalArgumentException]
+ * [AbstractMembershipManagementFlow] version of [IllegalArgumentException]
  */
 class IllegalFlowArgumentException(message: String) : FlowException(message)
 
 /**
- * Exception thrown by any [MembershipManagementFlow] whenever group ends up in illegal state.
+ * Exception thrown by any [AbstractMembershipManagementFlow] whenever group ends up in illegal state.
  */
 class IllegalBusinessNetworkGroupStateException(message: String) : FlowException(message)

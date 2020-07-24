@@ -2,9 +2,9 @@ package net.corda.bn.flows
 
 import net.corda.bn.contracts.MembershipContract
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.UnexpectedFlowEndException
+import net.corda.core.node.services.bn.MembershipStatus
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

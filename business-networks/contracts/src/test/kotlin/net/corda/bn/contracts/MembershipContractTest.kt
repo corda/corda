@@ -1,14 +1,14 @@
 package net.corda.bn.contracts
 
-import net.corda.bn.states.BNIdentity
-import net.corda.bn.states.BNORole
-import net.corda.bn.states.MembershipIdentity
 import net.corda.bn.states.MembershipState
-import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.bn.BNIdentity
+import net.corda.core.node.services.bn.BNORole
+import net.corda.core.node.services.bn.MembershipIdentity
+import net.corda.core.node.services.bn.MembershipStatus
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.core.TestIdentity

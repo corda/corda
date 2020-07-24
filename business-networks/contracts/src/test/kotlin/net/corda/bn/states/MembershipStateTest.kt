@@ -1,80 +1,34 @@
 package net.corda.bn.states
 
-import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.bn.MembershipIdentity
+import net.corda.core.node.services.bn.MembershipStatus
+import net.corda.testing.core.TestIdentity
 import org.junit.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 class MembershipStateTest {
 
-    private fun mockMembership(status: MembershipStatus = MembershipStatus.PENDING, roles: Set<BNRole> = emptySet()) = MembershipState(
-            identity = mock(),
-            networkId = "",
-            status = status,
-            roles = roles,
-            participants = mock()
-    )
-
     @Test(timeout = 300_000)
-    fun `membership state status helper methods should work`() {
-        mockMembership(status = MembershipStatus.PENDING).apply {
-            assertTrue(isPending())
-            assertFalse(isActive())
-            assertFalse(isSuspended())
-        }
-        mockMembership(status = MembershipStatus.ACTIVE).apply {
-            assertFalse(isPending())
-            assertTrue(isActive())
-            assertFalse(isSuspended())
-        }
-        mockMembership(status = MembershipStatus.SUSPENDED).apply {
-            assertFalse(isPending())
-            assertFalse(isActive())
-            assertTrue(isSuspended())
-        }
-    }
+    fun `converting membership state to business network membership should work`() {
+        val party = TestIdentity(CordaX500Name.parse("O=Member,L=London,C=GB")).party
+        val membershipState = MembershipState(
+                identity = MembershipIdentity(party),
+                networkId = "network-id",
+                status = MembershipStatus.ACTIVE,
+                roles = setOf(),
+                participants = listOf(party)
+        )
 
-    @Test(timeout = 300_000)
-    fun `membership state role helper methods should work`() {
-        mockMembership(roles = setOf(BNORole())).apply {
-            assertTrue(canActivateMembership())
-            assertTrue(canSuspendMembership())
-            assertTrue(canRevokeMembership())
-            assertTrue(canModifyRoles())
-            assertTrue(canModifyBusinessIdentity())
-            assertTrue(canModifyGroups())
-            assertTrue(canModifyMembership())
-        }
-        mockMembership(roles = setOf(MemberRole())).apply {
-            assertFalse(canActivateMembership())
-            assertFalse(canSuspendMembership())
-            assertFalse(canRevokeMembership())
-            assertFalse(canModifyRoles())
-            assertFalse(canModifyBusinessIdentity())
-            assertFalse(canModifyGroups())
-            assertFalse(canModifyMembership())
-        }
-
-        val adminCustomRole = BNRole("admin-role", setOf(AdminPermission.CAN_ACTIVATE_MEMBERSHIP, mock<BNPermission>()))
-        mockMembership(roles = setOf(adminCustomRole)).apply {
-            assertTrue(canActivateMembership())
-            assertFalse(canSuspendMembership())
-            assertFalse(canRevokeMembership())
-            assertFalse(canModifyRoles())
-            assertFalse(canModifyBusinessIdentity())
-            assertFalse(canModifyGroups())
-            assertTrue(canModifyMembership())
-        }
-
-        val memberCustomRole = BNRole("member-role", setOf(mock()))
-        mockMembership(roles = setOf(memberCustomRole)).apply {
-            assertFalse(canActivateMembership())
-            assertFalse(canSuspendMembership())
-            assertFalse(canRevokeMembership())
-            assertFalse(canModifyRoles())
-            assertFalse(canModifyBusinessIdentity())
-            assertFalse(canModifyGroups())
-            assertFalse(canModifyMembership())
+        membershipState.toBusinessNetworkMembership().apply {
+            assertEquals(membershipState.identity, identity)
+            assertEquals(membershipState.networkId, networkId)
+            assertEquals(membershipState.status, status)
+            assertEquals(membershipState.roles, roles)
+            assertEquals(membershipState.issued, issued)
+            assertEquals(membershipState.modified, modified)
+            assertEquals(membershipState.linearId, membershipId)
+            assertEquals(membershipState.participants, participants)
         }
     }
 }
