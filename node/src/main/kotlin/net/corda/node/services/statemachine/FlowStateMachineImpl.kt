@@ -538,7 +538,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (count < transientState.checkpoint.checkpointState.numberOfSuspends) {
                 onReloadFlowFromCheckpoint?.invoke(id)
                 processEventImmediately(
-                    Event.RetryFlowFromSafePoint,
+                    Event.ReloadFlowFromCheckpointAfterSuspend,
                     isDbTransactionOpenOnEntry = false,
                     isDbTransactionOpenOnExit = false
                 )

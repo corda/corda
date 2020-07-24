@@ -10,6 +10,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.startFlow
@@ -21,6 +22,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.statemachine.FlowTimeoutException
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -179,6 +181,22 @@ class FlowReloadAfterCheckpointTest {
             ).getOrThrow()
 
             alice.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
+            assertEquals(5, reloadCount)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `timed flow will reload from initial checkpoint after calling a suspending function when reloadCheckpointAfterSuspend is true`() {
+        var reloadCount = 0
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
+
+            val alice = startNode(
+                providedName = ALICE_NAME,
+                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
+            ).getOrThrow()
+
+            alice.rpc.startFlow(::MyTimedFlow).returnValue.getOrThrow()
             assertEquals(5, reloadCount)
         }
     }
@@ -366,6 +384,33 @@ class FlowReloadAfterCheckpointTest {
                 mapOf("i dont want" to "this to work")
             }
             logger.info("I need to use my variable to pass the build!: $map")
+            sleep(1.seconds)
+            sleep(1.seconds)
+        }
+    }
+
+    /**
+     * Has 4 suspension points inside the flow and 1 in [FlowStateMachineImpl.run] totaling 5.
+     * Therefore this flow should reload 5 times when completed without errors or restarts.
+     */
+    @StartableByRPC
+    @InitiatingFlow
+    class MyTimedFlow : FlowLogic<Unit>(), TimedFlow {
+
+        companion object {
+            var thrown = false
+        }
+
+        override val isTimeoutEnabled: Boolean = true
+
+        @Suspendable
+        override fun call() {
+            sleep(1.seconds)
+            sleep(1.seconds)
+            if (!thrown) {
+                thrown = true
+                throw FlowTimeoutException()
+            }
             sleep(1.seconds)
             sleep(1.seconds)
         }

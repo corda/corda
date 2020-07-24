@@ -148,10 +148,19 @@ sealed class Event {
     data class AsyncOperationThrows(val throwable: Throwable) : Event()
 
     /**
-     * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     * Retry a flow from its last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
      */
     object RetryFlowFromSafePoint : Event() {
         override fun toString() = "RetryFlowFromSafePoint"
+    }
+
+    /**
+     * Reload a flow from its last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     * This is separate from [RetryFlowFromSafePoint] which is used for error handling within the state machine.
+     * [ReloadFlowFromCheckpointAfterSuspend] is only used when [NodeConfiguration.reloadCheckpointAfterSuspend] is true.
+     */
+    object ReloadFlowFromCheckpointAfterSuspend : Event() {
+        override fun toString() = "ReloadFlowFromCheckpointAfterSuspend"
     }
 
     /**
