@@ -13,6 +13,7 @@ import net.corda.node.internal.NodeWithInfo;
 import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
 import net.corda.testing.node.internal.NodeBasedTest;
+import net.corda.testing.node.internal.TestCordappInternal;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,10 +31,18 @@ import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.FINANCE_CORDAPPS;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappWithPackages;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
-        super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()), Collections.singletonList(DUMMY_NOTARY_NAME));
+        super(cordapps(), Collections.singletonList(DUMMY_NOTARY_NAME));
+    }
+
+    private static Set<TestCordappInternal> cordapps() {
+        Set<TestCordappInternal> cordapps = new HashSet<>(FINANCE_CORDAPPS);
+        cordapps.add(cordappWithPackages(CashSchemaV1.class.getPackage().getName()));
+        return cordapps;
     }
 
     private List<String> perms = Arrays.asList(

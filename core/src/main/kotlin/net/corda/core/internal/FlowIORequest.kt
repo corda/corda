@@ -56,6 +56,13 @@ sealed class FlowIORequest<out R : Any> {
     }
 
     /**
+     * Closes the specified sessions.
+     *
+     * @property sessions the sessions to be closed.
+     */
+    data class CloseSessions(val sessions: NonEmptySet<FlowSession>): FlowIORequest<Unit>()
+
+    /**
      * Wait for a transaction to be committed to the database.
      *
      * @property hash the hash of the transaction.

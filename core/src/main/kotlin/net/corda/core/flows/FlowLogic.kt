@@ -25,6 +25,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
@@ -376,6 +377,22 @@ abstract class FlowLogic<out T> {
                 sessionToMessage = stateMachine.serialize(payloadsPerSession)
         )
         stateMachine.suspend(request, maySkipCheckpoint)
+    }
+
+    /**
+     * Closes the provided sessions and performs cleanup of any resources tied to these sessions.
+     *
+     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
+     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the provided sessions are not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
+     */
+    @Suspendable
+    fun close(sessions: NonEmptySet<FlowSession>) {
+        val request = FlowIORequest.CloseSessions(sessions)
+        stateMachine.suspend(request, false)
     }
 
     /**

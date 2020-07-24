@@ -211,6 +211,7 @@ fun printError(message: String) = System.err.println("${ShellConstants.RED}$mess
  */
 object CommonCliConstants {
     const val BASE_DIR = "--base-directory"
+    const val CONFIG_FILE = "--config-file"
 }
 
 /**

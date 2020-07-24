@@ -6,7 +6,7 @@ import static org.gradle.api.JavaVersion.VERSION_1_8
  */
 apply plugin: 'kotlin'
 
-tasks.withType(AbstractCompile) {
+tasks.withType(AbstractCompile).configureEach {
     // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
     // as it does the built-in JavaCompile task.
     if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
@@ -16,7 +16,7 @@ tasks.withType(AbstractCompile) {
     }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = VERSION_1_8
     targetCompatibility = VERSION_1_8
 }

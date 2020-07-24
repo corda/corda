@@ -37,7 +37,9 @@ def copyJdk = tasks.register('copyJdk', Copy) {
     }
 }
 
-assemble.dependsOn copyJdk
+tasks.named('assemble') {
+    dependsOn copyJdk
+}
 tasks.named('jar', Jar)  {
     enabled = false
 }

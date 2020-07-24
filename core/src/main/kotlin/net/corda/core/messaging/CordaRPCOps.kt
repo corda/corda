@@ -302,7 +302,12 @@ interface CordaRPCOps : RPCOps {
     /** Checks whether an attachment with the given hash is stored on the node. */
     fun attachmentExists(id: SecureHash): Boolean
 
-    /** Download an attachment JAR by ID. */
+    /**
+     * Download an attachment JAR by ID.
+     * @param id the id of the attachment to open
+     * @return the stream of the JAR
+     * @throws RPCException if the attachment doesn't exist
+     * */
     fun openAttachment(id: SecureHash): InputStream
 
     /** Uploads a jar to the node, returns it's hash. */

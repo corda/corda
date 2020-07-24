@@ -27,6 +27,12 @@ fun <V, W, X> CordaFuture<out V>.thenMatch(success: (V) -> W, failure: (Throwabl
 /** When this future is done and the outcome is failure, log the throwable. */
 fun CordaFuture<*>.andForget(log: Logger) = thenMatch({}, { log.error("Background task failed:", it) })
 
+/**
+ * Returns a future that will also apply the passed closure when it completes.
+ *
+ * @param accept A function to execute when completing the original future.
+ * @return A future returning the same result as the original future that this function was executed on.
+ */
 fun <RESULT> CordaFuture<out RESULT>.doOnComplete(accept: (RESULT) -> Unit): CordaFuture<RESULT> {
     return CordaFutureImpl<RESULT>().also { result ->
         thenMatch({

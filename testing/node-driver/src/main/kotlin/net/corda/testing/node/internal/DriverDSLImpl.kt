@@ -9,6 +9,7 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -226,16 +227,24 @@ class DriverDSLImpl(
         }
     }
 
-    private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+    /**
+     * @param pollInterval the interval to wait between attempting to connect, if
+     * a connection attempt fails.
+     */
+    private fun establishRpc(config: NodeConfig,
+                             processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
-        val connectionFuture = poll(executorService, "RPC connection") {
+        val connectionFuture = poll(
+                executorService = executorService,
+                pollName = "RPC connection",
+                pollInterval = RPC_CONNECT_POLL_INTERVAL) {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
-            } catch (e: Exception) {
+            } catch (e: RPCException) {
                 if (processDeathFuture.isDone) throw e
-                log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
+                log.info("Failed to connect to RPC at $rpcAddress")
                 null
             }
         }
@@ -533,8 +542,7 @@ class DriverDSLImpl(
             rootCert: X509Certificate,
             compatibilityZone: CompatibilityZoneParams
     ): CordaFuture<Pair<NodeConfig,NotaryInfo>> {
-        val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
-        val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
+        val parameters = NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryCustomOverrides, maximumHeapSize = spec.maximumHeapSize)
         return createSchema(createConfig(spec.name, parameters), false).flatMap { config ->
             startNodeRegistration(config, rootCert, compatibilityZone.config())}.flatMap { config ->
                 // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
@@ -542,7 +550,7 @@ class DriverDSLImpl(
                 if (startNodesInProcess) {
                     executorService.fork {
                         val nodeInfo = Node(config.corda, MOCK_VERSION_INFO, initialiseSerialization = false).generateAndSaveNodeInfo()
-                        Pair(config, NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                        Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                     }
                 } else {
                     // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
@@ -554,7 +562,7 @@ class DriverDSLImpl(
                                     .get()
                         }
                         val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
-                        Pair(config,NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
+                        Pair(config.withNotaryDefinition(spec.validating), NotaryInfo(nodeInfo.legalIdentities[0], spec.validating))
                     }
                 }
             }
@@ -698,6 +706,7 @@ class DriverDSLImpl(
                     }
             )
             val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
+                node.node.nodeReadyFuture.get() // Wait for the node to be ready before we connect to the node
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
@@ -750,7 +759,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = nodeMustBeStartedFuture(
                 executorService,
-                effectiveP2PAddress,
+                config.corda.baseDirectory / "net.corda.node.Corda.${identifier}.stdout.log",
                 process
             ) {
                 NodeListenProcessDeathException(
@@ -809,7 +818,12 @@ class DriverDSLImpl(
         val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().value()
     }
 
+    private fun NodeConfig.withNotaryDefinition(validating: Boolean): NodeConfig {
+        return NodeConfig(this.typesafe.plus(mapOf("notary" to mapOf("validating" to validating))))
+    }
+
     companion object {
+        private val RPC_CONNECT_POLL_INTERVAL: Duration = 100.millis
         internal val log = contextLogger()
 
         // While starting with inProcess mode, we need to have different names to avoid clashes

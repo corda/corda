@@ -105,7 +105,7 @@ buildscript {
     ext.eddsa_version = '0.3.0'
     ext.dependency_checker_version = '5.2.0'
     ext.commons_collections_version = '4.3'
-    ext.beanutils_version = '1.9.3'
+    ext.beanutils_version = '1.9.4'
     ext.crash_version = '1.7.4'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.1'
@@ -155,22 +155,39 @@ buildscript {
     ext.corda_docs_link = "https://docs.corda.net/docs/corda-os/$baseVersion"
     repositories {
         mavenLocal()
-        mavenCentral()
-        jcenter()
-        maven {
-            url 'https://kotlin.bintray.com/kotlinx'
-        }
-        maven {
-            url "$artifactory_contextUrl/corda-dependencies-dev"
-        }
-        maven {
-            url "$artifactory_contextUrl/corda-releases"
+        // Use system environment to activate caching with Artifactory,
+        // because it is actually easier to pass that during parallel build.
+        // NOTE: it has to be a name of a virtual repository with all
+        // required remote or local repositories!
+        if (System.getenv("CORDA_USE_CACHE")) {
+            maven {
+                name "R3 Maven remote repositories"
+                url "${artifactory_contextUrl}/${System.getenv("CORDA_USE_CACHE")}"
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                credentials {
+                    username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+                    password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+                }
+            }
+        } else {
+            mavenCentral()
+            jcenter()
+            maven {
+                url 'https://kotlin.bintray.com/kotlinx'
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+            }
         }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
@@ -204,7 +221,6 @@ plugins {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
 apply plugin: "com.r3.dependx.dependxies"
@@ -275,7 +291,7 @@ allprojects {
         toolVersion = "0.8.3"
     }
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
@@ -287,7 +303,7 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
@@ -302,7 +318,7 @@ allprojects {
         task.dependsOn tasks.withType(AbstractCompile)
     }
 
-    tasks.withType(Jar) { task ->
+    tasks.withType(Jar).configureEach { task ->
         // Includes War and Ear
         manifest {
             attributes('Corda-Release-Version': corda_release_version)
@@ -314,7 +330,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         forkEvery = 10
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
@@ -339,7 +355,7 @@ allprojects {
         systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
@@ -357,11 +373,29 @@ allprojects {
 
     repositories {
         mavenLocal()
-        mavenCentral()
-        jcenter()
-        maven { url "$artifactory_contextUrl/corda-dependencies" }
-        maven { url 'https://repo.gradle.org/gradle/libs-releases' }
-        maven { url "$artifactory_contextUrl/corda-dev" }
+        // Use system environment to activate caching with Artifactory,
+        // because it is actually easier to pass that during parallel build.
+        // NOTE: it has to be a name of a virtual repository with all
+        // required remote or local repositories!
+        if (System.getenv("CORDA_USE_CACHE")) {
+            maven {
+                name "R3 Maven remote repositories"
+                url "${artifactory_contextUrl}/${System.getenv("CORDA_USE_CACHE")}"
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                credentials {
+                    username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+                    password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+                }
+            }
+        } else {
+            mavenCentral()
+            jcenter()
+            maven { url "${artifactory_contextUrl}/corda-dependencies" }
+            maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+            maven { url "${artifactory_contextUrl}/corda-dev" }
+        }
     }
 
     configurations {
@@ -520,7 +554,7 @@ tasks.register('detektBaseline', JavaExec) {
     args(params)
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
@@ -626,7 +660,7 @@ dependxiesModule {
     skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi) {
+tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
     baseName = "api-corda"
 }
 
@@ -662,7 +696,7 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = "5.4.1"
+    gradleVersion = '5.6.4'
     distributionType = Wrapper.DistributionType.ALL
 }
 

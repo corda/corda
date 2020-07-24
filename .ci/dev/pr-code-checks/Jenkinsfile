@@ -4,10 +4,11 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'standard' }
     options {
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -38,6 +39,12 @@ pipeline {
             steps {
                 sh "./gradlew --no-daemon generateApi"
                 sh ".ci/check-api-changes.sh"
+            }
+        }
+
+        stage('Deploy Nodes') {
+            steps {
+                sh "./gradlew --no-daemon jar deployNodes"
             }
         }
     }

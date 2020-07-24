@@ -1,7 +1,9 @@
 package net.corda.core.flows
 
 import net.corda.core.CordaInternal
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -11,11 +13,13 @@ import net.corda.core.serialization.CordaSerializable
  * the flow to run at the scheduled time.
  */
 @DoNotImplement
+@KeepForDJVM
 interface FlowLogicRefFactory {
     /**
      * Construct a FlowLogicRef. This is intended for cases where the calling code has the relevant class already
      * and can provide it directly.
      */
+    @DeleteForDJVM
     fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
 
     /**
@@ -30,12 +34,14 @@ interface FlowLogicRefFactory {
      * [SchedulableFlow] annotation.
      */
     @CordaInternal
+    @DeleteForDJVM
     fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
 
     /**
      * Converts a [FlowLogicRef] object that was obtained from the calls above into a [FlowLogic], after doing some
      * validation to ensure it points to a legitimate flow class.
      */
+    @DeleteForDJVM
     fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*>
 }
 
@@ -59,4 +65,5 @@ class IllegalFlowLogicException(val type: String, msg: String) :
 // TODO: align this with the existing [FlowRef] in the bank-side API (probably replace some of the API classes)
 @CordaSerializable
 @DoNotImplement
+@KeepForDJVM
 interface FlowLogicRef

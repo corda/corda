@@ -16,3 +16,5 @@ class StateTransitionException(
 }
 
 class AsyncOperationTransitionException(exception: Exception) : CordaException(exception.message, exception)
+
+class ErrorStateTransitionException(val exception: Exception) : CordaException(exception.message, exception)

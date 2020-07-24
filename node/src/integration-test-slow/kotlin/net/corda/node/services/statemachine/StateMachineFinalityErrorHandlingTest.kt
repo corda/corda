@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine
 
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.messaging.startFlow
@@ -22,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 @Suppress("MaxLineLength") // Byteman rules cannot be easily wrapped
-class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
+class StateMachineFinalityErrorHandlingTest : StateMachineErrorHandlingTest() {
 
     /**
      * Throws an exception when recoding a transaction inside of [ReceiveFinalityFlow] on the responding
@@ -33,10 +32,10 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
      */
-    @Test(timeout=300_000)
-	fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
+    @Test(timeout = 300_000)
+    fun `error recording a transaction inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
@@ -67,14 +66,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
-            val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-            val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-
-            aliceClient.startFlow(
+            alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
                 500.DOLLARS,
                 OpaqueBytes.of(0x01),
@@ -83,15 +77,11 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
-            val (discharge, observation) = charlieClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
-            assertEquals(0, discharge)
-            assertEquals(1, observation)
-            assertEquals(0, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(1, charlieClient.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
-            // 1 ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+            charlie.rpc.assertHospitalCounts(observation = 1)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
         }
     }
 
@@ -104,10 +94,10 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
      * Only the responding node keeps a checkpoint. The initiating flow has completed successfully as it has complete its
      * send to the responding node and the responding node successfully received it.
      */
-    @Test(timeout=300_000)
-	fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
+    @Test(timeout = 300_000)
+    fun `error resolving a transaction's dependencies inside of ReceiveFinalityFlow will keep the flow in for observation`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             // could not get rule for FinalityDoctor + observation counter to work
@@ -138,14 +128,9 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
-            val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-            val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-
-            aliceClient.startFlow(
+            alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
                 500.DOLLARS,
                 OpaqueBytes.of(0x01),
@@ -154,15 +139,11 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
-            val (discharge, observation) = charlieClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
-            assertEquals(0, discharge)
-            assertEquals(1, observation)
-            assertEquals(0, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(1, charlieClient.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
-            // 1 for ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+            charlie.rpc.assertHospitalCounts(observation = 1)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
         }
     }
 
@@ -170,22 +151,22 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
      * Throws an exception when executing [Action.CommitTransaction] as part of receiving a transaction to record inside of [ReceiveFinalityFlow] on the responding
      * flow's node.
      *
-     * The exception is thrown 5 times.
+     * The exception is thrown 3 times.
      *
      * The responding flow is retried 3 times and then completes successfully.
      *
      * The [StaffedFlowHospital.TransitionErrorGeneralPractitioner] catches these errors instead of the [StaffedFlowHospital.FinalityDoctor]. Due to this, the
      * flow is retried instead of moving straight to observation.
      */
-    @Test(timeout=300_000)
-	fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and complete successfully`() {
+    @Test(timeout = 300_000)
+    fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and complete successfully`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -201,38 +182,17 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("finality_flag") && readCounter("counter") < 5
+                IF flagged("finality_flag") && readCounter("counter") < 3
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
-                ENDRULE
-                
-                RULE Increment discharge counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ DISCHARGE
-                IF true
-                DO traceln("Byteman test - discharging")
-                ENDRULE
-                
-                RULE Increment observation counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ OVERNIGHT_OBSERVATION
-                IF true
-                DO traceln("Byteman test - overnight observation")
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
+            submitBytemanRules(rules, port)
 
-            val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-            val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-
-            aliceClient.startFlow(
+            alice.rpc.startFlow(
                 ::CashIssueAndPaymentFlow,
                 500.DOLLARS,
                 OpaqueBytes.of(0x01),
@@ -241,20 +201,14 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 defaultNotaryIdentity
             ).returnValue.getOrThrow(30.seconds)
 
-            val output = getBytemanOutput(charlie)
+            // This sleep is a bit suspect...
+            Thread.sleep(1000)
 
-            // Check the stdout for the lines generated by byteman
-            assertEquals(3, output.filter { it.contains("Byteman test - discharging") }.size)
-            assertEquals(0, output.filter { it.contains("Byteman test - overnight observation") }.size)
-            val (discharge, observation) = charlieClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
-            assertEquals(3, discharge)
-            assertEquals(0, observation)
-            assertEquals(0, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(0, charlieClient.stateMachinesSnapshot().size)
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
-            // 1 for GetNumberOfCheckpointsFlow
-            assertEquals(1, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertNumberOfCheckpointsAllZero()
+            charlie.rpc.assertHospitalCounts(discharged = 3)
+            assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(0, charlie.rpc.stateMachinesSnapshot().size)
         }
     }
 
@@ -262,7 +216,7 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
      * Throws an exception when executing [Action.CommitTransaction] as part of receiving a transaction to record inside of [ReceiveFinalityFlow] on the responding
      * flow's node.
      *
-     * The exception is thrown 7 times.
+     * The exception is thrown 4 times.
      *
      * The responding flow is retried 3 times and is then kept in for observation.
      *
@@ -272,15 +226,15 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
      * The [StaffedFlowHospital.TransitionErrorGeneralPractitioner] catches these errors instead of the [StaffedFlowHospital.FinalityDoctor]. Due to this, the
      * flow is retried instead of moving straight to observation.
      */
-    @Test(timeout=300_000)
-	fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and be kept for observation is error persists`() {
+    @Test(timeout = 300_000)
+    fun `error during transition with CommitTransaction action while receiving a transaction inside of ReceiveFinalityFlow will be retried and be kept for observation is error persists`() {
         startDriver(notarySpec = NotarySpec(DUMMY_NOTARY_NAME, validating = false)) {
-            val charlie = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
+            val (charlie, port) = createBytemanNode(CHARLIE_NAME, FINANCE_CORDAPPS)
             val alice = createNode(ALICE_NAME, FINANCE_CORDAPPS)
 
             val rules = """
                 RULE Create Counter
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
                 IF createCounter("counter", $counter)
@@ -296,39 +250,18 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ENDRULE
                 
                 RULE Throw exception on executeCommitTransaction action
-                CLASS ${ActionExecutorImpl::class.java.name}
+                CLASS $actionExecutorClassName
                 METHOD executeCommitTransaction
                 AT ENTRY
-                IF flagged("finality_flag") && readCounter("counter") < 7
+                IF flagged("finality_flag") && readCounter("counter") < 4
                 DO incrementCounter("counter"); traceln("Throwing exception"); throw new java.lang.RuntimeException("die dammit die")
-                ENDRULE
-                
-                RULE Increment discharge counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ DISCHARGE
-                IF true
-                DO traceln("Byteman test - discharging")
-                ENDRULE
-                
-                RULE Increment observation counter
-                CLASS ${StaffedFlowHospital.TransitionErrorGeneralPractitioner::class.java.name}
-                METHOD consult
-                AT READ OVERNIGHT_OBSERVATION
-                IF true
-                DO traceln("Byteman test - overnight observation")
                 ENDRULE
             """.trimIndent()
 
-            submitBytemanRules(rules)
-
-            val aliceClient =
-                CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-            val charlieClient =
-                CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+            submitBytemanRules(rules, port)
 
             assertFailsWith<TimeoutException> {
-                aliceClient.startFlow(
+                alice.rpc.startFlow(
                     ::CashIssueAndPaymentFlow,
                     500.DOLLARS,
                     OpaqueBytes.of(0x01),
@@ -338,20 +271,14 @@ class StatemachineFinalityErrorHandlingTest : StatemachineErrorHandlingTest() {
                 ).returnValue.getOrThrow(30.seconds)
             }
 
-            val output = getBytemanOutput(charlie)
-
-            // Check the stdout for the lines generated by byteman
-            assertEquals(3, output.filter { it.contains("Byteman test - discharging") }.size)
-            assertEquals(1, output.filter { it.contains("Byteman test - overnight observation") }.size)
-            val (discharge, observation) = charlieClient.startFlow(StatemachineErrorHandlingTest::GetHospitalCountersFlow).returnValue.get()
-            assertEquals(3, discharge)
-            assertEquals(1, observation)
-            assertEquals(1, aliceClient.stateMachinesSnapshot().size)
-            assertEquals(1, charlieClient.stateMachinesSnapshot().size)
-            // 1 for CashIssueAndPaymentFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, aliceClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
-            // 1 for ReceiveFinalityFlow and 1 for GetNumberOfCheckpointsFlow
-            assertEquals(2, charlieClient.startFlow(StatemachineErrorHandlingTest::GetNumberOfUncompletedCheckpointsFlow).returnValue.get())
+            alice.rpc.assertNumberOfCheckpoints(runnable = 1)
+            charlie.rpc.assertNumberOfCheckpoints(hospitalized = 1)
+            charlie.rpc.assertHospitalCounts(
+                discharged = 3,
+                observation = 1
+            )
+            assertEquals(1, alice.rpc.stateMachinesSnapshot().size)
+            assertEquals(1, charlie.rpc.stateMachinesSnapshot().size)
         }
     }
 }

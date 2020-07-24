@@ -39,9 +39,10 @@ import kotlin.test.assertFalse
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
 // support this, and it's a property of the Corda JAR)
-abstract class NodeBasedTest
-@JvmOverloads
-constructor(private val cordappPackages: List<String> = emptyList(), private val notaries: List<CordaX500Name> = emptyList()) {
+abstract class NodeBasedTest @JvmOverloads constructor(
+    private val cordappPackages: Set<TestCordappInternal> = emptySet(),
+    private val notaries: List<CordaX500Name> = emptyList()
+) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
@@ -120,7 +121,11 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
                 ) + configOverrides
         )
 
-        val customCordapps = cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
+        val customCordapps = if (cordappPackages.isNotEmpty()) {
+            cordappPackages
+        } else {
+            cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { listOf(it) } ?: emptyList())
+        }
         TestCordappInternal.installCordapps(baseDirectory, emptySet(), customCordapps)
 
         val parsedConfig = config.parseAsNodeConfiguration().value()

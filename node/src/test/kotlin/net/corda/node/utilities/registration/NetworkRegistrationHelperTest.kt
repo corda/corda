@@ -28,6 +28,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.services.config.NotaryConfig
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import org.assertj.core.api.Assertions.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -37,6 +39,7 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
@@ -71,6 +74,7 @@ class NetworkRegistrationHelperTest {
             doReturn(null).whenever(it).tlsCertCrlDistPoint
             doReturn(null).whenever(it).tlsCertCrlIssuer
             doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(null).whenever(it).notary
         }
     }
 
@@ -120,7 +124,7 @@ class NetworkRegistrationHelperTest {
 
     @Test(timeout=300_000)
 	fun `missing truststore`() {
-        val nodeCaCertPath = createNodeCaCertPath()
+        val nodeCaCertPath = createCertPath()
         assertThatThrownBy {
             createFixedResponseRegistrationHelper(nodeCaCertPath)
         }.hasMessageContaining("This file must contain the root CA cert of your compatibility zone. Please contact your CZ operator.")
@@ -128,7 +132,7 @@ class NetworkRegistrationHelperTest {
 
     @Test(timeout=300_000)
 	fun `node CA with incorrect cert role`() {
-        val nodeCaCertPath = createNodeCaCertPath(type = CertificateType.TLS)
+        val nodeCaCertPath = createCertPath(type = CertificateType.TLS)
         saveNetworkTrustStore(CORDA_ROOT_CA to nodeCaCertPath.last())
         val registrationHelper = createFixedResponseRegistrationHelper(nodeCaCertPath)
         assertThatExceptionOfType(CertificateRequestException::class.java)
@@ -139,7 +143,7 @@ class NetworkRegistrationHelperTest {
     @Test(timeout=300_000)
 	fun `node CA with incorrect subject`() {
         val invalidName = CordaX500Name("Foo", "MU", "GB")
-        val nodeCaCertPath = createNodeCaCertPath(legalName = invalidName)
+        val nodeCaCertPath = createCertPath(legalName = invalidName)
         saveNetworkTrustStore(CORDA_ROOT_CA to nodeCaCertPath.last())
         val registrationHelper = createFixedResponseRegistrationHelper(nodeCaCertPath)
         assertThatExceptionOfType(CertificateRequestException::class.java)
@@ -220,36 +224,118 @@ class NetworkRegistrationHelperTest {
         createRegistrationHelper(rootAndIntermediateCA = rootAndIntermediateCA).generateKeysAndRegister()
     }
 
-    private fun createNodeCaCertPath(type: CertificateType = CertificateType.NODE_CA,
-                                     legalName: CordaX500Name = nodeLegalName,
-                                     publicKey: PublicKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public,
-                                     rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath()): List<X509Certificate> {
+    @Test(timeout=300_000)
+    fun `successful registration for notary node`() {
+        val notaryServiceLegalName = DUMMY_NOTARY_NAME
+        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = notaryServiceLegalName)
+        assertThat(notaryNodeConfig.notary).isNotNull
+
+        val rootAndIntermediateCA = createDevIntermediateCaCertPath().also {
+            saveNetworkTrustStore(CORDA_ROOT_CA to it.first.certificate)
+        }
+
+        // Mock out the registration service to ensure notary service registration is handled correctly
+        createRegistrationHelper(CertRole.NODE_CA, notaryNodeConfig) {
+            when {
+                it.subject == nodeLegalName.toX500Name() -> {
+                    val certType = CertificateType.values().first { it.role == CertRole.NODE_CA }
+                    createCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType)
+                }
+                it.subject == notaryServiceLegalName.toX500Name() -> {
+                    val certType = CertificateType.values().first { it.role == CertRole.SERVICE_IDENTITY }
+                    createCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType, legalName = notaryServiceLegalName)
+                }
+                else -> throw IllegalStateException("Unknown CSR")
+            }
+        }.generateKeysAndRegister()
+
+        val nodeKeystore = config.signingCertificateStore.get()
+
+        nodeKeystore.run {
+            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
+            assertFalse(contains(CORDA_ROOT_CA))
+            assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
+            assertThat(CertRole.extract(this[X509Utilities.CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
+            assertThat(CertRole.extract(this[DISTRIBUTED_NOTARY_KEY_ALIAS])).isEqualTo(CertRole.SERVICE_IDENTITY)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `notary registration fails when no separate notary service identity configured`() {
+        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = null)
+        assertThat(notaryNodeConfig.notary).isNotNull
+
+        assertThatThrownBy {
+            createRegistrationHelper(nodeConfig = notaryNodeConfig)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("notary service legal name must be provided")
+    }
+
+    @Test(timeout=300_000)
+    fun `notary registration fails when notary service identity configured with same legal name as node`() {
+        val notaryNodeConfig = createNotaryNodeConfiguration(notaryServiceLegalName = config.myLegalName)
+        assertThat(notaryNodeConfig.notary).isNotNull
+
+        assertThatThrownBy {
+            createRegistrationHelper(nodeConfig = notaryNodeConfig)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("notary service legal name must be different from the node")
+    }
+
+    private fun createNotaryNodeConfiguration(notaryServiceLegalName: CordaX500Name?): NodeConfiguration {
+        return rigorousMock<NodeConfiguration>().also {
+            doReturn(config.baseDirectory).whenever(it).baseDirectory
+            doReturn(config.certificatesDirectory).whenever(it).certificatesDirectory
+            doReturn(CertificateStoreStubs.P2P.withCertificatesDirectory(config.certificatesDirectory)).whenever(it).p2pSslOptions
+            doReturn(CertificateStoreStubs.Signing.withCertificatesDirectory(config.certificatesDirectory)).whenever(it)
+                    .signingCertificateStore
+            doReturn(nodeLegalName).whenever(it).myLegalName
+            doReturn("").whenever(it).emailAddress
+            doReturn(null).whenever(it).tlsCertCrlDistPoint
+            doReturn(null).whenever(it).tlsCertCrlIssuer
+            doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(NotaryConfig(validating = false, serviceLegalName = notaryServiceLegalName)).whenever(it).notary
+        }
+    }
+
+    private fun createCertPath(type: CertificateType = CertificateType.NODE_CA,
+                               legalName: CordaX500Name = nodeLegalName,
+                               publicKey: PublicKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME).public,
+                               rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath()): List<X509Certificate> {
         val (rootCa, intermediateCa) = rootAndIntermediateCA
         val nameConstraints = if (type == CertificateType.NODE_CA) {
             NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
         } else {
             null
         }
-        val nodeCaCert = X509Utilities.createCertificate(
+        val cert = X509Utilities.createCertificate(
                 type,
                 intermediateCa.certificate,
                 intermediateCa.keyPair,
                 legalName.x500Principal,
                 publicKey,
                 nameConstraints = nameConstraints)
-        return listOf(nodeCaCert, intermediateCa.certificate, rootCa.certificate)
+        return listOf(cert, intermediateCa.certificate, rootCa.certificate)
     }
 
     private fun createFixedResponseRegistrationHelper(response: List<X509Certificate>, certRole: CertRole = CertRole.NODE_CA): NetworkRegistrationHelper {
         return createRegistrationHelper(certRole) { response }
     }
 
-    private fun createRegistrationHelper(certRole: CertRole = CertRole.NODE_CA, rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath()) = createRegistrationHelper(certRole) {
+    private fun createRegistrationHelper(
+            certRole: CertRole = CertRole.NODE_CA,
+            rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath(),
+            nodeConfig: NodeConfiguration = config
+    ) = createRegistrationHelper(certRole, nodeConfig) {
         val certType = CertificateType.values().first { it.role == certRole }
-        createNodeCaCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType)
+        createCertPath(rootAndIntermediateCA = rootAndIntermediateCA, publicKey = it.publicKey, type = certType)
     }
 
-    private fun createRegistrationHelper(certRole: CertRole = CertRole.NODE_CA, dynamicResponse: (JcaPKCS10CertificationRequest) -> List<X509Certificate>): NetworkRegistrationHelper {
+    private fun createRegistrationHelper(
+            certRole: CertRole = CertRole.NODE_CA,
+            nodeConfig: NodeConfiguration = config,
+            dynamicResponse: (JcaPKCS10CertificationRequest) -> List<X509Certificate>
+    ): NetworkRegistrationHelper {
         val certService = rigorousMock<NetworkRegistrationService>().also {
             val requests = mutableMapOf<String, JcaPKCS10CertificationRequest>()
             doAnswer {
@@ -265,11 +351,11 @@ class NetworkRegistrationHelperTest {
         }
 
         return when (certRole) {
-            CertRole.NODE_CA -> NodeRegistrationHelper(NodeRegistrationConfiguration(config), certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
+            CertRole.NODE_CA -> NodeRegistrationHelper(NodeRegistrationConfiguration(nodeConfig), certService, NodeRegistrationOption(nodeConfig.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
             CertRole.SERVICE_IDENTITY -> NetworkRegistrationHelper(
-                    NodeRegistrationConfiguration(config),
+                    NodeRegistrationConfiguration(nodeConfig),
                     certService,
-                    config.certificatesDirectory / networkRootTrustStoreFileName,
+                    nodeConfig.certificatesDirectory / networkRootTrustStoreFileName,
                     networkRootTrustStorePassword,
                     DISTRIBUTED_NOTARY_KEY_ALIAS,
                     CertRole.SERVICE_IDENTITY)

@@ -28,12 +28,12 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
      *
      * @param error the error.
      */
-    fun freshErrorTransition(error: Throwable) {
+    fun freshErrorTransition(error: Throwable, rollback: Boolean = true) {
         val flowError = FlowError(
                 errorId = (error as? IdentifiableException)?.errorId ?: context.secureRandom.nextLong(),
                 exception = error
         )
-        errorTransition(flowError)
+        errorTransition(flowError, rollback)
     }
 
     /**
@@ -42,7 +42,7 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
      *
      * @param error the error.
      */
-    fun errorsTransition(errors: List<FlowError>) {
+    fun errorsTransition(errors: List<FlowError>, rollback: Boolean) {
         currentState = currentState.copy(
                 checkpoint = currentState.checkpoint.copy(
                         errorState = currentState.checkpoint.errorState.addErrors(errors)
@@ -50,10 +50,10 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
                 isFlowResumed = false
         )
         actions.clear()
-        actions.addAll(arrayOf(
-                Action.RollbackTransaction,
-                Action.ScheduleEvent(Event.DoRemainingWork)
-        ))
+        if(rollback) {
+            actions += Action.RollbackTransaction
+        }
+        actions += Action.ScheduleEvent(Event.DoRemainingWork)
     }
 
     /**
@@ -62,8 +62,8 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
      *
      * @param error the error.
      */
-    fun errorTransition(error: FlowError) {
-        errorsTransition(listOf(error))
+    fun errorTransition(error: FlowError, rollback: Boolean) {
+        errorsTransition(listOf(error), rollback)
     }
 
     fun resumeFlowLogic(result: Any?): FlowContinuation {
@@ -81,3 +81,5 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
 
 class CannotFindSessionException(sessionId: SessionId) : IllegalStateException("Couldn't find session with id $sessionId")
 class UnexpectedEventInState : IllegalStateException("Unexpected event")
+class PrematureSessionCloseException(sessionId: SessionId): IllegalStateException("The following session was closed before it was initialised: $sessionId")
+class PrematureSessionEndException(sessionId: SessionId): IllegalStateException("A premature session end message was received before the session was initialised: $sessionId")
