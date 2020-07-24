@@ -5,6 +5,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.serialization.MissingSerializerException
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -477,7 +478,7 @@ class FlowClientIdTests {
     @Test(timeout=300_000)
     fun `if flow fails to serialize its result then the result gets converted to an exception result`() {
         val clientId = UUID.randomUUID().toString()
-        assertFailsWith<StateTransitionException> {
+        assertFailsWith<MissingSerializerException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
         }
 
@@ -490,7 +491,7 @@ class FlowClientIdTests {
             //assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
         }
 
-        assertFailsWith<StateTransitionException> {
+        assertFailsWith<MissingSerializerException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
         }
     }

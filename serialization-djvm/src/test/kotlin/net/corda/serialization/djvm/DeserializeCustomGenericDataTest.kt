@@ -1,7 +1,7 @@
 package net.corda.serialization.djvm
 
 import net.corda.core.serialization.SerializationCustomSerializer
-import net.corda.core.serialization.internal.MissingSerializerException
+import net.corda.core.serialization.MissingSerializerException
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.serialization.djvm.SandboxType.KOTLIN

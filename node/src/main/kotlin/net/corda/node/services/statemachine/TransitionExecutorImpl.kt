@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.serialization.MissingSerializerException
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
@@ -74,12 +75,16 @@ class TransitionExecutorImpl(
                     }
 
                     // distinguish between a DatabaseTransactionException and an actual StateTransitionException
-                    val stateTransitionOrDatabaseTransactionException =
+                    val stateTransitionOrOtherException =
                         if (exception is DatabaseTransactionException) {
                             // if the exception is a DatabaseTransactionException then it is not really a StateTransitionException
                             // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
                             // it was rethrown on [DatabaseTransaction.commit]. Unwrap the original exception and pass it to flow hospital
                             exception.cause
+                        } else if (exception is MissingSerializerException) {
+                            // We must not wrap a [MissingSerializerException] with a [StateTransitionException],
+                            // because we will propagate the exception to rpc clients and [StateTransitionException] cannot be propagated to rpc clients.
+                            exception
                         } else {
                             // Wrap the exception with [StateTransitionException] for handling by the flow hospital
                             StateTransitionException(action, event, exception)
@@ -88,7 +93,7 @@ class TransitionExecutorImpl(
                     val newState = previousState.copy(
                         checkpoint = previousState.checkpoint.copy(
                             errorState = previousState.checkpoint.errorState.addErrors(
-                                listOf(FlowError(secureRandom.nextLong(), stateTransitionOrDatabaseTransactionException))
+                                listOf(FlowError(secureRandom.nextLong(), stateTransitionOrOtherException))
                             )
                         ),
                         isFlowResumed = false
