@@ -15,6 +15,7 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -532,6 +533,26 @@ class DBCheckpointStorage(
             StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
         }
     }
+
+    // This method needs modification once CORDA-3681 is implemented to include FAILED flows as well
+    override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata.Serialized>> {
+        val session = currentDBSession()
+        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, blob.checkpoint) 
+                from ${DBFlowCheckpoint::class.java.name} checkpoint 
+                join ${DBFlowCheckpointBlob::class.java.name} blob on blob.id = checkpoint.blob  
+                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}""".trimIndent()
+        val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
+        return query.resultList.stream().map {
+            val serializedCheckpointState = SerializedBytes<CheckpointState>(it.checkpoint)
+            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata.Serialized(it.status, serializedCheckpointState)
+        }
+    }
+
+    private class DBFlowResultMetadataFields(
+        val id: String,
+        val status: FlowStatus,
+        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY
+    )
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
         val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"

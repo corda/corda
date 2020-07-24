@@ -177,8 +177,6 @@ internal class SingleThreadedStateMachineManager(
         }
 
         // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED flows
-        // - RESULTED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3692
-        // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
         // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
         for (flow in fibers) {
             flow.fiber.clientId?.let {
@@ -191,6 +189,15 @@ internal class SingleThreadedStateMachineManager(
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(
                     doneClientIdFuture(pausedFlow.key, pausedFlow.value.resultFuture, it)
                 )
+            }
+        }
+
+        val finishedFlowsResults = fetchFinishedFlowsResults()
+        for ((id, finishedFlowResult) in finishedFlowsResults) {
+            if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
+                innerState.clientIdsToFlowIds[finishedFlowResult.clientId] = FlowWithClientIdStatus.Removed(id, true)
+            } else {
+                // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
             }
         }
 
@@ -450,6 +457,12 @@ internal class SingleThreadedStateMachineManager(
                 id to NonResidentFlow(id, checkpoint)
             }.toList().toMap()
         }
+    }
+
+    private fun fetchFinishedFlowsResults(): List<Pair<StateMachineRunId, FlowResultMetadata>> {
+        return checkpointStorage.getFinishedFlowsResultsMetadata().map { (id, serializedFlowResultMetadata) ->
+            id to serializedFlowResultMetadata.deserialize(checkpointSerializationContext!!)
+        }.toList()
     }
 
     private fun resumeRestoredFlows(flows: List<Flow<*>>) {

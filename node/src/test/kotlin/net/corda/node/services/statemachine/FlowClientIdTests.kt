@@ -391,6 +391,28 @@ class FlowClientIdTests {
 //    }
 
     @Test(timeout=300_000)
+    fun `on node start -completed- flows with client id are hook-able`() {
+        val clientId = UUID.randomUUID().toString()
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+        }
+
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle0.resultFuture.getOrThrow()
+        val aliceNode = mockNet.restartNode(aliceNode)
+
+        // Re-hook a completed flow
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val result1 = flowHandle1.resultFuture.getOrThrow(20.seconds)
+
+        Assert.assertEquals(1, counter) // assert flow has run only once
+        Assert.assertEquals(flowHandle0.id, flowHandle1.id)
+        Assert.assertEquals(clientId, flowHandle1.clientId)
+        Assert.assertEquals(5, result1)
+    }
+
+    @Test(timeout=300_000)
     fun `On 'startFlowInternal' throwing, subsequent request with same client id does not get de-duplicated and starts a new flow`() {
         val clientId = UUID.randomUUID().toString()
         var firstRequest = true
@@ -461,6 +483,12 @@ class FlowClientIdTests {
         assertFailsWith<StateTransitionException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
         }
+
+
+        // i have to check the database
+        
+
+
     }
 
     // This test is now redundant since, upon error at serialization of result we error and propagate

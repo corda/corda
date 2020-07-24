@@ -831,6 +831,41 @@ class DBCheckpointStorageTests {
         }
     }
 
+    // This test needs modification once CORDA-3681 is implemented to include FAILED flows as well
+    @Test(timeout = 300_000)
+    fun `'getFinishedFlowsResultsMetadata' fetches flows results metadata for finished flows only`() {
+        val (_, checkpoint) = newCheckpoint(1)
+        val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
+        val hospitalized = changeStatus(checkpoint, Checkpoint.FlowStatus.HOSPITALIZED)
+        val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
+        val failed = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED)
+        val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
+        val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
+
+        database.transaction {
+            val serializedFlowState =
+                checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+
+            checkpointStorage.addCheckpoint(runnable.id, runnable.checkpoint, serializedFlowState, runnable.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(hospitalized.id, hospitalized.checkpoint, serializedFlowState, hospitalized.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(completed.id, completed.checkpoint, serializedFlowState, completed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(failed.id, failed.checkpoint, serializedFlowState, failed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(killed.id, killed.checkpoint, serializedFlowState, killed.checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(paused.id, paused.checkpoint, serializedFlowState, paused.checkpoint.serializeCheckpointState())
+        }
+
+        val checkpointsInDb = database.transaction {
+            checkpointStorage.getCheckpoints().toList().size
+        }
+
+        val resultsMetadata = database.transaction {
+            checkpointStorage.getFinishedFlowsResultsMetadata()
+        }.toList()
+
+        assertEquals(6, checkpointsInDb)
+        assertEquals(Checkpoint.FlowStatus.COMPLETED, resultsMetadata.single().second.status)
+    }
+
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
 
     private fun changeStatus(oldCheckpoint: Checkpoint, status: Checkpoint.FlowStatus): IdAndCheckpoint {

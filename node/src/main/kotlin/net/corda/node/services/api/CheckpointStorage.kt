@@ -4,6 +4,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
+import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
 import java.util.stream.Stream
 
@@ -65,6 +66,8 @@ interface CheckpointStorage {
      * This method does not fetch [Checkpoint.Serialized.serializedFlowState] to save memory.
      */
     fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata.Serialized>>
 
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }
