@@ -473,22 +473,26 @@ class FlowClientIdTests {
 //        assertEquals(0, counter)
 //    }
 
-    @Test
-    fun `if flow fails to serialize its result then result gets converted to an exception result`() {
+    // This test needs modification once CORDA-3681 is implemented to check that 'node_flow_exceptions' gets a row
+    @Test(timeout=300_000)
+    fun `if flow fails to serialize its result then the result gets converted to an exception result`() {
         val clientId = UUID.randomUUID().toString()
         assertFailsWith<StateTransitionException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
         }
 
+        // flow has failed to serialize its result => table 'node_flow_results' should be empty, 'node_flow_exceptions' should get one row instead
+        aliceNode.services.database.transaction {
+            val checkpointStatus = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatus)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+            // uncomment the below line once CORDA-3681 is implemented
+            //assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+        }
+
         assertFailsWith<StateTransitionException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
         }
-
-
-        // i have to check the database
-        
-
-
     }
 
     // This test is now redundant since, upon error at serialization of result we error and propagate
