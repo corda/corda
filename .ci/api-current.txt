@@ -4932,7 +4932,7 @@ public final class net.corda.core.node.services.vault.PageSpecification extends 
   public String toString()
 ##
 @CordaSerializable
-public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria
+public abstract class net.corda.core.node.services.vault.QueryCriteria extends java.lang.Object implements net.corda.core.node.services.vault.GenericQueryCriteria, net.corda.core.node.services.vault.GenericQueryCriteria$ChainableQueryCriteria
   public <init>(kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public net.corda.core.node.services.vault.QueryCriteria and(net.corda.core.node.services.vault.QueryCriteria)
