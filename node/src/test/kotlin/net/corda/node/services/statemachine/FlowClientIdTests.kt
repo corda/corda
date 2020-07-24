@@ -116,7 +116,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow returning null gets retrieved after flow's lifetime when started with client id`() {
         val clientId = UUID.randomUUID().toString()
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null)).resultFuture.getOrThrow()
@@ -125,7 +125,7 @@ class FlowClientIdTests {
         assertNull(flowResult)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow returning Unit gets retrieved after flow's lifetime when started with client id`() {
         val clientId = UUID.randomUUID().toString()
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()

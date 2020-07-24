@@ -130,6 +130,7 @@ internal class SingleThreadedStateMachineManager(
      */
     override val changes: Observable<StateMachineManager.Change> = innerState.changesPublisher
 
+    @Suppress("ComplexMethod")
     override fun start(tokenizableServices: List<Any>, startMode: StateMachineManager.StartMode): CordaFuture<Unit> {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
