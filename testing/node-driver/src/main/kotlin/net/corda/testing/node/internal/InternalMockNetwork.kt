@@ -89,14 +89,17 @@ data class InternalMockNodeParameters(
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordappInternal> = emptyList(),
-        val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
+        val flowManager: MockNodeFlowManager = MockNodeFlowManager(),
+        val businessNetworks: BusinessNetworksConfig? = null) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
             mockNodeParameters.entropyRoot,
             { mockNodeParameters.configOverrides?.applyMockNodeOverrides(it) },
             MOCK_VERSION_INFO,
-            uncheckedCast(mockNodeParameters.additionalCordapps)
+            uncheckedCast(mockNodeParameters.additionalCordapps),
+            MockNodeFlowManager(),
+            mockNodeParameters.businessNetworks
     )
 }
 
@@ -474,6 +477,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             doReturn(emptyList<String>()).whenever(it).quasarExcludePackages
+            doReturn(parameters.businessNetworks).whenever(it).businessNetworks
             parameters.configOverrides(it)
         }
 

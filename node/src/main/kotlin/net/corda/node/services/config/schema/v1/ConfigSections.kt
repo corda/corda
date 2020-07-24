@@ -15,6 +15,8 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.config.AuthDataSourceType
+import net.corda.node.services.config.BusinessNetworksConfig
+import net.corda.node.services.config.BusinessNetworksServiceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
 import net.corda.node.services.config.DJVMOptions
@@ -305,5 +307,15 @@ internal object FlowOverridesConfigSpec : Configuration.Specification<FlowOverri
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<FlowOverrideConfig> {
         val config = configuration.withOptions(options)
         return valid(FlowOverrideConfig(config[overrides]))
+    }
+}
+
+internal object BusinessNetworksConfigSpec : Configuration.Specification<BusinessNetworksConfig>("BusinessNetworksConfig") {
+    private val serviceType by enum(BusinessNetworksServiceType::class)
+    private val serviceClass by string()
+
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<BusinessNetworksConfig> {
+        val config = configuration.withOptions(options)
+        return valid(BusinessNetworksConfig(config[serviceType], config[serviceClass]))
     }
 }

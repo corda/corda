@@ -3,6 +3,16 @@ package net.corda.node.internal.cordapp
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.bn.ActivateMembershipFlow
+import net.corda.core.flows.bn.CreateBusinessNetworkFlow
+import net.corda.core.flows.bn.CreateGroupFlow
+import net.corda.core.flows.bn.DeleteGroupFlow
+import net.corda.core.flows.bn.ModifyBusinessIdentityFlow
+import net.corda.core.flows.bn.ModifyGroupFlow
+import net.corda.core.flows.bn.ModifyRolesFlow
+import net.corda.core.flows.bn.RequestMembershipFlow
+import net.corda.core.flows.bn.RevokeMembershipFlow
+import net.corda.core.flows.bn.SuspendMembershipFlow
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.location
 import net.corda.node.VersionInfo
@@ -18,7 +28,17 @@ internal object VirtualCordapp {
     private val coreRpcFlows = listOf(
             ContractUpgradeFlow.Initiate::class.java,
             ContractUpgradeFlow.Authorise::class.java,
-            ContractUpgradeFlow.Deauthorise::class.java
+            ContractUpgradeFlow.Deauthorise::class.java,
+            ActivateMembershipFlow::class.java,
+            CreateBusinessNetworkFlow::class.java,
+            CreateGroupFlow::class.java,
+            DeleteGroupFlow::class.java,
+            ModifyBusinessIdentityFlow::class.java,
+            ModifyGroupFlow::class.java,
+            ModifyRolesFlow::class.java,
+            RequestMembershipFlow::class.java,
+            RevokeMembershipFlow::class.java,
+            SuspendMembershipFlow::class.java
     )
 
     /** A Cordapp representing the core package which is not scanned automatically. */

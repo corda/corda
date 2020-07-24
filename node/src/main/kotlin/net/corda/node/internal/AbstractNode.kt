@@ -54,6 +54,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.node.services.bn.BusinessNetworksService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
@@ -91,6 +92,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
+import net.corda.node.services.bn.BusinessNetworksServiceLoader
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
@@ -319,6 +321,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
+
+    val businessNetworksService = configuration.businessNetworks?.let {
+        BusinessNetworksServiceLoader(vaultService).load(cordappLoader.appClassLoader, it.serviceType, it.serviceClass).tokenize()
+    }
+
     @Suppress("LeakingThis")
     protected val network: MessagingService = makeMessagingService().tokenize().apply {
         activeChange.subscribe({
@@ -1167,6 +1174,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
         override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
+        override val businessNetworksService: BusinessNetworksService? get() = this@AbstractNode.businessNetworksService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

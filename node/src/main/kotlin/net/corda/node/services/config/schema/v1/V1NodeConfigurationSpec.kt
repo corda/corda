@@ -66,6 +66,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
             .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
     private val flowExternalOperationThreadPoolSize by int().optional().withDefaultValue(Defaults.flowExternalOperationThreadPoolSize)
     private val quasarExcludePackages by string().list().optional().withDefaultValue(Defaults.quasarExcludePackages)
+    private val businessNetworks by nested(BusinessNetworksConfigSpec).optional()
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -133,7 +134,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     networkParameterAcceptanceSettings = config[networkParameterAcceptanceSettings],
                     configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Options.defaults),
                     flowExternalOperationThreadPoolSize = config[flowExternalOperationThreadPoolSize],
-                    quasarExcludePackages = config[quasarExcludePackages]
+                    quasarExcludePackages = config[quasarExcludePackages],
+                    businessNetworks = config[businessNetworks]
             ))
         } catch (e: Exception) {
             return when (e) {

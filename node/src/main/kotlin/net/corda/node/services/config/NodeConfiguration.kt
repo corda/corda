@@ -93,6 +93,8 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
 
     val quasarExcludePackages: List<String>
 
+    val businessNetworks: BusinessNetworksConfig?
+
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
@@ -325,3 +327,16 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         }
     }
 }
+
+/**
+ * Specifies Business Network node storage implementation details.
+ *
+ * @property serviceType Type of storage used on the node.
+ * @property serviceClass Name of the class implementing specified storage type.
+ */
+data class BusinessNetworksConfig(val serviceType: BusinessNetworksServiceType, val serviceClass: String)
+
+/**
+ * Represents all Business Network storage types on the node.
+ */
+enum class BusinessNetworksServiceType { VAULT }

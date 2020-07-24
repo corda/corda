@@ -11,6 +11,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
+import net.corda.core.node.services.bn.BusinessNetworksService
 import net.corda.core.node.services.diagnostics.DiagnosticsService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -170,6 +171,12 @@ interface ServiceHub : ServicesForResolution {
      * @suppress
      */
     val transactionVerifierService: TransactionVerifierService
+
+    /**
+     * The Business Network Service provides Business Network related information about the node and instantiates implementation specific
+     * administrative Business Network management flows.
+     */
+    val businessNetworksService: BusinessNetworksService?
 
     /**
      * A [Clock] representing the node's current time. This should be used in preference to directly accessing the

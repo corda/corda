@@ -14,6 +14,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.config.BusinessNetworksConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -44,13 +45,14 @@ data class MockNodeParameters(
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: MockNodeConfigOverrides? = null,
-        val additionalCordapps: Collection<TestCordapp> = emptyList()) {
+        val additionalCordapps: Collection<TestCordapp> = emptyList(),
+        val businessNetworks: BusinessNetworksConfig? = null) {
 
     constructor(forcedID: Int? = null,
                 legalName: CordaX500Name? = null,
                 entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                 configOverrides: MockNodeConfigOverrides
-    ) : this(forcedID, legalName, entropyRoot, configOverrides, emptyList())
+    ) : this(forcedID, legalName, entropyRoot, configOverrides, emptyList(), null)
 
     fun withForcedID(forcedID: Int?): MockNodeParameters = copy(forcedID = forcedID)
     fun withLegalName(legalName: CordaX500Name?): MockNodeParameters = copy(legalName = legalName)
