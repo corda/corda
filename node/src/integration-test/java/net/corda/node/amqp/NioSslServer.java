@@ -176,7 +176,7 @@ public class NioSslServer extends NioSslPeer {
                 switch (result.getStatus()) {
                     case OK:
                         peerAppData.flip();
-                        log.debug("Incoming message: " + new String(peerAppData.array()));
+                        log.debug("Incoming message: " + peerAppDataAsString());
                         break;
                     case BUFFER_OVERFLOW:
                         peerAppData = enlargeApplicationBuffer(engine, peerAppData);

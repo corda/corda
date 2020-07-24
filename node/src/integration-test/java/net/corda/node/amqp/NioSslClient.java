@@ -182,7 +182,7 @@ public class NioSslClient extends NioSslPeer {
                     switch (result.getStatus()) {
                         case OK:
                             peerAppData.flip();
-                            log.debug("Server response: " + new String(peerAppData.array()));
+                            log.debug("Server response: " + peerAppDataAsString());
                             exitReadLoop = true;
                             break;
                         case BUFFER_OVERFLOW:
