@@ -5,12 +5,12 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
+import net.corda.core.flows.PartyIdentity
 import net.corda.core.flows.PartyNotFoundException
 import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.ReceiveTransactionFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.ThreadBox
@@ -113,13 +113,35 @@ class StaffedFlowHospital(
     //when the update completes we start the processing of the nodes
     private fun checkNodesWaitingForRefresh(@Suppress("UNUSED_PARAMETER") update: Unit) {
         mutex.locked {
-            for ((name, flows) in nodesWaitingForNetworkMapRefresh) {
-                if (networkMapCacheInternal.getNodeByLegalName(name) != null) {
-                    scheduleEvents(flows, "Party: $name is now in network map, retrying flow: ", Event.RetryFlowFromSafePoint)
-                } else {
-                    scheduleEvents(flows, "Party: $name still not in network map, propagating error for flow: ", Event.StartErrorPropagation)
-                }
+            for ((party, flows) in partiesWaitingForNetworkMapRefresh) {
+                party.partyName?.let {
+                    scheduleRetryOrErrorPropagationEvent(
+                            networkMapCacheInternal.getNodeByLegalName(it) != null,
+                            flows,
+                            party
+                    )
+                } ?: scheduleRetryOrErrorPropagationEvent(
+                        networkMapCacheInternal.getNodesByLegalIdentityKey(party.partyKey!!).isNotEmpty(),
+                        flows,
+                        party
+                )
             }
+        }
+    }
+
+    private fun scheduleRetryOrErrorPropagationEvent(condition: Boolean, flows: Set<StateMachineRunId>, partyNameOrOwningKey: Any) {
+        if (condition) {
+            scheduleEvents(
+                    flows,
+                    "Party: $partyNameOrOwningKey is now in network map, retrying flow: ",
+                    Event.RetryFlowFromSafePoint
+            )
+        } else {
+            scheduleEvents(
+                    flows,
+                    "Party: $partyNameOrOwningKey still not in network map, propagating error for flow: ",
+                    Event.StartErrorPropagation
+            )
         }
     }
 
@@ -154,7 +176,7 @@ class StaffedFlowHospital(
         val flowPatients = HashMap<StateMachineRunId, FlowMedicalHistory>()
         val treatableSessionInits = HashMap<StateMachineRunId, InternalSessionInitRecord>()
         val recordsPublisher = PublishSubject.create<MedicalRecord>()
-        val nodesWaitingForNetworkMapRefresh = HashMap<CordaX500Name, MutableSet<StateMachineRunId>>()
+        val partiesWaitingForNetworkMapRefresh = HashMap<PartyIdentity, MutableSet<StateMachineRunId>>()
     })
     private val secureRandom = newSecureRandom()
 
@@ -276,7 +298,12 @@ class StaffedFlowHospital(
                 Diagnosis.WAITING_FOR_NETWORK_MAP_REFRESH -> {
                     log.info("Flow error is waiting for networkmap refresh (error was ${report.error.message})")
                     onFlowKeptForWaitingForNetworkMapRefresh.forEach { hook -> hook.invoke(flowFiber.id, report.by.map{it.toString()}) }
-                    nodesWaitingForNetworkMapRefresh.getOrPut((report.error.cause as PartyNotFoundException).party) { HashSet() }.add(flowFiber.id)
+
+                    val partyNotFoundException = report.error.cause as PartyNotFoundException
+                    partiesWaitingForNetworkMapRefresh.getOrPut(
+                            PartyIdentity(partyNotFoundException.party.partyKey, partyNotFoundException.party.partyName)
+                    ) { HashSet() }.add(flowFiber.id)
+
                     EventOutcome(Outcome.WAITING_FOR_NETWORK_MAP_REFRESH, null, 0.seconds)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
@@ -711,10 +738,14 @@ class StaffedFlowHospital(
             val diagnosis: Diagnosis
             if(newError is StateTransitionException && newError.exception is PartyNotFoundException) {
                 val partyNotFoundException = newError.exception
-                log.info("Adding to waiting for network map refresh: ${partyNotFoundException.party}")
+                log.info("Adding to waiting for network map refresh: " +
+                        "${partyNotFoundException.party.partyName ?: "${partyNotFoundException.party.partyKey}"}"
+                )
                 diagnosis = Diagnosis.WAITING_FOR_NETWORK_MAP_REFRESH
             } else if(newError is PartyNotFoundException) {
-                log.info("Adding to waiting for network map refresh: ${newError.party}")
+                log.info("Adding to waiting for network map refresh: " +
+                        "${newError.party.partyName ?: "${newError.party.partyKey}"}"
+                )
                 diagnosis = Diagnosis.WAITING_FOR_NETWORK_MAP_REFRESH
             } else {
                 diagnosis = Diagnosis.NOT_MY_SPECIALTY

@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.Destination
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.PartyIdentity
 import net.corda.core.flows.PartyNotFoundException
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -74,14 +75,17 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             destination
         } else {
             // We assume that the destination type has already been checked by initiateFlow
-            val wellKnown = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(destination as AnonymousParty)) {
-                "We do not know who $destination belongs to"
+            val anonymousParty = destination as AnonymousParty
+            val wellKnown = requireNotNull(serviceHub.identityService.wellKnownPartyFromAnonymous(anonymousParty)) {
+                throw PartyNotFoundException("Could not find party: ${anonymousParty.owningKey}", PartyIdentity(partyKey = anonymousParty.owningKey))
             }
             log.trace { "Sending message $deduplicationId $message to $wellKnown on behalf of $destination" }
             wellKnown
         }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
-        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) { throw PartyNotFoundException("Could not find party: $party", party.name) }
+        val partyInfo = requireNotNull(serviceHub.networkMapCache.getPartyInfo(party)) {
+            throw PartyNotFoundException("Could not find party: ${party.name}", PartyIdentity(partyName = party.name))
+        }
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
             is InitialSessionMessage -> message.initiatorSessionId
