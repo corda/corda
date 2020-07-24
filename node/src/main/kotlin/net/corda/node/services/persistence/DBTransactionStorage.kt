@@ -304,7 +304,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
 
         // final pagination check
         if (query.maxResults > MAX_PAGE_SIZE) {
-            throw TransactionStorage.TransactionsQueryException("There are ${query.maxResults} results, which exceeds the limit of $MAX_PAGE_SIZE")
+            throw TransactionStorage.TransactionsQueryException("The requested page size ${query.maxResults} exceeds the limit of $MAX_PAGE_SIZE")
         }
         //execute
         val results = query.resultList
