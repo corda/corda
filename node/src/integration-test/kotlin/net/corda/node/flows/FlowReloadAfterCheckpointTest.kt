@@ -32,6 +32,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
+import java.sql.SQLTransientConnectionException
 import java.util.concurrent.Semaphore
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -198,6 +199,25 @@ class FlowReloadAfterCheckpointTest {
 
             alice.rpc.startFlow(::MyTimedFlow).returnValue.getOrThrow()
             assertEquals(5, reloadCount)
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `flow will correctly retry after an error when reloadCheckpointAfterSuspend is true`() {
+        var reloadCount = 0
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
+        var timesDischarged = 0
+        StaffedFlowHospital.onFlowDischarged.add { _, _ -> timesDischarged += 1 }
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
+
+            val alice = startNode(
+                providedName = ALICE_NAME,
+                customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
+            ).getOrThrow()
+
+            alice.rpc.startFlow(::TransientConnectionFailureFlow).returnValue.getOrThrow()
+            assertEquals(5, reloadCount)
+            assertEquals(3, timesDischarged)
         }
     }
 
@@ -410,6 +430,28 @@ class FlowReloadAfterCheckpointTest {
             if (!thrown) {
                 thrown = true
                 throw FlowTimeoutException()
+            }
+            sleep(1.seconds)
+            sleep(1.seconds)
+        }
+    }
+
+    @StartableByRPC
+    @InitiatingFlow
+    class TransientConnectionFailureFlow : FlowLogic<Unit>() {
+
+        companion object {
+            var retryCount = 0
+        }
+
+        @Suspendable
+        override fun call() {
+            sleep(1.seconds)
+            sleep(1.seconds)
+            if (retryCount < 3) {
+                retryCount += 1
+                throw SQLTransientConnectionException("Connection is not available")
+
             }
             sleep(1.seconds)
             sleep(1.seconds)
