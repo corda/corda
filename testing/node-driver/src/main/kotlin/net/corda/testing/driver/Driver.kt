@@ -27,6 +27,7 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
+import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -68,6 +69,8 @@ interface NodeHandle : AutoCloseable {
 
     fun running(): Boolean;
 }
+
+fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()
 
 /** Interface which represents an out of process node and exposes its process handle. **/
 @DoNotImplement

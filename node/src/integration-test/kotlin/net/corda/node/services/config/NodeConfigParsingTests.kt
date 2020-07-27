@@ -1,10 +1,10 @@
 package net.corda.node.services.config
 
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.driver.logFile
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
