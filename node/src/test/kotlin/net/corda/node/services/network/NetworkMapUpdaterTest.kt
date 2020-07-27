@@ -389,6 +389,7 @@ class NetworkMapUpdaterTest {
     fun `update nodes is successful for network map supporting bulk operations but with only a few nodes requested`() {
         server.version = "2"
         setUpdater()
+        // on first update, bulk request is used
         val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("info1")
         val nodeInfoHash1 = nodeInfo1.serialize().sha256()
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("info2")
@@ -397,11 +398,23 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(signedNodeInfo2)
 
         startUpdater()
-        Thread.sleep(2L * cacheExpiryMs)
 
-        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo1))
-        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo2))
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo1, nodeInfo2))
         assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2)
+
+        // on subsequent updates, single requests are used
+        val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("info3")
+        val nodeInfoHash3 = nodeInfo3.serialize().sha256()
+        val (nodeInfo4, signedNodeInfo4) = createNodeInfoAndSigned("info4")
+        val nodeInfoHash4 = nodeInfo4.serialize().sha256()
+        networkMapClient.publish(signedNodeInfo3)
+        networkMapClient.publish(signedNodeInfo4)
+
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo3))
+        verify(networkMapCache, times(1)).addOrUpdateNodes(listOf(nodeInfo4))
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(nodeInfoHash1, nodeInfoHash2, nodeInfoHash3, nodeInfoHash4)
     }
 
     @Test(timeout=300_000)

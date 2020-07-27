@@ -188,7 +188,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val allNodeHashes = networkMapCache.allNodeHashes
         val nodeHashesToBeDeleted = (allNodeHashes - allHashesFromNetworkMap - nodeInfoWatcher.processedNodeInfoHashes)
                 .filter { it != ourNodeInfoHash }
-        if (version == "1" || (allHashesFromNetworkMap - allNodeHashes).size < bulkNodeInfoFetchThreshold)
+        // enforce bulk fetch when no other nodes are known or unknown nodes count is less than threshold
+        if (version == "1" || (allNodeHashes.size > 1 && (allHashesFromNetworkMap - allNodeHashes).size < bulkNodeInfoFetchThreshold))
             updateNodeInfosV1(allHashesFromNetworkMap, allNodeHashes, networkMapClient)
         else
             updateNodeInfos(allHashesFromNetworkMap)
@@ -203,6 +204,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun updateNodeInfos(allHashesFromNetworkMap: Set<SecureHash>) {
+        val networkMapDownloadStartTime = System.currentTimeMillis()
         val nodeInfos = try {
             networkMapClient!!.getNodeInfos()
         } catch (e: Exception) {
@@ -213,6 +215,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             logger.warn("Error encountered when downloading node info '$it', skipping...")
         }
         networkMapCache.addOrUpdateNodes(nodeInfos)
+        logger.info("Fetched: ${nodeInfos.size} using 1 bulk request in ${System.currentTimeMillis() - networkMapDownloadStartTime}ms")
     }
 
     private fun updateNodeInfosV1(allHashesFromNetworkMap: Set<SecureHash>, allNodeHashes: List<SecureHash>, networkMapClient: NetworkMapClient) {
