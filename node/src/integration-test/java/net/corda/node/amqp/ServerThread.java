@@ -18,9 +18,11 @@ import java.time.Duration;
  *
  * @author <a href="mailto:alex.a.karnezis@gmail.com">Alex Karnezis</a>
  */
-public class ServerRunnable implements Runnable {
+public class ServerThread implements AutoCloseable {
 
-    private final static Logger log = LoggerFactory.getLogger(ServerRunnable.class);
+    private final static Logger log = LoggerFactory.getLogger(ServerThread.class);
+
+    private static final long JOIN_TIMEOUT_MS = 10000;
 
     private final KeyManagerFactory keyManagerFactory;
     private final TrustManagerFactory trustManagerFactory;
@@ -30,35 +32,47 @@ public class ServerRunnable implements Runnable {
 
     NioSslServer server;
 
-    public ServerRunnable(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port) {
+    private Thread serverThread;
+
+    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port) {
         this(keyManagerFactory, trustManagerFactory, port, null);
     }
 
-    public ServerRunnable(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port, @Nullable Duration handshakeDelay) {
+    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port, @Nullable Duration handshakeDelay) {
         this.keyManagerFactory = keyManagerFactory;
         this.trustManagerFactory = trustManagerFactory;
         this.port = port;
         this.handshakeDelay = handshakeDelay;
     }
 
-    @Override
-    public void run() {
-        try {
-            server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port, handshakeDelay);
-            server.start();
-        } catch (Exception e) {
-            log.error("Exception starting server", e);
-        }
+    public void start() {
+        Runnable serverRunnable = () -> {
+            try {
+                server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port, handshakeDelay);
+                server.start();
+            } catch (Exception e) {
+                log.error("Exception starting server", e);
+            }
+        };
+
+        serverThread = new Thread(serverRunnable, this.getClass().getSimpleName() + "-ServerThread");
+        serverThread.start();
     }
 
     /**
      * Should be called in order to gracefully stop the server.
      */
-    public void stop() {
+    public void stop() throws InterruptedException {
         server.stop();
+        serverThread.join(JOIN_TIMEOUT_MS);
     }
 
     public boolean isActive() {
         return server.isActive();
+    }
+
+    @Override
+    public void close() throws Exception {
+        stop();
     }
 }

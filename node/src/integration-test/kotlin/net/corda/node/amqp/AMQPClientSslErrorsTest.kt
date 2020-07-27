@@ -119,93 +119,85 @@ class AMQPClientSslErrorsTest {
     @Test(timeout = 300_000)
     fun trivialClientServerExchange() {
         val serverPort = portAllocation.nextPort()
-        val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
-        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
-        serverThread.start()
+        val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort).also { it.start() }
 
         //System.setProperty("javax.net.debug", "all");
 
-        val client = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
-        client.connect()
-        client.write("Hello! I am a client!")
-        client.read()
-        client.shutdown()
+        serverThread.use {
+            val client = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
+            client.connect()
+            client.write("Hello! I am a client!")
+            client.read()
+            client.shutdown()
 
-        val client2 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
-        val client3 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
-        val client4 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
+            val client2 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
+            val client3 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
+            val client4 = NioSslClient(clientKeyManagerFactory, clientTrustManagerFactory, "localhost", serverPort)
 
-        client2.connect()
-        client2.write("Hello! I am another client!")
-        client2.read()
-        client2.shutdown()
+            client2.connect()
+            client2.write("Hello! I am another client!")
+            client2.read()
+            client2.shutdown()
 
-        client3.connect()
-        client4.connect()
-        client3.write("Hello from client3!!!")
-        client4.write("Hello from client4!!!")
-        client3.read()
-        client4.read()
-        client3.shutdown()
-        client4.shutdown()
-
-        serverRunnable.stop()
-        serverThread.join(10000)
-        assertFalse(serverRunnable.isActive)
+            client3.connect()
+            client4.connect()
+            client3.write("Hello from client3!!!")
+            client4.write("Hello from client4!!!")
+            client3.read()
+            client4.read()
+            client3.shutdown()
+            client4.shutdown()
+        }
+        assertFalse(serverThread.isActive)
     }
 
     @Test(timeout = 300_000)
     fun amqpClientServerExchange() {
         val serverPort = portAllocation.nextPort()
-        val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
-        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
-        serverThread.start()
+        val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
+                .also { it.start() }
+        serverThread.use {
 
-        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
+            val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
 
-        amqpClient.use {
-            val clientConnected = amqpClient.onConnection.toFuture()
-            amqpClient.start()
-            val clientConnect = clientConnected.get()
-            assertTrue(clientConnect.connected)
+            amqpClient.use {
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val clientConnect = clientConnected.get()
+                assertTrue(clientConnect.connected)
 
-            log.info("Confirmed connected")
+                log.info("Confirmed connected")
 
-            val testPayload = "TestPayload".toByteArray()
-            val testQueueName = "TestQueueName"
-            val msg = amqpClient.createMessage(testPayload, testQueueName, ALICE_NAME.toString(), emptyMap())
-            amqpClient.write(msg)
+                val testPayload = "TestPayload".toByteArray()
+                val testQueueName = "TestQueueName"
+                val msg = amqpClient.createMessage(testPayload, testQueueName, ALICE_NAME.toString(), emptyMap())
+                amqpClient.write(msg)
 
-            log.info("Confirmed message sent")
-            // Unfortunately, the server is not talking AMQP protocol yet, so it cannot advice to the client that message been accepted
-            assertEquals(MessageStatus.Rejected, msg.onComplete.get())
+                log.info("Confirmed message sent")
+                // Unfortunately, the server is not talking AMQP protocol yet, so it cannot advice to the client that message been accepted
+                assertEquals(MessageStatus.Rejected, msg.onComplete.get())
+            }
         }
-
-        serverRunnable.stop()
-        serverThread.join(10000)
-        assertFalse(serverRunnable.isActive)
+        assertFalse(serverThread.isActive)
     }
 
     @Test(timeout = 300_000)
     fun amqpClientServerExchangeHandshakeTimeout() {
         val serverPort = portAllocation.nextPort()
-        val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort, 5.seconds)
-        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
-        serverThread.start()
+        val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort, 5.seconds)
+                .also { it.start() }
+        serverThread.use {
+            val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
 
-        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
-
-        amqpClient.use {
-            val clientConnected = amqpClient.onConnection.toFuture()
-            amqpClient.start()
-            val clientConnect = clientConnected.get()
-            assertFalse(clientConnect.connected)
-            // Not a badCert, but a timeout during handshake
-            assertFalse(clientConnect.badCert)
+            amqpClient.use {
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val clientConnect = clientConnected.get()
+                assertFalse(clientConnect.connected)
+                // Not a badCert, but a timeout during handshake
+                assertFalse(clientConnect.badCert)
+            }
         }
-
-        serverRunnable.stop()
-        serverThread.join(10000)
-        assertFalse(serverRunnable.isActive)
+        assertFalse(serverThread.isActive)
     }
 }
