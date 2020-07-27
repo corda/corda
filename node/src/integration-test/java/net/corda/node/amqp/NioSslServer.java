@@ -47,12 +47,12 @@ public class NioSslServer extends NioSslPeer {
      * The context will be initialized with a specific SSL/TLS protocol and will then be used
      * to create {@link SSLEngine} classes for each new connection that arrives to the server.
      */
-    private SSLContext context;
+    private final SSLContext context;
 
     /**
      * A part of Java NIO that will be used to serve all connections to the server in one thread.
      */
-    private Selector selector;
+    private final Selector selector;
 
 
     /**
@@ -60,8 +60,7 @@ public class NioSslServer extends NioSslPeer {
      *
      * @param hostAddress - the IP address this server will listen to.
      * @param port - the port this server will listen to.
-     * @param handShakeDelay
-     * @throws Exception
+     * @param handShakeDelay - if not [null] specifies for how long the handshake should be delayed
      */
     public NioSslServer(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, String hostAddress, int port,
                         Duration handShakeDelay) throws Exception {
@@ -91,8 +90,6 @@ public class NioSslServer extends NioSslPeer {
      * This method will run in a loop as long as the server is active. In order to stop the server
      * you should use {@link NioSslServer#stop()} which will set it to inactive state
      * and also wake up the listener, which may be in blocking select() state.
-     *
-     * @throws Exception
      */
     public void start() throws Exception {
 
@@ -136,7 +133,6 @@ public class NioSslServer extends NioSslPeer {
      * that will be exchanged during the session with this specific client.
      *
      * @param key - the key dedicated to the {@link ServerSocketChannel} used by the server to listen to new connection requests.
-     * @throws Exception
      */
     private void accept(SelectionKey key) throws Exception {
 
@@ -246,7 +242,7 @@ public class NioSslServer extends NioSslPeer {
                     myNetData = enlargePacketBuffer(engine, myNetData);
                     break;
                 case BUFFER_UNDERFLOW:
-                    throw new SSLException("Buffer underflow occured after a wrap. I don't think we should ever get here.");
+                    throw new SSLException("Buffer underflow occurred after a wrap. I don't think we should ever get here.");
                 case CLOSED:
                     closeConnection(socketChannel, engine);
                     return;
@@ -264,5 +260,4 @@ public class NioSslServer extends NioSslPeer {
     public boolean isActive() {
         return active;
     }
-
 }

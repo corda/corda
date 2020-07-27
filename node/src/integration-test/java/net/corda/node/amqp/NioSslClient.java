@@ -31,17 +31,17 @@ public class NioSslClient extends NioSslPeer {
     /**
      * The remote address of the server this client is configured to connect to.
      */
-    private String remoteAddress;
+    private final String remoteAddress;
 
     /**
      * The port of the server this client is configured to connect to.
      */
-    private int port;
+    private final int port;
 
     /**
      * The engine that will be used to encrypt/decrypt data between this client and the server.
      */
-    private SSLEngine engine;
+    private final SSLEngine engine;
 
     /**
      * The socket channel that will be used as the transport link between this client and the server.
@@ -75,7 +75,6 @@ public class NioSslClient extends NioSslPeer {
      * Opens a socket channel to communicate with the configured server and tries to complete the handshake protocol.
      *
      * @return True if client established a connection with the server, false otherwise.
-     * @throws Exception
      */
     public boolean connect() throws Exception {
         socketChannel = SocketChannel.open();
@@ -146,8 +145,6 @@ public class NioSslClient extends NioSslPeer {
 
     /**
      * Public method to try to read from the server.
-     *
-     * @throws Exception
      */
     public void read() throws Exception {
         read(socketChannel, engine);
@@ -158,11 +155,10 @@ public class NioSslClient extends NioSslPeer {
      * Uses {@link SocketChannel#read(ByteBuffer)}, which is non-blocking, and if
      * it gets nothing from the peer, waits for {@code waitToReadMillis} and tries again.
      * <p/>
-     * Just like {@link NioSslClient#read(SocketChannel, SSLEngine)} it uses inner class' socket channel
+     * Just like {@link NioSslPeer#read(SocketChannel, SSLEngine)} it uses inner class' socket channel
      * and engine and should not be used by the client. {@link NioSslClient#read()} should be called instead.
      *
      * @param engine - the engine used for encryption/decryption of the data exchanged between the two peers.
-     * @throws Exception
      */
     @Override
     protected void read(SocketChannel socketChannel, SSLEngine engine) throws Exception  {
