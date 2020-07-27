@@ -67,7 +67,7 @@ class NetworkParametersUpdater(baseDirectory: Path,
      * Ignoring always hotloadable properties (epoch, modifiedTime) return true if the notary is the only property that is different in the new network parameters
      */
     @VisibleForTesting
-    private fun canHotload(newNetworkParameters: NetworkParameters): Boolean {
+    fun canHotload(newNetworkParameters: NetworkParameters): Boolean {
 
         if (notaryUpdateListeners.isEmpty()) {
             logger.warn("There is no update function assigned to notary changes.")
