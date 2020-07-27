@@ -278,6 +278,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         private val log = contextLogger()
     }
 
+    // incrementally build list of join predicates
+    private val joinPredicates = mutableListOf<Predicate>()
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out StatePersistable>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
@@ -476,6 +478,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // ensure we re-use any existing instance of the same root entity
         val vaultFungibleStatesRoot = getVaultFungibleStateRoot()
+        val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"),
+                vaultFungibleStatesRoot.get<PersistentStateRef>("stateRef"))
+        predicateSet.add(joinPredicate)
 
         // owner
         criteria.owner?.let {
@@ -544,6 +549,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // ensure we re-use any existing instance of the same root entity
         val vaultLinearStatesRoot = getVaultLinearStatesRoot()
+        val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"),
+                vaultLinearStatesRoot.get<PersistentStateRef>("stateRef"))
+        predicateSet.add(joinPredicate)
 
         // linear ids UUID
         criteria.uuid?.let {
@@ -602,6 +610,13 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         entityRoot
                     }
 
+            val joinPredicate = if(IndirectStatePersistable::class.java.isAssignableFrom(entityRoot.javaType)) {
+                criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<IndirectStatePersistable<*>>("compositeKey").get<PersistentStateRef>("stateRef"))
+            } else {
+                criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
+            }
+            predicateSet.add(joinPredicate)
+
             // resolve general criteria expressions
             @Suppress("UNCHECKED_CAST")
             parseExpression(entityRoot as Root<L>, criteria.expression, predicateSet)
@@ -633,8 +648,15 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         criteriaQuery.multiselect(selections)
         val combinedPredicates = commonPredicates.values.plus(predicateSet)
                 .plus(constraintPredicates)
+                .plus(joinPredicates)
 
-        criteriaQuery.where(*combinedPredicates.toTypedArray(), *joinStateRefPredicate().toTypedArray())
+        val forceJoinPredicates = joinStateRefPredicate()
+
+        if(forceJoinPredicates.isEmpty()) {
+            criteriaQuery.where(*combinedPredicates.toTypedArray())
+        } else {
+            criteriaQuery.where(*combinedPredicates.toTypedArray(), criteriaBuilder.or(*forceJoinPredicates.toTypedArray()))
+        }
 
         return predicateSet
     }
