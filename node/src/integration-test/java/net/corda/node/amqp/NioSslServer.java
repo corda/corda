@@ -142,6 +142,8 @@ public class NioSslServer extends NioSslPeer {
 
         SSLEngine engine = context.createSSLEngine();
         engine.setUseClientMode(false);
+        // Demand client to present its certificate
+        engine.setNeedClientAuth(true);
         engine.beginHandshake();
 
         if (doHandshake(socketChannel, engine)) {
