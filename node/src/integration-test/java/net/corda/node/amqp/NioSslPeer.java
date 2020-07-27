@@ -144,7 +144,8 @@ public abstract class NioSslPeer {
                         try {
                             engine.closeInbound();
                         } catch (SSLException e) {
-                            log.error("This engine was forced to close inbound, without having received the proper SSL/TLS close notification message from the peer, due to end of stream.");
+                            log.error("This engine was forced to close inbound, without having received the proper SSL/TLS close " +
+                                    "notification message from the peer, due to end of stream.", e);
                         }
                         engine.closeOutbound();
                         // After closeOutbound the engine will be set to WRAP state, in order to try to send a close message to the client.
@@ -157,7 +158,8 @@ public abstract class NioSslPeer {
                         peerNetData.compact();
                         handshakeStatus = result.getHandshakeStatus();
                     } catch (SSLException sslException) {
-                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort. Will try to properly close connection...");
+                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort." +
+                                " Will try to properly close connection...", sslException);
                         engine.closeOutbound();
                         handshakeStatus = engine.getHandshakeStatus();
                         break;
@@ -191,7 +193,8 @@ public abstract class NioSslPeer {
                         result = engine.wrap(myAppData, myNetData);
                         handshakeStatus = result.getHandshakeStatus();
                     } catch (SSLException sslException) {
-                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort. Will try to properly close connection...");
+                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort." +
+                                "Will try to properly close connection...", sslException);
                         engine.closeOutbound();
                         handshakeStatus = engine.getHandshakeStatus();
                         break;

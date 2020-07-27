@@ -4,15 +4,20 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.div
+import net.corda.core.toFuture
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.protonwrapper.netty.initialiseTrustStoreAndEnableCrlChecking
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.junit.Before
 import org.junit.Rule
@@ -20,6 +25,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class AMQPClientSslErrorsTest {
@@ -39,6 +45,8 @@ class AMQPClientSslErrorsTest {
 
     private lateinit var clientKeyManagerFactory: KeyManagerFactory
     private lateinit var clientTrustManagerFactory: TrustManagerFactory
+
+    private lateinit var clientAmqpConfig: AMQPConfiguration
 
     @Before
     fun setup() {
@@ -91,7 +99,7 @@ class AMQPClientSslErrorsTest {
         //val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val keyStore = clientConfig.p2pSslOptions.keyStore.get()
 
-        val clientAmqpConfig = object : AMQPConfiguration {
+        clientAmqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
@@ -136,6 +144,33 @@ class AMQPClientSslErrorsTest {
         client4.read()
         client3.shutdown()
         client4.shutdown()
+
+        serverRunnable.stop()
+        serverThread.join(10000)
+        assertFalse(serverRunnable.isActive)
+    }
+
+    @Test(timeout = 300_000)
+    fun amqpClientServerExchange() {
+        val serverPort = portAllocation.nextPort()
+        val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
+        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
+        serverThread.start()
+
+        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
+
+        amqpClient.use {
+            val clientConnected = amqpClient.onConnection.toFuture()
+            amqpClient.start()
+            val clientConnect = clientConnected.get()
+            assertEquals(true, clientConnect.connected)
+
+            val testPayload = "TestPayload".toByteArray()
+            val testQueueName = "TestQueueName"
+            val msg = amqpClient.createMessage(testPayload, testQueueName, CHARLIE_NAME.toString(), emptyMap())
+            amqpClient.write(msg)
+            assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+        }
 
         serverRunnable.stop()
         serverThread.join(10000)
