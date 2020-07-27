@@ -30,6 +30,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+/**
+ * This test verifies some edge case scenarios like handshake timeouts when [AMQPClient] connected to the server
+ *
+ * In order to have control over handshake internals a simple TLS server is created which may have a configurable handshake delay.
+ */
 class AMQPClientSslErrorsTest {
 
     companion object {
