@@ -305,7 +305,7 @@ class FlowClientIdTests {
 
                 if (firstRun) {
                     firstRun = false
-                    // high sleeping time doesn't matter because the fiber will get an [Event.SoftShutdown] which will wake up the fiber
+                    // high sleeping time doesn't matter because the fiber will get an [Event.SoftShutdown] on node restart, which will wake up the fiber
                     sleep(100.seconds, maySkipCheckpoint = true)
                 }
 
