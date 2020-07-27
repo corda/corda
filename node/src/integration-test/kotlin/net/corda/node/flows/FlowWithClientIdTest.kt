@@ -1,8 +1,11 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -10,8 +13,10 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Before
 import org.junit.Test
-import java.util.*
+import rx.Observable
+import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -55,9 +60,22 @@ class FlowWithClientIdTest {
             assertEquals(flowHandle0.clientId, flowHandle1.clientId)
             assertEquals(2, counter) // this asserts that 2 different flows were spawned indeed
         }
-
     }
 
+    @Test(timeout=300_000)
+    fun `on flow unserializable result a 'CordaRuntimeException' is thrown containing in its message the unserializable type`() {
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+
+            val e = assertFailsWith<CordaRuntimeException> {
+                nodeA.rpc.startFlowWithClientId(clientId, ::UnserializableResultFlow).returnValue.getOrThrow(20.seconds)
+            }
+
+            val errorMessage = e.message
+            assertTrue(errorMessage!!.contains("Unable to create an object serializer for type class ${UnserializableResultFlow.UNSERIALIZABLE_OBJECT::class.java.name}"))
+        }
+    }
 }
 
 @StartableByRPC
@@ -75,3 +93,14 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
     }
 }
 
+@StartableByRPC
+internal class UnserializableResultFlow: FlowLogic<OpenFuture<Observable<Unit>>>() {
+    companion object {
+        val UNSERIALIZABLE_OBJECT = openFuture<Observable<Unit>>().also { it.set(Observable.empty<Unit>())}
+    }
+
+    @Suspendable
+    override fun call(): OpenFuture<Observable<Unit>> {
+        return UNSERIALIZABLE_OBJECT
+    }
+}
