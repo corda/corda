@@ -11,7 +11,9 @@ import net.corda.core.serialization.CordaSerializationTransformRenames
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.loggerFor
 import net.corda.djvm.SandboxConfiguration
+import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.execution.ExecutionProfile
 import net.corda.djvm.rewiring.ByteCode
@@ -22,7 +24,9 @@ import net.corda.djvm.source.UserSource
 import net.corda.node.internal.djvm.DeterministicVerifier
 import java.net.URL
 import java.net.URLClassLoader
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.function.Consumer
 import java.util.function.UnaryOperator
 
@@ -34,6 +38,7 @@ class DeterministicVerifierFactoryService(
 ) : SingletonSerializeAsToken(), VerifierFactoryService {
     private val baseSandboxConfiguration: SandboxConfiguration
     private val cordappByteCodeCache = ConcurrentHashMap<ByteCodeKey, ByteCode>()
+    private val contexts: BlockingQueue<SandboxRuntimeContext> = LinkedBlockingQueue()
 
     init {
         val baseAnalysisConfiguration = AnalysisConfiguration.createRoot(
@@ -48,6 +53,7 @@ class DeterministicVerifierFactoryService(
                 DeprecatedConstructorForDeserialization::class.java
             ),
             bootstrapSource = bootstrapSource,
+//            overrideClasses = emptySet()
             overrideClasses = setOf(
                 /**
                  * These classes are all duplicated into the sandbox
@@ -85,7 +91,7 @@ class DeterministicVerifierFactoryService(
 
     private fun specialise(ltx: LedgerTransaction, classLoader: ClassLoader): Verifier {
         return (classLoader as? URLClassLoader)?.run {
-            DeterministicVerifier(ltx, classLoader, createSandbox(classLoader.urLs))
+            DeterministicVerifier(ltx, classLoader, getSandboxContext(classLoader), contexts)
         } ?: BasicVerifier(ltx, classLoader)
     }
 
@@ -93,6 +99,11 @@ class DeterministicVerifierFactoryService(
         return baseSandboxConfiguration.createChild(UserPathSource(userSource), Consumer {
             it.setExternalCache(cordappByteCodeCache)
         })
+    }
+
+    private fun getSandboxContext(classLoader: URLClassLoader): SandboxRuntimeContext {
+        logger.info("ACQUIRING SANDBOX CONTEXT")
+        return contexts.poll() ?: SandboxRuntimeContext(createSandbox(classLoader.urLs))
     }
 
     override fun close() {
@@ -108,6 +119,7 @@ class DeterministicVerifierFactoryService(
             jumpCostThreshold = 500_000_000,
             throwCostThreshold = 1_000_000
         )
+        private val logger = loggerFor<DeterministicVerifierFactoryService>()
     }
 }
 

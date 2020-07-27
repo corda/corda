@@ -241,7 +241,7 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        internalPrepareVerify(attachments).verify()
+        internalPrepareVerify(attachments).use(Verifier::verify)
     }
 
     /**
