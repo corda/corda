@@ -7,6 +7,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
@@ -66,8 +67,10 @@ class FlowRetryTest {
                 startNodesInProcess = isQuasarAgentSpecified(),
                 notarySpecs = emptyList()
         )) {
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
@@ -134,8 +137,10 @@ class FlowRetryTest {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::TransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
@@ -152,8 +157,10 @@ class FlowRetryTest {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<TimeoutException> {
                     it.proxy.startFlow(::WrappedTransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
@@ -170,8 +177,10 @@ class FlowRetryTest {
         val user = User("mark", "dadada", setOf(Permissions.all()))
         driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
                 assertFailsWith<CordaRuntimeException> {

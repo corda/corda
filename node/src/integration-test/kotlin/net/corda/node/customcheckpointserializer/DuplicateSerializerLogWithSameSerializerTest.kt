@@ -7,9 +7,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.logging.logFile
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.logFile
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions
 import org.junit.Test
