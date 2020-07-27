@@ -22,6 +22,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.internal.NetworkParametersReader
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
@@ -40,7 +41,7 @@ import javax.persistence.PersistenceException
 @ThreadSafe
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryListUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -385,5 +386,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
+    }
+
+    override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+        this.notaries = notaries
     }
 }

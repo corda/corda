@@ -59,6 +59,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.Mockito
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
@@ -118,12 +119,13 @@ class NetworkMapUpdaterTest {
                              networkParameters: NetworkParameters = server.networkParameters,
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
+
         updater!!.start(DEV_ROOT_CA.certificate,
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
                 MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
-                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
+                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters), null)
     }
 
     @Test(timeout=300_000)

@@ -109,6 +109,8 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NetworkParameterUpdateListener
+import net.corda.node.services.network.NetworkParametersUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
@@ -261,6 +263,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
+
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -487,12 +490,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startShell()
         networkMapClient?.start(trustRoot)
 
-        val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+        val networkParametersReader = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory)
+        val (netParams, signedNetParams) = networkParametersReader.read()
         log.info("Loaded network parameters: $netParams")
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         networkMapCache.start(netParams.notaries)
+
 
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
@@ -501,6 +506,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
 
+
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPair, publish = true)
         }
@@ -508,13 +514,29 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
-        networkMapUpdater.start(
-                trustRoot,
-                signedNetParams.raw.hash,
-                signedNodeInfo,
-                netParams,
-                keyManagementService,
-                configuration.networkParameterAcceptanceSettings!!)
+
+        val networkParametersUpdater = if (networkMapClient == null){
+            log.warn("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
+            null
+        } else {
+            NetworkParametersUpdater(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage)
+        }
+        networkParametersUpdater?.let {
+            it.addNotaryUpdateListener(networkMapCache)
+            it.addNotaryUpdateListener(identityService)
+            it.addNetworkParametersChangedListeners(services)
+        }
+            networkMapUpdater.start(
+                    trustRoot,
+                    signedNetParams.raw.hash,
+                    signedNodeInfo,
+                    netParams,
+                    keyManagementService,
+                    configuration.networkParameterAcceptanceSettings!!,
+                    networkParametersUpdater)
+
+
+
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
@@ -1158,7 +1180,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
+    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService
@@ -1276,6 +1298,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
             val ledgerTransaction = servicesForResolution.specialise(ltx)
             return verifierFactoryService.apply(ledgerTransaction)
+        }
+
+        override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+            this._networkParameters = networkParameters
         }
     }
 }

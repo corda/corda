@@ -8,8 +8,6 @@ import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -26,9 +24,7 @@ import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
@@ -53,7 +49,6 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaGetter
-import kotlin.system.exitProcess
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val nodeInfoWatcher: NodeInfoWatcher,
@@ -78,9 +73,11 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var currentParametersHash: SecureHash
     private lateinit var ourNodeInfo: SignedNodeInfo
     private lateinit var ourNodeInfoHash: SecureHash
+
     private lateinit var networkParameters: NetworkParameters
     private lateinit var keyManagementService: KeyManagementService
     private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
+    private  var networkParametersUpdater: NetworkParametersUpdater? = null
 
     override fun close() {
         fileWatcherSubscription.updateAndGet { subscription ->
@@ -94,12 +91,15 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
 
+
     fun start(trustRoot: X509Certificate,
               currentParametersHash: SecureHash,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,
               keyManagementService: KeyManagementService,
-              networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings) {
+              networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings,
+              networkParametersUpdater: NetworkParametersUpdater?
+             ) {
         fileWatcherSubscription.updateAndGet { subscription ->
             require(subscription == null) { "Should not call this method twice" }
             this.trustRoot = trustRoot
@@ -110,6 +110,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             this.keyManagementService = keyManagementService
             this.autoAcceptNetworkParameters = networkParameterAcceptanceSettings.autoAcceptEnabled
             this.excludedAutoAcceptNetworkParameters = networkParameterAcceptanceSettings.excludedAutoAcceptableParameters
+            this.networkParametersUpdater = networkParametersUpdater
+
 
             val autoAcceptNetworkParametersNames = autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
             if (autoAcceptNetworkParameters && autoAcceptNetworkParametersNames.isNotEmpty()) {
@@ -185,9 +187,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             }
         }
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
-        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
-            exitOnParametersMismatch(globalNetworkMap)
-        }
+        networkParametersUpdater?.update(globalNetworkMap.networkParameterHash)
         // Calculate any nodes that are now gone and remove _only_ them from the cache
         // NOTE: We won't remove them until after the add/update cycle as only then will we definitely know which nodes are no longer
         // in the network
@@ -238,24 +238,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         // it's empty
         networkMapCache.nodeReady.set(null)
         return cacheTimeout
-    }
-
-    private fun exitOnParametersMismatch(networkMap: NetworkMap) {
-        val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
-        val exitCode = if (acceptedHash == networkMap.networkParameterHash) {
-            logger.info("Flag day occurred. Network map switched to the new network parameters: " +
-                    "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
-            0
-        } else {
-            // TODO This needs special handling (node omitted update process or didn't accept new parameters)
-            logger.error(
-                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
-To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
-The node will shutdown now.""")
-            1
-        }
-        exitProcess(exitCode)
     }
 
     private fun handleUpdateNetworkParameters(networkMapClient: NetworkMapClient, update: ParametersUpdate) {
@@ -324,7 +306,8 @@ internal fun NetworkParameters.canAutoAccept(newNetworkParameters: NetworkParame
 
 private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean = findAnnotation<AutoAcceptable>() != null
 
-private fun NetworkParameters.valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
+
+ fun NetworkParameters.valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
     val propertyValue = getter?.invoke(this)
     val newPropertyValue = getter?.invoke(newNetworkParameters)
     return propertyValue != newPropertyValue
