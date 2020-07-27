@@ -291,42 +291,31 @@ class FlowClientIdTests {
         Assert.assertEquals(10, resultsCounter.get())
     }
 
-
     @Test(timeout=300_000)
     fun `on node start -running- flows with client id are hook-able`() {
         val clientId = UUID.randomUUID().toString()
-        var noSecondFlowWasSpawned = 0
         var firstRun = true
-        var firstFiber: Fiber<out Any?>? = null
         val flowIsRunning = Semaphore(0)
         val waitUntilFlowIsRunning = Semaphore(0)
 
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                if (firstRun) {
-                    firstFiber = Fiber.currentFiber()
-                    firstRun = false
-                }
-
                 waitUntilFlowIsRunning.release()
-                try {
-                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
-                } catch (e: InterruptedException) {
-                    flowIsRunning.release()
-                    throw e
+
+                if (firstRun) {
+                    firstRun = false
+                    // high sleeping time doesn't matter because the fiber will get an [Event.SoftShutdown] which will wake up the fiber
+                    sleep(100.seconds, maySkipCheckpoint = true)
                 }
 
-                noSecondFlowWasSpawned++
+                flowIsRunning.acquire() // make flow wait here to impersonate a running flow
             }
         }
 
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         waitUntilFlowIsRunning.acquire()
-        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val aliceNode = mockNet.restartNode(aliceNode)
-        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
-        firstFiber!!.interrupt()
 
         waitUntilFlowIsRunning.acquire()
         // Re-hook a running flow
@@ -336,7 +325,6 @@ class FlowClientIdTests {
         Assert.assertEquals(flowHandle0.id, flowHandle1.id)
         Assert.assertEquals(clientId, flowHandle1.clientId)
         Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
-        Assert.assertEquals(1, noSecondFlowWasSpawned)
     }
 
 //    @Test(timeout=300_000)
@@ -496,6 +484,7 @@ class FlowClientIdTests {
         }
     }
 
+    //TODO make this test work regardless current flow
     // This test is now redundant since, upon error at serialization of result we error and propagate
 //    @Test
 //    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
