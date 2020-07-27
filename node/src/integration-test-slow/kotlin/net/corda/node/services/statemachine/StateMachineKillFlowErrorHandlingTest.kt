@@ -9,8 +9,6 @@ import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import org.junit.Test
 import java.time.Duration

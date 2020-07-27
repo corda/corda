@@ -77,6 +77,7 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun recover(): ReusableDriver? {
         return try {
             recoveries.forEach { it.invoke() }
@@ -90,19 +91,26 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
     }
 
     override fun close() {
-        startedNodes.forEach { (parameter, nodeFutures) ->
-            nodeFutures.forEach { nodeFuture ->
-                if (nodeFuture.isDone) {
-                    val node = nodeFuture.get()
-                    if ((node is NodeHandleInternal) && (node.running())) {
-                        reusableNodes.getOrPut(parameter, { mutableListOf() })
-                                .add(node)
-                    }
-                } else {
-                    nodeFuture.then { it.get()?.stop() }
-                }
+        val nodes = startedNodes.flatMap { (parameter, nodeFutures) ->
+            nodeFutures.map { it to parameter }
+        }.groupBy { it.first.isDone }
+
+        nodes[false]?.forEach {
+            it.first.then {
+                it.get()?.stop()
             }
         }
+
+        nodes[true]?.map {
+            it.first.get() to it.second
+        }?.filter { it.first.running() }
+                ?.forEach {
+                    if (it.first is NodeHandleInternal) {
+                        reusableNodes.getOrPut(it.second, { mutableListOf() })
+                                .add(it.first as NodeHandleInternal)
+                    }
+                }
+
         startedNodes.clear()
     }
 

@@ -7,8 +7,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.transitions.TopLevelTransition
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import org.junit.Test
 import java.util.concurrent.ExecutorService

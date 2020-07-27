@@ -5,10 +5,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.CheckpointStorage
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.internal.OutOfProcessImpl
 import org.junit.Test
 import java.sql.Connection
 import java.util.concurrent.ExecutorService
