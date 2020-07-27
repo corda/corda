@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.MissingSerializerException
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.model.*

@@ -15,7 +15,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.MissingSerializerException
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow

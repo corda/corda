@@ -1,4 +1,4 @@
-package net.corda.core.serialization
+package net.corda.core.serialization.internal
 
 import net.corda.core.KeepForDJVM
 import java.io.NotSerializableException
@@ -8,7 +8,6 @@ import java.io.NotSerializableException
  * needs to be included in a transaction.
  */
 @KeepForDJVM
-@CordaSerializable
 open class MissingSerializerException private constructor(
     message: String,
     val typeDescriptor: String?,
