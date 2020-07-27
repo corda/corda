@@ -3,8 +3,10 @@ package net.corda.node.amqp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
+import java.time.Duration;
 
 /**
  * This class provides a runnable that can be used to initialize a {@link NioSslServer} thread.
@@ -23,19 +25,26 @@ public class ServerRunnable implements Runnable {
     private final KeyManagerFactory keyManagerFactory;
     private final TrustManagerFactory trustManagerFactory;
     private final int port;
+    @Nullable
+    private final Duration handshakeDelay;
 
     NioSslServer server;
 
     public ServerRunnable(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port) {
+        this(keyManagerFactory, trustManagerFactory, port, null);
+    }
+
+    public ServerRunnable(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port, @Nullable Duration handshakeDelay) {
         this.keyManagerFactory = keyManagerFactory;
         this.trustManagerFactory = trustManagerFactory;
         this.port = port;
+        this.handshakeDelay = handshakeDelay;
     }
 
     @Override
     public void run() {
         try {
-            server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port);
+            server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port, handshakeDelay);
             server.start();
         } catch (Exception e) {
             log.error("Exception starting server", e);

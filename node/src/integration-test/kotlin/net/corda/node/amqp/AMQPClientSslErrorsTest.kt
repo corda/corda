@@ -7,6 +7,7 @@ import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -27,6 +28,7 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class AMQPClientSslErrorsTest {
 
@@ -104,6 +106,7 @@ class AMQPClientSslErrorsTest {
             override val keyStore = keyStore
             override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
+            override val sslHandshakeTimeout: Long = 3000
         }
 
         clientKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
@@ -164,7 +167,7 @@ class AMQPClientSslErrorsTest {
             val clientConnected = amqpClient.onConnection.toFuture()
             amqpClient.start()
             val clientConnect = clientConnected.get()
-            assertEquals(true, clientConnect.connected)
+            assertTrue(clientConnect.connected)
 
             log.info("Confirmed connected")
 
@@ -176,6 +179,29 @@ class AMQPClientSslErrorsTest {
             log.info("Confirmed message sent")
             // Unfortunately, the server is not talking AMQP protocol yet, so it cannot advice to the client that message been accepted
             assertEquals(MessageStatus.Rejected, msg.onComplete.get())
+        }
+
+        serverRunnable.stop()
+        serverThread.join(10000)
+        assertFalse(serverRunnable.isActive)
+    }
+
+    @Test(timeout = 300_000)
+    fun amqpClientServerExchangeHandshakeTimeout() {
+        val serverPort = portAllocation.nextPort()
+        val serverRunnable = ServerRunnable(serverKeyManagerFactory, serverTrustManagerFactory, serverPort, 5.seconds)
+        val serverThread = Thread(serverRunnable, this::class.java.simpleName + "-ServerThread")
+        serverThread.start()
+
+        val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
+
+        amqpClient.use {
+            val clientConnected = amqpClient.onConnection.toFuture()
+            amqpClient.start()
+            val clientConnect = clientConnected.get()
+            assertFalse(clientConnect.connected)
+            // Not a badCert, but a timeout during handshake
+            assertFalse(clientConnect.badCert)
         }
 
         serverRunnable.stop()

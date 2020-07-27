@@ -10,6 +10,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.time.Duration;
 import java.util.Iterator;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -36,6 +37,7 @@ import javax.net.ssl.TrustManagerFactory;
  */
 public class NioSslServer extends NioSslPeer {
 
+    private final Duration handshakeDelay;
     /**
      * Declares if the server is active to serve and create new connections.
      */
@@ -58,9 +60,11 @@ public class NioSslServer extends NioSslPeer {
      *
      * @param hostAddress - the IP address this server will listen to.
      * @param port - the port this server will listen to.
+     * @param handShakeDelay
      * @throws Exception
      */
-    public NioSslServer(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, String hostAddress, int port) throws Exception {
+    public NioSslServer(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, String hostAddress, int port,
+                        Duration handShakeDelay) throws Exception {
 
         context = SSLHelperKt.createAndInitSslContext(keyManagerFactory, trustManagerFactory);
 
@@ -76,6 +80,7 @@ public class NioSslServer extends NioSslPeer {
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.socket().bind(new InetSocketAddress(hostAddress, port));
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        this.handshakeDelay = handShakeDelay;
 
         active = true;
 
@@ -145,6 +150,11 @@ public class NioSslServer extends NioSslPeer {
         // Demand client to present its certificate
         engine.setNeedClientAuth(true);
         engine.beginHandshake();
+
+        if (handshakeDelay != null) {
+            log.info("Deliberately sleeping during handshake for: " + handshakeDelay);
+            Thread.sleep(handshakeDelay.toMillis());
+        }
 
         if (doHandshake(socketChannel, engine)) {
             socketChannel.register(selector, SelectionKey.OP_READ, engine);
