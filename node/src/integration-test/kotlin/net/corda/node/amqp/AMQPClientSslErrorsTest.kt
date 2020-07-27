@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -17,7 +18,6 @@ import net.corda.nodeapi.internal.protonwrapper.netty.initialiseTrustStoreAndEna
 import net.corda.nodeapi.internal.protonwrapper.netty.toRevocationConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.junit.Before
 import org.junit.Rule
@@ -32,6 +32,7 @@ class AMQPClientSslErrorsTest {
 
     companion object {
         private const val MAX_MESSAGE_SIZE = 10 * 1024
+        private val log = contextLogger()
     }
 
     @Rule
@@ -165,11 +166,16 @@ class AMQPClientSslErrorsTest {
             val clientConnect = clientConnected.get()
             assertEquals(true, clientConnect.connected)
 
+            log.info("Confirmed connected")
+
             val testPayload = "TestPayload".toByteArray()
             val testQueueName = "TestQueueName"
-            val msg = amqpClient.createMessage(testPayload, testQueueName, CHARLIE_NAME.toString(), emptyMap())
+            val msg = amqpClient.createMessage(testPayload, testQueueName, ALICE_NAME.toString(), emptyMap())
             amqpClient.write(msg)
-            assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+
+            log.info("Confirmed message sent")
+            // Unfortunately, the server is not talking AMQP protocol yet, so it cannot advice to the client that message been accepted
+            assertEquals(MessageStatus.Rejected, msg.onComplete.get())
         }
 
         serverRunnable.stop()
