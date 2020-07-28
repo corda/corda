@@ -22,7 +22,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.internal.NetworkParametersReader
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
@@ -34,8 +33,11 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.PersistenceException
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 /** Database-based network map cache. */
 @ThreadSafe
@@ -46,6 +48,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     companion object {
         private val logger = contextLogger()
     }
+    private val lock = ReentrantReadWriteLock(true)
 
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
@@ -56,7 +59,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     private lateinit var notaries: List<NotaryInfo>
 
-    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
+    override val notaryIdentities: List<Party> get() = lock.read {notaries.map { it.identity }}
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -96,7 +99,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
+    override fun isValidatingNotary(party: Party): Boolean = lock.read {notaries.any { it.validating && it.identity == party }}
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
@@ -389,6 +392,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {
-        this.notaries = notaries
+        lock.write { this.notaries = notaries }
     }
 }
