@@ -47,7 +47,7 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
         fun iterations(): Iterable<Array<Int>> {
             // It is possible to change this value to a greater number
             // to ensure that the test is not flaking when executed on CI
-            val repsCount = 50
+            val repsCount = 1
             return (1..repsCount).map { arrayOf(it) }
         }
     }
