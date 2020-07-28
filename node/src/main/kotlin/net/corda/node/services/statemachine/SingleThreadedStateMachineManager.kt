@@ -193,7 +193,7 @@ internal class SingleThreadedStateMachineManager(
             }
         }
 
-        val finishedFlowsResults = fetchFinishedFlowsResults()
+        val finishedFlowsResults = getFinishedFlowsResults()
         for ((id, finishedFlowResult) in finishedFlowsResults) {
             if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
                 innerState.clientIdsToFlowIds[finishedFlowResult.clientId] = FlowWithClientIdStatus.Removed(id, true)
@@ -461,7 +461,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun fetchFinishedFlowsResults(): List<Pair<StateMachineRunId, FlowResultMetadata>> {
+    private fun getFinishedFlowsResults(): List<Pair<StateMachineRunId, FlowResultMetadata>> {
         return checkpointStorage.getFinishedFlowsResultsMetadata().map { (id, serializedFlowResultMetadata) ->
             id to serializedFlowResultMetadata.deserialize(checkpointSerializationContext!!)
         }.toList()
