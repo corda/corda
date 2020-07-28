@@ -133,7 +133,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BasicVerifierFactoryService
 import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
@@ -790,10 +789,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             LinkedBlockingQueue<Runnable>(),
             ThreadFactoryBuilder().setNameFormat("flow-external-operation-thread").setDaemon(true).build()
         )
-    }
-
-    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
-        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
