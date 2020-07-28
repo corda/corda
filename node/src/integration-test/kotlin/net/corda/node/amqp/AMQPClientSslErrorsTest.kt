@@ -11,7 +11,6 @@ import net.corda.core.utilities.seconds
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.init
@@ -28,7 +27,6 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -169,12 +167,11 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
     }
 
     @Test(timeout = 300_000)
-    fun amqpClientServerExchange() {
+    fun amqpClientServerConnect() {
         val serverPort = portAllocation.nextPort()
         val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort)
                 .also { it.start() }
         serverThread.use {
-
             val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", serverPort)), setOf(ALICE_NAME), clientAmqpConfig)
 
             amqpClient.use {
@@ -184,22 +181,13 @@ class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
                 assertTrue(clientConnect.connected)
 
                 log.info("Confirmed connected")
-
-                val testPayload = "TestPayload".toByteArray()
-                val testQueueName = "TestQueueName"
-                val msg = amqpClient.createMessage(testPayload, testQueueName, ALICE_NAME.toString(), emptyMap())
-                amqpClient.write(msg)
-
-                log.info("Confirmed message sent")
-                // Unfortunately, the server is not talking AMQP protocol yet, so it cannot advice to the client that message been accepted
-                assertEquals(MessageStatus.Rejected, msg.onComplete.get())
             }
         }
         assertFalse(serverThread.isActive)
     }
 
     @Test(timeout = 300_000)
-    fun amqpClientServerExchangeHandshakeTimeout() {
+    fun amqpClientServerHandshakeTimeout() {
         val serverPort = portAllocation.nextPort()
         val serverThread = ServerThread(serverKeyManagerFactory, serverTrustManagerFactory, serverPort, 5.seconds)
                 .also { it.start() }
