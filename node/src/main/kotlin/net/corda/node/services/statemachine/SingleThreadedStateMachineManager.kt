@@ -289,10 +289,10 @@ internal class SingleThreadedStateMachineManager(
         if (clientId != null) {
             var existingStatus: FlowWithClientIdStatus? = null
             innerState.withLock {
-                clientIdsToFlowIds.compute(clientId) { _, _existingStatus ->
-                    if (_existingStatus != null) {
-                        existingStatus = _existingStatus
-                        _existingStatus
+                clientIdsToFlowIds.compute(clientId) { _, status ->
+                    if (status != null) {
+                        existingStatus = status
+                        status
                     } else {
                         newFuture = openFuture()
                         FlowWithClientIdStatus.Active(newFuture!!)
