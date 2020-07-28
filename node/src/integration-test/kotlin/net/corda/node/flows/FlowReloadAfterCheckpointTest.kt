@@ -239,7 +239,7 @@ class FlowReloadAfterCheckpointTest {
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            alice.rpc.startFlow(::MyRestartingFlow)
+            alice.rpc.startFlow(::MyHospitalizingFlow)
             Thread.sleep(10.seconds.toMillis())
 
             alice.stop()
@@ -273,7 +273,7 @@ class FlowReloadAfterCheckpointTest {
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            alice.rpc.startFlow(::IdempotentRestartingFlow)
+            alice.rpc.startFlow(::IdempotentHospitalizingFlow)
             Thread.sleep(10.seconds.toMillis())
 
             alice.stop()
@@ -464,7 +464,7 @@ class FlowReloadAfterCheckpointTest {
      */
     @StartableByRPC
     @InitiatingFlow
-    class MyRestartingFlow : FlowLogic<Unit>() {
+    class MyHospitalizingFlow : FlowLogic<Unit>() {
 
         companion object {
             var thrown = false
@@ -489,7 +489,7 @@ class FlowReloadAfterCheckpointTest {
      */
     @StartableByRPC
     @InitiatingFlow
-    class IdempotentRestartingFlow : FlowLogic<Unit>(), IdempotentFlow {
+    class IdempotentHospitalizingFlow : FlowLogic<Unit>(), IdempotentFlow {
 
         companion object {
             var thrown = false
