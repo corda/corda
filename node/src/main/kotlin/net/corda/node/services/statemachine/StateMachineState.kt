@@ -401,10 +401,7 @@ data class FlowResultMetadata(
             val clientId = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext)
                 .invocationContext.clientId!!
 
-            return FlowResultMetadata(
-                 status,
-                clientId
-             )
+            return FlowResultMetadata(status, clientId)
         }
     }
 }
