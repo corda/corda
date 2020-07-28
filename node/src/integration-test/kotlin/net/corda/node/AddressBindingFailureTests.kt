@@ -41,7 +41,7 @@ class AddressBindingFailureTests {
 
             assertThatThrownBy {
                 driver(DriverParameters(startNodesInProcess = false,
-                    notarySpecs = listOf(NotarySpec(notaryName)),
+                    notarySpecs = listOf(NotarySpec(notaryName, startInProcess = false)),
                     notaryCustomOverrides = mapOf("p2pAddress" to address.toString()),
                     portAllocation = portAllocation,
                     cordappsForAllNodes = emptyList())

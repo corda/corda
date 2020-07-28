@@ -575,7 +575,7 @@ class DriverDSLImpl(
             localNetworkMap,
             NodeParameters(rpcUsers = spec.rpcUsers,
                 verifierType = spec.verifierType,
-                startInSameProcess = true,
+                startInSameProcess = spec.startInProcess,
                 customOverrides = notaryConfig + customOverrides,
                 maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
