@@ -9,6 +9,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.concurrent.transpose
@@ -347,7 +348,7 @@ class FlowReloadAfterCheckpointTest {
             val session = initiateFlow(party)
             session.send(counterPartyHasDeserializationError, skipCheckpoints)
             session.receive(String::class.java, skipCheckpoints).unwrap { it }
-            sleep(1.seconds, skipCheckpoints)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, skipCheckpoints)
             val map = if (shouldHaveDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
             } else {
@@ -374,7 +375,7 @@ class FlowReloadAfterCheckpointTest {
             flowId = runId
             val counterPartyHasDeserializationError = session.receive<Boolean>().unwrap { it }
             session.send("hello there 12312311")
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             val map = if (counterPartyHasDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
             } else {
@@ -396,16 +397,16 @@ class FlowReloadAfterCheckpointTest {
 
         @Suspendable
         override fun call() {
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             val map = if (shouldHaveDeserializationError) {
                 BrokenMap(mutableMapOf("i dont want" to "this to work"))
             } else {
                 mapOf("i dont want" to "this to work")
             }
             logger.info("I need to use my variable to pass the build!: $map")
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 
@@ -425,14 +426,14 @@ class FlowReloadAfterCheckpointTest {
 
         @Suspendable
         override fun call() {
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             if (!thrown) {
                 thrown = true
                 throw FlowTimeoutException()
             }
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 
@@ -446,15 +447,15 @@ class FlowReloadAfterCheckpointTest {
 
         @Suspendable
         override fun call() {
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             if (retryCount < 3) {
                 retryCount += 1
                 throw SQLTransientConnectionException("Connection is not available")
 
             }
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 
@@ -472,14 +473,14 @@ class FlowReloadAfterCheckpointTest {
 
         @Suspendable
         override fun call() {
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             if (!thrown) {
                 thrown = true
                 throw HospitalizeFlowException("i want to try again")
             }
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 
@@ -497,14 +498,14 @@ class FlowReloadAfterCheckpointTest {
 
         @Suspendable
         override fun call() {
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
             if (!thrown) {
                 thrown = true
                 throw HospitalizeFlowException("i want to try again")
             }
-            sleep(1.seconds)
-            sleep(1.seconds)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+            stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 }
