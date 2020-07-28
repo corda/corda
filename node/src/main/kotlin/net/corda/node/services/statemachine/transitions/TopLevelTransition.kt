@@ -247,7 +247,8 @@ class TopLevelTransition(
                         } else {
                             actions.add(
                                 Action.PersistCheckpoint(
-                                    context.id, currentState.checkpoint,
+                                    context.id,
+                                    currentState.checkpoint,
                                     isCheckpointUpdate = currentState.isAnyCheckpointPersisted
                                 )
                             )
