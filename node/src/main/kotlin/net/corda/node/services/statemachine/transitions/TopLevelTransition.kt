@@ -58,7 +58,8 @@ class TopLevelTransition(
             is Event.InitiateFlow -> initiateFlowTransition(event)
             is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
             is Event.AsyncOperationThrows -> asyncOperationThrowsTransition(event)
-            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
+            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition()
+            is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
             is Event.OvernightObservation -> overnightObservationTransition()
             is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
         }
@@ -198,8 +199,8 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        isFlowResumed = false
+                    checkpoint = newCheckpoint,
+                    isFlowResumed = false
                 )
             } else {
                 actions.addAll(arrayOf(
@@ -210,10 +211,10 @@ class TopLevelTransition(
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isFlowResumed = false,
-                        isAnyCheckpointPersisted = true
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isFlowResumed = false,
+                    isAnyCheckpointPersisted = true
                 )
             }
             FlowContinuation.ProcessEvents
@@ -315,10 +316,18 @@ class TopLevelTransition(
         }
     }
 
-    private fun retryFlowFromSafePointTransition(startingState: StateMachineState): TransitionResult {
+    private fun retryFlowFromSafePointTransition(): TransitionResult {
         return builder {
             // Need to create a flow from the prior checkpoint or flow initiation.
-            actions.add(Action.RetryFlowFromSafePoint(startingState))
+            actions.add(Action.RetryFlowFromSafePoint(currentState))
+            FlowContinuation.Abort
+        }
+    }
+
+    private fun reloadFlowFromCheckpointAfterSuspendTransition(): TransitionResult {
+        return builder {
+            currentState = currentState.copy(reloadCheckpointAfterSuspendCount = currentState.reloadCheckpointAfterSuspendCount!! + 1)
+            actions.add(Action.RetryFlowFromSafePoint(currentState))
             FlowContinuation.Abort
         }
     }

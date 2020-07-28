@@ -1,10 +1,13 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaRuntimeException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowExternalAsyncOperation
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.concurrent.transpose
@@ -23,6 +26,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
@@ -33,7 +37,8 @@ import java.sql.SQLException
 import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.Collections
+import java.util.HashSet
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
@@ -41,7 +46,11 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class FlowRetryTest {
-    val config = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryIntervalMultiplier = 1.1)
+
+    private companion object {
+        val user = User("mark", "dadada", setOf(Permissions.all()))
+        val cordapps = listOf(enclosedCordapp())
+    }
 
     @Before
     fun resetCounters() {
@@ -58,154 +67,134 @@ class FlowRetryTest {
         StaffedFlowHospital.DatabaseEndocrinologist.customConditions.clear()
     }
 
-    @Test(timeout=300_000)
-	fun `flows continue despite errors`() {
+    @Test(timeout = 300_000)
+    fun `flows continue despite errors`() {
         val numSessions = 2
         val numIterations = 10
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
-        val result: Any? = driver(DriverParameters(
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList()
-        )) {
-            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
-                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
-                    .transpose()
-                    .getOrThrow()
+        val result: Any? = driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
-            val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
-            }
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                .transpose()
+                .getOrThrow()
+
+            val result = nodeAHandle.rpc.startFlow(
+                ::InitiatorFlow,
+                numSessions,
+                numIterations,
+                nodeBHandle.nodeInfo.singleIdentity()
+            ).returnValue.getOrThrow()
             result
         }
         assertNotNull(result)
         assertEquals("$numSessions:$numIterations", result)
     }
 
-    @Test(timeout=300_000)
-	fun `async operation deduplication id is stable accross retries`() {
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<AsyncRetryFlow>()))
-        driver(DriverParameters(
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList()
-        )) {
+    @Test(timeout = 300_000)
+    fun `async operation deduplication id is stable accross retries`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            nodeAHandle.rpc.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
+        }
+    }
 
-            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
+    @Test(timeout = 300_000)
+    fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            assertFailsWith<CordaRuntimeException> {
+                nodeAHandle.rpc.startFlow(::RetryFlow).returnValue.getOrThrow()
             }
         }
     }
 
-    @Test(timeout=300_000)
-	fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<RetryFlow>()))
-        assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
-            driver(DriverParameters(
-                    startNodesInProcess = isQuasarAgentSpecified(),
-                    notarySpecs = emptyList()
-            )) {
-                val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-
-                val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                    it.proxy.startFlow(::RetryFlow).returnValue.getOrThrow()
-                }
-                result
+    @Test(timeout = 300_000)
+    fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            assertFailsWith<CordaRuntimeException> {
+                nodeAHandle.rpc.startFlow(::ThrowingFlow).returnValue.getOrThrow()
             }
         }
     }
 
-    @Test(timeout=300_000)
-	fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<ThrowingFlow>()))
-        assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
-            driver(DriverParameters(
-                    startNodesInProcess = isQuasarAgentSpecified(),
-                    notarySpecs = emptyList()
-            )) {
-                val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-
-                val result = CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                    it.proxy.startFlow(::ThrowingFlow).returnValue.getOrThrow()
-                }
-                result
-            }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+    @Test(timeout = 300_000)
+    fun `SQLTransientConnectionExceptions thrown by hikari are retried 3 times and then kept in the checkpoints table`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
-                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
-                    .transpose()
-                    .getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                assertFailsWith<TimeoutException> {
-                    it.proxy.startFlow(::TransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
-                            .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
-                }
-                assertEquals(3, TransientConnectionFailureFlow.retryCount)
-                assertEquals(1, it.proxy.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.HOSPITALIZED).returnValue.get())
+                .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                .transpose()
+                .getOrThrow()
+
+            assertFailsWith<TimeoutException> {
+                nodeAHandle.rpc.startFlow(::TransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
+                    .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
             }
+            assertEquals(3, TransientConnectionFailureFlow.retryCount)
+            assertEquals(
+                1,
+                nodeAHandle.rpc.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.HOSPITALIZED).returnValue.get()
+            )
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Specific exception still detected even if it is nested inside another exception`() {
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+    @Test(timeout = 300_000)
+    fun `Specific exception still detected even if it is nested inside another exception`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
-                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
-                    .transpose()
-                    .getOrThrow()
-            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                assertFailsWith<TimeoutException> {
-                    it.proxy.startFlow(::WrappedTransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
-                            .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
-                }
-                assertEquals(3, WrappedTransientConnectionFailureFlow.retryCount)
-                assertEquals(1, it.proxy.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.HOSPITALIZED).returnValue.get())
+                .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                .transpose()
+                .getOrThrow()
+
+            assertFailsWith<TimeoutException> {
+                nodeAHandle.rpc.startFlow(::WrappedTransientConnectionFailureFlow, nodeBHandle.nodeInfo.singleIdentity())
+                    .returnValue.getOrThrow(Duration.of(10, ChronoUnit.SECONDS))
             }
+            assertEquals(3, WrappedTransientConnectionFailureFlow.retryCount)
+            assertEquals(
+                1,
+                nodeAHandle.rpc.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.HOSPITALIZED).returnValue.get()
+            )
         }
     }
 
-    @Test(timeout=300_000)
-	fun `General external exceptions are not retried and propagate`() {
-        val user = User("mark", "dadada", setOf(Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+    @Test(timeout = 300_000)
+    fun `General external exceptions are not retried and propagate`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
-                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
-                    .transpose()
-                    .getOrThrow()
+                .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                .transpose()
+                .getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                assertFailsWith<CordaRuntimeException> {
-                    it.proxy.startFlow(::GeneralExternalFailureFlow, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
-                }
-                assertEquals(0, GeneralExternalFailureFlow.retryCount)
-                assertEquals(1, it.proxy.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.FAILED).returnValue.get())
+            assertFailsWith<CordaRuntimeException> {
+                nodeAHandle.rpc.startFlow(
+                    ::GeneralExternalFailureFlow,
+                    nodeBHandle.nodeInfo.singleIdentity()
+                ).returnValue.getOrThrow()
             }
+            assertEquals(0, GeneralExternalFailureFlow.retryCount)
+            assertEquals(
+                1,
+                nodeAHandle.rpc.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.FAILED).returnValue.get()
+            )
         }
     }
 
-    @Test(timeout=300_000)
-	fun `Permission exceptions are not retried and propagate`() {
+    @Test(timeout = 300_000)
+    fun `Permission exceptions are not retried and propagate`() {
         val user = User("mark", "dadada", setOf())
-        driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
 
-            CordaRPCClient(nodeAHandle.rpcAddress, config).start(user.username, user.password).use {
-                assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
-                    it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
-                }.withMessageStartingWith("User not authorized to perform RPC call")
-                // This stays at -1 since the flow never even got called
-                assertEquals(-1, GeneralExternalFailureFlow.retryCount)
-            }
+            assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+                nodeAHandle.rpc.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
+            }.withMessageStartingWith("User not authorized to perform RPC call")
+            // This stays at -1 since the flow never even got called
+            assertEquals(-1, GeneralExternalFailureFlow.retryCount)
         }
     }
 }
@@ -315,6 +304,10 @@ enum class Step { First, BeforeInitiate, AfterInitiate, AfterInitiateSendReceive
 
 data class Visited(val sessionNum: Int, val iterationNum: Int, val step: Step)
 
+class BrokenMap<K, V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K, V> by delegate {
+    override fun put(key: K, value: V): V? = throw IllegalStateException("Broken on purpose")
+}
+
 @StartableByRPC
 class RetryFlow() : FlowLogic<String>(), IdempotentFlow {
     companion object {
@@ -342,7 +335,7 @@ class AsyncRetryFlow() : FlowLogic<String>(), IdempotentFlow {
         val deduplicationIds = mutableSetOf<String>()
     }
 
-    class RecordDeduplicationId: FlowExternalAsyncOperation<String> {
+    class RecordDeduplicationId : FlowExternalAsyncOperation<String> {
         override fun execute(deduplicationId: String): CompletableFuture<String> {
             val dedupeIdIsNew = deduplicationIds.add(deduplicationId)
             if (dedupeIdIsNew) {
@@ -423,8 +416,9 @@ class WrappedTransientConnectionFailureFlow(private val party: Party) : FlowLogi
         // checkpoint will restart the flow after the send
         retryCount += 1
         throw IllegalStateException(
-                "wrapped error message",
-                IllegalStateException("another layer deep", SQLTransientConnectionException("Connection is not available")))
+            "wrapped error message",
+            IllegalStateException("another layer deep", SQLTransientConnectionException("Connection is not available"))
+        )
     }
 }
 
@@ -465,12 +459,14 @@ class GeneralExternalFailureResponder(private val session: FlowSession) : FlowLo
 
 @StartableByRPC
 class GetCheckpointNumberOfStatusFlow(private val flowStatus: Checkpoint.FlowStatus) : FlowLogic<Long>() {
+
+    @Suspendable
     override fun call(): Long {
         val sqlStatement =
-                "select count(*) " +
-                        "from node_checkpoints " +
-                        "where status = ${flowStatus.ordinal} " +
-                        "and flow_id != '${runId.uuid}' " // don't count in the checkpoint of the current flow
+            "select count(*) " +
+                    "from node_checkpoints " +
+                    "where status = ${flowStatus.ordinal} " +
+                    "and flow_id != '${runId.uuid}' " // don't count in the checkpoint of the current flow
 
         return serviceHub.jdbcSession().prepareStatement(sqlStatement).use { ps ->
             ps.executeQuery().use { rs ->
