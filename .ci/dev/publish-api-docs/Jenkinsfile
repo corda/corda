@@ -1,5 +1,15 @@
-@Library('corda-shared-build-pipeline-steps')
+#!groovy
+/**
+ * Jenkins pipeline to build Corda OS KDoc & Javadoc archive
+ */
 
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
+@Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
@@ -10,6 +20,7 @@ pipeline {
         ansiColor('xterm')
         timestamps()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
@@ -20,7 +31,7 @@ pipeline {
 
     stages {
         stage('Publish Archived API Docs to Artifactory') {
-            when { tag pattern: /^release-os-V(\d+\.\d+)(\.\d+){0,1}(-GA){0,1}(-\d{4}-\d\d-\d\d-\d{4}){0,1}$/, comparator: 'REGEXP' }
+            when { tag pattern: /^docs-release-os-V(\d+\.\d+)(\.\d+){0,1}(-GA){0,1}(-\d{4}-\d\d-\d\d-\d{4}){0,1}$/, comparator: 'REGEXP' }
             steps {
                 sh "./gradlew :clean :docs:artifactoryPublish -DpublishApiDocs"
             }
