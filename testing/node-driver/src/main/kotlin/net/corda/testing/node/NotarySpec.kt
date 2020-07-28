@@ -29,8 +29,8 @@ data class NotarySpec(
                 rpcUsers: List<User> = emptyList(),
                 verifierType: VerifierType = VerifierType.InMemory,
                 cluster: ClusterSpec? = null,
-                startInProcess: Boolean = true,
-                maximumHeapSize: String = "512m"): this(name, validating, rpcUsers, verifierType, cluster, startInProcess) {
+                maximumHeapSize: String = "512m",
+                startInProcess: Boolean = true): this(name, validating, rpcUsers, verifierType, cluster, startInProcess) {
         this.maximumHeapSize = maximumHeapSize
     }
 
