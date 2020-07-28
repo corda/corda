@@ -548,12 +548,6 @@ class DBCheckpointStorage(
         }
     }
 
-    private class DBFlowResultMetadataFields(
-        val id: String,
-        val status: FlowStatus,
-        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    )
-
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
         val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
         currentDBSession().createNativeQuery(update).executeUpdate()
@@ -707,6 +701,12 @@ class DBCheckpointStorage(
             )
         }
     }
+
+    private class DBFlowResultMetadataFields(
+        val id: String,
+        val status: FlowStatus,
+        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY
+    )
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
