@@ -49,6 +49,8 @@ class NetworkMapServer(private val pollInterval: Duration,
     private val service = InMemoryNetworkMapService()
     private var parametersUpdate: ParametersUpdate? = null
     private var nextNetworkParameters: NetworkParameters? = null
+    // version toggle allowing to easily test behaviour of different version without spinning up a whole new server
+    var version: String = "1"
 
     init {
         server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
@@ -171,7 +173,10 @@ class NetworkMapServer(private val pollInterval: Duration,
         private fun networkMapResponse(nodeInfoHashes: List<SecureHash>): Response {
             val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes)
+                    .header("Cache-Control", "max-age=${pollInterval.seconds}")
+                    .apply { if (version != "1") this.header("X-Corda-Server-Version", version)}
+                    .build()
         }
 
         // Remove nodeInfo for testing.
@@ -203,6 +208,15 @@ class NetworkMapServer(private val pollInterval: Duration,
             } else {
                 Response.status(Response.Status.NOT_FOUND)
             }.build()
+        }
+
+        @GET
+        @Path("node-infos")
+        @Produces(MediaType.APPLICATION_OCTET_STREAM)
+        fun getNodeInfos(): Response {
+            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
+            val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
+            return Response.ok(Pair(signedNetworkMap, nodeInfoMap.values.toList()).serialize().bytes).build()
         }
 
         @GET
