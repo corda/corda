@@ -93,30 +93,29 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
     }
 
     override fun close() {
-        val nodes = startedNodes.flatMap { (parameter, nodeFutures) ->
-            nodeFutures.map { it to parameter }
-        }.groupBy { it.first.isDone }
+        val nodes = startedNodes.groupBy {
+            it.second.isDone }
 
         nodes[false]?.forEach {
-            it.first.then {
+            it.second.then {
                 it.get()?.stop()
             }
         }
 
         nodes[true]?.map {
-            it.first.get() to it.second
-        }?.filter { it.first.running() }
+            it.first to it.second.get()
+        }?.filter { it.second.running() }
                 ?.forEach {
-                    if (it.first is NodeHandleInternal) {
-                        reusableNodes.getOrPut(it.second, { mutableListOf() })
-                                .add(it.first as NodeHandleInternal)
+                    if (it.second is NodeHandleInternal) {
+                        reusableNodes.getOrPut(it.first, { mutableListOf() })
+                                .add(it.second as NodeHandleInternal)
                     }
                 }
 
         startedNodes.clear()
     }
 
-    private val startedNodes = mutableMapOf<NodeKey, MutableList<CordaFuture<NodeHandle>>>()
+    private val startedNodes = mutableListOf<Pair<NodeKey, CordaFuture<NodeHandle>>>()
     private val reusableNodes = mutableMapOf<NodeKey, MutableList<NodeHandleInternal>>()
     private val runningNamedDriver = mutableMapOf<CordaX500Name, NodeKey>()
 
@@ -158,8 +157,7 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
             val node = driver.startNode(parameters, bytemanPort)
             node
         }
-        startedNodes.getOrPut(key, { mutableListOf() })
-                .add(nodeFuture)
+        startedNodes.add(key to nodeFuture)
         return nodeFuture
     }
 
