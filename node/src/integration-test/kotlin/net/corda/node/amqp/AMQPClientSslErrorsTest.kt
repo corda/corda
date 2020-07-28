@@ -24,6 +24,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.test.assertEquals
@@ -35,11 +37,21 @@ import kotlin.test.assertTrue
  *
  * In order to have control over handshake internals a simple TLS server is created which may have a configurable handshake delay.
  */
-class AMQPClientSslErrorsTest {
+@RunWith(Parameterized::class)
+class AMQPClientSslErrorsTest(@Suppress("unused") private val iteration: Int) {
 
     companion object {
         private const val MAX_MESSAGE_SIZE = 10 * 1024
         private val log = contextLogger()
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "iteration = {0}")
+        fun iterations(): Iterable<Array<Int>> {
+            // It is possible to change this value to a greater number
+            // to ensure that the test is not flaking when executed on CI
+            val repsCount = 50
+            return (1..repsCount).map { arrayOf(it) }
+        }
     }
 
     @Rule
