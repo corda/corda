@@ -451,7 +451,7 @@ class DBCheckpointStorage(
 
         currentDBSession().update(dbFlowCheckpoint)
         blob?.let { currentDBSession().update(it) }
-        dbFlowResult?.let { currentDBSession().save(it) } // there should be only one result per flow stored in the database
+        dbFlowResult?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
             val session = currentDBSession()
             val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
