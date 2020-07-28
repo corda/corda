@@ -5,103 +5,146 @@ import freighter.deployments.SingleNodeDeployed
 import freighter.machine.AzureMachineProvider
 import freighter.machine.DeploymentMachineProvider
 import freighter.testing.AzureTest
-import net.corda.bn.flows.ActivateMembershipFlow
-import net.corda.bn.flows.ModifyGroupFlow
+import net.corda.bn.flows.AssignBNORoleFlow
+import net.corda.bn.flows.AssignMemberRoleFlow
+import net.corda.bn.flows.ModifyRolesFlow
+import net.corda.bn.flows.RevokeMembershipFlow
+import net.corda.bn.flows.SuspendMembershipFlow
+import net.corda.bn.states.BNORole
 import net.corda.bn.states.MembershipState
+import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.utilities.getOrThrow
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.spi.ExtendedLogger
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
 import kotlin.system.measureTimeMillis
 
 @AzureTest
-class BnRolesFrieghterTests: AbstractBnRolesFrieghterTests() {
+class BnRolesFreighterTests: AbstractBnRolesFreighterTests() {
 
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
+    companion object {
+        val logger: ExtendedLogger = LogManager.getContext().getLogger(BnRolesFreighterTests::class.java.name)
+    }
+
+    override fun getLogger(): ExtendedLogger {
+        return logger
+    }
+
     @Test
-    fun testMembershipSlowActivationWith20Participants() {
+    fun testAllMembersAreBNOWith10Participants() {
+        val numberOfParticipants = 10
+        measureBenchmark(numberOfParticipants, 300000)
+    }
+
+    @Test
+    fun testAllMembersAreBNOWith20Participants() {
         val numberOfParticipants = 20
+        measureBenchmark(numberOfParticipants, 15000)
+    }
+
+    @Test
+    fun testAllMembersAreBNOWith40Participants() {
+        val numberOfParticipants = 40
+        measureBenchmark(numberOfParticipants, 20000)
+    }
+
+    private fun measureBenchmark(numberOfParticipants: Int, maxTime:Long, doRevocation: Boolean = false) {
+        logger.info("Running benchmark with $numberOfParticipants particpants")
+
 
         val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
-        val benchmark = addingNodesToAGroupOneAtATimeBenchmark(deploymentContext, numberOfParticipants)
+        val benchmark = runBenchmark(deploymentContext, numberOfParticipants, doRevocation)
 
         benchmark.map {
-            BaseBNFreighterTest.logger.info("${it.key} BenchMark ${it.value}")
+            logger.info("${it.key} BenchMark ${it.value}")
         }
 
         benchmark.map {
-            Assertions.assertTrue(it.value <= 300000)
+            Assertions.assertTrue(it.value <= maxTime)
         }
     }
 }
 
-abstract class AbstractBnRolesFrieghterTests() :BaseBNFreighterTest(){
+abstract class AbstractBnRolesFreighterTests :BaseBNFreighterTest(){
 
-    fun addingNodesToAGroupOneAtATimeBenchmark(deploymentContext: DeploymentContext, numberOfParticpants: Int): Map<String, Long>{
+    fun runBenchmark(deploymentContext: DeploymentContext, numberOfParticipants: Int, doRevocation:Boolean): Map<String, Long>{
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
-        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, UniqueIdentifier(), UniqueIdentifier())
-
         val newGroupId = UniqueIdentifier()
         val newGroupName = "InitialGroup"
-        val groupStateForDefaultGroup = createGroup(bnoNode, bnoMembershipState, newGroupId, newGroupName)
+        val networkId = UniqueIdentifier()
+        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkId, newGroupId,newGroupName)
 
-        val listOfNetworkMembers = buildGroupMembershipNodes(numberOfParticpants, nodeGenerator)
+        //val groupStateForDefaultGroup = createGroup(bnoNode, bnoMembershipState, newGroupId, newGroupName)
 
-        val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requrestNetworkMembership(listOfNetworkMembers, bnoNode, bnoMembershipState)
+        val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
 
-        val listOfPrivateGroupMember = mutableListOf(bnoMembershipState.linearId)
+        val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
+        activateNetworkMembership(nodeToMembershipIds, bnoNode)
 
-        val slowGroupAddBenchmark = measureTimeMillis{
-            nodeToMembershipIds.map {
+        getLogger().info("Beginning to Assign BNO Roles")
+
+        nodeToMembershipIds.values.forEach{
+            bnoNode.rpc {
+                getLogger().info("Assigning ${it.identity} bno role")
+                startFlow(::ModifyRolesFlow, it.linearId, setOf(BNORole()),null).returnValue.getOrThrow()
+            }
+        }
+
+        getLogger().info("Finished Assigning Roles")
+
+        val membershipCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.ACTIVE))
+        val membershipActiveTime = measureTimeMillis { waitForStatusUpdate(listOfGroupMembers, membershipCriteria) }
+        val firstSubsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size / 2).first()
+
+        getLogger().info("Beginning to Suspend")
+
+
+        val membershipUpdateTime = measureTimeMillis {
+            firstSubsetGroupMembers.map{
                 bnoNode.rpc {
-                    startFlow(::ActivateMembershipFlow,
-                            it.value.linearId,
-                            null)
-                }
-                listOfPrivateGroupMember.add(it.value.linearId)
-                bnoNode.rpc {
-                    startFlow(::ModifyGroupFlow,
-                            newGroupId,
-                            newGroupName,
-                            listOfPrivateGroupMember.toMutableSet(),
-                            null)
+                    getLogger().info("${it.nodeMachine.identity()} membership will be suspended.")
+                    startFlow(::AssignMemberRoleFlow, nodeToMembershipIds[it]!!.linearId, null).returnValue.getOrThrow()
+                    startFlow(::SuspendMembershipFlow, nodeToMembershipIds[it]!!.linearId, null).returnValue.getOrThrow()
                 }
             }
         }
 
-        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
-                .and(QueryCriteria.LinearStateQueryCriteria(linearId = listOf(groupStateForDefaultGroup.linearId)))
+        val suspendedStatusCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))
+        val membershipSuspendTime = measureTimeMillis { waitForStatusUpdate(firstSubsetGroupMembers, suspendedStatusCriteria) }
 
-        val vaultUpdateTime = measureTimeMillis {
-            checkGroupSizeIsAsExpectedInMembersVaults(listOfNetworkMembers, criteria, listOfPrivateGroupMember.size)
-        }
+        val benchmarkResults = mutableMapOf("Membership Activation" to membershipActiveTime,
+                "Membership Update Time" to membershipUpdateTime,
+                "Time Taken To Register Suspension in All Vaults" to membershipSuspendTime)
 
-        listOfPrivateGroupMember.remove(listOfPrivateGroupMember.last())
+        if(doRevocation){
+            val membershipRevocationTime = measureTimeMillis {
+                for (node in firstSubsetGroupMembers) {
+                    bnoNode.rpc {
+                        startFlow(::RevokeMembershipFlow, nodeToMembershipIds[node]!!.linearId, null).returnValue.getOrThrow()
+                    }
+                }
+            }
 
-        bnoNode.rpc {
-            startFlow(::ModifyGroupFlow,
-                    newGroupId,
-                    newGroupName,
-                    listOfPrivateGroupMember.toMutableSet(),
-                    null)
-        }
-
-        val vaultUpdateTimeAfterDeletion = measureTimeMillis {
-            checkGroupSizeIsAsExpectedInMembersVaults(listOfNetworkMembers, criteria, listOfPrivateGroupMember.size)
+            val vaultUpdateTimeAfterDeletion = measureTimeMillis {
+                checkGroupSizeIsAsExpectedInMembersVaults(firstSubsetGroupMembers, newGroupId,(nodeToMembershipIds.size-firstSubsetGroupMembers.size)+1)
+            }
+            benchmarkResults["Time Taken Revoke Membership of half"] = membershipRevocationTime
+            benchmarkResults["Time Taken for Vault Update To Reflect Revocation in remaining members' Vaults"] = vaultUpdateTimeAfterDeletion
         }
 
         bnoNode.nodeMachine.stopNode()
-        listOfNetworkMembers.forEach { it.stopNode() }
+        listOfGroupMembers.map { it.stopNode() }
 
-        return mapOf("Members Added Individually to group" to slowGroupAddBenchmark,
-                "Updates to Vault" to vaultUpdateTime,
-                "Update to Members Vault after Single Member is removed" to vaultUpdateTimeAfterDeletion)
-
+        return benchmarkResults
     }
 }
