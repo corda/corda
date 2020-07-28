@@ -187,7 +187,12 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             }
         }
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
-        networkParametersUpdater?.update(globalNetworkMap.networkParameterHash)
+        if (networkParametersUpdater == null) {
+            throw CordaRuntimeException("Network parameters can be updated only if network map/compatibility zone URL is specified")
+        }
+        else {
+            networkParametersUpdater!!.update(globalNetworkMap.networkParameterHash)
+        }
         // Calculate any nodes that are now gone and remove _only_ them from the cache
         // NOTE: We won't remove them until after the add/update cycle as only then will we definitely know which nodes are no longer
         // in the network

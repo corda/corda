@@ -165,5 +165,4 @@ class DBNetworkParametersStorage(
                 return SignedDataWithCert(SerializedBytes(networkParametersBytes), signWithCert)
             }
     }
-
 }

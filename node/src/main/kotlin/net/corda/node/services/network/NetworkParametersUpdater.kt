@@ -39,12 +39,12 @@ class NetworkParametersUpdater(baseDirectory: Path,
         private val alwaysHotloadable = listOf(NetworkParameters::epoch, NetworkParameters::modifiedTime)
     }
 
-    private var networkParameterUpdateListeners = mutableListOf<NetworkParameterUpdateListener>()
-    private var notaryUpdateListeners = mutableListOf<NotaryListUpdateListener>()
+    private val networkParameterUpdateListeners = mutableListOf<NetworkParameterUpdateListener>()
+    private val notaryUpdateListeners = mutableListOf<NotaryListUpdateListener>()
     private val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
 
     fun addNetworkParametersChangedListeners(listener: NetworkParameterUpdateListener) {
-        this.networkParameterUpdateListeners.add(listener)
+        networkParameterUpdateListeners.add(listener)
     }
 
     fun addNotaryUpdateListener(listener: NotaryListUpdateListener) {
@@ -125,8 +125,8 @@ The node will shutdown now.""")
      */
     private fun hotloadParameters(newNetworkParameters: NetworkParameters, newNetworkParameterHash: SecureHash) {
 
-        this.networkParameters = newNetworkParameters
-        this.parametersHash = newNetworkParameterHash
+        networkParameters = newNetworkParameters
+        parametersHash = newNetworkParameterHash
 
         val networkParametersAndSigned = networkParametersReader.read()
         networkParametersStorage.setCurrentParameters(networkParametersAndSigned.signed, trustRoot)

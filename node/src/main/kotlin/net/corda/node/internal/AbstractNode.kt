@@ -263,7 +263,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
-
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -498,14 +497,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         networkMapCache.start(netParams.notaries)
 
-
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa), netParams.notaries.map { it.identity }, pkToIdCache)
-
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             updateNodeInfo(identity, identityKeyPair, publish = true)
@@ -516,26 +513,24 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         services.start(nodeInfo, netParams)
 
         val networkParametersUpdater = if (networkMapClient == null){
-            log.warn("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
+            log.info("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
             null
         } else {
-            NetworkParametersUpdater(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage)
+            NetworkParametersUpdater(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage).also {
+                it.addNotaryUpdateListener(networkMapCache)
+                it.addNotaryUpdateListener(identityService)
+                it.addNetworkParametersChangedListeners(services)
+            }
         }
-        networkParametersUpdater?.let {
-            it.addNotaryUpdateListener(networkMapCache)
-            it.addNotaryUpdateListener(identityService)
-            it.addNetworkParametersChangedListeners(services)
-        }
-            networkMapUpdater.start(
-                    trustRoot,
-                    signedNetParams.raw.hash,
-                    signedNodeInfo,
-                    netParams,
-                    keyManagementService,
-                    configuration.networkParameterAcceptanceSettings!!,
-                    networkParametersUpdater)
 
-
+        networkMapUpdater.start(
+                trustRoot,
+                signedNetParams.raw.hash,
+                signedNodeInfo,
+                netParams,
+                keyManagementService,
+                configuration.networkParameterAcceptanceSettings!!,
+                networkParametersUpdater)
 
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
