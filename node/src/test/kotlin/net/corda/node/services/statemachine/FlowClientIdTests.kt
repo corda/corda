@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.CordaRuntimeException
@@ -484,14 +483,20 @@ class FlowClientIdTests {
         }
     }
 
-    //TODO make this test work regardless current flow
-    // This test is now redundant since, upon error at serialization of result we error and propagate
-//    @Test
-//    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
-//        val clientId = UUID.randomUUID().toString()
-//        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow(5)).resultFuture.getOrThrow()
-//        assertEquals(5, result)
-//    }
+    /**
+     * The below test does not follow a valid path. Normally it should error and propagate.
+     * However, we want to assert that a flow that fails to serialize its result its retriable.
+     */
+    @Test
+    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
+        val clientId = UUID.randomUUID().toString()
+        // before the hospital schedules a [Event.Error] we manually schedule a [Event.RetryFlowFromSafePoint]
+        StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+            FlowStateMachineImpl.currentStateMachine()!!.scheduleEvent(Event.RetryFlowFromSafePoint)
+        }
+        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow()).resultFuture.getOrThrow()
+        assertEquals(5, result)
+    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
@@ -508,7 +513,7 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
     }
 }
 
-internal class UnSerializableResultFlow(private val serializableObject: Int): FlowLogic<Any>() {
+internal class UnSerializableResultFlow: FlowLogic<Any>() {
     companion object {
         var firstRun = true
     }
@@ -520,7 +525,7 @@ internal class UnSerializableResultFlow(private val serializableObject: Int): Fl
             firstRun = false
             Observable.empty<Any>()
         } else {
-            serializableObject
+            5 // serializable result
         }
     }
 }
