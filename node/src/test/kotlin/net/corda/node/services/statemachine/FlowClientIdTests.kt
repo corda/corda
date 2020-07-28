@@ -487,7 +487,7 @@ class FlowClientIdTests {
      * The below test does not follow a valid path. Normally it should error and propagate.
      * However, we want to assert that a flow that fails to serialize its result its retriable.
      */
-    @Test
+    @Test(timeout=300_000)
     fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
         val clientId = UUID.randomUUID().toString()
         // before the hospital schedules a [Event.Error] we manually schedule a [Event.RetryFlowFromSafePoint]
