@@ -279,7 +279,6 @@ data class DriverParameters(
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
-            startNoteryInProcess: Boolean = false,
             waitForAllNodesToFinish: Boolean = false,
             notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
             extraCordappPackagesToScan: List<String> = emptyList(),
