@@ -181,7 +181,7 @@ class FlowReloadAfterCheckpointTest {
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            alice.rpc.startFlow(::MyIdempotentFlow, false).returnValue.getOrThrow()
+            alice.rpc.startFlow(::MyIdempotentFlow, true).returnValue.getOrThrow()
             assertEquals(5, reloadCount)
         }
     }
