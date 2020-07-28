@@ -604,20 +604,6 @@ interface UniquenessProviderFactory {
     fun cleanUp() {}
 }
 
-class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
-    private var database: CordaPersistence? = null
-
-    override fun create(clock: Clock): UniquenessProvider {
-        database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
-        return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory(), ::signSingle)
-    }
-
-    override fun cleanUp() {
-        database?.close()
-    }
-}
-
 class RaftUniquenessProviderFactory : UniquenessProviderFactory {
     private var database: CordaPersistence? = null
     private var provider: RaftUniquenessProvider? = null
