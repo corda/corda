@@ -24,31 +24,22 @@ public class ServerThread implements AutoCloseable {
 
     private static final long JOIN_TIMEOUT_MS = 10000;
 
-    private final KeyManagerFactory keyManagerFactory;
-    private final TrustManagerFactory trustManagerFactory;
-    private final int port;
-    @Nullable
-    private final Duration handshakeDelay;
-
-    NioSslServer server;
+    private final NioSslServer server;
 
     private Thread serverThread;
 
-    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port) {
+    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port) throws Exception {
         this(keyManagerFactory, trustManagerFactory, port, null);
     }
 
-    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port, @Nullable Duration handshakeDelay) {
-        this.keyManagerFactory = keyManagerFactory;
-        this.trustManagerFactory = trustManagerFactory;
-        this.port = port;
-        this.handshakeDelay = handshakeDelay;
+    public ServerThread(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, int port, @Nullable Duration handshakeDelay) throws Exception {
+        server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port, handshakeDelay);
     }
 
     public void start() {
+
         Runnable serverRunnable = () -> {
             try {
-                server = new NioSslServer(keyManagerFactory, trustManagerFactory, "localhost", port, handshakeDelay);
                 server.start();
             } catch (Exception e) {
                 log.error("Exception starting server", e);

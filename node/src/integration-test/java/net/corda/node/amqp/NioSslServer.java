@@ -60,10 +60,10 @@ public class NioSslServer extends NioSslPeer {
      *
      * @param hostAddress - the IP address this server will listen to.
      * @param port - the port this server will listen to.
-     * @param handShakeDelay - if not [null] specifies for how long the handshake should be delayed
+     * @param handshakeDelay - if not [null] specifies for how long the handshake should be delayed
      */
     public NioSslServer(KeyManagerFactory keyManagerFactory, TrustManagerFactory trustManagerFactory, String hostAddress, int port,
-                        Duration handShakeDelay) throws Exception {
+                        Duration handshakeDelay) throws Exception {
 
         context = SSLHelperKt.createAndInitSslContext(keyManagerFactory, trustManagerFactory);
 
@@ -79,7 +79,7 @@ public class NioSslServer extends NioSslPeer {
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.socket().bind(new InetSocketAddress(hostAddress, port));
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-        this.handshakeDelay = handShakeDelay;
+        this.handshakeDelay = handshakeDelay;
 
         active = true;
 
