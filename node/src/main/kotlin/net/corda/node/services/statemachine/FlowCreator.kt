@@ -19,6 +19,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -148,7 +149,7 @@ class FlowCreator(
         return try {
             bytes.checkpointDeserialize(context = checkpointSerializationContext)
         } catch (e: Exception) {
-            if (reloadCheckpointAfterSuspend) {
+            if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
                 logger.error(
                     "Unable to deserialize checkpoint for flow $flowId. [reloadCheckpointAfterSuspend] is turned on, throwing exception",
                     e
