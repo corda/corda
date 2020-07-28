@@ -300,6 +300,7 @@ internal class SingleThreadedStateMachineManager(
                 }
             }
 
+            // Flow -started with client id- already exists, return the existing's flow future and don't start a new flow.
             existingStatus?.let {
                 val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
                 return@startFlow uncheckedCast(existingFuture)
