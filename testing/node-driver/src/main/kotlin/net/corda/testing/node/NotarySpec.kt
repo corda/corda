@@ -23,6 +23,19 @@ data class NotarySpec(
         val cluster: ClusterSpec? = null,
         val startInProcess: Boolean = true
 ) {
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null): this(name, validating, rpcUsers, verifierType, cluster, "512m", true)
+
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null,
+                maximumHeapSize: String): this(name, validating, rpcUsers, verifierType, cluster, maximumHeapSize, true)
+
     // These extra fields are handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
     constructor(name: CordaX500Name,
                 validating: Boolean = true,
@@ -33,6 +46,21 @@ data class NotarySpec(
                 startInProcess: Boolean = true): this(name, validating, rpcUsers, verifierType, cluster, startInProcess) {
         this.maximumHeapSize = maximumHeapSize
     }
+
+    fun copy(
+            name: CordaX500Name,
+            validating: Boolean = true,
+            rpcUsers: List<User> = emptyList(),
+            verifierType: VerifierType = VerifierType.InMemory,
+            cluster: ClusterSpec? = null
+    ) = this.copy(
+            name = name,
+            validating = validating,
+            rpcUsers = rpcUsers,
+            verifierType = verifierType,
+            cluster = cluster,
+            startInProcess = true
+    )
 
     var maximumHeapSize: String = "512m"
 }
