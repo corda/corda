@@ -16,7 +16,6 @@ import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.minutes
@@ -589,8 +588,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
         ): Diagnosis {
             return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
                 when {
-                    newError.mentionsThrowable(InterruptedException::class.java) ||
-                            newError.mentionsThrowable(MissingSerializerException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION
