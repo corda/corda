@@ -166,6 +166,30 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
+    @Test(timeout=300_000)
+    fun `If only the notary changes but parameters were not accepted, the node will still shut down on the flag day`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
+                isDebug = true
+        ) {
+
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithNewNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
+
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
+            networkMapServer.scheduleParametersUpdate(paramsWithNewNotary, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
+            // Wait for network map client to poll for the next update.
+            Thread.sleep(cacheTimeout.toMillis() * 2)
+            networkMapServer.advertiseNewParameters()
+            Thread.sleep(cacheTimeout.toMillis() * 2)
+            assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected")
+        }
+    }
 
     @Test(timeout=300_000)
     fun `Can not hotload parameters if non-hotloadable parameter changes and the node will shut down`() {

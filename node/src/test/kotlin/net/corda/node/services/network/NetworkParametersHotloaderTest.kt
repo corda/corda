@@ -64,6 +64,17 @@ class NetworkParametersHotloaderTest {
     }
 
     @Test(timeout=300_000)
+    fun `can not hotload if notary changes but another non-hotloadable property also changes`() {
+
+        networkParametersHotloader.addNotaryUpdateListener(object: NotaryListUpdateListener {
+            override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+            }
+        })
+        val newnetParamsWithNewNotaryAndMaxMsgSize = newnetParamsWithNewNotary.copy(maxMessageSize = newnetParamsWithNewNotary.maxMessageSize + 1)
+        Assert.assertFalse(networkParametersHotloader.canHotload(newnetParamsWithNewNotaryAndMaxMsgSize))
+    }
+
+    @Test(timeout=300_000)
     fun `can hotload if only always hotloadable properties change`() {
 
         val newParametersWithAlwaysHotloadableProperties = networkParameters.copy(epoch = networkParameters.epoch +1, modifiedTime = networkParameters.modifiedTime.plusSeconds(60))
