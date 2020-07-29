@@ -453,11 +453,7 @@ class DBCheckpointStorage(
         blob?.let { currentDBSession().update(it) }
         dbFlowResult?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
-            val session = currentDBSession()
-            val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
-                    "where flow_id = '$flowId'"
-            val query = session.createNativeQuery(sqlQuery)
-            query.executeUpdate()
+            setDBFlowMetadataFinishTime(flowId, now)
         }
     }
 
@@ -638,6 +634,14 @@ class DBCheckpointStorage(
                 persistedInstant = now
             )
         }
+    }
+
+    private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
+        val session = currentDBSession()
+        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
+                "where flow_id = '$flowId'"
+        val query = session.createNativeQuery(sqlQuery)
+        query.executeUpdate()
     }
 
     private fun InvocationContext.getStartedType(): StartReason {
