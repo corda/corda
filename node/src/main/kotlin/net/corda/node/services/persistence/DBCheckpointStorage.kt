@@ -224,7 +224,7 @@ class DBCheckpointStorage(
             if (value != null) {
                 if (otherValue == null) return false
                 if (!value.contentEquals(otherValue)) return false
-            } else if (other.value != null) return false
+            } else if (otherValue != null) return false
             if (persistedInstant != other.persistedInstant) return false
             return true
         }
