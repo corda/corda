@@ -32,8 +32,6 @@ class NetworkParametersHotloaderTest {
     @Mock
     val trustRoot = Mockito.mock(X509Certificate::class.java)
     @Mock
-    val parametersHash = Mockito.mock(SecureHash::class.java)
-    @Mock
     val networkParametersReader = Mockito.mock(NetworkParametersReader::class.java)
     @Mock
     val networkParametersStorage = Mockito.mock(NetworkParametersStorage::class.java)

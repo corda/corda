@@ -516,7 +516,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             log.info("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
             null
         } else {
-            NetworkParametersHotloader(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage).also {
+            NetworkParametersHotloader( networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)

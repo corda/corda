@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.cliutils.ExitCodes
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
@@ -8,6 +9,8 @@ import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.readObject
 import net.corda.core.internal.sign
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -24,7 +27,9 @@ import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
@@ -49,6 +54,7 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaGetter
+import kotlin.system.exitProcess
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val nodeInfoWatcher: NodeInfoWatcher,
@@ -187,14 +193,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             }
         }
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
-        if (networkParametersHotloader == null) {
-            throw CordaRuntimeException("Network parameters can be updated only if network map/compatibility zone URL is specified")
+        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
+            hotloadOrExitOnParametersMismatch(globalNetworkMap)
         }
-        else {
-            networkParametersHotloader!!.update(globalNetworkMap.networkParameterHash)
-            logger.info("Calling networkParametersUpdater with hash ${globalNetworkMap.networkParameterHash}")
-        }
-
         // Calculate any nodes that are now gone and remove _only_ them from the cache
         // NOTE: We won't remove them until after the add/update cycle as only then will we definitely know which nodes are no longer
         // in the network
@@ -245,6 +246,28 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         // it's empty
         networkMapCache.nodeReady.set(null)
         return cacheTimeout
+    }
+
+    private fun hotloadOrExitOnParametersMismatch(networkMap: NetworkMap) {
+        val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val newParameterHash = networkMap.networkParameterHash
+        val nodeAcceptedNewParameters = updatesFile.exists() && newParameterHash == updatesFile.readObject<SignedNetworkParameters>().raw.hash
+
+        if (!nodeAcceptedNewParameters) {
+            logger.error(
+                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
+To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
+The node will shutdown now.""")
+            exitProcess(ExitCodes.FAILURE)
+        }
+
+        val hotloadSucceded = networkParametersHotloader!=null && networkParametersHotloader!!.attemptHotload(newParameterHash)
+        if (!hotloadSucceded) {
+            logger.info("Flag day occurred. Network map switched to the new network parameters: " +
+                    "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
+            exitProcess(ExitCodes.SUCCESS)
+        }
+        currentParametersHash = newParameterHash
     }
 
     private fun handleUpdateNetworkParameters(networkMapClient: NetworkMapClient, update: ParametersUpdate) {
