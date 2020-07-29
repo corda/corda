@@ -217,16 +217,15 @@ class DBCheckpointStorage(
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-
             other as DBFlowResult
-
             if (flow_id != other.flow_id) return false
+            val value = value
+            val otherValue = other.value
             if (value != null) {
-                if (other.value == null) return false
-                if (!value!!.contentEquals(other.value!!)) return false
+                if (otherValue == null) return false
+                if (!value.contentEquals(otherValue)) return false
             } else if (other.value != null) return false
             if (persistedInstant != other.persistedInstant) return false
-
             return true
         }
 
