@@ -571,9 +571,13 @@ class DriverDSLImpl(
     private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
         val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         return startRegisteredNode(
-                spec.name,
-                localNetworkMap,
-                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides, maximumHeapSize = spec.maximumHeapSize)
+            spec.name,
+            localNetworkMap,
+            NodeParameters(rpcUsers = spec.rpcUsers,
+                verifierType = spec.verifierType,
+                startInSameProcess = spec.startInProcess,
+                customOverrides = notaryConfig + customOverrides,
+                maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
     }
 
