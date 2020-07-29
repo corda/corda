@@ -22,7 +22,7 @@ configurations {
 
 dependencies {
     //Crypto
-    implementation "com.ing.dlt:zkkrypto:1.0.0"
+    implementation "com.ing.dlt:zkkrypto:${zkkrypto_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
     testImplementation "junit:junit:$junit_version"

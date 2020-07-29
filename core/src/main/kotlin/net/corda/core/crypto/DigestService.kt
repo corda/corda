@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import com.ing.dlt.zkkrypto.ecc.pedersenhash.PedersenHash
 import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializeAsToken
@@ -89,6 +90,16 @@ object BLAKE2b256DigestService : DigestService {
      * BLAKE2b256 is resistant to length extension attack, so no double hashing needed.
      */
     override fun hash(bytes: ByteArray) = SecureHash.BLAKE2b256(blake2b256.digest(bytes))
+    override fun hash(str: String): SecureHash = hash(str.toByteArray())
+    override val allOnesHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 255.toByte() })
+    override val zeroHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 0.toByte() })
+}
+
+@CordaSerializable
+object PedersenDigestService : DigestService {
+    private val pedersen = PedersenHash()
+    override val digestLength: Int by lazy { pedersen.hashLength }
+    override fun hash(bytes: ByteArray) = SecureHash.Pedersen(pedersen.hash(bytes))
     override fun hash(str: String): SecureHash = hash(str.toByteArray())
     override val allOnesHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 255.toByte() })
     override val zeroHash = SecureHash.BLAKE2b256(ByteArray(digestLength) { 0.toByte() })
