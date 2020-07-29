@@ -59,8 +59,7 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?
     /**
      * Ignoring always hotloadable properties (epoch, modifiedTime) return true if the notary is the only property that is different in the new network parameters
      */
-    @VisibleForTesting
-    fun canHotload(newNetworkParameters: NetworkParameters): Boolean {
+    private fun canHotload(newNetworkParameters: NetworkParameters): Boolean {
 
         if (notaryUpdateListeners.isEmpty()) {
             logger.warn("There is no update function assigned to notary changes.")
