@@ -27,13 +27,13 @@ import kotlin.system.exitProcess
  * This class is responsible for hotloading new network parameters or shut down the node if it's not possible.
  * Currently only hotloading notary changes are supported.
  */
-class NetworkParametersUpdater(baseDirectory: Path,
-                               private val networkMapClient: NetworkMapClient?,
-                               private val trustRoot: X509Certificate,
-                               private var networkParameters: NetworkParameters,
-                               private var parametersHash: SecureHash,
-                               private val networkParametersReader: NetworkParametersReader,
-                               private val networkParametersStorage: NetworkParametersStorage) {
+class NetworkParametersHotloader(baseDirectory: Path,
+                                 private val networkMapClient: NetworkMapClient?,
+                                 private val trustRoot: X509Certificate,
+                                 private var networkParameters: NetworkParameters,
+                                 private var parametersHash: SecureHash,
+                                 private val networkParametersReader: NetworkParametersReader,
+                                 private val networkParametersStorage: NetworkParametersStorage) {
     companion object {
         private val logger = contextLogger()
         private val alwaysHotloadable = listOf(NetworkParameters::epoch, NetworkParameters::modifiedTime)
@@ -58,6 +58,7 @@ class NetworkParametersUpdater(baseDirectory: Path,
      * When the network parameter hash has changed, try to hotload the new network parameters, or shut down if it's not possible.
      */
     fun update(newNetworkParameterHash: SecureHash) {
+        logger.info("update newNetworkParameterHash: $newNetworkParameterHash")
         if (parametersHash != newNetworkParameterHash) {
             hotloadParametersOrExit(newNetworkParameterHash)
         }
@@ -88,6 +89,7 @@ class NetworkParametersUpdater(baseDirectory: Path,
     }
 
     private fun hotloadParametersOrExit(newNetworkParameterHash: SecureHash) {
+
 
         val nodeAcceptedNewParameters = updatesFile.exists() && newNetworkParameterHash == updatesFile.readObject<SignedNetworkParameters>().raw.hash
 

@@ -77,7 +77,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var networkParameters: NetworkParameters
     private lateinit var keyManagementService: KeyManagementService
     private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
-    private  var networkParametersUpdater: NetworkParametersUpdater? = null
+    private  var networkParametersHotloader: NetworkParametersHotloader? = null
 
     override fun close() {
         fileWatcherSubscription.updateAndGet { subscription ->
@@ -98,7 +98,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
               networkParameters: NetworkParameters,
               keyManagementService: KeyManagementService,
               networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings,
-              networkParametersUpdater: NetworkParametersUpdater?
+              networkParametersHotloader: NetworkParametersHotloader?
              ) {
         fileWatcherSubscription.updateAndGet { subscription ->
             require(subscription == null) { "Should not call this method twice" }
@@ -110,7 +110,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             this.keyManagementService = keyManagementService
             this.autoAcceptNetworkParameters = networkParameterAcceptanceSettings.autoAcceptEnabled
             this.excludedAutoAcceptNetworkParameters = networkParameterAcceptanceSettings.excludedAutoAcceptableParameters
-            this.networkParametersUpdater = networkParametersUpdater
+            this.networkParametersHotloader = networkParametersHotloader
 
 
             val autoAcceptNetworkParametersNames = autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
@@ -187,12 +187,14 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             }
         }
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
-        if (networkParametersUpdater == null) {
+        if (networkParametersHotloader == null) {
             throw CordaRuntimeException("Network parameters can be updated only if network map/compatibility zone URL is specified")
         }
         else {
-            networkParametersUpdater!!.update(globalNetworkMap.networkParameterHash)
+            networkParametersHotloader!!.update(globalNetworkMap.networkParameterHash)
+            logger.info("Calling networkParametersUpdater with hash ${globalNetworkMap.networkParameterHash}")
         }
+
         // Calculate any nodes that are now gone and remove _only_ them from the cache
         // NOTE: We won't remove them until after the add/update cycle as only then will we definitely know which nodes are no longer
         // in the network

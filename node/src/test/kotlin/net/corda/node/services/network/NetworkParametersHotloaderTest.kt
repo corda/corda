@@ -21,7 +21,7 @@ import org.mockito.Spy
 import java.nio.file.Paths
 import java.security.cert.X509Certificate
 
-class NetworkParametersUpdaterTest {
+class NetworkParametersHotloaderTest {
 
     @Spy
     val notary: Party = TestIdentity.fresh("test notary").party
@@ -41,7 +41,7 @@ class NetworkParametersUpdaterTest {
     val newnetParamsWithNewNotary = networkParameters.addNotary(notary)
 
     @InjectMocks
-    lateinit var networkParametersUpdater: NetworkParametersUpdater
+    lateinit var networkParametersHotloader: NetworkParametersHotloader
 
 
     @Before
@@ -52,24 +52,24 @@ class NetworkParametersUpdaterTest {
     @Test(timeout=300_000)
     fun `can not hotload if notary changes but no listener function exists`() {
 
-        Assert.assertFalse(networkParametersUpdater.canHotload(newnetParamsWithNewNotary))
+        Assert.assertFalse(networkParametersHotloader.canHotload(newnetParamsWithNewNotary))
     }
 
     @Test(timeout=300_000)
     fun `can hotload if notary changes`() {
 
-        networkParametersUpdater.addNotaryUpdateListener(object: NotaryListUpdateListener {
+        networkParametersHotloader.addNotaryUpdateListener(object: NotaryListUpdateListener {
             override fun onNewNotaryList(notaries: List<NotaryInfo>) {
             }
         })
-        Assert.assertTrue(networkParametersUpdater.canHotload(newnetParamsWithNewNotary))
+        Assert.assertTrue(networkParametersHotloader.canHotload(newnetParamsWithNewNotary))
     }
 
     @Test(timeout=300_000)
     fun `can hotload if only always hotloadable properties change`() {
 
         val newParametersWithAlwaysHotloadableProperties = networkParameters.copy(epoch = networkParameters.epoch +1, modifiedTime = networkParameters.modifiedTime.plusSeconds(60))
-        Assert.assertTrue(networkParametersUpdater.canHotload(newParametersWithAlwaysHotloadableProperties))
+        Assert.assertTrue(networkParametersHotloader.canHotload(newParametersWithAlwaysHotloadableProperties))
     }
 
     @Test(timeout=300_000)
@@ -79,9 +79,9 @@ class NetworkParametersUpdaterTest {
         val parametersWithNewTransactionSize = networkParameters.copy(maxTransactionSize = networkParameters.maxTransactionSize +1)
         val parametersWithNewminimumPlatformVersion = networkParameters.copy(maxTransactionSize = networkParameters.minimumPlatformVersion +1)
 
-        Assert.assertFalse(networkParametersUpdater.canHotload(parametersWithNewMaxMessageSize))
-        Assert.assertFalse(networkParametersUpdater.canHotload(parametersWithNewTransactionSize))
-        Assert.assertFalse(networkParametersUpdater.canHotload(parametersWithNewminimumPlatformVersion))
+        Assert.assertFalse(networkParametersHotloader.canHotload(parametersWithNewMaxMessageSize))
+        Assert.assertFalse(networkParametersHotloader.canHotload(parametersWithNewTransactionSize))
+        Assert.assertFalse(networkParametersHotloader.canHotload(parametersWithNewminimumPlatformVersion))
 
     }
 }

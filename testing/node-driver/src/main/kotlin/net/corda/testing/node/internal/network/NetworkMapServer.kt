@@ -92,6 +92,7 @@ class NetworkMapServer(private val pollInterval: Duration,
 
     fun advertiseNewParameters() {
         networkParameters = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
+
         nextNetworkParameters = null
         parametersUpdate = null
     }
@@ -115,7 +116,8 @@ class NetworkMapServer(private val pollInterval: Duration,
         // Mapping from the UUID of the network (null for global one) to hashes of the nodes in network
         private val networkMaps = mutableMapOf<UUID?, MutableSet<SecureHash>>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
-        private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
+        //private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
+        private val signedNetParams get() = networkMapCertAndKeyPair.sign(networkParameters)
 
         @POST
         @Path("publish")

@@ -110,7 +110,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NetworkParameterUpdateListener
-import net.corda.node.services.network.NetworkParametersUpdater
+import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
@@ -516,7 +516,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             log.info("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
             null
         } else {
-            NetworkParametersUpdater(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage).also {
+            NetworkParametersHotloader(configuration.baseDirectory, networkMapClient, trustRoot, netParams, signedNetParams.raw.hash, networkParametersReader, networkParametersStorage).also {
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)
