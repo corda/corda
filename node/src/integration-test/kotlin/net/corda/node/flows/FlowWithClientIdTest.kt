@@ -6,7 +6,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlowWithClientId
-import net.corda.core.serialization.ResultSerializationException
+import net.corda.core.flows.ResultSerializationException
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.testing.driver.DriverParameters

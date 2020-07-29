@@ -1,4 +1,4 @@
-package net.corda.core.serialization
+package net.corda.core.flows
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.serialization.internal.MissingSerializerException

@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.serialization.ResultSerializationException
+import net.corda.core.flows.ResultSerializationException
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult

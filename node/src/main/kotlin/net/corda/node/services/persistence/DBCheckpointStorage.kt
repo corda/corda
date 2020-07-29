@@ -6,7 +6,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.ResultSerializationException
+import net.corda.core.flows.ResultSerializationException
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
