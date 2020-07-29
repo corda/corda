@@ -241,7 +241,7 @@ apply plugin: 'com.r3.testing.distributed-testing'
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
-    ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
+    ext.versionSuffix = "DJVM-${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
 }
 
 // Need the `toString()` call on these, because they need to be converted from GStringImpl to Java Strings.
@@ -608,42 +608,42 @@ bintrayConfig {
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
     publications = [
-            'corda-jfx',
-            'corda-mock',
-            'corda-rpc',
+    //        'corda-jfx',
+    //        'corda-mock',
+    //        'corda-rpc',
             'corda-core',
             'corda-core-deterministic',
-            'corda-deterministic-verifier',
+    //        'corda-deterministic-verifier',
             'corda-deserializers-djvm',
-            'corda',
-            'corda-finance-workflows',
+    //        'corda',
+    //        'corda-finance-workflows',
             'corda-finance-contracts',
-            'corda-node',
-            'corda-node-api',
-            'corda-node-djvm',
-            'corda-test-common',
-            'corda-core-test-utils',
-            'corda-test-utils',
-            'corda-test-db',
-            'corda-jackson',
-            'corda-testserver-impl',
-            'corda-testserver',
-            'corda-node-driver',
-            'corda-confidential-identities',
-            'corda-shell',
-            'corda-tools-shell-cli',
+    //        'corda-node',
+    //        'corda-node-api',
+    //        'corda-node-djvm',
+    //        'corda-test-common',
+    //        'corda-core-test-utils',
+    //        'corda-test-utils',
+    //        'corda-test-db',
+    //        'corda-jackson',
+    //        'corda-testserver-impl',
+    //        'corda-testserver',
+    //        'corda-node-driver',
+    //        'corda-confidential-identities',
+    //        'corda-shell',
+    //        'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-serialization-djvm',
-            'corda-tools-blob-inspector',
-            'corda-tools-explorer',
-            'corda-tools-network-bootstrapper',
-            'corda-tools-cliutils',
-            'corda-common-configuration-parsing',
-            'corda-common-validation',
-            'corda-common-logging',
-            'corda-tools-network-builder',
-            'corda-tools-checkpoint-agent'
+    //        'corda-tools-blob-inspector',
+    //        'corda-tools-explorer',
+    //        'corda-tools-network-bootstrapper',
+    //        'corda-tools-cliutils',
+    //        'corda-common-configuration-parsing',
+    //        'corda-common-validation',
+    //        'corda-common-logging',
+    //        'corda-tools-network-builder',
+    //        'corda-tools-checkpoint-agent'
     ]
     license {
         name = 'Apache-2.0'
