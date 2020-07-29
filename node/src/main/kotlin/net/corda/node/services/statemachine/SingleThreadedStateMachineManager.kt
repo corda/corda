@@ -193,13 +193,15 @@ internal class SingleThreadedStateMachineManager(
             }
         }
 
-        val finishedFlowsResults = getFinishedFlowsResults()
+        val finishedFlowsResults = checkpointStorage.getFinishedFlowsResultsMetadata().toList()
         for ((id, finishedFlowResult) in finishedFlowsResults) {
-            if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
-                innerState.clientIdsToFlowIds[finishedFlowResult.clientId] = FlowWithClientIdStatus.Removed(id, true)
-            } else {
-                // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
-            }
+            finishedFlowResult.clientId?.let {
+                if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
+                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, true)
+                } else {
+                    // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+                }
+            } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
 
         return serviceHub.networkMapCache.nodeReady.map {
@@ -459,12 +461,6 @@ internal class SingleThreadedStateMachineManager(
                 id to NonResidentFlow(id, checkpoint)
             }.toList().toMap()
         }
-    }
-
-    private fun getFinishedFlowsResults(): List<Pair<StateMachineRunId, FlowResultMetadata>> {
-        return checkpointStorage.getFinishedFlowsResultsMetadata().map { (id, serializedFlowResultMetadata) ->
-            id to serializedFlowResultMetadata.deserialize(checkpointSerializationContext!!)
-        }.toList()
     }
 
     private fun resumeRestoredFlows(flows: List<Flow<*>>) {

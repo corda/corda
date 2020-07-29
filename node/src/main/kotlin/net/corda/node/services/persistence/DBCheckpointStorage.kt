@@ -535,16 +535,15 @@ class DBCheckpointStorage(
     }
 
     // This method needs modification once CORDA-3681 is implemented to include FAILED flows as well
-    override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata.Serialized>> {
+    override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>> {
         val session = currentDBSession()
-        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, blob.checkpoint) 
+        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
-                join ${DBFlowCheckpointBlob::class.java.name} blob on blob.id = checkpoint.blob  
+                join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
                 where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
-            val serializedCheckpointState = SerializedBytes<CheckpointState>(it.checkpoint)
-            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata.Serialized(it.status, serializedCheckpointState)
+            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
         }
     }
 
@@ -705,7 +704,7 @@ class DBCheckpointStorage(
     private class DBFlowResultMetadataFields(
         val id: String,
         val status: FlowStatus,
-        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY
+        val clientId: String?
     )
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {

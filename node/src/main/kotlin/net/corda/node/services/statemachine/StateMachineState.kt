@@ -391,17 +391,5 @@ sealed class FlowWithClientIdStatus {
 
 data class FlowResultMetadata(
     val status: Checkpoint.FlowStatus,
-    val clientId: String
-) {
-    data class Serialized(
-        val status: Checkpoint.FlowStatus,
-        val serializedCheckpointState: SerializedBytes<CheckpointState>
-    ) {
-        fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): FlowResultMetadata {
-            val clientId = serializedCheckpointState.checkpointDeserialize(checkpointSerializationContext)
-                .invocationContext.clientId!!
-
-            return FlowResultMetadata(status, clientId)
-        }
-    }
-}
+    val clientId: String?
+)
