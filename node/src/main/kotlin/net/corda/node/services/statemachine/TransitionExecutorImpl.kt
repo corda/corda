@@ -1,8 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.CordaRuntimeException
-import net.corda.core.serialization.internal.MissingSerializerException
+import net.corda.core.serialization.ResultSerializationException
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
@@ -82,11 +81,10 @@ class TransitionExecutorImpl(
                             // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
                             // it was rethrown on [DatabaseTransaction.commit]. Unwrap the original exception and pass it to flow hospital
                             exception.cause
-                        } else if (exception is MissingSerializerException) {
-                            // We must not wrap a [MissingSerializerException] with a [StateTransitionException],
+                        } else if (exception is ResultSerializationException) {
+                            // We must not wrap a [ResultSerializationException] with a [StateTransitionException],
                             // because we will propagate the exception to rpc clients and [StateTransitionException] cannot be propagated to rpc clients.
-                            // We convert it instead to a [CordaRuntimeException], keeping its message and its cause.
-                            CordaRuntimeException(exception.message, exception)
+                            exception
                         } else {
                             // Wrap the exception with [StateTransitionException] for handling by the flow hospital
                             StateTransitionException(action, event, exception)

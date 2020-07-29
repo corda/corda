@@ -6,9 +6,11 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.ResultSerializationException
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
@@ -429,7 +431,11 @@ class DBCheckpointStorage(
         }
 
         val dbFlowResult = if (checkpoint.status == FlowStatus.COMPLETED) {
-            createDBFlowResult(flowId, checkpoint.result, now)
+            try {
+                createDBFlowResult(flowId, checkpoint.result, now)
+            } catch(e: MissingSerializerException) {
+                throw ResultSerializationException(e)
+            }
         } else {
             null
         }
