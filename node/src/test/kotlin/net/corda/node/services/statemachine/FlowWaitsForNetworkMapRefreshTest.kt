@@ -5,12 +5,9 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.PartyIdentity
 import net.corda.core.flows.PartyNotFoundException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -95,33 +92,6 @@ class FlowWaitsForNetworkMapRefreshTest {
         assertEquals(flowDiagnosedWithNetworkMapWaiting.size, 1)
     }
 
-    @Test(timeout = 300_000)
-    fun `flow started with missing anonymous party restarts after network map refresh and successfully finishes execution`() {
-        driver(DriverParameters(
-                notarySpecs = emptyList(),
-                startNodesInProcess = true
-        )) {
-            val user = User(
-                    "mark",
-                    "dadada",
-                    setOf(Permissions.startFlow<HelloExceptionFlow>())
-            )
-
-            val nodeAHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = CHARLIE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBAnonymous = AnonymousParty(nodeBHandle.nodeInfo.singleIdentity().owningKey)
-
-            // Party "added" after first fail, should retry the flow and succeed
-            val result = nodeAHandle.rpc.startFlow(::HelloExceptionFlow, nodeBAnonymous)
-                    .returnValue
-                    .getOrThrow()
-
-            assertEquals("go away", result)
-        }
-
-        assertEquals(flowDiagnosedWithNetworkMapWaiting.size, 1)
-    }
-
     @StartableByRPC
     @InitiatingFlow
     class HelloFlow : FlowLogic<Any>() {
@@ -138,7 +108,7 @@ class FlowWaitsForNetworkMapRefreshTest {
 
     @StartableByRPC
     @InitiatingFlow
-    class HelloExceptionFlow(val p: AbstractParty) : FlowLogic<String>() {
+    class HelloExceptionFlow(val p: Party) : FlowLogic<String>() {
         companion object {
             @Volatile
             var counter = 0
@@ -148,11 +118,7 @@ class FlowWaitsForNetworkMapRefreshTest {
         override fun call(): String {
             if (counter == 0) {
                 counter += 1
-                val partyNotFoundException = if (p is Party) {
-                    PartyNotFoundException("Could not find party: ${p.name}", PartyIdentity(partyName = p.name))
-                } else {
-                    PartyNotFoundException("Could not find party: ${p.owningKey}", PartyIdentity(partyKey = p.owningKey))
-                }
+                val partyNotFoundException = PartyNotFoundException("Could not find party: $CHARLIE_NAME", CHARLIE_NAME)
                 throw StateTransitionException(partyNotFoundException)
             }
             val partySession = initiateFlow(p)
