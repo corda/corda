@@ -552,9 +552,9 @@ class DBCheckpointStorage(
         }
     }
 
-    override fun getFlowResult(id: StateMachineRunId, checkExists: Boolean): Any? {
+    override fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean): Any? {
         val dbFlowResult = getDBFlowResult(id)
-        if (checkExists && dbFlowResult == null) {
+        if (throwIfMissing && dbFlowResult == null) {
             throw IllegalStateException("Flow's $id result was not found in the database. Something is very wrong.")
         }
         val serializedFlowResult = dbFlowResult?.value?.let { SerializedBytes<Any>(it) }

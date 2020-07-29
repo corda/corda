@@ -70,10 +70,10 @@ interface CheckpointStorage {
     fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>>
 
     /**
-     * Load a flow result from the store. If [checkExists] is true then it checks if it exists in
-     * the database and if not it throws a [IllegalStateException].
+     * Load a flow result from the store. If [throwIfMissing] is true then it throws an [IllegalStateException]
+     * if the flow result is missing in the database.
      */
-    fun getFlowResult(id: StateMachineRunId, checkExists: Boolean = false): Any?
+    fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
 
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }
