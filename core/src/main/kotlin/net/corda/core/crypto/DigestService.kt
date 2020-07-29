@@ -3,8 +3,6 @@ package net.corda.core.crypto
 import com.ing.dlt.zkkrypto.ecc.pedersenhash.PedersenHash
 import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SingletonSerializeAsToken
 import org.bouncycastle.crypto.digests.Blake2sDigest
 import org.bouncycastle.jcajce.provider.digest.Blake2b
 
