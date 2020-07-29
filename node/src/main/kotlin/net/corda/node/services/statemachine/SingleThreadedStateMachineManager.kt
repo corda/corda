@@ -889,12 +889,7 @@ internal class SingleThreadedStateMachineManager(
             val flowId = existingStatus.flowId
 
             val resultFuture = if (existingStatus.succeeded) {
-                val dbFlowResult = database.transaction {
-                    (checkpointStorage as DBCheckpointStorage).getDBFlowResult(existingStatus.flowId)
-                        ?: throw IllegalStateException("Flow's $flowId result was not found in the database. Something is very wrong.")
-                }
-                val serializedFlowResult = dbFlowResult.value?.let { SerializedBytes<Any>(it) }
-                val flowResult = serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+                val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, checkExists = true) }
                 doneFuture(flowResult)
             } else {
                 // this block will be implemented upon implementing CORDA-3681 - for now just return a dummy exception

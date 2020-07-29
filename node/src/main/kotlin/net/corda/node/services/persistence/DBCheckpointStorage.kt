@@ -8,6 +8,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
@@ -514,7 +515,7 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
-    fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
+    private fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
         return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
     }
 
@@ -541,6 +542,15 @@ class DBCheckpointStorage(
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
         }
+    }
+
+    override fun getFlowResult(id: StateMachineRunId, checkExists: Boolean): Any? {
+        val dbFlowResult = getDBFlowResult(id)
+        if (checkExists && dbFlowResult == null) {
+            throw IllegalStateException("Flow's $id result was not found in the database. Something is very wrong.")
+        }
+        val serializedFlowResult = dbFlowResult?.value?.let { SerializedBytes<Any>(it) }
+        return serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
