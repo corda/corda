@@ -886,7 +886,7 @@ internal class SingleThreadedStateMachineManager(
             val flowId = existingStatus.flowId
 
             val resultFuture = if (existingStatus.succeeded) {
-                val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, checkExists = true) }
+                val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
                 doneFuture(flowResult)
             } else {
                 // this block will be implemented upon implementing CORDA-3681 - for now just return a dummy exception
