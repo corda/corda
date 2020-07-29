@@ -24,6 +24,7 @@ import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.apache.logging.log4j.spi.ExtendedLogger
+import org.junit.jupiter.api.Assertions
 import utility.getOrThrow
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
@@ -36,6 +37,21 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
     private val freighterHelperCordapp = NodeBuilder.DeployedCordapp.fromClassPath("freighter-cordapp-flows")
 
     abstract fun getLogger(): ExtendedLogger
+    abstract fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long>
+
+
+    fun runBenchmark(numberOfParticipants: Int,cutOffTime:Long){
+        val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
+        val benchmark = runScenario( numberOfParticipants,deploymentContext)
+
+        benchmark.map {
+            getLogger().info("${it.key} BenchMark ${it.value}")
+        }
+
+        benchmark.map {
+            Assertions.assertTrue(it.value <= cutOffTime)
+        }
+    }
 
     fun checkGroupSizeIsAsExpectedInMembersVaults(listOfNetworkMembers: List<SingleNodeDeployed>, groupLinearId: UniqueIdentifier, expectedGroupSize: Int) {
         val listToIterateOver = listOfNetworkMembers.toMutableList()
@@ -69,7 +85,7 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
                     newGroupId,
                     newGroupName,
                     groupMembers.toMutableSet(),
-                    null)
+                    null).returnValue.getOrThrow()
         }
     }
 
@@ -147,6 +163,13 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
         return (0 until numberOfParticipants).map {
             nodeGenerator()
         }.map { it.getOrThrow() }
+    }
+
+    fun setupDefaultGroup(nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState>, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed, defaultGroupID: UniqueIdentifier, defaultGroupName: String): MutableList<UniqueIdentifier> {
+        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
+        groupMembers.add(0, bnoMembershipState.linearId)
+        addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
+        return groupMembers
     }
 
     fun createDeploymentGenerator(

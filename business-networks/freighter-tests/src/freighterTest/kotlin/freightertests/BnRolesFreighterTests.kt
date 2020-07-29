@@ -4,8 +4,9 @@ import freighter.deployments.DeploymentContext
 import freighter.deployments.SingleNodeDeployed
 import freighter.machine.AzureMachineProvider
 import freighter.machine.DeploymentMachineProvider
+import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
-import net.corda.bn.flows.AssignBNORoleFlow
+import freighter.testing.DockerTest
 import net.corda.bn.flows.AssignMemberRoleFlow
 import net.corda.bn.flows.ModifyRolesFlow
 import net.corda.bn.flows.RevokeMembershipFlow
@@ -15,88 +16,87 @@ import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.getOrThrow
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.spi.ExtendedLogger
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
 import kotlin.system.measureTimeMillis
 
 @AzureTest
-class BnRolesFreighterTests: AbstractBnRolesFreighterTests() {
+class BnRolesFreighterTests : AbstractBnRolesFreighterTests() {
 
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
-    companion object {
-        val logger: ExtendedLogger = LogManager.getContext().getLogger(BnRolesFreighterTests::class.java.name)
-    }
-
     override fun getLogger(): ExtendedLogger {
-        return logger
+        return LogManager.getContext().getLogger(BnRolesFreighterTests::class.java.name)
     }
 
     @Test
     fun testAllMembersAreBNOWith10Participants() {
         val numberOfParticipants = 10
-        measureBenchmark(numberOfParticipants, 300000)
+        runBenchmark(numberOfParticipants, 300000)
     }
 
     @Test
     fun testAllMembersAreBNOWith20Participants() {
         val numberOfParticipants = 20
-        measureBenchmark(numberOfParticipants, 15000)
+        runBenchmark(numberOfParticipants, 15000)
     }
 
     @Test
     fun testAllMembersAreBNOWith40Participants() {
         val numberOfParticipants = 40
-        measureBenchmark(numberOfParticipants, 20000)
-    }
-
-    private fun measureBenchmark(numberOfParticipants: Int, maxTime:Long, doRevocation: Boolean = false) {
-        logger.info("Running benchmark with $numberOfParticipants particpants")
-
-
-        val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
-        val benchmark = runBenchmark(deploymentContext, numberOfParticipants, doRevocation)
-
-        benchmark.map {
-            logger.info("${it.key} BenchMark ${it.value}")
-        }
-
-        benchmark.map {
-            Assertions.assertTrue(it.value <= maxTime)
-        }
+        runBenchmark(numberOfParticipants, 20000)
     }
 }
 
-abstract class AbstractBnRolesFreighterTests :BaseBNFreighterTest(){
+@DockerTest
+class DockerBnRolesFreighterTests : AbstractBnRolesFreighterTests() {
 
-    fun runBenchmark(deploymentContext: DeploymentContext, numberOfParticipants: Int, doRevocation:Boolean): Map<String, Long>{
+    override fun getLogger(): ExtendedLogger {
+        return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
+    }
+
+    override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
+
+    @Test
+    fun testScenario2Participants() {
+        val numberOfParticipants = 2
+        runBenchmark(numberOfParticipants, 300000)
+    }
+}
+
+abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
+
+    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long> {
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
         val newGroupId = UniqueIdentifier()
         val newGroupName = "InitialGroup"
         val networkId = UniqueIdentifier()
-        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkId, newGroupId,newGroupName)
-
-        //val groupStateForDefaultGroup = createGroup(bnoNode, bnoMembershipState, newGroupId, newGroupName)
+        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkId, newGroupId, newGroupName)
 
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
 
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
 
+        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
+        groupMembers.add(0, bnoMembershipState.linearId)
+        addMembersToAGroup(bnoNode, newGroupId, newGroupName, groupMembers)
+        checkGroupSizeIsAsExpectedInMembersVaults(listOfGroupMembers, newGroupId, groupMembers.size)
+
         getLogger().info("Beginning to Assign BNO Roles")
 
-        nodeToMembershipIds.values.forEach{
+        nodeToMembershipIds.forEach { nodeTOMembershipId ->
             bnoNode.rpc {
-                getLogger().info("Assigning ${it.identity} bno role")
-                startFlow(::ModifyRolesFlow, it.linearId, setOf(BNORole()),null).returnValue.getOrThrow()
+                getLogger().info("Assigning ${nodeTOMembershipId.value.identity} bno role")
+                startFlow(::ModifyRolesFlow, nodeTOMembershipId.value.linearId, setOf(BNORole()), null).returnValue.getOrThrow()
+            }
+            while (!checkBnoRoleInVault(nodeTOMembershipId)) {
+                getLogger().info("Waiting for BNO Role To Propagate To Vault")
             }
         }
 
@@ -108,9 +108,8 @@ abstract class AbstractBnRolesFreighterTests :BaseBNFreighterTest(){
 
         getLogger().info("Beginning to Suspend")
 
-
         val membershipUpdateTime = measureTimeMillis {
-            firstSubsetGroupMembers.map{
+            firstSubsetGroupMembers.map {
                 bnoNode.rpc {
                     getLogger().info("${it.nodeMachine.identity()} membership will be suspended.")
                     startFlow(::AssignMemberRoleFlow, nodeToMembershipIds[it]!!.linearId, null).returnValue.getOrThrow()
@@ -126,25 +125,32 @@ abstract class AbstractBnRolesFreighterTests :BaseBNFreighterTest(){
                 "Membership Update Time" to membershipUpdateTime,
                 "Time Taken To Register Suspension in All Vaults" to membershipSuspendTime)
 
-        if(doRevocation){
-            val membershipRevocationTime = measureTimeMillis {
-                for (node in firstSubsetGroupMembers) {
-                    bnoNode.rpc {
-                        startFlow(::RevokeMembershipFlow, nodeToMembershipIds[node]!!.linearId, null).returnValue.getOrThrow()
-                    }
+        val membershipRevocationTime = measureTimeMillis {
+            for (node in firstSubsetGroupMembers) {
+                bnoNode.rpc {
+                    startFlow(::RevokeMembershipFlow, nodeToMembershipIds[node]!!.linearId, null).returnValue.getOrThrow()
                 }
             }
-
-            val vaultUpdateTimeAfterDeletion = measureTimeMillis {
-                checkGroupSizeIsAsExpectedInMembersVaults(firstSubsetGroupMembers, newGroupId,(nodeToMembershipIds.size-firstSubsetGroupMembers.size)+1)
-            }
-            benchmarkResults["Time Taken Revoke Membership of half"] = membershipRevocationTime
-            benchmarkResults["Time Taken for Vault Update To Reflect Revocation in remaining members' Vaults"] = vaultUpdateTimeAfterDeletion
         }
+
+        val vaultUpdateTimeAfterDeletion = measureTimeMillis {
+            checkGroupSizeIsAsExpectedInMembersVaults(firstSubsetGroupMembers, newGroupId, (nodeToMembershipIds.size - firstSubsetGroupMembers.size) + 1)
+        }
+        benchmarkResults["Time Taken Revoke Membership of half"] = membershipRevocationTime
+        benchmarkResults["Time Taken for Vault Update To Reflect Revocation in remaining members' Vaults"] = vaultUpdateTimeAfterDeletion
+
 
         bnoNode.nodeMachine.stopNode()
         listOfGroupMembers.map { it.stopNode() }
 
         return benchmarkResults
     }
+
+    private fun checkBnoRoleInVault(nodeTOMembershipId: Map.Entry<SingleNodeDeployed, MembershipState>): Boolean {
+        return nodeTOMembershipId.key.rpc {
+            vaultQuery(MembershipState::class.java).states.map { it.state.data }
+        }.first().roles.contains(BNORole())
+    }
 }
+
+

@@ -1,0 +1,4 @@
+package freightertests
+
+class ImpactsOfDifferingGroupSizesOnTheSameNetwork {
+}

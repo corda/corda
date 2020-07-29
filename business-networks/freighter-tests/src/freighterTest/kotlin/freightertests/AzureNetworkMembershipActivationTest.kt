@@ -4,7 +4,9 @@ import freighter.deployments.DeploymentContext
 import freighter.deployments.SingleNodeDeployed
 import freighter.machine.AzureMachineProvider
 import freighter.machine.DeploymentMachineProvider
+import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
+import freighter.testing.DockerTest
 import net.corda.bn.flows.SuspendMembershipFlow
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
@@ -12,7 +14,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.spi.ExtendedLogger
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
 import kotlin.system.measureTimeMillis
@@ -31,58 +32,57 @@ class AzureNetworkMembershipActivationTest : AbstractNetworkMembershipActivation
     }
 
     @Test
-    fun testMembershipActivationWithSplitGroupParticipants() {
-        val numberOfParticipants = 5
-        runBaseActivationBenchmark(numberOfParticipants, 15000, true)
-    }
-
-    @Test
     fun testMembershipActivationWithParticipants() {
         val numberOfParticipants = 5
-        runBaseActivationBenchmark(numberOfParticipants, 15000)
+        runBenchmark(numberOfParticipants, 15000)
     }
 
     @Test
     fun testMembershipActivationWith10Participants() {
         val numberOfParticipants = 10
-        runBaseActivationBenchmark(numberOfParticipants, 15000)
+        runBenchmark(numberOfParticipants, 15000)
     }
 
     @Test
     fun testMembershipActivationWith15Participants() {
         val numberOfParticipants = 15
-        runBaseActivationBenchmark(numberOfParticipants, 15000)
+        runBenchmark(numberOfParticipants, 15000)
     }
 
     @Test
     fun testMembershipActivationWith20Participants() {
         val numberOfParticipants = 20
-        runBaseActivationBenchmark(numberOfParticipants, 20000)
+        runBenchmark(numberOfParticipants, 20000)
     }
 
     @Test
     fun testMembershipActivationWith40Participants() {
         val numberOfParticipants = 40
-        runBaseActivationBenchmark(numberOfParticipants, 30000)
+        runBenchmark(numberOfParticipants, 30000)
     }
 
-    private fun runBaseActivationBenchmark(numberOfParticipants: Int, cutOffTime: Long, groupSplitMode: Boolean = false) {
-        val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
-        val benchmark = runNetworkMembershipActivationBenchmark(deploymentContext, numberOfParticipants)
+}
 
-        benchmark.map {
-            logger.info("${it.key} BenchMark ${it.value}")
-        }
+@DockerTest
+class DockerNetworkMembershipActivationTest : AbstractNetworkMembershipActivationTest(){
 
-        benchmark.map {
-            Assertions.assertTrue(it.value <= cutOffTime)
-        }
+    override fun getLogger(): ExtendedLogger {
+        return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
     }
+
+    override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
+
+    @Test
+    fun testActivation2Participants() {
+        val numberOfParticipants = 2
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
 }
 
 abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
 
-    fun runNetworkMembershipActivationBenchmark(deploymentContext: DeploymentContext, numberOfParticipants: Int, doGroupSplit: Boolean = false): Map<String, Long> {
+    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long> {
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
@@ -105,16 +105,6 @@ abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
         val membershipInVault = measureTimeMillis { waitForStatusUpdate(listOfGroupMembers, membershipCriteria) }
         val subsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size / 2).first()
 
-        if (doGroupSplit) {
-            val subsetGroupName = "subGroup"
-            val subGroupId = UniqueIdentifier()
-
-            val subGroupMembers = subsetGroupMembers.map { nodeToMembershipIds.get(it)!!.linearId } as MutableList
-            groupMembers.add(0, bnoMembershipState.linearId)
-
-            createGroup(bnoNode, bnoMembershipState, subGroupId, subsetGroupName)
-            addMembersToAGroup(bnoNode, subGroupId, subsetGroupName, subGroupMembers)
-        }
 
         measureTimeMillis {
             for (node in subsetGroupMembers) {

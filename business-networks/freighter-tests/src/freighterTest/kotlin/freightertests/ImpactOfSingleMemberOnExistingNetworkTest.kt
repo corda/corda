@@ -4,12 +4,13 @@ import freighter.deployments.DeploymentContext
 import freighter.deployments.SingleNodeDeployed
 import freighter.machine.AzureMachineProvider
 import freighter.machine.DeploymentMachineProvider
+import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
+import freighter.testing.DockerTest
 import net.corda.bn.states.MembershipState
 import net.corda.core.contracts.UniqueIdentifier
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.spi.ExtendedLogger
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
 import kotlin.system.measureTimeMillis
@@ -26,48 +27,50 @@ class ImpactOfSingleMemberOnExistingNetworkTest: AbstractImpactOfSingleMemberOnE
     @Test
     fun testOfAddingASingleNodeTOAnExistingNetworkOf10Nodes(){
         val participants = 10
-        runBenchmarkAgainstExpectedTime(participants,300000)
+        runBenchmark(participants,300000)
     }
 
     @Test
     fun testOfAddingASingleNodeTOAnExistingNetworkOf20Nodes(){
         val participants = 20
-        runBenchmarkAgainstExpectedTime(participants,300000)
+        runBenchmark(participants,300000)
     }
 
     @Test
     fun testOfAddingASingleNodeTOAnExistingNetworkOf30Nodes(){
         val participants = 30
-        runBenchmarkAgainstExpectedTime(participants,300000)
+        runBenchmark(participants,300000)
     }
 
     @Test
     fun testOfAddingASingleNodeTOAnExistingNetworkOf40Nodes(){
         val participants = 40
-        runBenchmarkAgainstExpectedTime(participants,300000)
+        runBenchmark(participants,300000)
     }
 
+}
 
+@DockerTest
+class DockerImpactOfSingleMemberOnExistingNetworkTest : AbstractImpactOfSingleMemberOnExistingNetworkTest(){
 
-    private fun runBenchmarkAgainstExpectedTime(participants: Int, maximumTime: Long) {
-        val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
-        val benchmark = runBenchmark(deploymentContext, participants)
-
-
-        benchmark.map {
-            getLogger().info("${it.key} BenchMark ${it.value}")
-        }
-
-        benchmark.map {
-            Assertions.assertTrue(it.value <= maximumTime)
-        }
+    override fun getLogger(): ExtendedLogger {
+        return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
     }
+
+    override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
+
+    @Test
+    fun testScenario2Participants() {
+        val numberOfParticipants = 2
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
 }
 
 
 abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighterTest(){
 
-    fun runBenchmark(deploymentContext: DeploymentContext, numberOfParticipants: Int): Map<String, Long>{
+    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long>{
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
@@ -81,9 +84,7 @@ abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighter
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
-        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
-        groupMembers.add(0, bnoMembershipState.linearId)
-        addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
+        val groupMembers = setupDefaultGroup(nodeToMembershipIds, bnoMembershipState, bnoNode, defaultGroupID, defaultGroupName)
 
         getLogger().info("Adding New Single Node")
         val newNode = nodeGenerator().getOrThrow()
