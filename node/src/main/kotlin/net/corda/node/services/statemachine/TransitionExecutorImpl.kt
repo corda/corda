@@ -74,26 +74,12 @@ class TransitionExecutorImpl(
                         log.info("Error while executing $action, with event $event, erroring state", exception)
                     }
 
-                    // distinguish between a DatabaseTransactionException and an actual StateTransitionException
-                    val stateTransitionOrOtherException: Throwable =
-                        if (exception is DatabaseTransactionException) {
-                            // if the exception is a DatabaseTransactionException then it is not really a StateTransitionException
-                            // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
-                            // it was rethrown on [DatabaseTransaction.commit]. Unwrap the original exception and pass it to flow hospital
-                            exception.cause
-                        } else if (exception is ResultSerializationException) {
-                            // We must not wrap a [ResultSerializationException] with a [StateTransitionException],
-                            // because we will propagate the exception to rpc clients and [StateTransitionException] cannot be propagated to rpc clients.
-                            exception
-                        } else {
-                            // Wrap the exception with [StateTransitionException] for handling by the flow hospital
-                            StateTransitionException(action, event, exception)
-                        }
+                    val flowError = createError(exception, action, event)
 
                     val newState = previousState.copy(
                         checkpoint = previousState.checkpoint.copy(
                             errorState = previousState.checkpoint.errorState.addErrors(
-                                listOf(FlowError(secureRandom.nextLong(), stateTransitionOrOtherException))
+                                listOf(flowError)
                             )
                         ),
                         isFlowResumed = false
@@ -125,5 +111,24 @@ class TransitionExecutorImpl(
                 )
             }
         }
+    }
+
+    private fun createError(e: Exception, action: Action, event: Event): FlowError {
+        // distinguish between a DatabaseTransactionException and an actual StateTransitionException
+        val stateTransitionOrOtherException: Throwable =
+            if (e is DatabaseTransactionException) {
+                // if the exception is a DatabaseTransactionException then it is not really a StateTransitionException
+                // it is actually an exception that previously broke a DatabaseTransaction and was suppressed by user code
+                // it was rethrown on [DatabaseTransaction.commit]. Unwrap the original exception and pass it to flow hospital
+                e.cause
+            } else if (e is ResultSerializationException) {
+                // We must not wrap a [ResultSerializationException] with a [StateTransitionException],
+                // because we will propagate the exception to rpc clients and [StateTransitionException] cannot be propagated to rpc clients.
+                e
+            } else {
+                // Wrap the exception with [StateTransitionException] for handling by the flow hospital
+                StateTransitionException(action, event, e)
+            }
+        return FlowError(secureRandom.nextLong(), stateTransitionOrOtherException)
     }
 }
