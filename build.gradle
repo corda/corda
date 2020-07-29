@@ -188,6 +188,7 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
@@ -221,12 +222,13 @@ plugins {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
 apply plugin: "com.r3.dependx.dependxies"
 
 
-// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
+// If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve
 // the latest git commit hash and timestamp and create a version postfix from that
 if (project.hasProperty("versionFromGit")){
     ext.versionSuffix = "${grgit.head().dateTime.format("yyyyMMdd_HHmmss")}-${grgit.head().abbreviatedId}"
@@ -395,6 +397,14 @@ allprojects {
             maven { url "${artifactory_contextUrl}/corda-dependencies" }
             maven { url 'https://repo.gradle.org/gradle/libs-releases' }
             maven { url "${artifactory_contextUrl}/corda-dev" }
+        }
+        maven {
+            name "GitHubPackages"
+            url "https://maven.pkg.github.com/ing-bank/zkkrypto"
+            credentials {
+                username System.getenv("GITHUB_USERNAME")
+                password System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 
