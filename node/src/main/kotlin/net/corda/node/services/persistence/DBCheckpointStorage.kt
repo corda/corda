@@ -213,6 +213,7 @@ class DBCheckpointStorage(
         @Column(name = "timestamp")
         val persistedInstant: Instant
     ) {
+        @Suppress("ComplexMethod")
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -409,6 +410,7 @@ class DBCheckpointStorage(
         currentDBSession().save(metadata)
     }
 
+    @Suppress("ComplexMethod")
     override fun updateCheckpoint(
         id: StateMachineRunId,
         checkpoint: Checkpoint,
@@ -434,7 +436,7 @@ class DBCheckpointStorage(
         val dbFlowResult = if (checkpoint.status == FlowStatus.COMPLETED) {
             try {
                 createDBFlowResult(flowId, checkpoint.result, now)
-            } catch(e: MissingSerializerException) {
+            } catch (e: MissingSerializerException) {
                 throw ResultSerializationException(e)
             }
         } else {
