@@ -2,8 +2,8 @@ name: ING Corda Fork Minimal Build
 
 env:
   ING_MINIMAL_BUILD: 1
-  GITHUB_USERNAME: ${{ github.actor }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_USERNAME: ${{ secrets.GH_PACKAGES_USER }}
+  GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
 on:
   push:
@@ -32,10 +32,6 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew assemble --stacktrace --build-cache --parallel
-        env:
-          ING_MINIMAL_BUILD: 1
-          GITHUB_USERNAME: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     runs-on: ubuntu-latest
