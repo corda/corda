@@ -839,6 +839,7 @@ if (System.getenv('ING_MINIMAL_BUILD') != null) {
             ':samples:simm-valuation-demo',
             ':samples:simm-valuation-demo:contracts-states',
             ':samples:simm-valuation-demo:flows',
+            ':samples:simm-valuation-demo:contracts-states:shrink',
             ':samples:trader-demo',
             ':samples:trader-demo:workflows-trader',
 
@@ -933,6 +934,24 @@ if (System.getenv('ING_MINIMAL_BUILD') != null) {
                 }
 
 
+            }
+        }
+
+        it.afterEvaluate {
+            it.tasks.findByName("configureCordappFatJar").each {
+                it.enabled = false
+            }
+        }
+
+        it.afterEvaluate {
+            it.tasks.findByName("shrink").each {
+                it.enabled = false
+            }
+        }
+
+        it.afterEvaluate {
+            it.tasks.findByName("sign").each {
+                it.enabled = false
             }
         }
 
