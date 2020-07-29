@@ -1,12 +1,12 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlowWithClientId
+import net.corda.core.serialization.ResultSerializationException
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.testing.driver.DriverParameters
@@ -68,7 +68,7 @@ class FlowWithClientIdTest {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
 
-            val e = assertFailsWith<CordaRuntimeException> {
+            val e = assertFailsWith<ResultSerializationException> {
                 nodeA.rpc.startFlowWithClientId(clientId, ::UnserializableResultFlow).returnValue.getOrThrow(20.seconds)
             }
 

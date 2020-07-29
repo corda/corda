@@ -3,4 +3,9 @@ package net.corda.core.serialization
 import net.corda.core.CordaRuntimeException
 import net.corda.core.serialization.internal.MissingSerializerException
 
-class ResultSerializationException(e: MissingSerializerException) : CordaRuntimeException(e.message)
+/**
+ * Thrown whenever a flow result cannot be serialized when attempting to save it in the database
+ */
+class ResultSerializationException private constructor(message: String?) : CordaRuntimeException(message) {
+    constructor(e: MissingSerializerException): this(e.message)
+}
