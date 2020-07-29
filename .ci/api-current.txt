@@ -5224,7 +5224,6 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$SoftL
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.QueryCriteria$SoftLockingType extends java.lang.Enum
-  protected <init>()
   public static net.corda.core.node.services.vault.QueryCriteria$SoftLockingType valueOf(String)
   public static net.corda.core.node.services.vault.QueryCriteria$SoftLockingType[] values()
 ##
