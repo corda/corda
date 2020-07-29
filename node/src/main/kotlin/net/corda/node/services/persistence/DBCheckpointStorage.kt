@@ -220,9 +220,10 @@ class DBCheckpointStorage(
             other as DBFlowResult
 
             if (flow_id != other.flow_id) return false
-            if (!(value ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.value ?: EMPTY_BYTE_ARRAY)) {
-                return false
-            }
+            if (value != null) {
+                if (other.value == null) return false
+                if (!value!!.contentEquals(other.value!!)) return false
+            } else if (other.value != null) return false
             if (persistedInstant != other.persistedInstant) return false
 
             return true
