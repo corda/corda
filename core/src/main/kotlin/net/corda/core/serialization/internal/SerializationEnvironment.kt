@@ -99,11 +99,8 @@ val _allEnabledSerializationEnvs: List<Pair<String, SerializationEnvironment>>
     get() = serializationEnvFields.mapNotNull { it.get()?.let { env -> Pair(it.name, env) } }
 
 val effectiveSerializationEnv: SerializationEnvironment
-    get() {
-        return _allEnabledSerializationEnvs.let {
-            checkNotNull(it.singleOrNull()?.second) {
+    get() = _allEnabledSerializationEnvs
+            .singleOrNull { it.second != _rpcClientSerializationEnv.get() }?.second ?: throw IllegalStateException(
                 "Expected exactly 1 of {${serializationEnvFields.joinToString(", ") { it.name }}} " +
-                        "but got: {${it.joinToString(", ") { it.first }}}"
-            }
-        }
-    }
+                        "but got: {${_allEnabledSerializationEnvs.joinToString(", ") { it.first }}}"
+    )
