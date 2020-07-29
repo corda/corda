@@ -77,7 +77,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         )
     }
 
-
     @Before
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
@@ -96,7 +95,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList()
-                //isDebug = true
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
             val nextParams = networkMapServer.networkParameters.copy(
@@ -150,8 +148,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList(),
-                isDebug = true
+                notarySpecs = emptyList()
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -161,8 +158,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
 
             val alice = startNodeAndRunFlagDay(paramsWithNewNotary)
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-            assertEquals(paramsWithNewNotary, alice.rpc.networkParameters)
+            eventually { assertEquals(paramsWithNewNotary, alice.rpc.networkParameters) }
+
         }
     }
 
@@ -171,8 +168,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList(),
-                isDebug = true
+                notarySpecs = emptyList()
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -186,8 +182,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
             networkMapServer.advertiseNewParameters()
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-            assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected")
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+
         }
     }
 
@@ -196,8 +192,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList(),
-                isDebug = true
+                notarySpecs = emptyList()
         ) {
 
             val oldParams = networkMapServer.networkParameters
@@ -206,8 +201,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
                     maxMessageSize = oldParams.maxMessageSize + 1)
             val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSize)
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-            assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected")
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
         }
     }
 

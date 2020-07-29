@@ -520,6 +520,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)
+                it.addNetworkParametersChangedListeners(networkMapUpdater)
             }
         }
 

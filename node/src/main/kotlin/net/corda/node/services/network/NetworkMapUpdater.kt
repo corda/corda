@@ -62,7 +62,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val baseDirectory: Path,
                         private val extraNetworkMapKeys: List<UUID>,
                         private val networkParametersStorage: NetworkParametersStorage
-) : AutoCloseable {
+) : AutoCloseable, NetworkParameterUpdateListener {
     companion object {
         private val logger = contextLogger()
         private val defaultRetryInterval = 1.minutes
@@ -315,6 +315,10 @@ The node will shutdown now.""")
         } else {
             throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
         }
+    }
+
+    override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+        this.networkParameters = networkParameters
     }
 }
 
