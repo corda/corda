@@ -1,11 +1,13 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.concurrent.Semaphore
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
@@ -19,6 +21,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import rx.Observable
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.util.UUID
@@ -26,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FlowClientIdTests {
@@ -49,6 +53,7 @@ class FlowClientIdTests {
         mockNet.stopNodes()
         ResultFlow.hook = null
         ResultFlow.suspendableHook = null
+        UnSerializableResultFlow.firstRun = true
         SingleThreadedStateMachineManager.beforeClientIDCheck = null
         SingleThreadedStateMachineManager.onClientIDNotFound = null
         SingleThreadedStateMachineManager.onCallingStartFlowInternal = null
@@ -63,6 +68,16 @@ class FlowClientIdTests {
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         Assert.assertEquals(1, counter)
+    }
+
+    @Test(timeout=300_000)
+    fun `flow's result gets persisted if the flow is started with a client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(10)).resultFuture.getOrThrow()
+
+        aliceNode.database.transaction {
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+        }
     }
 
     @Test(timeout=300_000)
@@ -81,6 +96,41 @@ class FlowClientIdTests {
         Assert.assertEquals(clientId0, clientId1)
         Assert.assertEquals(flowId0, flowId1)
         Assert.assertEquals(result0, result1)
+    }
+
+    @Test(timeout=300_000)
+    fun `if flow's result is not found in the database an IllegalStateException is thrown`() {
+        val clientId = UUID.randomUUID().toString()
+        val handle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val flowId0 = handle0.id
+        handle0.resultFuture.getOrThrow()
+
+        // manually remove the checkpoint (including DBFlowResult) from the database
+        aliceNode.database.transaction {
+            aliceNode.internals.checkpointStorage.removeCheckpoint(flowId0)
+        }
+
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `flow returning null gets retrieved after flow's lifetime when started with client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null)).resultFuture.getOrThrow()
+
+        val flowResult = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(null)).resultFuture.getOrThrow()
+        assertNull(flowResult)
+    }
+
+    @Test(timeout=300_000)
+    fun `flow returning Unit gets retrieved after flow's lifetime when started with client id`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()
+
+        val flowResult = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()
+        assertEquals(Unit, flowResult)
     }
 
     @Test(timeout=300_000)
@@ -240,42 +290,31 @@ class FlowClientIdTests {
         Assert.assertEquals(10, resultsCounter.get())
     }
 
-
     @Test(timeout=300_000)
     fun `on node start -running- flows with client id are hook-able`() {
         val clientId = UUID.randomUUID().toString()
-        var noSecondFlowWasSpawned = 0
         var firstRun = true
-        var firstFiber: Fiber<out Any?>? = null
         val flowIsRunning = Semaphore(0)
         val waitUntilFlowIsRunning = Semaphore(0)
 
         ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {
-                if (firstRun) {
-                    firstFiber = Fiber.currentFiber()
-                    firstRun = false
-                }
-
                 waitUntilFlowIsRunning.release()
-                try {
-                    flowIsRunning.acquire() // make flow wait here to impersonate a running flow
-                } catch (e: InterruptedException) {
-                    flowIsRunning.release()
-                    throw e
+
+                if (firstRun) {
+                    firstRun = false
+                    // high sleeping time doesn't matter because the fiber will get an [Event.SoftShutdown] on node restart, which will wake up the fiber
+                    sleep(100.seconds, maySkipCheckpoint = true)
                 }
 
-                noSecondFlowWasSpawned++
+                flowIsRunning.acquire() // make flow wait here to impersonate a running flow
             }
         }
 
         val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
         waitUntilFlowIsRunning.acquire()
-        aliceNode.internals.acceptableLiveFiberCountOnStop = 1
         val aliceNode = mockNet.restartNode(aliceNode)
-        // Blow up the first fiber running our flow as it is leaked here, on normal node shutdown that fiber should be gone
-        firstFiber!!.interrupt()
 
         waitUntilFlowIsRunning.acquire()
         // Re-hook a running flow
@@ -285,7 +324,6 @@ class FlowClientIdTests {
         Assert.assertEquals(flowHandle0.id, flowHandle1.id)
         Assert.assertEquals(clientId, flowHandle1.clientId)
         Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
-        Assert.assertEquals(1, noSecondFlowWasSpawned)
     }
 
 //    @Test(timeout=300_000)
@@ -339,6 +377,28 @@ class FlowClientIdTests {
 //        Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
 //        Assert.assertEquals(1, noSecondFlowWasSpawned)
 //    }
+
+    @Test(timeout=300_000)
+    fun `on node start -completed- flows with client id are hook-able`() {
+        val clientId = UUID.randomUUID().toString()
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+        }
+
+        val flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle0.resultFuture.getOrThrow()
+        val aliceNode = mockNet.restartNode(aliceNode)
+
+        // Re-hook a completed flow
+        val flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        val result1 = flowHandle1.resultFuture.getOrThrow(20.seconds)
+
+        Assert.assertEquals(1, counter) // assert flow has run only once
+        Assert.assertEquals(flowHandle0.id, flowHandle1.id)
+        Assert.assertEquals(clientId, flowHandle1.clientId)
+        Assert.assertEquals(5, result1)
+    }
 
     @Test(timeout=300_000)
     fun `On 'startFlowInternal' throwing, subsequent request with same client id does not get de-duplicated and starts a new flow`() {
@@ -400,6 +460,43 @@ class FlowClientIdTests {
 //
 //        assertEquals(0, counter)
 //    }
+
+    // This test needs modification once CORDA-3681 is implemented to check that 'node_flow_exceptions' gets a row
+    @Test(timeout=300_000)
+    fun `if flow fails to serialize its result then the result gets converted to an exception result`() {
+        val clientId = UUID.randomUUID().toString()
+        assertFailsWith<CordaRuntimeException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
+        }
+
+        // flow has failed to serialize its result => table 'node_flow_results' should be empty, 'node_flow_exceptions' should get one row instead
+        aliceNode.services.database.transaction {
+            val checkpointStatus = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatus)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+            // uncomment the below line once CORDA-3681 is implemented
+            //assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+        }
+
+        assertFailsWith<CordaRuntimeException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow<Observable<Unit>>(Observable.empty())).resultFuture.getOrThrow()
+        }
+    }
+
+    /**
+     * The below test does not follow a valid path. Normally it should error and propagate.
+     * However, we want to assert that a flow that fails to serialize its result its retriable.
+     */
+    @Test(timeout=300_000)
+    fun `flow failing to serialize its result gets retried and succeeds if returning a different result`() {
+        val clientId = UUID.randomUUID().toString()
+        // before the hospital schedules a [Event.Error] we manually schedule a [Event.RetryFlowFromSafePoint]
+        StaffedFlowHospital.onFlowErrorPropagated.add { _, _ ->
+            FlowStateMachineImpl.currentStateMachine()!!.scheduleEvent(Event.RetryFlowFromSafePoint)
+        }
+        val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow()).resultFuture.getOrThrow()
+        assertEquals(5, result)
+    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
@@ -413,5 +510,22 @@ internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
         hook?.invoke()
         suspendableHook?.let { subFlow(it) }
         return result
+    }
+}
+
+internal class UnSerializableResultFlow: FlowLogic<Any>() {
+    companion object {
+        var firstRun = true
+    }
+
+    @Suspendable
+    override fun call(): Any {
+        stateMachine.suspend(FlowIORequest.ForceCheckpoint, false)
+        return if (firstRun) {
+            firstRun = false
+            Observable.empty<Any>()
+        } else {
+            5 // serializable result
+        }
     }
 }

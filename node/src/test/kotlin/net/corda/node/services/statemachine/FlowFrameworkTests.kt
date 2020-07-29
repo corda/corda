@@ -62,6 +62,7 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.getMessage
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.startFlowWithClientId
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -81,7 +82,7 @@ import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.ArrayList
+import java.util.UUID
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.reflect.KClass
@@ -372,12 +373,11 @@ class FlowFrameworkTests {
         }
     }
 
-    // Ignoring test since completed flows are not currently keeping their checkpoints in the database
-    @Ignore
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
         val terminationSignal = Semaphore(0)
-        val flow = aliceNode.services.startFlow(NoOpFlow(terminateUponSignal = terminationSignal))
+        val clientId = UUID.randomUUID().toString()
+        val flow = aliceNode.services.startFlowWithClientId(clientId, NoOpFlow(terminateUponSignal = terminationSignal))
         mockNet.waitQuiescent()
         aliceNode.database.transaction {
             val metadata = session.find(DBCheckpointStorage.DBFlowMetadata::class.java, flow.id.uuid.toString())
@@ -832,12 +832,6 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
-        val criteria = session.criteriaBuilder.createQuery(T::class.java)
-        criteria.select(criteria.from(T::class.java))
-        return session.createQuery(criteria).resultList
-    }
-
     //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -1020,6 +1014,12 @@ internal fun TestStartedNode.sendSessionMessage(message: SessionMessage, destina
         val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
         send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
     }
+}
+
+inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
+    val criteria = session.criteriaBuilder.createQuery(T::class.java)
+    criteria.select(criteria.from(T::class.java))
+    return session.createQuery(criteria).resultList
 }
 
 internal fun errorMessage(errorResponse: FlowException? = null) =

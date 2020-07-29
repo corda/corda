@@ -6,8 +6,11 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.flows.ResultSerializationException
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.MissingSerializerException
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
@@ -15,6 +18,7 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.Checkpoint.FlowStatus
 import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -58,6 +62,24 @@ class DBCheckpointStorage(
         const val MAX_CLIENT_ID_LENGTH = 512
 
         private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
+
+        // This is a dummy [DBFlowMetadata] object which help us whenever we want to persist a [DBFlowCheckpoint], but not persist its [DBFlowMetadata].
+        // [DBFlowCheckpoint] needs to always reference a [DBFlowMetadata] ([DBFlowCheckpoint.flowMetadata] is not nullable).
+        // However, since we do not -hibernate- cascade, it does not get persisted into the database.
+        private val dummyDBFlowMetadata: DBFlowMetadata = DBFlowMetadata(
+                flowId = "dummyFlowId",
+                invocationId = "dummyInvocationId",
+                flowName = "dummyFlowName",
+                userSuppliedIdentifier = "dummyUserSuppliedIdentifier",
+                startType = StartReason.INITIATED,
+                initialParameters = ByteArray(0),
+                launchingCordapp = "dummyLaunchingCordapp",
+                platformVersion = -1,
+                startedBy = "dummyStartedBy",
+                invocationInstant = Instant.now(),
+                startInstant = Instant.now(),
+                finishInstant = null
+        )
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -185,28 +207,31 @@ class DBCheckpointStorage(
         var flow_id: String,
 
         @Type(type = "corda-blob")
-        @Column(name = "result_value", nullable = false)
-        var value: ByteArray = EMPTY_BYTE_ARRAY,
+        @Column(name = "result_value", nullable = true)
+        var value: ByteArray? = null,
 
         @Column(name = "timestamp")
         val persistedInstant: Instant
     ) {
+        @Suppress("ComplexMethod")
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-
             other as DBFlowResult
-
             if (flow_id != other.flow_id) return false
-            if (!value.contentEquals(other.value)) return false
+            val value = value
+            val otherValue = other.value
+            if (value != null) {
+                if (otherValue == null) return false
+                if (!value.contentEquals(otherValue)) return false
+            } else if (otherValue != null) return false
             if (persistedInstant != other.persistedInstant) return false
-
             return true
         }
 
         override fun hashCode(): Int {
             var result = flow_id.hashCode()
-            result = 31 * result + value.contentHashCode()
+            result = 31 * result + (value?.contentHashCode() ?: 0)
             result = 31 * result + persistedInstant.hashCode()
             return result
         }
@@ -299,7 +324,7 @@ class DBCheckpointStorage(
         @Column(name = "invocation_time", nullable = false)
         var invocationInstant: Instant,
 
-        @Column(name = "start_time", nullable = true)
+        @Column(name = "start_time", nullable = false)
         var startInstant: Instant,
 
         @Column(name = "finish_time", nullable = true)
@@ -363,7 +388,7 @@ class DBCheckpointStorage(
             now
         )
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint, now)
 
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         val dbFlowCheckpoint = DBFlowCheckpoint(
@@ -384,8 +409,11 @@ class DBCheckpointStorage(
         currentDBSession().save(metadata)
     }
 
+    @Suppress("ComplexMethod")
     override fun updateCheckpoint(
-        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
+        id: StateMachineRunId,
+        checkpoint: Checkpoint,
+        serializedFlowState: SerializedBytes<FlowState>?,
         serializedCheckpointState: SerializedBytes<CheckpointState>
     ) {
         val now = clock.instant()
@@ -404,18 +432,25 @@ class DBCheckpointStorage(
             )
         }
 
-        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
-        //val result = updateDBFlowResult(entity, checkpoint, now)
+        val dbFlowResult = if (checkpoint.status == FlowStatus.COMPLETED) {
+            try {
+                createDBFlowResult(flowId, checkpoint.result, now)
+            } catch (e: MissingSerializerException) {
+                throw ResultSerializationException(e)
+            }
+        } else {
+            null
+        }
+
         val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
 
-        val metadata = createDBFlowMetadata(flowId, checkpoint)
-
+        // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
-            result = null,
+            result = dbFlowResult,
             exceptionDetails = exceptionDetails,
-            flowMetadata = metadata,
+            flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
             status = checkpoint.status,
             compatible = checkpoint.compatible,
             progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
@@ -425,9 +460,9 @@ class DBCheckpointStorage(
 
         currentDBSession().update(dbFlowCheckpoint)
         blob?.let { currentDBSession().update(it) }
+        dbFlowResult?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
-            metadata.finishInstant = now
-            currentDBSession().update(metadata)
+            setDBFlowMetadataFinishTime(flowId, now)
         }
     }
 
@@ -446,11 +481,11 @@ class DBCheckpointStorage(
         var deletedRows = 0
         val flowId = id.uuid.toString()
         deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
-//        resultId?.let { deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, it.toString()) }
 //        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
-        return deletedRows == 3
+        return deletedRows >= 2
     }
 
     private fun <T> deleteRow(clazz: Class<T>, pk: String, value: String): Int {
@@ -488,6 +523,10 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
     }
 
+    private fun getDBFlowResult(id: StateMachineRunId): DBFlowResult? {
+        return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
+    }
+
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
@@ -500,12 +539,34 @@ class DBCheckpointStorage(
         }
     }
 
+    // This method needs modification once CORDA-3681 is implemented to include FAILED flows as well
+    override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>> {
+        val session = currentDBSession()
+        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
+                from ${DBFlowCheckpoint::class.java.name} checkpoint 
+                join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
+                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}""".trimIndent()
+        val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
+        return query.resultList.stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
+        }
+    }
+
+    override fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean): Any? {
+        val dbFlowResult = getDBFlowResult(id)
+        if (throwIfMissing && dbFlowResult == null) {
+            throw IllegalStateException("Flow's $id result was not found in the database. Something is very wrong.")
+        }
+        val serializedFlowResult = dbFlowResult?.value?.let { SerializedBytes<Any>(it) }
+        return serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
         val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
         currentDBSession().createNativeQuery(update).executeUpdate()
     }
 
-    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
@@ -521,7 +582,7 @@ class DBCheckpointStorage(
             platformVersion = PLATFORM_VERSION,
             startedBy = context.principal().name,
             invocationInstant = context.trace.invocationId.timestamp,
-            startInstant = clock.instant(),
+            startInstant = now,
             finishInstant = null
         )
     }
@@ -541,35 +602,10 @@ class DBCheckpointStorage(
         )
     }
 
-    /**
-     * Creates, updates or deletes the result related to the current flow/checkpoint.
-     *
-     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
-     *
-     * A [DBFlowResult] is created if [DBFlowCheckpoint.result] does not exist and the [Checkpoint] has a result..
-     * The existing [DBFlowResult] is updated if [DBFlowCheckpoint.result] exists and the [Checkpoint] has a result.
-     * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
-     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
-     */
-    private fun updateDBFlowResult(flowId: String, entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
-        val result = checkpoint.result?.let { createDBFlowResult(flowId, it, now) }
-        if (entity.result != null) {
-            if (result != null) {
-                result.flow_id = entity.result!!.flow_id
-                currentDBSession().update(result)
-            } else {
-                currentDBSession().delete(entity.result)
-            }
-        } else if (result != null) {
-            currentDBSession().save(result)
-        }
-        return result
-    }
-
-    private fun createDBFlowResult(flowId: String, result: Any, now: Instant): DBFlowResult {
+    private fun createDBFlowResult(flowId: String, result: Any?, now: Instant): DBFlowResult {
         return DBFlowResult(
             flow_id = flowId,
-            value = result.storageSerialize().bytes,
+            value = result?.storageSerialize()?.bytes,
             persistedInstant = now
         )
     }
@@ -618,6 +654,14 @@ class DBCheckpointStorage(
         }
     }
 
+    private fun setDBFlowMetadataFinishTime(flowId: String, now: Instant) {
+        val session = currentDBSession()
+        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}flow_metadata set finish_time = '$now' " +
+                "where flow_id = '$flowId'"
+        val query = session.createNativeQuery(sqlQuery)
+        query.executeUpdate()
+    }
+
     private fun InvocationContext.getStartedType(): StartReason {
         return when (origin) {
             is InvocationOrigin.RPC, is InvocationOrigin.Shell -> StartReason.RPC
@@ -648,7 +692,7 @@ class DBCheckpointStorage(
             // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
             errorState = ErrorState.Clean,
             // A checkpoint with a result should not normally be loaded (it should be [null] most of the time)
-            result = result?.let { SerializedBytes<Any>(it.value) },
+            result = result?.let { dbFlowResult -> dbFlowResult.value?.let { SerializedBytes<Any>(it) } },
             status = status,
             progressStep = progressStep,
             flowIoRequest = ioRequestType,
@@ -678,6 +722,12 @@ class DBCheckpointStorage(
             )
         }
     }
+
+    private class DBFlowResultMetadataFields(
+        val id: String,
+        val status: FlowStatus,
+        val clientId: String?
+    )
 
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
