@@ -56,8 +56,12 @@ pipeline {
 
     stages {
         /*
-        * Disable Sonatype check for now
+        * Temporarily disable Sonatype checks for regression builds
+        */
         stage('Sonatype Check') {
+            when {
+                expression { isReleaseTag }
+            }
             steps {
                 sh "./gradlew --no-daemon clean jar"
                 script {
@@ -76,7 +80,7 @@ pipeline {
                 )
             }
         }
-        */
+
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
