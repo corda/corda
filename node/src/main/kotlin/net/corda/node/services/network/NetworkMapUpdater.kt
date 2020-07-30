@@ -84,7 +84,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var networkParameters: NetworkParameters
     private lateinit var keyManagementService: KeyManagementService
     private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
-    private  var networkParametersHotloader: NetworkParametersHotloader? = null
+    private var networkParametersHotloader: NetworkParametersHotloader? = null
 
     override fun close() {
         fileWatcherSubscription.updateAndGet { subscription ->
