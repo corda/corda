@@ -143,7 +143,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `Can hotload parameters if the notary changes`() {
         internalDriver(
                 portAllocation = portAllocation,
@@ -163,7 +163,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `If only the notary changes but parameters were not accepted, the node will still shut down on the flag day`() {
         internalDriver(
                 portAllocation = portAllocation,
@@ -187,7 +187,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `Can not hotload parameters if non-hotloadable parameter changes and the node will shut down`() {
         internalDriver(
                 portAllocation = portAllocation,
@@ -205,7 +205,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
-    @Test(timeout=300_000)
+    @Test(timeout = 300_000)
     fun `Can not hotload parameters if notary and a non-hotloadable parameter changes and the node will shut down`() {
         internalDriver(
                 portAllocation = portAllocation,

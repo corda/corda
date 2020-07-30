@@ -33,14 +33,6 @@ class NetworkParametersHotloaderTest {
     private val networkParametersWithNotary = originalNetworkParameters.addNotary(notary)
     private val networkParametersStorage = Mockito.mock(NetworkParametersStorage::class.java)
 
-
-    @Test(timeout = 300_000)
-    fun `can not hotload if notary changes but no listener function exists`() {
-
-        val networkParametersHotloader = createHotloaderWithMockedServices(networkParametersWithNotary)
-        Assert.assertFalse(networkParametersHotloader.attemptHotload(networkParametersWithNotary.serialize().hash))
-    }
-
     @Test(timeout = 300_000)
     fun `can hotload if notary changes`() {
         `can hotload`(networkParametersWithNotary)

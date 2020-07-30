@@ -15,9 +15,9 @@ import kotlin.reflect.jvm.javaGetter
  * This class is responsible for hotloading new network parameters or shut down the node if it's not possible.
  * Currently only hotloading notary changes are supported.
  */
-class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?,
+class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient,
                                  private val trustRoot: X509Certificate,
-                                 private var networkParameters: NetworkParameters,
+                                 @Volatile private var networkParameters: NetworkParameters,
                                  private val networkParametersReader: NetworkParametersReader,
                                  private val networkParametersStorage: NetworkParametersStorage) {
     companion object {
@@ -41,8 +41,6 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?
 
     fun attemptHotload(newNetworkParameterHash: SecureHash): Boolean {
 
-        if (networkMapClient==null) return false
-
         val newSignedNetParams = networkMapClient.getNetworkParameters(newNetworkParameterHash)
         val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
 
@@ -60,9 +58,6 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?
      */
     private fun canHotload(newNetworkParameters: NetworkParameters): Boolean {
 
-        if (notaryUpdateListeners.isEmpty()) {
-            logger.warn("There is no update function assigned to notary changes.")
-        }
         val propertiesChanged = NetworkParameters::class.declaredMemberProperties
                 .minus(alwaysHotloadable)
                 .filter { networkParameters.valueChanged(newNetworkParameters, it.javaGetter) }
@@ -73,7 +68,7 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?
         val onlyNotariesChanged = propertiesChanged == listOf(NetworkParameters::notaries)
         return when {
             noPropertiesChanged -> true
-            onlyNotariesChanged && notaryUpdateListeners.isNotEmpty() -> true
+            onlyNotariesChanged -> true
             else -> false
         }
     }

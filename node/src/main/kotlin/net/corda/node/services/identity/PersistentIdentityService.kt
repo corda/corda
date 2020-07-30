@@ -200,6 +200,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
+    @Volatile
     private var notaryIdentityCache = HashSet<Party>()
 
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency

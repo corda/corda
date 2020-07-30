@@ -513,11 +513,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
 
-        val networkParametersUpdater = if (networkMapClient == null){
-            log.info("Network parameters hotloading can be set up only if network map/compatibility zone URL is specified")
+        val networkParametersHotloader = if (networkMapClient == null) {
             null
         } else {
-            NetworkParametersHotloader( networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
+            NetworkParametersHotloader(networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)
@@ -532,7 +531,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 netParams,
                 keyManagementService,
                 configuration.networkParameterAcceptanceSettings!!,
-                networkParametersUpdater)
+                networkParametersHotloader)
 
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
@@ -1210,6 +1209,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
 
+        @Volatile
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 

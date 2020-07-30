@@ -49,7 +49,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     companion object {
         private val logger = contextLogger()
     }
-    private val lock = ReentrantReadWriteLock(true)
 
     private val _changed = PublishSubject.create<MapChange>()
     // We use assignment here so that multiple subscribers share the same wrapped Observable.
@@ -58,9 +57,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override val nodeReady: OpenFuture<Void?> = openFuture()
 
+    @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
-    override val notaryIdentities: List<Party> get() = lock.read {notaries.map { it.identity }}
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -100,7 +100,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
         }
     }
 
-    override fun isValidatingNotary(party: Party): Boolean = lock.read {notaries.any { it.validating && it.identity == party }}
+    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
@@ -393,6 +393,6 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     }
 
     override fun onNewNotaryList(notaries: List<NotaryInfo>) {
-        lock.write { this.notaries = notaries }
+        this.notaries = notaries
     }
 }

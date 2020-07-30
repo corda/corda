@@ -76,6 +76,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private val fileWatcherSubscription = AtomicReference<Subscription?>()
     private var autoAcceptNetworkParameters: Boolean = true
     private lateinit var trustRoot: X509Certificate
+    @Volatile
     private lateinit var currentParametersHash: SecureHash
     private lateinit var ourNodeInfo: SignedNodeInfo
     private lateinit var ourNodeInfoHash: SecureHash
@@ -260,8 +261,8 @@ The node will shutdown now.""")
             exitProcess(ExitCodes.FAILURE)
         }
 
-        val hotloadSucceded = networkParametersHotloader!=null && networkParametersHotloader!!.attemptHotload(newParameterHash)
-        if (!hotloadSucceded) {
+        val hotloadSucceeded = networkParametersHotloader!!.attemptHotload(newParameterHash)
+        if (!hotloadSucceeded) {
             logger.info("Flag day occurred. Network map switched to the new network parameters: " +
                     "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
             exitProcess(ExitCodes.SUCCESS)
@@ -339,8 +340,7 @@ internal fun NetworkParameters.canAutoAccept(newNetworkParameters: NetworkParame
 
 private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean = findAnnotation<AutoAcceptable>() != null
 
-
- fun NetworkParameters.valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
+internal fun NetworkParameters.valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
     val propertyValue = getter?.invoke(this)
     val newPropertyValue = getter?.invoke(newNetworkParameters)
     return propertyValue != newPropertyValue
