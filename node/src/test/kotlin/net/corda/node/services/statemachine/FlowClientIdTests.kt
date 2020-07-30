@@ -15,6 +15,7 @@ import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
 import org.junit.After
 import org.junit.Assert
@@ -461,7 +462,6 @@ class FlowClientIdTests {
 //        assertEquals(0, counter)
 //    }
 
-    // This test needs modification once CORDA-3681 is implemented to check that 'node_flow_exceptions' gets a row
     @Test(timeout=300_000)
     fun `if flow fails to serialize its result then the result gets converted to an exception result`() {
         val clientId = UUID.randomUUID().toString()
@@ -474,8 +474,7 @@ class FlowClientIdTests {
             val checkpointStatus = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
             assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatus)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-            // uncomment the below line once CORDA-3681 is implemented
-            //assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
         }
 
         assertFailsWith<CordaRuntimeException> {
@@ -497,6 +496,22 @@ class FlowClientIdTests {
         val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow()).resultFuture.getOrThrow()
         assertEquals(5, result)
     }
+
+    @Test
+    fun `flow that fails does not retain its checkpoint nor its exception in the database if not started with a client id`() {
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlow(ExceptionFlow { IllegalStateException("another exception") }).resultFuture.getOrThrow()
+        }
+
+        aliceNode.services.database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+    }
+
+    // TODO: Hospitalization tests -> ()
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
