@@ -76,7 +76,6 @@ class NetworkMapUpdaterTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
-
     private val cacheExpiryMs = 1000
     private val privateNetUUID = UUID.randomUUID()
     private val fs = Jimfs.newFileSystem(unix())
@@ -118,12 +117,13 @@ class NetworkMapUpdaterTest {
                              networkParameters: NetworkParameters = server.networkParameters,
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
+
         updater!!.start(DEV_ROOT_CA.certificate,
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
                 MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
-                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
+                NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters), null)
     }
 
     @Test(timeout=300_000)
