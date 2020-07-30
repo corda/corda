@@ -44,7 +44,7 @@ import java.time.Duration
 import java.util.*
 
 class AbstractNodeKeystoreCheckTest {
-    @Test
+    @Test(timeout = 300_000)
     fun `starting node in non-dev mode with no key store`() {
         whenever(signingSupplier.get()).doAnswer { throw IOException() }
 
@@ -53,7 +53,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `starting node in non-dev mode with invalid password`() {
         whenever(signingSupplier.get()).doAnswer { throw KeyStoreException() }
 
@@ -62,7 +62,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("At least one of the keystores or truststore passwords does not match configuration")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `starting node in non-dev mode without trusted root`() {
         whenever(trustStore.contains(CORDA_ROOT_CA)).thenReturn(false)
 
@@ -71,7 +71,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("Alias for trustRoot key not found. Please ensure you have an updated trustStore file")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `starting node in non-dev mode without alias for TLS key`() {
         whenever(keyStore.contains(CORDA_CLIENT_TLS)).thenReturn(false)
 
@@ -80,7 +80,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("Alias for TLS key not found. Please ensure you have an updated TLS keyStore file")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `starting node in non-dev mode without alias for node CA key`() {
         whenever(signingStore.contains(CORDA_CLIENT_CA)).thenReturn(false)
 
@@ -89,7 +89,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("Alias for Node CA key not found. Please ensure you have an updated identity keyStore file")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `node should throw exception if cert path does not chain to the trust root`() {
         val untrustedRoot = mock<X509Certificate>()
         whenever(signingStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
@@ -99,7 +99,7 @@ class AbstractNodeKeystoreCheckTest {
         }.hasMessageContaining("Client CA certificate must chain to the trusted root")
     }
 
-    @Test
+    @Test(timeout = 300_000)
     fun `node should throw exception if TLS certificate does not chain to the trust root`() {
         val untrustedRoot = mock<X509Certificate>()
         whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
