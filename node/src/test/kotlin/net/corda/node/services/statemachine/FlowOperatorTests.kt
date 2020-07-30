@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import kotlin.test.assertTrue
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
@@ -37,6 +36,7 @@ import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class FlowOperatorTests {
 
@@ -66,29 +66,33 @@ class FlowOperatorTests {
         }
 
         fun Map<String, Map<String, Pair<Semaphore, Semaphore>>>.waitToResumeAccepting(marker: String, party: Party) {
+            log.info("Party $party waiting to resume accepting the flow")
             if(!getValue(marker).getValue(party.name.toString()).first.tryAcquire(5, TimeUnit.SECONDS)) {
                 error("(Party: $party) Waiting too long for the signal to continue...")
             }
-            log.info("Party $party continues accepting the flow")
+            log.info("Party $party resumed the flow")
         }
 
         fun Map<String, Map<String, Pair<Semaphore, Semaphore>>>.enteredAccepting(marker: String, party: Party) {
-            log.info("Party $party entering accepting the flow")
             getValue(marker).getValue(party.name.toString()).second.release()
+            log.info("Party $party entered the flow")
         }
 
         fun Map<String, Map<String, Pair<Semaphore, Semaphore>>>.waitToContinueTest(marker: String, vararg parties: Party) {
+            log.info("Started waiting to continue tests for ${parties.joinToString(";")}")
             parties.forEach {
-                if(!getValue(marker).getValue(it.name.toString()).second.tryAcquire(5, TimeUnit.SECONDS)) {
+                if(!getValue(marker).getValue(it.name.toString()).second.tryAcquire(10, TimeUnit.SECONDS)) {
                     error("(Party: $it) Waiting too long to kick off accepting flow...")
                 }
             }
+            log.info("Continue tests for ${parties.joinToString(";")}")
         }
 
         fun Map<String, Map<String, Pair<Semaphore, Semaphore>>>.resumeAccepting(marker: String, vararg parties: Party) {
             parties.forEach {
                 getValue(marker).getValue(it.name.toString()).first.release()
             }
+            log.info("Resumed accepting for ${parties.joinToString(";")}")
         }
     }
 
@@ -134,28 +138,73 @@ class FlowOperatorTests {
 
     @Test
     fun `should return all parties for flows which are waiting for other party to process`() {
-        val otherParties = arrayOf(bobParty)
+        val otherParties = arrayOf(bobParty, daveParty)
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
         val marker = newSemaphore(*otherParties)
-        val future = aliceNode.services.startFlow(TestInitiatorFlow(marker, *otherParties)).resultFuture
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, false, bobParty)).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, false, daveParty)).resultFuture
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
         semaphores.waitToContinueTest(marker, *otherParties)
+        Thread.sleep(1000) // let time to settle all flow states properly
 
-        var result1 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
-        assertEquals(1, result1.size)
-        assertEquals(1, result1.first().waitingForParties.size)
-        assertTrue(result1.first().waitingForParties.any { it.name == bobX500Name })
+        try {
+            var result1 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+            assertEquals(2, result1.size)
+            assertEquals(1, result1.first().waitingForParties.size)
+            assertEquals(1, result1.last().waitingForParties.size)
+            val firstName = result1.first().waitingForParties.first().name
+            val lastName = result1.last().waitingForParties.first().name
+            assertNotEquals(firstName, lastName)
+            if(firstName == bobX500Name) {
+                assertEquals(daveX500Name, lastName)
+            } else {
+                assertEquals(daveX500Name, firstName)
+                assertEquals(bobX500Name, lastName)
+            }
+        } finally {
+            semaphores.resumeAccepting(marker, *otherParties)
+            bobFuture.getOrThrow(5.seconds)
+            daveFuture.getOrThrow(5.seconds)
+        }
 
-        semaphores.resumeAccepting(marker, *otherParties)
-        future.getOrThrow(5.seconds)
+        var result2 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+        assertEquals(0, result2.size)
+    }
+
+    @Test
+    fun `should return only parties for flows which are waiting for other party to process and not in the hospital`() {
+        val otherParties = arrayOf(bobParty, daveParty)
+        val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
+        val marker = newSemaphore(*otherParties)
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, true, bobParty)).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, false, daveParty)).resultFuture
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        semaphores.waitToContinueTest(marker, *otherParties)
+        Thread.sleep(1000) // let time to settle all flow states properly
+
+        try {
+            var result1 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+            assertEquals(1, result1.size)
+            assertEquals(1, result1.first().waitingForParties.size)
+            assertEquals(daveX500Name, result1.first().waitingForParties.first().name)
+        } finally {
+            semaphores.resumeAccepting(marker, *otherParties)
+            try {
+                bobFuture.get(5, TimeUnit.SECONDS)
+            } catch (e: Throwable) {
+                // ignore as it's expected to fail
+            }
+            daveFuture.getOrThrow(5.seconds)
+        }
 
         var result2 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
         assertEquals(0, result2.size)
     }
 
     @BelongsToContract(TestContract::class)
-    class TestState(val marker: String, val me: Party, vararg val otherParties: Party) : ContractState {
+    class TestState(val marker: String, val failAccepting: Boolean, val me: Party, vararg val otherParties: Party) : ContractState {
         override val participants: List<AbstractParty> = listOf(me, *otherParties)
     }
 
@@ -174,11 +223,11 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class TestInitiatorFlow(val semaphore: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
+    class TestInitiatorFlow(val marker: String, val failAccepting: Boolean, vararg val otherParties: Party) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val notary = serviceHub.networkMapCache.notaryIdentities.single()
-            val state = TestState(semaphore, serviceHub.myInfo.legalIdentities.first(), *otherParties)
+            val state = TestState(marker, failAccepting, serviceHub.myInfo.legalIdentities.first(), *otherParties)
             val command = Command(TestContract.Commands.Create(), state.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(state, TestContract.ID)
@@ -203,8 +252,10 @@ class FlowOperatorTests {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val marker = (stx.tx.outputStates[0] as TestState).marker
+                    val fail = (stx.tx.outputStates[0] as TestState).failAccepting
                     val me = serviceHub.myInfo.legalIdentities.first()
                     semaphores.enteredAccepting(marker, me)
+                    "Should fail only if requested" using ( !fail )
                     semaphores.waitToResumeAccepting(marker, me)
                     return@requireThat
                 }
