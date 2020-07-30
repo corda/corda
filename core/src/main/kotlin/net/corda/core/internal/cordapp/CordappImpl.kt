@@ -9,6 +9,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.toPath
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -25,6 +26,7 @@ data class CordappImpl(
         override val services: List<Class<out SerializeAsToken>>,
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
+        override val checkpointCustomSerializers: List<CheckpointCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
@@ -79,6 +81,7 @@ data class CordappImpl(
                 services = emptyList(),
                 serializationWhitelists = emptyList(),
                 serializationCustomSerializers = emptyList(),
+                checkpointCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
                 info = UNKNOWN_INFO,

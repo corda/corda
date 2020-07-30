@@ -182,6 +182,11 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
+
+            override fun close() {
+                TODO("Not yet implemented")
+            }
+
         }), nodeA.services.newContext()).get()
         records.next()
         // Killing it should remove it.

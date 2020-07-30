@@ -117,8 +117,9 @@ class ErrorFlowTransition(
                 sessionState
             }
         }
+        // if we have already received error message from the other side, we don't include that session in the list to avoid propagating errors.
         val initiatedSessions = sessions.values.mapNotNull { session ->
-            if (session is SessionState.Initiated && session.errors.isEmpty()) {
+            if (session is SessionState.Initiated && !session.otherSideErrored) {
                 session
             } else {
                 null

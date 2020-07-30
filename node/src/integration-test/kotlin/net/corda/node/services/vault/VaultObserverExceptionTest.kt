@@ -16,6 +16,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
@@ -24,7 +25,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -450,8 +451,11 @@ class VaultObserverExceptionTest {
                                     findCordapp("com.r3.dbfailure.schemas")
                                 ),inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {
@@ -540,8 +544,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {
@@ -622,8 +629,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenCreatingSecondState = {
@@ -699,8 +709,11 @@ class VaultObserverExceptionTest {
                                 ),
                                 inMemoryDB = false)
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (aliceNode, bobNode) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it,
+                            rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
             val notary = defaultNotaryHandle.nodeHandles.getOrThrow().first()
 
             val startErrorInObservableWhenConsumingState = {
@@ -843,8 +856,8 @@ class VaultObserverExceptionTest {
             override fun call(): List<String> {
                 return serviceHub.withEntityManager {
                     val criteriaQuery = this.criteriaBuilder.createQuery(String::class.java)
-                    val root = criteriaQuery.from(PersistentUniquenessProvider.CommittedTransaction::class.java)
-                    criteriaQuery.select(root.get<String>(PersistentUniquenessProvider.CommittedTransaction::transactionId.name))
+                    val root = criteriaQuery.from(JPAUniquenessProvider.CommittedTransaction::class.java)
+                    criteriaQuery.select(root.get(JPAUniquenessProvider.CommittedTransaction::transactionId.name))
                     val query = this.createQuery(criteriaQuery)
                     query.resultList
                 }

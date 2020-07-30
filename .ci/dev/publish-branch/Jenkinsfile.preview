@@ -12,6 +12,7 @@ pipeline {
         ansiColor('xterm')
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {

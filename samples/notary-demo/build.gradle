@@ -55,13 +55,15 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
     node {
-        name "O=Notary Service,L=Zurich,C=CH"
+        name "O=Notary Node,L=Zurich,C=CH"
         p2pPort 10009
         rpcSettings {
             address "localhost:10010"
             adminAddress "localhost:10110"
         }
-        notary = [validating: true]
+        notary = [validating: true,
+                  serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
+        ]
     }
 }
 
@@ -85,7 +87,7 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
     }
     node {
-        name "O=Notary Service,L=Zurich,C=CH"
+        name "O=Notary Node,L=Zurich,C=CH"
         p2pPort 10009
         rpcSettings {
             address "localhost:10010"
@@ -93,7 +95,8 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         }
         notary = [
                 validating: true,
-                className: "net.corda.notarydemo.MyCustomValidatingNotaryService"
+                className: "net.corda.notarydemo.MyCustomValidatingNotaryService",
+                serviceLegalName: "O=Notary Service,L=Zurich,C=CH"
         ]
     }
 }

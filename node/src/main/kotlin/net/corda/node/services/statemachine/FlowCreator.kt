@@ -19,6 +19,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.currentStateMachine
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -38,20 +39,22 @@ class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint) 
 }
 
 class FlowCreator(
-    val checkpointSerializationContext: CheckpointSerializationContext,
+    private val checkpointSerializationContext: CheckpointSerializationContext,
     private val checkpointStorage: CheckpointStorage,
-    val scheduler: FiberScheduler,
-    val database: CordaPersistence,
-    val transitionExecutor: TransitionExecutor,
-    val actionExecutor: ActionExecutor,
-    val secureRandom: SecureRandom,
-    val serviceHub: ServiceHubInternal,
-    val unfinishedFibers: ReusableLatch,
-    val resetCustomTimeout: (StateMachineRunId, Long) -> Unit) {
+    private val scheduler: FiberScheduler,
+    private val database: CordaPersistence,
+    private val transitionExecutor: TransitionExecutor,
+    private val actionExecutor: ActionExecutor,
+    private val secureRandom: SecureRandom,
+    private val serviceHub: ServiceHubInternal,
+    private val unfinishedFibers: ReusableLatch,
+    private val resetCustomTimeout: (StateMachineRunId, Long) -> Unit) {
 
     companion object {
         private val logger = contextLogger()
     }
+
+    private val reloadCheckpointAfterSuspend = serviceHub.configuration.reloadCheckpointAfterSuspend
 
     fun createFlowFromNonResidentFlow(nonResidentFlow: NonResidentFlow): Flow<*>? {
         // As for paused flows we don't extract the serialized flow state we need to re-extract the checkpoint from the database.
@@ -67,14 +70,25 @@ class FlowCreator(
         return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint, nonResidentFlow.resultFuture)
     }
 
-    fun createFlowFromCheckpoint(runId: StateMachineRunId, oldCheckpoint: Checkpoint, resultFuture: OpenFuture<Any?> = openFuture()): Flow<*>? {
+    fun createFlowFromCheckpoint(
+        runId: StateMachineRunId,
+        oldCheckpoint: Checkpoint,
+        resultFuture: OpenFuture<Any?> = openFuture(),
+        reloadCheckpointAfterSuspendCount: Int? = null
+    ): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
-        fiber.transientValues = TransientReference(createTransientValues(runId, resultFuture))
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
-        val state = createStateMachineState(checkpoint, fiber, true)
-        fiber.transientState = TransientReference(state)
+        val state = createStateMachineState(
+            checkpoint = checkpoint,
+            fiber = fiber,
+            anyCheckpointPersisted = true,
+            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
+                ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null
+        )
+        fiber.transientValues = createTransientValues(runId, resultFuture)
+        fiber.transientState = state
         return Flow(fiber, resultFuture)
     }
 
@@ -92,7 +106,7 @@ class FlowCreator(
         // have access to the fiber (and thereby the service hub)
         val flowStateMachineImpl = FlowStateMachineImpl(flowId, flowLogic, scheduler)
         val resultFuture = openFuture<Any?>()
-        flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
+        flowStateMachineImpl.transientValues = createTransientValues(flowId, resultFuture)
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).checkpointSerialize(context = checkpointSerializationContext)
         val flowCorDappVersion = FlowStateMachineImpl.createSubFlowVersion(
@@ -109,12 +123,14 @@ class FlowCreator(
         ).getOrThrow()
 
         val state = createStateMachineState(
-            checkpoint,
-            flowStateMachineImpl,
-            existingCheckpoint != null,
-             deduplicationHandler,
-             senderUUID)
-        flowStateMachineImpl.transientState = TransientReference(state)
+            checkpoint = checkpoint,
+            fiber = flowStateMachineImpl,
+            anyCheckpointPersisted = existingCheckpoint != null,
+            reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
+            deduplicationHandler = deduplicationHandler,
+            senderUUID = senderUUID
+        )
+        flowStateMachineImpl.transientState = state
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 
@@ -126,9 +142,7 @@ class FlowCreator(
             }
             is FlowState.Started -> tryCheckpointDeserialize(this.flowState.frozenFiber, runId) ?: return null
             // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-            else -> {
-                return null
-            }
+            else -> null
         }
     }
 
@@ -137,8 +151,16 @@ class FlowCreator(
         return try {
             bytes.checkpointDeserialize(context = checkpointSerializationContext)
         } catch (e: Exception) {
-            logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-            null
+            if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
+                logger.error(
+                    "Unable to deserialize checkpoint for flow $flowId. [reloadCheckpointAfterSuspend] is turned on, throwing exception",
+                    e
+                )
+                throw ReloadFlowFromCheckpointException(e)
+            } else {
+                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
+                null
+            }
         }
     }
 
@@ -170,12 +192,15 @@ class FlowCreator(
         )
     }
 
+    @Suppress("LongParameterList")
     private fun createStateMachineState(
-            checkpoint: Checkpoint,
-            fiber: FlowStateMachineImpl<*>,
-            anyCheckpointPersisted: Boolean,
-            deduplicationHandler: DeduplicationHandler? = null,
-            senderUUID: String? = null): StateMachineState {
+        checkpoint: Checkpoint,
+        fiber: FlowStateMachineImpl<*>,
+        anyCheckpointPersisted: Boolean,
+        reloadCheckpointAfterSuspendCount: Int?,
+        deduplicationHandler: DeduplicationHandler? = null,
+        senderUUID: String? = null
+    ): StateMachineState {
         return StateMachineState(
             checkpoint = checkpoint,
             pendingDeduplicationHandlers = deduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -187,6 +212,8 @@ class FlowCreator(
             isRemoved = false,
             isKilled = false,
             flowLogic = fiber.logic,
-            senderUUID = senderUUID)
+            senderUUID = senderUUID,
+            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
+        )
     }
 }

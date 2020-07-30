@@ -15,6 +15,7 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -109,7 +110,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     services.networkParametersService.lookup(hashToResolve)
                 },
                 // `as?` is used due to [MockServices] not implementing [ServiceHubCoreInternal]
-                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true }
+                isAttachmentTrusted = { (services as? ServiceHubCoreInternal)?.attachmentTrustCalculator?.calculate(it) ?: true },
+                attachmentsClassLoaderCache = (services as? ServiceHubCoreInternal)?.attachmentsClassLoaderCache
             )
         )
     }
@@ -145,7 +147,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                { it.isUploaderTrusted() }
+                { it.isUploaderTrusted() },
+                null
         )
     }
 
@@ -161,16 +164,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { true } // Any attachment loaded through the DJVM should be trusted
+                { true }, // Any attachment loaded through the DJVM should be trusted
+                null
         )
     }
 
+    @Suppress("LongParameterList", "ThrowsCount")
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            isAttachmentTrusted: (Attachment) -> Boolean
+            isAttachmentTrusted: (Attachment) -> Boolean,
+            attachmentsClassLoaderCache: AttachmentsClassLoaderCache?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -206,7 +212,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                isAttachmentTrusted
+                isAttachmentTrusted,
+                attachmentsClassLoaderCache
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)

@@ -73,6 +73,29 @@ class NetworkMapClientTest {
     }
 
     @Test(timeout=300_000)
+    fun `registered node is added to the network map v2`() {
+        server.version = "2"
+        val (nodeInfo, signedNodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
+
+        networkMapClient.publish(signedNodeInfo)
+
+        val nodeInfoHash = nodeInfo.serialize().sha256()
+
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash)
+        assertEquals(nodeInfo, networkMapClient.getNodeInfos().single())
+
+        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned(BOB_NAME)
+
+        networkMapClient.publish(signedNodeInfo2)
+
+        val nodeInfoHash2 = nodeInfo2.serialize().sha256()
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
+        assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
+        assertEquals("2", networkMapClient.getNetworkMap().serverVersion)
+        assertThat(networkMapClient.getNodeInfos()).containsExactlyInAnyOrder(nodeInfo, nodeInfo2)
+    }
+
+    @Test(timeout=300_000)
 	fun `negative test - registered invalid node is added to the network map`() {
         val invalidLongNodeName = CordaX500Name(
                 commonName = "AB123456789012345678901234567890123456789012345678901234567890",

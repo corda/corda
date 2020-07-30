@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.post
 import net.corda.core.internal.responseAs
@@ -13,6 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.utilities.registration.cacheControl
+import net.corda.node.utilities.registration.cordaServerVersion
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
@@ -61,8 +63,9 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
+        val version = connection.cordaServerVersion
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
-        return NetworkMapResponse(networkMap, timeout)
+        return NetworkMapResponse(networkMap, timeout, version)
     }
 
     fun getNodeInfo(nodeInfoHash: SecureHash): NodeInfo {
@@ -81,6 +84,23 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         return networkParameter
     }
 
+    fun getNodeInfos(): List<NodeInfo> {
+        val url = URL("$networkMapUrl/node-infos")
+        logger.trace { "Fetching node infos from $url." }
+        val verifiedNodeInfo = url.openHttpConnection().responseAs<Pair<SignedNetworkMap, List<SignedNodeInfo>>>()
+                .also {
+                    val verifiedNodeInfoHashes = it.first.verifiedNetworkMapCert(trustRoot).nodeInfoHashes
+                    val nodeInfoHashes = it.second.map { signedNodeInfo -> signedNodeInfo.verified().serialize().sha256() }
+                    require(
+                            verifiedNodeInfoHashes.containsAll(nodeInfoHashes) &&
+                                    verifiedNodeInfoHashes.size == nodeInfoHashes.size
+                    )
+                }
+                .second.map { it.verified() }
+        logger.trace { "Fetched node infos successfully. Node Infos size: ${verifiedNodeInfo.size}" }
+        return verifiedNodeInfo
+    }
+
     fun myPublicHostname(): String {
         val url = URL("$networkMapUrl/my-hostname")
         logger.trace { "Resolving public hostname from '$url'." }
@@ -90,4 +110,4 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 }
 
-data class NetworkMapResponse(val payload: NetworkMap, val cacheMaxAge: Duration)
+data class NetworkMapResponse(val payload: NetworkMap, val cacheMaxAge: Duration, val serverVersion: String)

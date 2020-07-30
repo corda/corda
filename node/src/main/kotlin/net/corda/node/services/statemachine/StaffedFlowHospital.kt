@@ -589,6 +589,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
             return if (newError.mentionsThrowable(StateTransitionException::class.java)) {
                 when {
                     newError.mentionsThrowable(InterruptedException::class.java) -> Diagnosis.TERMINAL
+                    newError.mentionsThrowable(ReloadFlowFromCheckpointException::class.java) -> Diagnosis.OVERNIGHT_OBSERVATION
                     newError.mentionsThrowable(AsyncOperationTransitionException::class.java) -> Diagnosis.NOT_MY_SPECIALTY
                     history.notDischargedForTheSameThingMoreThan(2, this, currentState) -> Diagnosis.DISCHARGE
                     else -> Diagnosis.OVERNIGHT_OBSERVATION

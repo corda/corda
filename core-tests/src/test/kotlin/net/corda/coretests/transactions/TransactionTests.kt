@@ -10,6 +10,7 @@ import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.TESTDSL_UPLOADER
 import net.corda.core.internal.createLedgerTransaction
 import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.common.internal.testNetworkParameters
@@ -18,6 +19,7 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.coretesting.internal.rigorousMock
+import net.corda.testing.internal.TestingNamedCacheFactory
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
@@ -131,6 +133,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
+        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
         val transaction = createLedgerTransaction(
                 inputs,
                 outputs,
@@ -142,7 +145,8 @@ class TransactionTests {
                 privacySalt,
                 testNetworkParameters(),
                 emptyList(),
-                isAttachmentTrusted = { true }
+                isAttachmentTrusted = { true },
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
         )
 
         transaction.verify()
@@ -183,6 +187,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
+        val attachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
 
         fun buildTransaction() = createLedgerTransaction(
                 inputs,
@@ -195,7 +200,8 @@ class TransactionTests {
                 privacySalt,
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
                 emptyList(),
-                isAttachmentTrusted = { true }
+                isAttachmentTrusted = { true },
+                attachmentsClassLoaderCache = attachmentsClassLoaderCache
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }

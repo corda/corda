@@ -571,9 +571,13 @@ class DriverDSLImpl(
     private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
         val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         return startRegisteredNode(
-                spec.name,
-                localNetworkMap,
-                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides, maximumHeapSize = spec.maximumHeapSize)
+            spec.name,
+            localNetworkMap,
+            NodeParameters(rpcUsers = spec.rpcUsers,
+                verifierType = spec.verifierType,
+                startInSameProcess = spec.startInProcess,
+                customOverrides = notaryConfig + customOverrides,
+                maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
     }
 
@@ -729,7 +733,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = nodeMustBeStartedFuture(
                 executorService,
-                effectiveP2PAddress,
+                config.corda.baseDirectory / "net.corda.node.Corda.${identifier}.stdout.log",
                 process
             ) {
                 NodeListenProcessDeathException(

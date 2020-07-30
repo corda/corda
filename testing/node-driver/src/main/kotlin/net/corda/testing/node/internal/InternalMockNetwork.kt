@@ -529,7 +529,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     }
 
     private fun pumpAll(): Boolean {
-        val transferredMessages = messagingNetwork.endpoints.map { it.pumpReceive(false) }
+        val transferredMessages = messagingNetwork.endpoints.filter { it.active }
+                .map { it.pumpReceive(false) }
         return transferredMessages.any { it != null }
     }
 
@@ -638,6 +639,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
         doReturn(rigorousMock<ConfigurationWithOptions>()).whenever(it).configurationWithOptions
         doReturn(2).whenever(it).flowExternalOperationThreadPoolSize
+        doReturn(false).whenever(it).reloadCheckpointAfterSuspend
     }
 }
 

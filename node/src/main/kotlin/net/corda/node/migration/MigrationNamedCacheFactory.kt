@@ -37,6 +37,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
             "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
             "NodeParametersStorage_networkParametersByHash" -> caffeine.maximumSize(defaultCacheSize)
             "NodeAttachmentTrustCalculator_trustedKeysCache" -> caffeine.maximumSize(defaultCacheSize)
+            "AttachmentsClassLoader_cache" -> caffeine.maximumSize(defaultCacheSize)
             else -> throw IllegalArgumentException("Unexpected cache name $name.")
         }
     }

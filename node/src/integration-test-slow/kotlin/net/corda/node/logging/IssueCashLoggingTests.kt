@@ -1,5 +1,6 @@
 package net.corda.node.logging
 
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
@@ -22,8 +23,10 @@ class IssueCashLoggingTests {
 	fun `issuing and sending cash as payment do not result in duplicate insertion warnings`() {
         val user = User("mark", "dadada", setOf(all()))
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
-            val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()
-            val nodeB = startNode().getOrThrow()
+            val (nodeA, nodeB) = listOf(startNode(rpcUsers = listOf(user)),
+                    startNode())
+                    .transpose()
+                    .getOrThrow()
 
             val amount = 1.DOLLARS
             val ref = OpaqueBytes.of(0)

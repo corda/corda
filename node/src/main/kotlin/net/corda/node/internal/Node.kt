@@ -644,8 +644,8 @@ open class Node(configuration: NodeConfiguration,
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
                 checkpointSerializer = KryoCheckpointSerializer,
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
-            )
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
+        )
     }
 
     /** Starts a blocking event loop for message dispatch. */
