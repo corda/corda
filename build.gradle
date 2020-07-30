@@ -62,14 +62,14 @@ buildscript {
 
     ext.asm_version = '7.1'
     ext.artemis_version = '2.6.2'
-    // TODO Upgrade Jackson only when corda is using kotlin 1.3.10
-    ext.jackson_version = '2.9.7'
+    // TODO Upgrade to Jackson 2.10+ only when corda is using kotlin 1.3.10
+    ext.jackson_version = '2.9.8'
     ext.jetty_version = '9.4.19.v20190610'
     ext.jersey_version = '2.25'
     ext.servlet_version = '4.0.1'
     ext.assertj_version = '3.12.2'
-    ext.slf4j_version = '1.7.26'
-    ext.log4j_version = '2.11.2'
+    ext.slf4j_version = '1.7.30'
+    ext.log4j_version = '2.13.3'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")

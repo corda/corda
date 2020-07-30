@@ -29,6 +29,7 @@ import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.isIdempotentFlow
 import net.corda.core.internal.isRegularFile
@@ -87,6 +88,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
         private val SERIALIZER_BLOCKER = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER").apply { isAccessible = true }.get(null)
+
+        @VisibleForTesting
+        var onReloadFlowFromCheckpoint: ((id: StateMachineRunId) -> Unit)? = null
     }
 
     data class TransientValues(
@@ -504,10 +508,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             contextTransactionOrNull = transaction.value
             val event = try {
                 Event.Suspend(
-                        ioRequest = ioRequest,
-                        maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.checkpointSerialize(context = serializationContext.value),
-                        progressStep = logic.progressTracker?.currentStep
+                    ioRequest = ioRequest,
+                    maySkipCheckpoint = skipPersistingCheckpoint,
+                    fiber = this.checkpointSerialize(context = serializationContext.value),
+                    progressStep = logic.progressTracker?.currentStep
                 )
             } catch (exception: Exception) {
                 Event.Error(exception)
@@ -529,6 +533,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 unpark(SERIALIZER_BLOCKER)
             }
         }
+
+        transientState.reloadCheckpointAfterSuspendCount?.let { count ->
+            if (count < transientState.checkpoint.checkpointState.numberOfSuspends) {
+                onReloadFlowFromCheckpoint?.invoke(id)
+                processEventImmediately(
+                    Event.ReloadFlowFromCheckpointAfterSuspend,
+                    isDbTransactionOpenOnEntry = false,
+                    isDbTransactionOpenOnExit = false
+                )
+            }
+        }
+
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true

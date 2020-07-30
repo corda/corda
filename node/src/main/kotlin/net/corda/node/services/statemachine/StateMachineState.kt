@@ -59,7 +59,8 @@ data class StateMachineState(
     val isRemoved: Boolean,
     @Volatile
     var isKilled: Boolean,
-    val senderUUID: String?
+    val senderUUID: String?,
+    val reloadCheckpointAfterSuspendCount: Int?
 ) : KryoSerializable {
     override fun write(kryo: Kryo?, output: Output?) {
         throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be serialized")

@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.NetworkParametersStorage
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyTo
@@ -65,6 +66,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     companion object {
         private val logger = contextLogger()
         private val defaultRetryInterval = 1.minutes
+        private const val bulkNodeInfoFetchThreshold = 50
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
@@ -173,17 +175,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (networkMapClient == null) {
             throw CordaRuntimeException("Network map cache can be updated only if network map/compatibility zone URL is specified")
         }
-        val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
+        val (globalNetworkMap, cacheTimeout, version) = networkMapClient.getNetworkMap()
         globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
-        val additionalHashes = extraNetworkMapKeys.flatMap {
-            try {
-                networkMapClient.getNetworkMap(it).payload.nodeInfoHashes
-            } catch (e: Exception) {
-                // Failure to retrieve one network map using UUID shouldn't stop the whole update.
-                logger.warn("Error encountered when downloading network map with uuid '$it', skipping...", e)
-                emptyList<SecureHash>()
-            }
-        }
+        val additionalHashes = getPrivateNetworkNodeHashes(version)
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
         if (currentParametersHash != globalNetworkMap.networkParameterHash) {
             exitOnParametersMismatch(globalNetworkMap)
@@ -194,6 +188,37 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val allNodeHashes = networkMapCache.allNodeHashes
         val nodeHashesToBeDeleted = (allNodeHashes - allHashesFromNetworkMap - nodeInfoWatcher.processedNodeInfoHashes)
                 .filter { it != ourNodeInfoHash }
+        // enforce bulk fetch when no other nodes are known or unknown nodes count is less than threshold
+        if (version == "1" || (allNodeHashes.size > 1 && (allHashesFromNetworkMap - allNodeHashes).size < bulkNodeInfoFetchThreshold))
+            updateNodeInfosV1(allHashesFromNetworkMap, allNodeHashes, networkMapClient)
+        else
+            updateNodeInfos(allHashesFromNetworkMap)
+        // NOTE: We remove nodes after any new/updates because updated nodes will have a new hash and, therefore, any
+        // nodes that we can actually pull out of the cache (with the old hashes) should be a truly removed node.
+        nodeHashesToBeDeleted.mapNotNull { networkMapCache.getNodeByHash(it) }.forEach(networkMapCache::removeNode)
+
+        // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
+        // it's empty
+        networkMapCache.nodeReady.set(null)
+        return cacheTimeout
+    }
+
+    private fun updateNodeInfos(allHashesFromNetworkMap: Set<SecureHash>) {
+        val networkMapDownloadStartTime = System.currentTimeMillis()
+        val nodeInfos = try {
+            networkMapClient!!.getNodeInfos()
+        } catch (e: Exception) {
+            logger.warn("Error encountered when downloading node infos", e)
+            emptyList<NodeInfo>()
+        }
+        (allHashesFromNetworkMap - nodeInfos.map { it.serialize().sha256() }).forEach {
+            logger.warn("Error encountered when downloading node info '$it', skipping...")
+        }
+        networkMapCache.addOrUpdateNodes(nodeInfos)
+        logger.info("Fetched: ${nodeInfos.size} using 1 bulk request in ${System.currentTimeMillis() - networkMapDownloadStartTime}ms")
+    }
+
+    private fun updateNodeInfosV1(allHashesFromNetworkMap: Set<SecureHash>, allNodeHashes: List<SecureHash>, networkMapClient: NetworkMapClient) {
         //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24, as if we did not limit this on large machines it could result in 100's of concurrent requests
@@ -230,14 +255,25 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 executorToUseForInsertionIntoDB.shutdown()
             }.getOrThrow()
         }
-        // NOTE: We remove nodes after any new/updates because updated nodes will have a new hash and, therefore, any
-        // nodes that we can actually pull out of the cache (with the old hashes) should be a truly removed node.
-        nodeHashesToBeDeleted.mapNotNull { networkMapCache.getNodeByHash(it) }.forEach(networkMapCache::removeNode)
+    }
 
-        // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
-        // it's empty
-        networkMapCache.nodeReady.set(null)
-        return cacheTimeout
+    private fun getPrivateNetworkNodeHashes(version: String): List<SecureHash> {
+        // private networks are not supported by latest versions of Network Map
+        // for compatibility reasons, this call is still present for new nodes that communicate with old Network Map service versions
+        // but can be omitted if we know that the version of the Network Map is recent enough
+        return if (version == "1") {
+            extraNetworkMapKeys.flatMap {
+                try {
+                    networkMapClient!!.getNetworkMap(it).payload.nodeInfoHashes
+                } catch (e: Exception) {
+                    // Failure to retrieve one network map using UUID shouldn't stop the whole update.
+                    logger.warn("Error encountered when downloading network map with uuid '$it', skipping...", e)
+                    emptyList<SecureHash>()
+                }
+            }
+        } else {
+            emptyList()
+        }
     }
 
     private fun exitOnParametersMismatch(networkMap: NetworkMap) {
