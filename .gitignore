@@ -104,3 +104,5 @@ virtualenv/
 PLAN
 NOTES
 TODO
+
+.dependx/
