@@ -75,7 +75,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import rx.Notification
 import rx.Observable
@@ -761,8 +760,6 @@ class FlowFrameworkTests {
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
     }
 
-    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
-    @Ignore
     @Test(timeout=300_000)
     fun `Checkpoint is updated in DB with FAILED status and the error when flow fails`() {
         var flowId: StateMachineRunId? = null
@@ -786,8 +783,6 @@ class FlowFrameworkTests {
         }
     }
 
-    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
-    @Ignore
     @Test(timeout=300_000)
     fun `Checkpoint is updated in DB with HOSPITALIZED status and the error when flow is kept for overnight observation` () {
         var flowId: StateMachineRunId? = null

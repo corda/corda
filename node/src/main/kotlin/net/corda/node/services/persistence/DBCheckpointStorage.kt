@@ -442,14 +442,20 @@ class DBCheckpointStorage(
             null
         }
 
-        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
+        val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            val errored = checkpoint.errorState as? ErrorState.Errored
+            errored?.let { createDBFlowException(flowId, it, now) }
+                    ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
+        } else {
+            null
+        }
 
         // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
             result = dbFlowResult,
-            exceptionDetails = exceptionDetails,
+            exceptionDetails = dbFlowException,
             flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
             status = checkpoint.status,
             compatible = checkpoint.compatible,
@@ -464,6 +470,7 @@ class DBCheckpointStorage(
         if (checkpoint.isFinished()) {
             setDBFlowMetadataFinishTime(flowId, now)
         }
+        dbFlowException?.let { currentDBSession().save(it) }
     }
 
     override fun markAllPaused() {
@@ -475,16 +482,15 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
-    // DBFlowResult and DBFlowException to be integrated with rest of schema
     @Suppress("MagicNumber")
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         var deletedRows = 0
         val flowId = id.uuid.toString()
         deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
-//        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
         return deletedRows >= 2
     }
 
@@ -608,37 +614,6 @@ class DBCheckpointStorage(
             value = result?.storageSerialize()?.bytes,
             persistedInstant = now
         )
-    }
-
-    /**
-     * Creates, updates or deletes the error related to the current flow/checkpoint.
-     *
-     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
-     *
-     * A [DBFlowException] is created if [DBFlowCheckpoint.exceptionDetails] does not exist and the [Checkpoint] has an error attached to it.
-     * The existing [DBFlowException] is updated if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has an error.
-     * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
-     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
-     */
-    // DBFlowException to be integrated with rest of schema
-    // Add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
-    private fun updateDBFlowException(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowException? {
-        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(flowId, it, now) }
-//        if (checkpoint.dbExoSkeleton.dbFlowExceptionId != null) {
-//            if (exceptionDetails != null) {
-//                exceptionDetails.flow_id = checkpoint.dbExoSkeleton.dbFlowExceptionId!!
-//                currentDBSession().update(exceptionDetails)
-//            } else {
-//                val session = currentDBSession()
-//                val entity = session.get(DBFlowException::class.java, checkpoint.dbExoSkeleton.dbFlowExceptionId)
-//                session.delete(entity)
-//                return null
-//            }
-//        } else if (exceptionDetails != null) {
-//            currentDBSession().save(exceptionDetails)
-//            checkpoint.dbExoSkeleton.dbFlowExceptionId = exceptionDetails.flow_id
-//        }
-        return exceptionDetails
     }
 
     private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
