@@ -1,12 +1,15 @@
 package net.corda.client.rpcreconnect
 
+import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
 import net.corda.client.rpc.GracefulReconnect
 import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -19,6 +22,7 @@ import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
@@ -81,6 +85,29 @@ class CordaRPCClientReconnectionTest {
         }
     }
 
+
+    @Test(timeout=300_000)
+    fun `minimum server protocol version should cause exception if higher than allowed`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            assertThatThrownBy {
+                val node = startNode ()
+                val client = CordaRPCClient(node.rpcAddress, config.copy(minimumServerProtocolVersion = 100, maxReconnectAttempts = 1))
+                client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)
+            }
+                    .isInstanceOf(UnrecoverableRPCException::class.java)
+                    .hasMessageStartingWith("Requested minimum protocol version (100) is higher than the server's supported protocol version ")
+        }
+    }
 
     @Test(timeout=300_000)
     fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
@@ -292,7 +319,7 @@ class CordaRPCClientReconnectionTest {
             val node = startNode()
             CordaRPCClient(node.rpcAddress, config).start(rpcUser.username, rpcUser.password, gracefulReconnect).use {
                 node.stop()
-                thread() {
+                thread {
                     it.proxy.startTrackedFlow(
                             ::CashIssueFlow,
                             10.DOLLARS,
@@ -347,6 +374,29 @@ class CordaRPCClientReconnectionTest {
                 // If we get here we know we're not stuck in a reconnect cycle with a node that's been shut down
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `gracefulShutdown terminate test after flow crash due to stopped notary`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
+            val charlie = startNode(
+                    NodeParameters(
+                            providedName = CHARLIE_NAME,
+                            rpcUsers = listOf(rpcUser),
+                            additionalCordapps = FINANCE_CORDAPPS
+                    )
+            ).getOrThrow()
+
+            val charlieClient =
+                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
+
+            defaultNotaryNode.get().stop()
+            charlieClient.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.getOrThrow()
+
+            assertThatThrownBy {
+                charlieClient.terminate(true)
+            }.isInstanceOf(ConnectionFailureException::class.java)
         }
     }
 }
