@@ -55,6 +55,8 @@ pipeline {
     }
 
     stages {
+        /*
+        * Disable Sonatype check for now
         stage('Sonatype Check') {
             steps {
                 sh "./gradlew --no-daemon clean jar"
@@ -74,7 +76,7 @@ pipeline {
                 )
             }
         }
-
+        */
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
