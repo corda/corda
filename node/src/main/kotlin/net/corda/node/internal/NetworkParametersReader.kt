@@ -1,7 +1,11 @@
 package net.corda.node.internal
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.moveTo
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -16,7 +20,8 @@ import java.security.cert.X509Certificate
 
 class NetworkParametersReader(private val trustRoot: X509Certificate,
                               private val networkMapClient: NetworkMapClient?,
-                              private val baseDirectory: Path) {
+                              private val baseDirectory: Path,
+                              private val networkParamsPath: Path) {
     companion object {
         private val logger = contextLogger()
     }
@@ -28,13 +33,13 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
                 "Both network parameters and network parameters update files don't match" +
                         "parameters advertised by network map. Please update node to use correct network parameters file."
         )
-        class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash) : Error(
+        class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash, path: Path) : Error(
                 """Node is using network parameters with hash $previousParametersHash but the network map is advertising $advertisedParametersHash.
-                To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart."""
+                To resolve this mismatch, and move to the current parameters, delete the network-parameters file at location $path and restart."""
         )
     }
 
-    private val networkParamsFile = baseDirectory / NETWORK_PARAMS_FILE_NAME
+    private val networkParamsFile = networkParamsPath
 
     fun read(): NetworkParametersAndSigned {
         val advertisedParametersHash = try {
@@ -70,7 +75,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
         val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
         if (!parametersUpdateFile.exists()) {
-            throw Error.OldParams(previousParametersHash, advertisedParametersHash)
+            throw Error.OldParams(previousParametersHash, advertisedParametersHash, networkParamsPath)
         }
         val signedUpdatedParameters = parametersUpdateFile.readObject<SignedNetworkParameters>()
         if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
@@ -87,7 +92,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
         signedParams.verifiedNetworkParametersCert(trustRoot)
-        signedParams.serialize().open().copyTo(baseDirectory / NETWORK_PARAMS_FILE_NAME)
+        networkParamsFile.parent.toFile().mkdirs()
+        signedParams.serialize().open().copyTo(networkParamsFile)
+        logger.info("Saved network parameters into: $networkParamsFile")
         return signedParams
     }
 

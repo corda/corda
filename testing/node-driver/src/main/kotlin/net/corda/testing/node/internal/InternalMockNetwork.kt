@@ -54,6 +54,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.coretesting.internal.rigorousMock
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import net.corda.coretesting.internal.testThreadFactory
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -479,6 +480,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         certificatesDirectory.createDirectories()
         val config = mockNodeConfiguration(certificatesDirectory).also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(baseDirectory/ NETWORK_PARAMS_FILE_NAME).whenever(it).networkParametersPath
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys

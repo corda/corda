@@ -6,10 +6,12 @@ import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
+import net.corda.core.internal.div
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults.reloadCheckpointAfterSuspend
 import net.corda.node.services.config.schema.parsers.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -68,6 +70,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val flowExternalOperationThreadPoolSize by int().optional().withDefaultValue(Defaults.flowExternalOperationThreadPoolSize)
     private val quasarExcludePackages by string().list().optional().withDefaultValue(Defaults.quasarExcludePackages)
     private val reloadCheckpointAfterSuspend by boolean().optional().withDefaultValue(Defaults.reloadCheckpointAfterSuspend)
+    private val networkParametersPath by string().mapValid(::toPath).optional()
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -80,6 +83,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val database = config[database] ?: Defaults.database(config[devMode])
         val baseDirectoryPath = config[baseDirectory]
         val cordappDirectories = config[cordappDirectories]?.map { baseDirectoryPath.resolve(it) } ?: Defaults.cordappsDirectories(baseDirectoryPath)
+        val networkParametersPath = config[networkParametersPath]?.div(NETWORK_PARAMS_FILE_NAME) ?: Defaults.networkParametersDefaultPath(baseDirectoryPath)
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                     baseDirectory = baseDirectoryPath,
@@ -136,7 +140,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Options.defaults),
                     flowExternalOperationThreadPoolSize = config[flowExternalOperationThreadPoolSize],
                     quasarExcludePackages = config[quasarExcludePackages],
-                    reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend]
+                    reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend],
+                    networkParametersPath = networkParametersPath
             ))
         } catch (e: Exception) {
             return when (e) {
