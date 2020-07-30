@@ -2,7 +2,6 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.NetworkParametersStorage
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.contextLogger
@@ -27,13 +26,13 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient?
     }
 
     private val networkParameterUpdateListeners = mutableListOf<NetworkParameterUpdateListener>()
-    private val notaryUpdateListeners = mutableListOf<NotaryListUpdateListener>()
+    private val notaryUpdateListeners = mutableListOf<NotaryUpdateListener>()
 
     fun addNetworkParametersChangedListeners(listener: NetworkParameterUpdateListener) {
         networkParameterUpdateListeners.add(listener)
     }
 
-    fun addNotaryUpdateListener(listener: NotaryListUpdateListener) {
+    fun addNotaryUpdateListener(listener: NotaryUpdateListener) {
         notaryUpdateListeners.add(listener)
     }
 

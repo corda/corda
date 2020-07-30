@@ -20,7 +20,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.BasicHSMKeyManagementService
-import net.corda.node.services.network.NotaryListUpdateListener
+import net.corda.node.services.network.NotaryUpdateListener
 import net.corda.node.services.persistence.PublicKeyHashToExternalId
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -55,7 +55,8 @@ import kotlin.streams.toList
  * cached for efficient lookup.
  */
 @ThreadSafe
-class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal, NotaryListUpdateListener {
+@Suppress("TooManyFunctions")
+class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal, NotaryUpdateListener {
 
     companion object {
         private val log = contextLogger()

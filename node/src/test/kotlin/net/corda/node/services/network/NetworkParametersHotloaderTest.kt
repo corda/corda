@@ -34,7 +34,7 @@ class NetworkParametersHotloaderTest {
     @Test(timeout = 300_000)
     fun `listener function gets invoked if parameter changes are hotloadable`() {
 
-        val notaryUpdateListener = Mockito.spy(object : NotaryListUpdateListener {
+        val notaryUpdateListener = Mockito.spy(object : NotaryUpdateListener {
             override fun onNewNotaryList(notaries: List<NotaryInfo>) {
             }
         })
@@ -112,7 +112,7 @@ class NetworkParametersHotloaderTest {
 
     private fun createHotloaderWithMockedServicesAndListener(newNetworkParameters: NetworkParameters): NetworkParametersHotloader {
         return createHotloaderWithMockedServices(newNetworkParameters).also {
-            it.addNotaryUpdateListener(object : NotaryListUpdateListener {
+            it.addNotaryUpdateListener(object : NotaryUpdateListener {
                 override fun onNewNotaryList(notaries: List<NotaryInfo>) {
                 }
             })

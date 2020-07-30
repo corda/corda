@@ -464,6 +464,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    @Suppress("ComplexMethod")
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 

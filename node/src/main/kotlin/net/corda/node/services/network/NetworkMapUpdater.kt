@@ -96,8 +96,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
-
-
+    @Suppress("LongParameterList")
     fun start(trustRoot: X509Certificate,
               currentParametersHash: SecureHash,
               ourNodeInfo: SignedNodeInfo,
