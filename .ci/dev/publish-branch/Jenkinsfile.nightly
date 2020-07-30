@@ -1,17 +1,34 @@
 #!groovy
+/**
+ * Jenkins pipeline to build Corda OS nightly snapshots
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precendence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
 @Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
+/*
+** calculate the stage for NexusIQ evaluation
+**  * build for snapshots
+*/
+def nexusIqStage = "build"
+
 pipeline {
-    agent { label 'k8s' }
+    agent { label 'standard' }
 
     options {
         timestamps()
         ansiColor('xterm')
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     triggers {
@@ -27,6 +44,26 @@ pipeline {
     }
 
     stages {
+        stage('Sonatype Check') {
+            steps {
+                sh "./gradlew --no-daemon clean jar"
+                script {
+                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
+                    /* every build related to Corda X.Y (GA, RC, HC, patch or snapshot) uses the same NexusIQ application */
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
+                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
+                    def artifactId = 'corda'
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                }
+                nexusPolicyEvaluation (
+                        failBuildOnNetworkError: false,
+                        iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
+                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
+                        iqStage: nexusIqStage
+                )
+            }
+        }
+
         stage('Publish to Artifactory') {
             steps {
                 rtServer (

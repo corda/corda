@@ -14,6 +14,8 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -130,6 +132,8 @@ data class TestTransactionDSLInterpreter private constructor(
             ledgerInterpreter.services.cordappProvider
 
         override val notaryService: NotaryService? = null
+
+        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(TestingNamedCacheFactory())
     }
 
     private fun copy(): TestTransactionDSLInterpreter =

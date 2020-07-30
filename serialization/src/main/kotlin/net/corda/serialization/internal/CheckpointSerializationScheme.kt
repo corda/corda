@@ -1,6 +1,7 @@
 package net.corda.serialization.internal
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationEncoding
@@ -13,7 +14,8 @@ data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val properties: Map<Any, Any>,
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val encoding: SerializationEncoding?,
-                                                              override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) : CheckpointSerializationContext {
+                                                              override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
+                                                              override val checkpointCustomSerializers: Iterable<CheckpointCustomSerializer<*,*>> = emptyList()) : CheckpointSerializationContext {
     override fun withProperty(property: Any, value: Any): CheckpointSerializationContext {
         return copy(properties = properties + (property to value))
     }
@@ -34,4 +36,6 @@ data class CheckpointSerializationContextImpl @JvmOverloads constructor(
 
     override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
+    override fun withCheckpointCustomSerializers(checkpointCustomSerializers : Iterable<CheckpointCustomSerializer<*,*>>)
+            = copy(checkpointCustomSerializers = checkpointCustomSerializers)
 }

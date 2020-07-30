@@ -6,6 +6,7 @@ import net.corda.core.crypto.internal.Instances
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
 import java.io.OutputStream
+import java.security.InvalidKeyException
 import java.security.PrivateKey
 import java.security.Provider
 import java.security.SecureRandom
@@ -24,14 +25,18 @@ object ContentSignerBuilder {
         else
             Signature.getInstance(signatureScheme.signatureName, provider)
 
-        val sig = signatureInstance.apply {
-            // TODO special handling for Sphincs due to a known BouncyCastle's Sphincs bug we reported.
-            //      It is fixed in BC 161b12, so consider updating the below if-statement after updating BouncyCastle.
-            if (random != null && signatureScheme != SPHINCS256_SHA256) {
-                initSign(privateKey, random)
-            } else {
-                initSign(privateKey)
+        val sig = try {
+            signatureInstance.apply {
+                // TODO special handling for Sphincs due to a known BouncyCastle's Sphincs bug we reported.
+                //      It is fixed in BC 161b12, so consider updating the below if-statement after updating BouncyCastle.
+                if (random != null && signatureScheme != SPHINCS256_SHA256) {
+                    initSign(privateKey, random)
+                } else {
+                    initSign(privateKey)
+                }
             }
+        } catch(ex: InvalidKeyException) {
+            throw InvalidKeyException("Incorrect key type ${privateKey.algorithm} for signature scheme ${signatureInstance.algorithm}", ex)
         }
         return object : ContentSigner {
             private val stream = SignatureOutputStream(sig, optimised)

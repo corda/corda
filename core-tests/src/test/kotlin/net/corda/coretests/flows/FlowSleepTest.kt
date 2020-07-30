@@ -7,6 +7,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
@@ -53,8 +54,10 @@ class FlowSleepTest {
     fun `flow can sleep and perform other suspending functions`() {
         // ensures that events received while the flow is sleeping are not processed
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
-            val bob = startNode(providedName = BOB_NAME).getOrThrow()
+            val (alice, bob) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it) }
+                    .transpose()
+                    .getOrThrow()
             val (start, finish) = alice.rpc.startFlow(
                 ::SleepAndInteractWithPartyFlow,
                 bob.nodeInfo.singleIdentity()

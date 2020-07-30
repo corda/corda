@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -29,6 +30,7 @@ import java.net.URL
  * @property services List of RPC services
  * @property serializationWhitelists List of Corda plugin registries
  * @property serializationCustomSerializers List of serializers
+ * @property checkpointCustomSerializers List of serializers for checkpoints
  * @property customSchemas List of custom schemas
  * @property allFlows List of all flow classes
  * @property jarPath The path to the JAR for this CorDapp
@@ -49,6 +51,7 @@ interface Cordapp {
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>
     val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>
+    val checkpointCustomSerializers: List<CheckpointCustomSerializer<*, *>>
     val customSchemas: Set<MappedSchema>
     val allFlows: List<Class<out FlowLogic<*>>>
     val jarPath: URL

@@ -50,8 +50,8 @@ tasks.named('jar', Jar) {
     enabled = false
 }
 
-def serializationJarTask = tasks.getByPath(':serialization:jar')
-def originalJar = serializationJarTask.outputs.files.singleFile
+def serializationJarTask = project(':serialization').tasks.named('jar', Jar)
+def originalJar = serializationJarTask.map { it.outputs.files.singleFile }
 
 def patchSerialization = tasks.register('patchSerialization', Zip) {
     dependsOn serializationJarTask
@@ -77,7 +77,7 @@ def patchSerialization = tasks.register('patchSerialization', Zip) {
 }
 
 def predeterminise = tasks.register('predeterminise', ProGuardTask) {
-    dependsOn project(':core-deterministic').assemble
+    dependsOn project(':core-deterministic').tasks.named('assemble')
     injars patchSerialization
     outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
@@ -125,7 +125,7 @@ def jarFilter = tasks.register('jarFilter', JarFilterTask) {
     }
 }
 
-task determinise(type: ProGuardTask) {
+def determinise = tasks.register('determinise', ProGuardTask) {
     injars jarFilter
     outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
@@ -154,16 +154,19 @@ task determinise(type: ProGuardTask) {
     keepclassmembers 'class net.corda.serialization.** { public synthetic <methods>; }'
 }
 
-task metafix(type: MetaFixerTask) {
+def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask)
+
+def metafix = tasks.register('metafix', MetaFixerTask) {
     outputDir file("$buildDir/libs")
     jars determinise
     suffix ""
 
     // Strip timestamps from the JAR to make it reproducible.
     preserveTimestamps = false
+    finalizedBy checkDeterminism
 }
 
-def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask) {
+checkDeterminism.configure {
     dependsOn jdkTask
     injars metafix
 
@@ -183,14 +186,17 @@ def checkDeterminism = tasks.register('checkDeterminism', ProGuardTask) {
 }
 
 defaultTasks "determinise"
-determinise.finalizedBy metafix
-metafix.finalizedBy checkDeterminism
-assemble.dependsOn checkDeterminism
+determinise.configure {
+    finalizedBy metafix
+}
+tasks.named('assemble') {
+    dependsOn checkDeterminism
+}
 
-def deterministicJar = metafix.outputs.files.singleFile
+def deterministicJar = metafix.map { it.outputs.files.singleFile }
 artifacts {
-    deterministicArtifacts file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
-    publish file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
+    deterministicArtifacts deterministicJar
+    publish deterministicJar
 }
 
 tasks.named('sourceJar', Jar) {
