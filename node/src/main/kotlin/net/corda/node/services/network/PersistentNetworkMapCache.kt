@@ -33,11 +33,8 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
-import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.PersistenceException
-import kotlin.concurrent.read
-import kotlin.concurrent.write
 
 /** Database-based network map cache. */
 @ThreadSafe
