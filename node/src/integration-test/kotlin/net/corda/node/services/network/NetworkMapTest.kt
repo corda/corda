@@ -205,6 +205,25 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
+    @Test(timeout=300_000)
+    fun `Can not hotload parameters if notary and a non-hotloadable parameter changes and the node will shut down`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList()
+        ) {
+
+            val oldParams = networkMapServer.networkParameters
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val paramsWithUpdatedMaxMessageSizeAndNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = oldParams.maxMessageSize + 1).addNotary(notary)
+            val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSizeAndNotary)
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+        }
+    }
+
     private fun DriverDSLImpl.startNodeAndRunFlagDay(newParams: NetworkParameters): NodeHandleInternal {
 
         val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal

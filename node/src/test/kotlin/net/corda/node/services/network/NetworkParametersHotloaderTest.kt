@@ -1,5 +1,7 @@
 package net.corda.node.services.network
 
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.identity.Party
 import net.corda.core.internal.NetworkParametersStorage
@@ -23,35 +25,14 @@ class NetworkParametersHotloaderTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
-    val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
-    val trustRoot = DEV_ROOT_CA.certificate
+    private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
+    private val trustRoot = DEV_ROOT_CA.certificate
 
-    val originalNetworkParameters = testNetworkParameters()
-    val notary: Party = TestIdentity.fresh("test notary").party
-    val networkParametersWithNotary = originalNetworkParameters.addNotary(notary)
-    val networkParametersStorage = Mockito.mock(NetworkParametersStorage::class.java)
+    private val originalNetworkParameters = testNetworkParameters()
+    private val notary: Party = TestIdentity.fresh("test notary").party
+    private val networkParametersWithNotary = originalNetworkParameters.addNotary(notary)
+    private val networkParametersStorage = Mockito.mock(NetworkParametersStorage::class.java)
 
-    @Test(timeout = 300_000)
-    fun `listener function gets invoked if parameter changes are hotloadable`() {
-
-        val notaryUpdateListener = Mockito.spy(object : NotaryUpdateListener {
-            override fun onNewNotaryList(notaries: List<NotaryInfo>) {
-            }
-        })
-
-        val networkParametersChangedListener = Mockito.spy(object : NetworkParameterUpdateListener {
-            override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
-            }
-        })
-
-        val networkParametersHotloader = createHotloaderWithMockedServices(networkParametersWithNotary)
-        networkParametersHotloader.addNotaryUpdateListener(notaryUpdateListener)
-        networkParametersHotloader.addNetworkParametersChangedListeners(networkParametersChangedListener)
-
-        networkParametersHotloader.attemptHotload(networkParametersWithNotary.serialize().hash)
-        verify(notaryUpdateListener).onNewNotaryList(networkParametersWithNotary.notaries)
-        verify(networkParametersChangedListener).onNewNetworkParameters(networkParametersWithNotary)
-    }
 
     @Test(timeout = 300_000)
     fun `can not hotload if notary changes but no listener function exists`() {
@@ -101,22 +82,42 @@ class NetworkParametersHotloaderTest {
     }
 
     private fun `can hotload`(newNetworkParameters: NetworkParameters) {
-        val networkParametersHotloader = createHotloaderWithMockedServicesAndListener(newNetworkParameters)
+        val notaryUpdateListener = Mockito.spy(object : NotaryUpdateListener {
+            override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+            }
+        })
+
+        val networkParametersChangedListener = Mockito.spy(object : NetworkParameterUpdateListener {
+            override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+            }
+        })
+        val networkParametersHotloader = createHotloaderWithMockedServices(newNetworkParameters).also {
+            it.addNotaryUpdateListener(notaryUpdateListener)
+            it.addNetworkParametersChangedListeners(networkParametersChangedListener)
+        }
+
         Assert.assertTrue(networkParametersHotloader.attemptHotload(newNetworkParameters.serialize().hash))
+        verify(notaryUpdateListener).onNewNotaryList(newNetworkParameters.notaries)
+        verify(networkParametersChangedListener).onNewNetworkParameters(newNetworkParameters)
     }
 
     private fun `can not hotload`(newNetworkParameters: NetworkParameters) {
-        val networkParametersHotloader = createHotloaderWithMockedServicesAndListener(newNetworkParameters)
-        Assert.assertFalse(networkParametersHotloader.attemptHotload(newNetworkParameters.serialize().hash))
-    }
+        val notaryUpdateListener = Mockito.spy(object : NotaryUpdateListener {
+            override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+            }
+        })
 
-    private fun createHotloaderWithMockedServicesAndListener(newNetworkParameters: NetworkParameters): NetworkParametersHotloader {
-        return createHotloaderWithMockedServices(newNetworkParameters).also {
-            it.addNotaryUpdateListener(object : NotaryUpdateListener {
-                override fun onNewNotaryList(notaries: List<NotaryInfo>) {
-                }
-            })
+        val networkParametersChangedListener = Mockito.spy(object : NetworkParameterUpdateListener {
+            override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+            }
+        })
+        val networkParametersHotloader = createHotloaderWithMockedServices(newNetworkParameters).also {
+            it.addNotaryUpdateListener(notaryUpdateListener)
+            it.addNetworkParametersChangedListeners(networkParametersChangedListener)
         }
+        Assert.assertFalse(networkParametersHotloader.attemptHotload(newNetworkParameters.serialize().hash))
+        verify(notaryUpdateListener, never()).onNewNotaryList(any());
+        verify(networkParametersChangedListener, never()).onNewNetworkParameters(any());
     }
 
     private fun createHotloaderWithMockedServices(newNetworkParameters: NetworkParameters): NetworkParametersHotloader {
