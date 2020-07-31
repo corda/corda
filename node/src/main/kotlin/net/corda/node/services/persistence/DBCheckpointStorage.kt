@@ -567,6 +567,11 @@ class DBCheckpointStorage(
         return serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
+    override fun removeFlowException(id: StateMachineRunId): Boolean {
+        val flowId = id.uuid.toString()
+        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId) == 1
+    }
+
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
         val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
         currentDBSession().createNativeQuery(update).executeUpdate()

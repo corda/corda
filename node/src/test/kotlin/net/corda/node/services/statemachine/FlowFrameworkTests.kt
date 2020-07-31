@@ -85,6 +85,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
+import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
@@ -810,6 +811,32 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
+    @Test
+    fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
+        aliceNode.services.startFlow(ExceptionFlow {
+            HospitalizeFlowException("hospitalizing")
+        }
+        )
+
+        var firstRun = true
+        var counter = 0
+        val flowHospitalizedTwice = Semaphore(-1)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++counter
+            if (firstRun) {
+                firstRun = false
+                val fiber = FlowStateMachineImpl.currentStateMachine()!!
+                thread {
+                    // schedule a [RetryFlowFromSafePoint] after the [OvernightObservation] gets scheduled by the hospital
+                    Thread.sleep(2000)
+                    fiber.scheduleEvent(Event.RetryFlowFromSafePoint)
+                }
+            }
+            flowHospitalizedTwice.release()
+        }
+        flowHospitalizedTwice.acquire()
+        assertEquals(2, counter)
+    }
     //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)

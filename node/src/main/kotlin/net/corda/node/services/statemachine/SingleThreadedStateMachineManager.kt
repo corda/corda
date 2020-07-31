@@ -476,6 +476,10 @@ internal class SingleThreadedStateMachineManager(
                 tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
                         checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                        if (!checkpointStorage.removeFlowException(flowId)) {
+                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not retry.")
+                            return@transaction null
+                        }
                     }
                 } ?: return@transaction null
             } ?: return

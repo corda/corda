@@ -75,5 +75,7 @@ interface CheckpointStorage {
      */
     fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
 
+    fun removeFlowException(id: StateMachineRunId): Boolean
+
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }
