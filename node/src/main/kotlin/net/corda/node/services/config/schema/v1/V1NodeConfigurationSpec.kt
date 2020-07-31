@@ -6,12 +6,10 @@ import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.core.internal.div
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults.reloadCheckpointAfterSuspend
 import net.corda.node.services.config.schema.parsers.*
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -83,7 +81,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val database = config[database] ?: Defaults.database(config[devMode])
         val baseDirectoryPath = config[baseDirectory]
         val cordappDirectories = config[cordappDirectories]?.map { baseDirectoryPath.resolve(it) } ?: Defaults.cordappsDirectories(baseDirectoryPath)
-        val networkParametersPath = config[networkParametersPath]?.div(NETWORK_PARAMS_FILE_NAME) ?: Defaults.networkParametersDefaultPath(baseDirectoryPath)
+        val networkParametersPath = config[networkParametersPath] ?: baseDirectoryPath
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                     baseDirectory = baseDirectoryPath,

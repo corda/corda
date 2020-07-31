@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
@@ -86,7 +85,7 @@ data class NodeConfigurationImpl(
         override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
         override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
         override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend,
-        override val networkParametersPath: Path
+        override val networkParametersPath: Path = baseDirectory
 
 ) : NodeConfiguration {
     internal object Defaults {
@@ -129,8 +128,6 @@ data class NodeConfigurationImpl(
         val reloadCheckpointAfterSuspend: Boolean = System.getProperty("reloadCheckpointAfterSuspend", "false")!!.toBoolean()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
-
-        fun networkParametersDefaultPath(baseDirectory: Path) = baseDirectory / NETWORK_PARAMS_FILE_NAME
 
         fun messagingServerExternal(messagingServerAddress: NetworkHostAndPort?) = messagingServerAddress != null
 

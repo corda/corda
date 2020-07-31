@@ -21,7 +21,7 @@ import java.security.cert.X509Certificate
 class NetworkParametersReader(private val trustRoot: X509Certificate,
                               private val networkMapClient: NetworkMapClient?,
                               private val baseDirectory: Path,
-                              private val networkParamsPath: Path) {
+                              private val networkParamsPath: Path = baseDirectory) {
     companion object {
         private val logger = contextLogger()
     }
@@ -39,7 +39,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         )
     }
 
-    private val networkParamsFile = networkParamsPath
+    private val networkParamsFile = networkParamsPath / NETWORK_PARAMS_FILE_NAME
 
     fun read(): NetworkParametersAndSigned {
         val advertisedParametersHash = try {
@@ -73,7 +73,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     }
 
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
-        val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val parametersUpdateFile = networkParamsPath / NETWORK_PARAMS_UPDATE_FILE_NAME
         if (!parametersUpdateFile.exists()) {
             throw Error.OldParams(previousParametersHash, advertisedParametersHash, networkParamsPath)
         }
