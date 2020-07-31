@@ -308,8 +308,7 @@ class FlowFrameworkTests {
             .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
             .withStackTraceContaining("Received counter-flow exception from peer")
         bobNode.database.transaction {
-            val checkpoint = bobNode.internals.checkpointStorage.checkpoints().single()
-            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
+            assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }
 
         assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
