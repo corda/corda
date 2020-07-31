@@ -1,6 +1,7 @@
 package net.corda.tools.shell
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -17,37 +18,42 @@ class HashLookupCommandTest {
     companion object {
         private val DEFAULT_TXID: SecureHash = SecureHash.randomSHA256()
 
-        private fun ops(txId: SecureHash): CordaRPCOps? {
-            val snapshot: List<StateMachineTransactionMapping> = listOf(
-                    StateMachineTransactionMapping(StateMachineRunId(UUID.randomUUID()), txId)
-            )
+        private fun ops(vararg txIds: SecureHash): CordaRPCOps? {
+            val snapshot: List<StateMachineTransactionMapping> = txIds.map { txId ->
+                StateMachineTransactionMapping(StateMachineRunId(UUID.randomUUID()), txId)
+            }
             return Mockito.mock(CordaRPCOps::class.java).apply {
                 Mockito.`when`(stateMachineRecordedTransactionMappingSnapshot()).thenReturn(snapshot)
+            }
+        }
+
+        private fun runCommand(ops: CordaRPCOps?, txIdHash: String): String {
+            val arrayWriter = CharArrayWriter()
+            return PrintWriter(arrayWriter).use {
+                HashLookupShellCommand.hashLookup(it, ops, txIdHash)
+                it.flush()
+                arrayWriter.toString()
             }
         }
     }
 
     @Test(timeout=300_000)
 	fun `hash lookup command returns correct response`() {
-        val txIdHash = DEFAULT_TXID.toString()
         val ops = ops(DEFAULT_TXID)
-        val arrayWriter = CharArrayWriter()
-        val response = PrintWriter(arrayWriter).use {
-            HashLookupShellCommand.hashLookup(it, ops, txIdHash)
-            it.flush()
-            arrayWriter.toString()
-        }
+        var response = runCommand(ops, DEFAULT_TXID.toString())
 
-        MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $txIdHash"))
+        MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
+
+        // Verify the hash of the TX ID also works
+        response = runCommand(ops, DEFAULT_TXID.sha256().toString())
+        MatcherAssert.assertThat(response, StringContains.containsString("Found a matching transaction with Id: $DEFAULT_TXID"))
     }
 
     @Test(timeout=300_000)
     fun `should reject invalid txid`() {
         val ops = ops(DEFAULT_TXID)
         assertFailsWith<IllegalArgumentException>("The provided string is not a valid hexadecimal SHA-256 hash value") {
-            PrintWriter(CharArrayWriter()).use {
-                HashLookupShellCommand.hashLookup(it, ops, "abcdefgh")
-            }
+            runCommand(ops, "abcdefgh")
         }
     }
 
@@ -55,9 +61,7 @@ class HashLookupCommandTest {
     fun `should reject unknown txid`() {
         val ops = ops(DEFAULT_TXID)
         assertFailsWith<IllegalArgumentException>("No matching transaction found") {
-            PrintWriter(CharArrayWriter()).use {
-                HashLookupShellCommand.hashLookup(it, ops, SecureHash.randomSHA256().toString())
-            }
+            runCommand(ops, SecureHash.randomSHA256().toString())
         }
     }
 }
