@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
+@Suppress("TooGenericExceptionCaught")
 class FlowOperatorTests {
 
     companion object {
@@ -53,10 +54,10 @@ class FlowOperatorTests {
         val offlineX500Name = CordaX500Name("Offline", "OfflineCorp", "GB")
         val acceptorInstructions = mutableMapOf<String, Map<String, AcceptorInstructions>>()
 
-        fun newInstructions(vararg instructions: Instructions) =
-                newInstructions(UUID.randomUUID().toString(), *instructions)
+        fun newInstructions(instructions: List<Instructions>) =
+                newInstructions(UUID.randomUUID().toString(), instructions)
 
-        fun newInstructions(marker: String, vararg instructions: Instructions): String {
+        fun newInstructions(marker: String, instructions: List<Instructions>): String {
             if(instructions.isEmpty()) {
                 error("Specify at least one party")
             }
@@ -86,7 +87,7 @@ class FlowOperatorTests {
                         .getValue(this)
                         .getValue(serviceHub.myInfo.legalIdentities.first().name.toString())
 
-        fun AcceptorInstructions.waitToCompleteAccepting() {
+        private fun AcceptorInstructions.waitToCompleteAccepting() {
             log.info("Party $name waiting to resume accepting the flow")
             if(!semaphores.first.tryAcquire(15, TimeUnit.SECONDS)) {
                 error("(Party: $name) Waiting too long for the signal to continue...")
@@ -94,7 +95,7 @@ class FlowOperatorTests {
             log.info("Party $name resumed the flow")
         }
 
-        fun AcceptorInstructions.enteredAcceptor() {
+        private fun AcceptorInstructions.enteredAcceptor() {
             semaphores.second.release()
             log.info("Party $name entered the flow")
         }
@@ -105,7 +106,7 @@ class FlowOperatorTests {
             waitToCompleteAccepting()
         }
 
-        fun Map<String, Map<String, AcceptorInstructions>>.waitToContinueTest(marker: String, vararg parties: Party) {
+        fun Map<String, Map<String, AcceptorInstructions>>.waitToContinueTest(marker: String, parties: List<Party>) {
             log.info("Started waiting to continue tests for ${parties.joinToString(";")}")
             parties.forEach {
                 if(!getValue(marker).getValue(it.name.toString()).semaphores.second.tryAcquire(15, TimeUnit.SECONDS)) {
@@ -115,7 +116,7 @@ class FlowOperatorTests {
             log.info("Continue tests for ${parties.joinToString(";")}")
         }
 
-        fun Map<String, Map<String, AcceptorInstructions>>.resumeAccepting(marker: String, vararg parties: Party) {
+        fun Map<String, Map<String, AcceptorInstructions>>.resumeAccepting(marker: String, parties: List<Party>) {
             parties.forEach {
                 getValue(marker).getValue(it.name.toString()).semaphores.first.release()
             }
@@ -132,7 +133,7 @@ class FlowOperatorTests {
     private lateinit var carolParty: Party
     lateinit var daveNode: TestStartedNode
     lateinit var daveParty: Party
-    lateinit var offlineParty: Party
+    private lateinit var offlineParty: Party
 
     @Before
     fun setup() {
@@ -169,19 +170,19 @@ class FlowOperatorTests {
         mockNet.stopNodes()
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return all flows which are waiting for other party to process`() {
-        val otherParties = arrayOf(bobParty, daveParty)
+        val otherParties = listOf(bobParty, daveParty)
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
-        val marker = newInstructions(*otherParties.map {
+        val marker = newInstructions(otherParties.map {
             Instructions(it.name, false)
-        }.toTypedArray())
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+        }.toList())
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -199,7 +200,7 @@ class FlowOperatorTests {
                 assertEquals(bobX500Name, lastName)
             }
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             bobFuture.getOrThrow(5.seconds)
             daveFuture.getOrThrow(5.seconds)
         }
@@ -208,18 +209,18 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return only requested by party flows which are waiting for other party to process`() {
-        val otherParties = arrayOf(bobParty, daveParty)
-        val marker = newInstructions(*otherParties.map {
+        val otherParties = listOf(bobParty, daveParty)
+        val marker = newInstructions(otherParties.map {
             Instructions(it.name, false)
-        }.toTypedArray())
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+        }.toList())
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -228,7 +229,7 @@ class FlowOperatorTests {
             assertEquals(1, result1.first().waitingForParties.size)
             assertEquals(daveX500Name, result1.first().waitingForParties.first().name)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             bobFuture.getOrThrow(5.seconds)
             daveFuture.getOrThrow(5.seconds)
         }
@@ -237,11 +238,11 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return only flows which are waiting for other party to process and not in the hospital`() {
-        val otherParties = arrayOf(bobParty, daveParty)
+        val otherParties = listOf(bobParty, daveParty)
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
-        val marker = newInstructions(
+        val marker = newInstructions(listOf(
                 Instructions(
                         bobX500Name,
                         true
@@ -249,13 +250,13 @@ class FlowOperatorTests {
                 Instructions(
                         daveX500Name,
                         false
-                ))
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+                )))
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -264,7 +265,7 @@ class FlowOperatorTests {
             assertEquals(1, result1.first().waitingForParties.size)
             assertEquals(daveX500Name, result1.first().waitingForParties.first().name)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             try {
                 bobFuture.get(5, TimeUnit.SECONDS)
             } catch (e: Throwable) {
@@ -277,11 +278,11 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return only flows which are waiting more than 4 seconds for other party to process`() {
-        val otherParties = arrayOf(bobParty, daveParty)
+        val otherParties = listOf(bobParty, daveParty)
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
-        val marker = newInstructions(
+        val marker = newInstructions(listOf(
                 Instructions(
                         bobX500Name,
                         false
@@ -289,11 +290,11 @@ class FlowOperatorTests {
                 Instructions(
                         daveX500Name,
                         false
-                ))
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        acceptorInstructions.waitToContinueTest(marker, bobParty)
+                )))
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        acceptorInstructions.waitToContinueTest(marker, listOf(bobParty))
         Thread.sleep(4500) // let time to settle all flow states properly
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -306,7 +307,7 @@ class FlowOperatorTests {
             assertEquals(1, result1.first().waitingForParties.size)
             assertEquals(bobX500Name, result1.first().waitingForParties.first().name)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             try {
                 bobFuture.get(5, TimeUnit.SECONDS)
             } catch (e: Throwable) {
@@ -319,19 +320,19 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForPartiesGrouped should return all flows which are waiting for other party to process grouped by party`() {
-        val otherParties = arrayOf(bobParty, daveParty)
+        val otherParties = listOf(bobParty, daveParty)
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
-        val marker = newInstructions(*otherParties.map {
+        val marker = newInstructions(otherParties.map {
             Instructions(it.name, false)
-        }.toTypedArray())
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+        }.toList())
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -344,7 +345,7 @@ class FlowOperatorTests {
             assertEquals(1, result1.getValue(daveParty).first().waitingForParties.size)
             assertEquals(daveX500Name, result1.getValue(daveParty).first().waitingForParties.first().name)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             bobFuture.getOrThrow(5.seconds)
             daveFuture.getOrThrow(5.seconds)
         }
@@ -353,25 +354,25 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getWaitingFlows should return all flow state machines which are waiting for other party to process`() {
-        val otherParties = arrayOf(bobParty, daveParty)
-        val marker = newInstructions(*otherParties.map {
+        val otherParties = listOf(bobParty, daveParty)
+        val marker = newInstructions(otherParties.map {
             Instructions(it.name, false)
-        }.toTypedArray())
-        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
+        }.toList())
+        val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty))).resultFuture
+        val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
             val result1 = cut.getWaitingFlows().toList()
             assertEquals(2, result1.size)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             bobFuture.getOrThrow(5.seconds)
             daveFuture.getOrThrow(5.seconds)
         }
@@ -380,10 +381,10 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `getWaitingFlows should return only requested by id flows which are waiting for other party to process`() {
-        val otherParties = arrayOf(bobParty, daveParty, carolParty)
-        val marker = newInstructions(
+        val otherParties = listOf(bobParty, daveParty, carolParty)
+        val marker = newInstructions(listOf(
                 Instructions(
                         bobX500Name,
                         true
@@ -395,14 +396,14 @@ class FlowOperatorTests {
                 Instructions(
                         carolX500Name,
                         false
-                ))
-        val bobStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty))
-        val daveStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty))
-        val carolStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, carolParty))
+                )))
+        val bobStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(bobParty)))
+        val daveStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(daveParty)))
+        val carolStart = aliceNode.services.startFlow(TestInitiatorFlow(marker, listOf(carolParty)))
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, *otherParties)
+        acceptorInstructions.waitToContinueTest(marker, otherParties)
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -420,7 +421,7 @@ class FlowOperatorTests {
                 assertEquals(daveX500Name, lastName)
             }
         } finally {
-            acceptorInstructions.resumeAccepting(marker, *otherParties)
+            acceptorInstructions.resumeAccepting(marker, otherParties)
             try {
                 bobStart.resultFuture.get(5, TimeUnit.SECONDS)
             } catch (e: Throwable) {
@@ -434,22 +435,22 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `should return all flows which are waiting for sending from other party`() {
         bobNode.registerCordappFlowFactory(TestReceiveFlow::class) { TestInitiatedSendFlow("Hello", it) }
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
         val marker = newInstructions(
                 "TestInitiatedSendFlow",
-                Instructions(
-                        bobX500Name,
-                        false
-                )
-        )
-        val bobFuture = aliceNode.services.startFlow(TestReceiveFlow(bobParty)).resultFuture
+                listOf(
+                        Instructions(
+                            bobX500Name,
+                            false
+                )))
+        val bobFuture = aliceNode.services.startFlow(TestReceiveFlow(listOf(bobParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
-        acceptorInstructions.waitToContinueTest(marker, bobParty)
+        acceptorInstructions.waitToContinueTest(marker, listOf(bobParty))
         Thread.sleep(1000) // let time to settle all flow states properly
 
         try {
@@ -458,7 +459,7 @@ class FlowOperatorTests {
             assertEquals(1, result1.first().waitingForParties.size)
             assertEquals(bobX500Name, result1.first().waitingForParties.first().name)
         } finally {
-            acceptorInstructions.resumeAccepting(marker, bobParty)
+            acceptorInstructions.resumeAccepting(marker, listOf(bobParty))
             bobFuture.getOrThrow(5.seconds)
         }
 
@@ -466,11 +467,11 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `should return all flows which are waiting for getting info about other party`() {
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty, offlineParty)
 
-        val offlineFuture = aliceNode.services.startFlow(TestSendStuckInGetFlowInfoFlow("Hello", offlineParty)).resultFuture
+        val offlineFuture = aliceNode.services.startFlow(TestSendStuckInGetFlowInfoFlow("Hello", listOf(offlineParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -504,8 +505,8 @@ class FlowOperatorTests {
     )
 
     @BelongsToContract(TestContract::class)
-    class TestState(val marker: String, val me: Party, vararg val otherParties: Party) : ContractState {
-        override val participants: List<AbstractParty> = listOf(me, *otherParties)
+    class TestState(val marker: String, val me: Party, val otherParties: List<Party>) : ContractState {
+        override val participants: List<AbstractParty> = mutableListOf(me).plus(otherParties)
     }
 
     class TestContract : Contract {
@@ -523,11 +524,11 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class TestInitiatorFlow(val marker: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
+    class TestInitiatorFlow(val marker: String, val otherParties: List<Party>) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val notary = serviceHub.networkMapCache.notaryIdentities.single()
-            val state = TestState(marker, serviceHub.myInfo.legalIdentities.first(), *otherParties)
+            val state = TestState(marker, serviceHub.myInfo.legalIdentities.first(), otherParties)
             val command = Command(TestContract.Commands.Create(), state.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary)
                     .addOutputState(state, TestContract.ID)
@@ -561,7 +562,7 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class TestReceiveFlow(private vararg val otherParties: Party) : FlowLogic<Unit>() {
+    class TestReceiveFlow(private val otherParties: List<Party>) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -581,19 +582,19 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class TestSendStuckInGetFlowInfoFlow(private val payload: String, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
+    class TestSendStuckInGetFlowInfoFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<FlowInfo>() {
         init {
             require(otherParties.isNotEmpty())
         }
 
         @Suspendable
         override fun call(): FlowInfo {
-            val flowInfos = otherParties.map {
+            val flowInfo = otherParties.map {
                 val session = initiateFlow(it)
                 session.send(payload)
                 session.getCounterpartyFlowInfo()
             }.toList()
-            return flowInfos.first()
+            return flowInfo.first()
         }
     }
 }
