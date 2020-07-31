@@ -694,6 +694,7 @@ class FlowFrameworkTests {
                 futureFiber.complete(flowFiber)
             }
         }
+        // TODO: make this test more strict => assert the below before checkpoint (after we add -> clearing the exception on 'StateMachineManager.start')
         SuspendingFlow.hookAfterCheckpoint = {
             dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getCheckpointsToRun().toList().single()
                     .second.status
@@ -761,29 +762,6 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
-    fun `Checkpoint is updated in DB with FAILED status and the error when flow fails`() {
-        var flowId: StateMachineRunId? = null
-
-        val e = assertFailsWith<FlowException> {
-            val fiber = aliceNode.services.startFlow(ExceptionFlow { FlowException("Just an exception") })
-            flowId = fiber.id
-            fiber.resultFuture.getOrThrow()
-        }
-
-        aliceNode.database.transaction {
-            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
-            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
-
-            // assert all fields of DBFlowException
-            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
-            assertEquals(FlowException::class.java.name, persistedException!!.type)
-            assertEquals("Just an exception", persistedException.message)
-            assertEquals(ExceptionUtils.getStackTrace(e), persistedException.stackTrace)
-            assertEquals(null, persistedException.value)
-        }
-    }
-
-    @Test(timeout=300_000)
     fun `Checkpoint is updated in DB with HOSPITALIZED status and the error when flow is kept for overnight observation` () {
         var flowId: StateMachineRunId? = null
 
@@ -801,10 +779,12 @@ class FlowFrameworkTests {
             val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
             assertEquals(HospitalizeFlowException::class.java.name, persistedException!!.type)
             assertEquals("Overnight observation", persistedException.message)
+            // TODO: this needs change once we save the exception blob
             assertEquals(null, persistedException.value)
         }
     }
 
+    // TODO: modify the below to test to assert the same but BEFORE suspension after we add -> clearing the exception on 'retryFlowFromSafePoint'
     @Test(timeout=300_000)
     fun `Checkpoint status and error in memory and in DB are not dirtied upon flow retry`() {
         var firstExecution = true
