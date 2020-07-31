@@ -376,27 +376,4 @@ class CordaRPCClientReconnectionTest {
             }
         }
     }
-
-    @Test(timeout=300_000)
-    fun `gracefulShutdown terminate test after flow crash due to stopped notary`() {
-        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
-            val charlie = startNode(
-                    NodeParameters(
-                            providedName = CHARLIE_NAME,
-                            rpcUsers = listOf(rpcUser),
-                            additionalCordapps = FINANCE_CORDAPPS
-                    )
-            ).getOrThrow()
-
-            val charlieClient =
-                    CordaRPCClient(charlie.rpcAddress).start(rpcUser.username, rpcUser.password).proxy
-
-            defaultNotaryNode.get().stop()
-            charlieClient.startFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.getOrThrow()
-
-            assertThatThrownBy {
-                charlieClient.terminate(true)
-            }.isInstanceOf(ConnectionFailureException::class.java)
-        }
-    }
 }
