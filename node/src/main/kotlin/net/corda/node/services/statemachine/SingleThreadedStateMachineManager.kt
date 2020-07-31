@@ -464,11 +464,6 @@ internal class SingleThreadedStateMachineManager(
             return
         }
         val flow = if (currentState.isAnyCheckpointPersisted) {
-
-            if (currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
-            }
-
             // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
             // we mirror exactly what happens when restarting the node.
             val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
