@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.concurrent.Semaphore
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
@@ -829,6 +831,7 @@ class FlowFrameworkTests {
         }
     }
 
+    // When ported to ENT use the existing API there to properly retry the flow
     @Test
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
         aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
