@@ -628,7 +628,7 @@ class DBCheckpointStorage(
                 type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
                 message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
                 stackTrace = it.stackTraceToString(),
-                value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+                value = it.storageSerialize().bytes,
                 persistedInstant = now
             )
         }

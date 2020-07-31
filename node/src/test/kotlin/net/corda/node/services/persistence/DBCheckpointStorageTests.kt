@@ -1,12 +1,15 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.toSet
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
@@ -448,7 +451,11 @@ class DBCheckpointStorageTests {
             assertNotNull(exceptionDetails)
             assertEquals(exception::class.java.name, exceptionDetails!!.type)
             assertEquals(exception.message, exceptionDetails.message)
-            assertEquals(1,  findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            val deserializedException = exceptionDetails.value?.let { SerializedBytes<Any>(it) }?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            assertTrue(deserializedException is CordaRuntimeException)
+            val cordaRuntimeException = deserializedException as CordaRuntimeException
+            assertEquals(IllegalStateException::class.java.name, cordaRuntimeException.originalExceptionClassName)
+            assertEquals("I am a naughty exception", cordaRuntimeException.originalMessage!!)
         }
     }
 
