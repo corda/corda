@@ -466,13 +466,20 @@ internal class SingleThreadedStateMachineManager(
         val flow = if (currentState.isAnyCheckpointPersisted) {
             // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
             // we mirror exactly what happens when restarting the node.
-            val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
-            if (serializedCheckpoint == null) {
-                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
-            }
+            val checkpoint = database.transaction {
+                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
+                if (serializedCheckpoint == null) {
+                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                    return@transaction null
+                }
 
-            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                    }
+                } ?: return@transaction null
+            } ?: return
+
             // Resurrect flow
             flowCreator.createFlowFromCheckpoint(flowId, checkpoint, reloadCheckpointAfterSuspendCount = currentState.reloadCheckpointAfterSuspendCount)
                     ?: return
