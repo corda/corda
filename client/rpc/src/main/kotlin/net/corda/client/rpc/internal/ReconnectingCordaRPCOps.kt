@@ -292,6 +292,7 @@ class ReconnectingCordaRPCOps private constructor(
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
         private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
+        private fun Method.isShutdown() = name == "shutdown" || name == "gracefulShutdown" || name == "terminate"
 
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
             if (method.isStartFlow()) {
@@ -306,7 +307,7 @@ class ReconnectingCordaRPCOps private constructor(
          *
          * A negative number for [maxNumberOfAttempts] means an unlimited number of retries will be performed.
          */
-        @Suppress("ThrowsCount", "ComplexMethod")
+        @Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")
         private fun doInvoke(method: Method, args: Array<out Any>?, maxNumberOfAttempts: Int): Any? {
             checkIfClosed()
             var remainingAttempts = maxNumberOfAttempts
@@ -318,20 +319,20 @@ class ReconnectingCordaRPCOps private constructor(
                         log.debug { "RPC $method invoked successfully." }
                     }
                 } catch (e: InvocationTargetException) {
-                    if (method.name.equals("shutdown", true)) {
-                        log.debug("Shutdown invoked, stop reconnecting.", e)
-                        reconnectingRPCConnection.notifyServerAndClose()
-                        break
-                    }
                     when (e.targetException) {
                         is RejectedCommandException -> {
                             log.warn("Node is being shutdown. Operation ${method.name} rejected. Shutting down...", e)
                             throw e.targetException
                         }
                         is ConnectionFailureException -> {
-                            log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
-                            reconnectingRPCConnection.reconnectOnError(e)
-                            checkIfIsStartFlow(method, e)
+                            if (method.isShutdown()) {
+                                log.debug("Shutdown invoked, stop reconnecting.", e)
+                                reconnectingRPCConnection.notifyServerAndClose()
+                            } else {
+                                log.warn("Failed to perform operation ${method.name}. Connection dropped. Retrying....", e)
+                                reconnectingRPCConnection.reconnectOnError(e)
+                                checkIfIsStartFlow(method, e)
+                            }
                         }
                         is RPCException -> {
                             rethrowIfUnrecoverable(e.targetException as RPCException)

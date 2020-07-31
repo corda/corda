@@ -16,7 +16,9 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.http.HttpApi
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import org.assertj.core.api.Assertions.assertThat
@@ -118,7 +120,7 @@ class DriverTests {
 	fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
         // First check that the process-id file is created by the node on startup, so that we can be sure our check that
         // it's deleted on shutdown isn't a false-positive.
-        val baseDirectory = driver {
+        val baseDirectory = driver(DriverParameters(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, startInProcess = false)))) {
             val baseDirectory = defaultNotaryNode.getOrThrow().baseDirectory
             assertThat(baseDirectory / "process-id").exists()
             baseDirectory

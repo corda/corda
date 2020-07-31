@@ -63,7 +63,6 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     NodeCoreV1)
 
     val internalSchemas = requiredSchemas + extraSchemas.filter { schema ->
-                schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1" ||
                 schema::class.qualifiedName?.startsWith("net.corda.notary.") ?: false
     }
 
