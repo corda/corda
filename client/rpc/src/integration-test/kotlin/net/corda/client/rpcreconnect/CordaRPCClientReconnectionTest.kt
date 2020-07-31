@@ -1,6 +1,5 @@
 package net.corda.client.rpcreconnect
 
-import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
@@ -9,7 +8,6 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
-import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -22,7 +20,6 @@ import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
