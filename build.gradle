@@ -399,14 +399,6 @@ allprojects {
             maven { url 'https://repo.gradle.org/gradle/libs-releases' }
             maven { url "${artifactory_contextUrl}/corda-dev" }
         }
-        maven {
-            name "GitHubPackages"
-            url "https://maven.pkg.github.com/ing-bank/zkkrypto"
-            credentials {
-                username System.getenv("GITHUB_USERNAME")
-                password System.getenv("GITHUB_TOKEN")
-            }
-        }
     }
 
     configurations {
