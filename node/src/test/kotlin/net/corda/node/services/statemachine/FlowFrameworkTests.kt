@@ -813,10 +813,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
-        aliceNode.services.startFlow(ExceptionFlow {
-            HospitalizeFlowException("hospitalizing")
-        }
-        )
+        aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
 
         var firstRun = true
         var counter = 0
