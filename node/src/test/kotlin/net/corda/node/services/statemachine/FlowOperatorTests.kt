@@ -6,9 +6,11 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -25,6 +27,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
@@ -47,13 +50,16 @@ class FlowOperatorTests {
         val bobX500Name = CordaX500Name("Bob", "BobCorp", "GB")
         val carolX500Name = CordaX500Name("Carol", "CarolCorp", "GB")
         val daveX500Name = CordaX500Name("Dave", "DaveCorp", "GB")
+        val offlineX500Name = CordaX500Name("Offline", "OfflineCorp", "GB")
         val acceptorInstructions = mutableMapOf<String, Map<String, AcceptorInstructions>>()
 
-        fun newInstructions(vararg instructions: Instructions): String {
+        fun newInstructions(vararg instructions: Instructions) =
+                newInstructions(UUID.randomUUID().toString(), *instructions)
+
+        fun newInstructions(marker: String, vararg instructions: Instructions): String {
             if(instructions.isEmpty()) {
                 error("Specify at least one party")
             }
-            val marker = UUID.randomUUID().toString()
             val partySemaphores = mutableMapOf<String, AcceptorInstructions>()
             instructions.forEach {
                 val semaphore1 = Semaphore(1)
@@ -74,6 +80,11 @@ class FlowOperatorTests {
                 acceptorInstructions
                     .getValue((tx.outputStates.first { it is TestState } as TestState).marker)
                     .getValue(serviceHub.myInfo.legalIdentities.first().name.toString())
+
+        fun String.getMyInstructions(serviceHub: ServiceHub) =
+                acceptorInstructions
+                        .getValue(this)
+                        .getValue(serviceHub.myInfo.legalIdentities.first().name.toString())
 
         fun AcceptorInstructions.waitToCompleteAccepting() {
             log.info("Party $name waiting to resume accepting the flow")
@@ -115,6 +126,7 @@ class FlowOperatorTests {
     private lateinit var carolParty: Party
     lateinit var daveNode: TestStartedNode
     lateinit var daveParty: Party
+    lateinit var offlineParty: Party
 
     @Before
     fun setup() {
@@ -134,11 +146,16 @@ class FlowOperatorTests {
         daveNode = mockNet.createNode(InternalMockNodeParameters(
                 legalName = daveX500Name
         ))
+        val offlineNode = mockNet.createNode(InternalMockNodeParameters(
+                legalName = offlineX500Name
+        ))
         mockNet.startNodes()
         aliceParty = aliceNode.info.legalIdentities.first()
         bobParty = bobNode.info.legalIdentities.first()
         carolParty = carolNode.info.legalIdentities.first()
         daveParty = daveNode.info.legalIdentities.first()
+        offlineParty = offlineNode.info.legalIdentities.first()
+        offlineNode.dispose()
     }
 
     @After
@@ -154,7 +171,6 @@ class FlowOperatorTests {
             Instructions(it.name, false)
         }.toTypedArray())
         val bobFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, bobParty)).resultFuture
-
         val daveFuture = aliceNode.services.startFlow(TestInitiatorFlow(marker, daveParty)).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
@@ -412,6 +428,62 @@ class FlowOperatorTests {
         assertEquals(0, result2.size)
     }
 
+    @Test
+    fun `should return all flows which are waiting for sending from other party`() {
+        bobNode.registerCordappFlowFactory(TestReceiveFlow::class) { TestInitiatedSendFlow("Hello", it) }
+        val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty)
+        val marker = newInstructions(
+                "TestInitiatedSendFlow",
+                Instructions(
+                        bobX500Name,
+                        false
+                )
+        )
+        val bobFuture = aliceNode.services.startFlow(TestReceiveFlow(bobParty)).resultFuture
+
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        acceptorInstructions.waitToContinueTest(marker, bobParty)
+        Thread.sleep(1000) // let time to settle all flow states properly
+
+        try {
+            val result1 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+            assertEquals(1, result1.size)
+            assertEquals(1, result1.first().waitingForParties.size)
+            assertEquals(bobX500Name, result1.first().waitingForParties.first().name)
+        } finally {
+            acceptorInstructions.resumeAccepting(marker, bobParty)
+            bobFuture.getOrThrow(5.seconds)
+        }
+
+        val result2 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+        assertEquals(0, result2.size)
+    }
+
+    @Test
+    fun `should return all flows which are waiting for receiving from other party`() {
+        val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty, offlineParty)
+
+        val offlineFuture = aliceNode.services.startFlow(TestSendFlow("Hello", offlineParty)).resultFuture
+
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        Thread.sleep(1000) // let time to settle all flow states properly
+
+        try {
+            val result1 = cut.getFlowsCurrentlyWaitingForParties(queryParties)
+            assertEquals(1, result1.size)
+            assertEquals(1, result1.first().waitingForParties.size)
+            assertEquals(offlineX500Name, result1.first().waitingForParties.first().name)
+        } finally {
+            try {
+                offlineFuture.get(100, TimeUnit.MILLISECONDS)
+            } catch (e: Throwable) {
+                // expected to fail
+            }
+        }
+    }
+
     open class Instructions(
             x500Name: CordaX500Name,
             val fail: Boolean
@@ -482,6 +554,46 @@ class FlowOperatorTests {
             }
             val txId = subFlow(signTransactionFlow).id
             return subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId = txId))
+        }
+    }
+
+    @InitiatingFlow
+    class TestReceiveFlow(private vararg val otherParties: Party) : FlowLogic<Unit>() {
+        init {
+            require(otherParties.isNotEmpty())
+        }
+
+        @Suspendable
+        override fun call() {
+            otherParties.forEach { initiateFlow(it).receive<String>() }
+        }
+    }
+
+    class TestInitiatedSendFlow(private val payload: Any, private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val myInstructions = "TestInitiatedSendFlow".getMyInstructions(serviceHub)
+            myInstructions.enteredAcceptor()
+            "Should fail when requested" using ( !myInstructions.fail )
+            myInstructions.waitToCompleteAccepting()
+            otherPartySession.send(payload)
+        }
+    }
+
+    @InitiatingFlow
+    class TestSendFlow(private val payload: String, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
+        init {
+            require(otherParties.isNotEmpty())
+        }
+
+        @Suspendable
+        override fun call(): FlowInfo {
+            val flowInfos = otherParties.map {
+                val session = initiateFlow(it)
+                session.send(payload)
+                session.getCounterpartyFlowInfo()
+            }.toList()
+            return flowInfos.first()
         }
     }
 }
