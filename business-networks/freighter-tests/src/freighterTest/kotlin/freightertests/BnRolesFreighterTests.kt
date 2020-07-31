@@ -7,8 +7,8 @@ import freighter.machine.DeploymentMachineProvider
 import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
 import freighter.testing.DockerTest
+import net.corda.bn.flows.AssignBNORoleFlow
 import net.corda.bn.flows.AssignMemberRoleFlow
-import net.corda.bn.flows.ModifyRolesFlow
 import net.corda.bn.flows.RevokeMembershipFlow
 import net.corda.bn.flows.SuspendMembershipFlow
 import net.corda.bn.states.BNORole
@@ -91,9 +91,13 @@ abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
         getLogger().info("Beginning to Assign BNO Roles")
 
         nodeToMembershipIds.forEach { nodeTOMembershipId ->
+            groupMembers.remove(nodeTOMembershipId.value.linearId)
+            groupMembers.add(0,nodeTOMembershipId.value.linearId)
+            addMembersToAGroup(bnoNode, newGroupId, newGroupName, groupMembers)
+
             bnoNode.rpc {
                 getLogger().info("Assigning ${nodeTOMembershipId.value.identity} bno role")
-                startFlow(::ModifyRolesFlow, nodeTOMembershipId.value.linearId, setOf(BNORole()), null).returnValue.getOrThrow()
+                startFlow(::AssignBNORoleFlow, nodeTOMembershipId.value.linearId, null).returnValue.getOrThrow()
             }
             while (!checkBnoRoleInVault(nodeTOMembershipId)) {
                 getLogger().info("Waiting for BNO Role To Propagate To Vault")

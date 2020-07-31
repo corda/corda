@@ -33,6 +33,24 @@ class HighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest() {
         val numberOfParticipants = 10
         runBenchmark(numberOfParticipants, 300000)
     }
+
+    @Test
+    fun testScenario20Participants() {
+        val numberOfParticipants = 20
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
+    @Test
+    fun testScenario30Participants() {
+        val numberOfParticipants = 30
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
+    @Test
+    fun testScenario40Participants() {
+        val numberOfParticipants = 40
+        runBenchmark(numberOfParticipants, 300000)
+    }
 }
 
 @DockerTest
@@ -45,8 +63,8 @@ class DockerHighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest(){
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testScenario2Participants() {
-        val numberOfParticipants = 2
+    fun testScenario10Participants() {
+        val numberOfParticipants = 10
         runBenchmark(numberOfParticipants, 300000)
     }
 
@@ -92,6 +110,7 @@ abstract class AbstractHighGroupNumberImpactTest : BaseBNFreighterTest() {
         val suspendedStatusCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))
         val vaultRegistryTime = measureTimeMillis { waitForStatusUpdate(listOf(nodeToSuspend), suspendedStatusCriteria) }
 
-        return mapOf("Time Taken To Suspend A Single Node" to suspensionTime,"Time taken to register in Vault" to vaultRegistryTime )
+        return mapOf("Time Taken To Suspend A Single Node" to suspensionTime,
+                "Time taken to register in Vault" to vaultRegistryTime )
     }
 }

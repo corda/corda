@@ -7,8 +7,11 @@ import freighter.machine.DeploymentMachineProvider
 import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
 import freighter.testing.DockerTest
+import net.corda.bn.flows.SuspendMembershipFlow
 import net.corda.bn.states.MembershipState
+import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.messaging.startFlow
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.spi.ExtendedLogger
 import org.junit.jupiter.api.Test
@@ -89,14 +92,30 @@ abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighter
         getLogger().info("Adding New Single Node")
         val newNode = nodeGenerator().getOrThrow()
         val newNodeToMembershipState = requestNetworkMembership(listOf(newNode), bnoNode,bnoMembershipState)
+        val newNodeMemberState =  newNodeToMembershipState[newNode] ?: error("Node Not Found")
 
         val membershipActivation = measureTimeMillis {activateNetworkMembership(newNodeToMembershipState, bnoNode)}
         val groupAdditionTime = measureTimeMillis {
-            groupMembers.add((newNodeToMembershipState[newNode] ?: error("Node Not Found")).linearId)
+            groupMembers.add(newNodeMemberState.linearId)
             addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
         }
 
-        return mapOf("Membership Activation Time" to membershipActivation, "Group Addition Time" to groupAdditionTime)
+        val suspensionTime = measureTimeMillis {
+            bnoNode.rpc {
+                startFlow(::SuspendMembershipFlow, newNodeMemberState.linearId, null)
+            }
+        }
+
+        val membershipSuspendInVaultTime = measureTimeMillis { waitForStatusUpdate(listOf(newNode), getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))) }
+
+
+
+
+        return mapOf("Membership Activation Time" to membershipActivation,
+                "Group Addition Time" to groupAdditionTime,
+                "Time taken to Run Suspend Membership Flow" to suspensionTime,
+                "Time take to Register Suspension In Vault" to membershipSuspendInVaultTime
+                )
 
 
     }

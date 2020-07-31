@@ -40,25 +40,26 @@ class AzureNetworkMembershipActivationTest : AbstractNetworkMembershipActivation
     @Test
     fun testMembershipActivationWith10Participants() {
         val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 15000)
-    }
-
-    @Test
-    fun testMembershipActivationWith15Participants() {
-        val numberOfParticipants = 15
-        runBenchmark(numberOfParticipants, 15000)
+        runBenchmark(numberOfParticipants, 120000)
     }
 
     @Test
     fun testMembershipActivationWith20Participants() {
         val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 20000)
+        runBenchmark(numberOfParticipants, 120000)
     }
+
+    @Test
+    fun testMembershipActivationWith30Participants() {
+        val numberOfParticipants = 30
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
 
     @Test
     fun testMembershipActivationWith40Participants() {
         val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 30000)
+        runBenchmark(numberOfParticipants, 500000)
     }
 
 }
@@ -97,16 +98,17 @@ abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
         val membershipActiveTime = measureTimeMillis {
             activateNetworkMembership(nodeToMembershipIds, bnoNode)
         }
-        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
-        groupMembers.add(0, bnoMembershipState.linearId)
-        addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
-
         val membershipCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.ACTIVE))
         val membershipInVault = measureTimeMillis { waitForStatusUpdate(listOfGroupMembers, membershipCriteria) }
+
+        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
+        groupMembers.add(0, bnoMembershipState.linearId)
+        val timeItTookToOnboardToGroup = measureTimeMillis {addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)}
+
+
         val subsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size / 2).first()
 
-
-        measureTimeMillis {
+        val timeTakenToRunSuspendFlow = measureTimeMillis {
             for (node in subsetGroupMembers) {
                 bnoNode.rpc {
                     startFlow(::SuspendMembershipFlow, nodeToMembershipIds[node]!!.linearId, null)
@@ -120,6 +122,10 @@ abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
         bnoNode.nodeMachine.stopNode()
         listOfGroupMembers.forEach { it.stopNode() }
 
-        return mapOf("Membership Activation" to membershipActiveTime,"Membership in Members Vault" to membershipInVault, "Membership Update Time" to membershipActiveTime, "Membership Suspend Time" to membershipSuspendTime)
+        return mapOf("Membership Activation" to membershipActiveTime,
+                "Added To Group Flow" to timeItTookToOnboardToGroup,
+                "Membership in Members Vault" to membershipInVault,
+                "Time Take to Run Suspend Flow" to timeTakenToRunSuspendFlow,
+                "Time Take For Suspend Flow to Appear in Vault" to membershipSuspendTime)
     }
 }

@@ -49,7 +49,7 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
         }
 
         benchmark.map {
-            Assertions.assertTrue(it.value <= cutOffTime)
+            Assertions.assertTrue(it.value <= cutOffTime, "${it.value} exceeded the benchmark of $cutOffTime")
         }
     }
 
@@ -123,6 +123,16 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
                     null
             ).returnValue.getOrThrow()
         }.tx.outputStates.single() as GroupState
+    }
+
+    fun createSubGroup(listOfMemberStates: List<MembershipState>, groupIndex: AtomicInteger, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed) {
+        val subGroupMembers = listOfMemberStates.map { it.linearId } as MutableList
+        val subsetGroupName = "subGroup-${groupIndex.incrementAndGet()}"
+        val subGroupId = UniqueIdentifier()
+        subGroupMembers.add(0, bnoMembershipState.linearId)
+
+        createGroup(bnoNode, bnoMembershipState, subGroupId, subsetGroupName)
+        addMembersToAGroup(bnoNode, subGroupId, subsetGroupName, subGroupMembers)
     }
 
     fun getMembershipStatusQueryCriteria(listOfMemberShipStatus: List<MembershipStatus>): QueryCriteria {

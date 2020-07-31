@@ -38,19 +38,19 @@ class AddingASingleMemberToNetworkAndGroupTest : AbstractAddingASingleMemberToNe
     @Test
     fun testMembershipSlowActivationWith20Participants() {
         val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 20000)
+        runBenchmark(numberOfParticipants, 800000)
     }
 
     @Test
     fun testMembershipSlowActivationWith30Participants() {
         val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 30000)
+        runBenchmark(numberOfParticipants, 3000000)
     }
 
     @Test
     fun testMembershipSlowActivationWith40Participants() {
         val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 30000)
+        runBenchmark(numberOfParticipants, 7279540)
     }
 }
 

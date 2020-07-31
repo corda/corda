@@ -14,7 +14,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.startFlow
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.spi.ExtendedLogger
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import utility.getOrThrow
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,11 +27,28 @@ class ImpactOfOverlappingGroupsTest:AbstractImpactOfOverlappingGroupsTest() {
     }
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
+    @Test
+    fun testWith10Participants() {
+        val numberOfParticipants = 10
+        runBenchmark(numberOfParticipants, 300000)
+    }
 
     @Test
-    fun testScenarioWith10Participants(){
-        val participants = 10
-        runBenchmark(participants,300000)
+    fun testScenario20Participants() {
+        val numberOfParticipants = 20
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
+    @Test
+    fun testScenario30Participants() {
+        val numberOfParticipants = 30
+        runBenchmark(numberOfParticipants, 300000)
+    }
+
+    @Test
+    fun testScenario40Participants() {
+        val numberOfParticipants = 40
+        runBenchmark(numberOfParticipants, 300000)
     }
 
 }
@@ -96,13 +112,4 @@ abstract class AbstractImpactOfOverlappingGroupsTest : BaseBNFreighterTest() {
         return mapOf("Time taken to run suspend flow on node for overlapping group" to membershipSuspendTimeFlow, "Time take for this to register in vault" to membershipSuspendTimeInVault)
     }
 
-    private fun createSubGroup(listOfMemberStates: List<MembershipState>, groupIndex: AtomicInteger, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed) {
-        val subGroupMembers = listOfMemberStates.map { it.linearId } as MutableList
-        val subsetGroupName = "subGroup-${groupIndex.incrementAndGet()}"
-        val subGroupId = UniqueIdentifier()
-        subGroupMembers.add(0, bnoMembershipState.linearId)
-
-        createGroup(bnoNode, bnoMembershipState, subGroupId, subsetGroupName)
-        addMembersToAGroup(bnoNode, subGroupId, subsetGroupName, subGroupMembers)
-    }
 }
