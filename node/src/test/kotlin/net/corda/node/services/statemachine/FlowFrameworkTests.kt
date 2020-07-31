@@ -817,6 +817,7 @@ class FlowFrameworkTests {
         var firstRun = true
         var counter = 0
         val waitUntilHospitalizedTwice = Semaphore(-1)
+
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++counter
             if (firstRun) {
@@ -830,8 +831,13 @@ class FlowFrameworkTests {
             }
             waitUntilHospitalizedTwice.release()
         }
+
+        var counterRes = 0
+        StaffedFlowHospital.onFlowResuscitated.add { _, _, _ -> ++counterRes }
+
         waitUntilHospitalizedTwice.acquire()
         assertEquals(2, counter)
+        assertEquals(0, counterRes)
     }
     //region Helpers
 
