@@ -60,9 +60,9 @@ open class MembershipContract : Contract {
          * Command responsible for modification of [MembershipState.roles].
          *
          * @param requiredSigners List of all required public keys of command's signers.
-         * @property bnCreation Flag indicating whether this command is part of transaction creating new Business Network.
+         * @property initiator Identity of the party building the transaction.
          */
-        class ModifyRoles(requiredSigners: List<PublicKey>, val bnCreation: Boolean = false) : Commands(requiredSigners)
+        class ModifyRoles(requiredSigners: List<PublicKey>, val initiator: Party) : Commands(requiredSigners)
 
         /**
          * Command responsible for modification of [MembershipState.identity.businessIdentity].
@@ -235,7 +235,10 @@ open class MembershipContract : Contract {
         "Input and output state of membership roles modification transaction should have same business identity" using (inputMembership.identity.businessIdentity == outputMembership.identity.businessIdentity)
         "Input and output state of membership roles modification transaction should have same participants" using (inputMembership.participants.toSet() == outputMembership.participants.toSet())
         (command.value as Commands.ModifyRoles).apply {
-            "Input membership owner shouldn't be required signer of membership roles modification transaction (with an exception of Business Network creation)" using (bnCreation || inputMembership.identity.cordaIdentity.owningKey !in requiredSigners)
+            val selfModification = initiator == inputMembership.identity.cordaIdentity
+            val memberIsSigner = inputMembership.identity.cordaIdentity.owningKey in requiredSigners
+            "Input membership owner should be required signer of membership business identity modification transaction if it initiated it" using (!selfModification || memberIsSigner)
+            "Input membership owner shouldn't be required signer of membership business identity modification transaction if it didn't initiate it" using (selfModification || !memberIsSigner)
         }
     }
 
