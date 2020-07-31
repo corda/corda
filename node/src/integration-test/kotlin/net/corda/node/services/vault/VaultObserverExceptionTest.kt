@@ -25,7 +25,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
 import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.notary.jpa.JPAUniquenessProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -856,8 +856,8 @@ class VaultObserverExceptionTest {
             override fun call(): List<String> {
                 return serviceHub.withEntityManager {
                     val criteriaQuery = this.criteriaBuilder.createQuery(String::class.java)
-                    val root = criteriaQuery.from(PersistentUniquenessProvider.CommittedTransaction::class.java)
-                    criteriaQuery.select(root.get<String>(PersistentUniquenessProvider.CommittedTransaction::transactionId.name))
+                    val root = criteriaQuery.from(JPAUniquenessProvider.CommittedTransaction::class.java)
+                    criteriaQuery.select(root.get(JPAUniquenessProvider.CommittedTransaction::transactionId.name))
                     val query = this.createQuery(criteriaQuery)
                     query.resultList
                 }

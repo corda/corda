@@ -13,6 +13,7 @@ see changes to this list.
 * agoldvarg
 * Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
+* Alex Karnezis
 * amiracam
 * Amol Pednekar
 * Andras Slemmer (R3)
