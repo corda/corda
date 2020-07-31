@@ -1182,7 +1182,7 @@ internal class SuspendingFlow : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         stateMachine.hookBeforeCheckpoint()
-        sleep(1.seconds) // flow checkpoints => checkpoint is in DB
+        stateMachine.suspend(FlowIORequest.ForceCheckpoint, maySkipCheckpoint = false) // flow checkpoints => checkpoint is in DB
         stateMachine.hookAfterCheckpoint()
     }
 }
