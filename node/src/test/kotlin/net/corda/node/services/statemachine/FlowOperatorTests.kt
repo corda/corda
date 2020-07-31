@@ -99,6 +99,12 @@ class FlowOperatorTests {
             log.info("Party $name entered the flow")
         }
 
+        fun AcceptorInstructions.process() {
+            enteredAcceptor()
+            "Should fail when requested" using ( !fail )
+            waitToCompleteAccepting()
+        }
+
         fun Map<String, Map<String, AcceptorInstructions>>.waitToContinueTest(marker: String, vararg parties: Party) {
             log.info("Started waiting to continue tests for ${parties.joinToString(";")}")
             parties.forEach {
@@ -461,10 +467,10 @@ class FlowOperatorTests {
     }
 
     @Test
-    fun `should return all flows which are waiting for receiving from other party`() {
+    fun `should return all flows which are waiting for getting info about other party`() {
         val queryParties = listOf(aliceParty, bobParty, carolParty, daveParty, offlineParty)
 
-        val offlineFuture = aliceNode.services.startFlow(TestSendFlow("Hello", offlineParty)).resultFuture
+        val offlineFuture = aliceNode.services.startFlow(TestSendStuckInGetFlowInfoFlow("Hello", offlineParty)).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -545,10 +551,7 @@ class FlowOperatorTests {
         override fun call(): SignedTransaction {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val myInstructions = stx.getMyInstructions(serviceHub)
-                    myInstructions.enteredAcceptor()
-                    "Should fail when requested" using ( !myInstructions.fail )
-                    myInstructions.waitToCompleteAccepting()
+                    stx.getMyInstructions(serviceHub).process()
                     return@requireThat
                 }
             }
@@ -572,16 +575,13 @@ class FlowOperatorTests {
     class TestInitiatedSendFlow(private val payload: Any, private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val myInstructions = "TestInitiatedSendFlow".getMyInstructions(serviceHub)
-            myInstructions.enteredAcceptor()
-            "Should fail when requested" using ( !myInstructions.fail )
-            myInstructions.waitToCompleteAccepting()
+            "TestInitiatedSendFlow".getMyInstructions(serviceHub).process()
             otherPartySession.send(payload)
         }
     }
 
     @InitiatingFlow
-    class TestSendFlow(private val payload: String, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
+    class TestSendStuckInGetFlowInfoFlow(private val payload: String, private vararg val otherParties: Party) : FlowLogic<FlowInfo>() {
         init {
             require(otherParties.isNotEmpty())
         }
