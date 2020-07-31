@@ -41,47 +41,18 @@ class StartedFlowTransition(
                     continuation = FlowContinuation.Throw(errorsToThrow[0])
             )
         }
-        val sessionsToBeTerminated = findSessionsToBeTerminated(startingState)
-        // if there are sessions to be closed, we close them as part of this transition and normal processing will continue on the next transition.
-        return if (sessionsToBeTerminated.isNotEmpty()) {
-            terminateSessions(sessionsToBeTerminated)
-        } else {
-            when (flowIORequest) {
-                is FlowIORequest.Send -> sendTransition(flowIORequest)
-                is FlowIORequest.Receive -> receiveTransition(flowIORequest)
-                is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
-                is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
-                is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
-                is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
-                is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
-                is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
-                is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
-                FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
-            }
-        }
-    }
-
-    private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
-        return startingState.checkpoint.checkpointState.sessionsToBeClosed.mapNotNull { sessionId ->
-                    val sessionState = startingState.checkpoint.checkpointState.sessions[sessionId]!! as SessionState.Initiated
-                    if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is EndSessionMessage) {
-                        sessionId to sessionState
-                    } else {
-                        null
-                    }
-                }.toMap()
-    }
-
-    private fun terminateSessions(sessionsToBeTerminated: SessionMap): TransitionResult {
-        return builder {
-            val sessionsToRemove = sessionsToBeTerminated.keys
-            val newCheckpoint = currentState.checkpoint.removeSessions(sessionsToRemove)
-                                                       .removeSessionsToBeClosed(sessionsToRemove)
-            currentState = currentState.copy(checkpoint = newCheckpoint)
-            actions.add(Action.RemoveSessionBindings(sessionsToRemove))
-            actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
-            FlowContinuation.ProcessEvents
-        }
+        return when (flowIORequest) {
+            is FlowIORequest.Send -> sendTransition(flowIORequest)
+            is FlowIORequest.Receive -> receiveTransition(flowIORequest)
+            is FlowIORequest.SendAndReceive -> sendAndReceiveTransition(flowIORequest)
+            is FlowIORequest.CloseSessions -> closeSessionTransition(flowIORequest)
+            is FlowIORequest.WaitForLedgerCommit -> waitForLedgerCommitTransition(flowIORequest)
+            is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
+            is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
+            is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
+            is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
+            FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
+        }.let { scheduleTerminateSessionsIfRequired(it) }
     }
 
     private fun waitForSessionConfirmationsTransition(): TransitionResult {
@@ -536,5 +507,26 @@ class StartedFlowTransition(
 
     private fun executeForceCheckpoint(): TransitionResult {
         return builder { resumeFlowLogic(Unit) }
+    }
+
+    private fun scheduleTerminateSessionsIfRequired(transition: TransitionResult): TransitionResult {
+        // If there are sessions to be closed, close them on a following transition
+        val sessionsToBeTerminated = findSessionsToBeTerminated(transition.newState)
+        return if (sessionsToBeTerminated.isNotEmpty()) {
+            transition.copy(actions = transition.actions + Action.ScheduleEvent(Event.TerminateSessions(sessionsToBeTerminated.keys)))
+        } else {
+            transition
+        }
+    }
+
+    private fun findSessionsToBeTerminated(startingState: StateMachineState): SessionMap {
+        return startingState.checkpoint.checkpointState.sessionsToBeClosed.mapNotNull { sessionId ->
+            val sessionState = startingState.checkpoint.checkpointState.sessions[sessionId]!! as SessionState.Initiated
+            if (sessionState.receivedMessages.isNotEmpty() && sessionState.receivedMessages.first() is EndSessionMessage) {
+                sessionId to sessionState
+            } else {
+                null
+            }
+        }.toMap()
     }
 }
