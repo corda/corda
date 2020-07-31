@@ -3,7 +3,9 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.Try
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.Action
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.DeduplicationId
@@ -11,12 +13,15 @@ import net.corda.node.services.statemachine.EndSessionMessage
 import net.corda.node.services.statemachine.ErrorState
 import net.corda.node.services.statemachine.Event
 import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowRemovalReason
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.InitialSessionMessage
 import net.corda.node.services.statemachine.InitiatedSessionState
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.SessionMessage
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.StateMachineState
 import net.corda.node.services.statemachine.SubFlow
@@ -62,7 +67,7 @@ class TopLevelTransition(
 
     private fun errorTransition(event: Event.Error): TransitionResult {
         return builder {
-            freshErrorTransition(event.exception)
+            freshErrorTransition(event.exception, event.rollback)
             FlowContinuation.ProcessEvents
         }
     }
@@ -314,22 +319,38 @@ class TopLevelTransition(
     private fun retryFlowFromSafePointTransition(startingState: StateMachineState): TransitionResult {
         return builder {
             // Need to create a flow from the prior checkpoint or flow initiation.
-            actions.add(Action.CreateTransaction)
             actions.add(Action.RetryFlowFromSafePoint(startingState))
-            actions.add(Action.CommitTransaction)
             FlowContinuation.Abort
         }
     }
 
     private fun overnightObservationTransition(): TransitionResult {
         return builder {
+            val flowStartEvents = currentState.pendingDeduplicationHandlers.filter(::isFlowStartEvent)
             val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
-            actions.add(Action.CreateTransaction)
-            actions.add(Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted))
-            actions.add(Action.CommitTransaction)
-            currentState = currentState.copy(checkpoint = newCheckpoint)
+            actions += Action.CreateTransaction
+            actions += Action.PersistDeduplicationFacts(flowStartEvents)
+            actions += Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted)
+            actions += Action.CommitTransaction
+            actions += Action.AcknowledgeMessages(flowStartEvents)
+            currentState = currentState.copy(
+                checkpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED),
+                pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers - flowStartEvents
+            )
             FlowContinuation.ProcessEvents
         }
+    }
+
+    private fun isFlowStartEvent(handler: DeduplicationHandler): Boolean {
+        return handler.externalCause.run { isSessionInit() || isFlowStart() }
+    }
+
+    private fun ExternalEvent.isSessionInit(): Boolean {
+        return this is ExternalEvent.ExternalMessageEvent && this.receivedMessage.data.deserialize<SessionMessage>() is InitialSessionMessage
+    }
+
+    private fun ExternalEvent.isFlowStart(): Boolean {
+        return this is ExternalEvent.ExternalStartFlowEvent<*>
     }
 
     private fun wakeUpFromSleepTransition(): TransitionResult {

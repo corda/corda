@@ -872,6 +872,24 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `update only the flow status`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.HOSPITALIZED)
+        }
+        database.transaction {
+            assertEquals(
+                checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED),
+                checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
 
     private fun changeStatus(oldCheckpoint: Checkpoint, status: Checkpoint.FlowStatus): IdAndCheckpoint {

@@ -1598,6 +1598,7 @@
     <ID>TooGenericExceptionCaught:ScheduledFlowIntegrationTests.kt$ScheduledFlowIntegrationTests$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:SerializationOutputTests.kt$SerializationOutputTests$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:ShutdownManager.kt$ShutdownManager$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:SimpleAMQPClient.kt$SimpleAMQPClient$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SimpleMQClient.kt$SimpleMQClient$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SingleThreadedStateMachineManager.kt$SingleThreadedStateMachineManager$ex: Exception</ID>
@@ -1617,6 +1618,7 @@
     <ID>TooGenericExceptionCaught:TransformTypes.kt$TransformTypes.Companion$e: IndexOutOfBoundsException</ID>
     <ID>TooGenericExceptionCaught:TransitionExecutorImpl.kt$TransitionExecutorImpl$exception: Exception</ID>
     <ID>TooGenericExceptionCaught:Try.kt$Try.Companion$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:UserValidationPlugin.kt$UserValidationPlugin$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:Utils.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:V1NodeConfigurationSpec.kt$V1NodeConfigurationSpec$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ValidatingNotaryFlow.kt$ValidatingNotaryFlow$e: Exception</ID>

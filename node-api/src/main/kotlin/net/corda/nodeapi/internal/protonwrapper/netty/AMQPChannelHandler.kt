@@ -10,6 +10,7 @@ import io.netty.handler.proxy.ProxyConnectionEvent
 import io.netty.handler.ssl.SniCompletionEvent
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
+import io.netty.handler.ssl.SslHandshakeTimeoutException
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.contextLogger
@@ -295,8 +296,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         // This happens when the peer node is closed during SSL establishment.
         when {
             cause is ClosedChannelException -> logWarnWithMDC("SSL Handshake closed early.")
+            cause is SslHandshakeTimeoutException -> logWarnWithMDC("SSL Handshake timed out")
             // Sadly the exception thrown by Netty wrapper requires that we check the message.
-            cause is SSLException && cause.message == "handshake timed out" -> logWarnWithMDC("SSL Handshake timed out")
             cause is SSLException && (cause.message?.contains("close_notify") == true)
                                                                            -> logWarnWithMDC("Received close_notify during handshake")
             // io.netty.handler.ssl.SslHandler.setHandshakeFailureTransportFailure()

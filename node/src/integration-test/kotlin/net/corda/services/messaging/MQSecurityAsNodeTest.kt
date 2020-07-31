@@ -1,6 +1,7 @@
 package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
@@ -14,6 +15,9 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.services.messaging.SimpleAMQPClient.Companion.sendAndVerify
+import net.corda.testing.core.singleIdentity
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -24,6 +28,8 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
 import java.nio.file.Files
+import javax.jms.JMSSecurityException
+import kotlin.test.assertEquals
 
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
@@ -39,7 +45,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test(timeout=300_000)
 	fun `send message to RPC requests address`() {
-        assertSendAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
+        assertProducerQueueCreationAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
     @Test(timeout=300_000)
@@ -116,5 +122,54 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)
         }
+    }
+
+    override fun `send message to notifications address`() {
+        assertProducerQueueCreationAttackFails(ArtemisMessagingComponent.NOTIFICATIONS_ADDRESS)
+    }
+
+    @Test(timeout=300_000)
+    fun `send message on core protocol`() {
+        val attacker = clientTo(alice.node.configuration.p2pAddress)
+        attacker.start(PEER_USER, PEER_USER)
+        val message = attacker.createMessage()
+        assertEquals(true, attacker.producer.isBlockOnNonDurableSend)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.producer.send("${ArtemisMessagingComponent.P2P_PREFIX}${alice.info.singleIdentity().owningKey.toStringShort()}", message)
+        }.withMessageContaining("CoreMessage").withMessageContaining("AMQPMessage")
+    }
+
+    @Test(timeout = 300_000)
+    fun `send AMQP message with correct validated user in header`() {
+        val attacker = amqpClientTo(alice.node.configuration.p2pAddress)
+        val session = attacker.start(PEER_USER, PEER_USER)
+        val message = session.createMessage()
+        message.setStringProperty("_AMQ_VALIDATED_USER", "O=MegaCorp, L=London, C=GB")
+        val queue = session.createQueue("${ArtemisMessagingComponent.P2P_PREFIX}${alice.info.singleIdentity().owningKey.toStringShort()}")
+        val producer = session.createProducer(queue)
+        producer.sendAndVerify(message)
+    }
+
+    @Test(timeout = 300_000)
+    fun `send AMQP message with incorrect validated user in header`() {
+        val attacker = amqpClientTo(alice.node.configuration.p2pAddress)
+        val session = attacker.start(PEER_USER, PEER_USER)
+        val message = session.createMessage()
+        message.setStringProperty("_AMQ_VALIDATED_USER", "O=Bob, L=New York, C=US")
+        val queue = session.createQueue("${ArtemisMessagingComponent.P2P_PREFIX}${alice.info.singleIdentity().owningKey.toStringShort()}")
+        val producer = session.createProducer(queue)
+        assertThatExceptionOfType(JMSSecurityException::class.java).isThrownBy {
+            producer.sendAndVerify(message)
+        }.withMessageContaining("_AMQ_VALIDATED_USER mismatch")
+    }
+
+    @Test(timeout = 300_000)
+    fun `send AMQP message without header`() {
+        val attacker = amqpClientTo(alice.node.configuration.p2pAddress)
+        val session = attacker.start(PEER_USER, PEER_USER)
+        val message = session.createMessage()
+        val queue = session.createQueue("${ArtemisMessagingComponent.P2P_PREFIX}${alice.info.singleIdentity().owningKey.toStringShort()}")
+        val producer = session.createProducer(queue)
+        producer.sendAndVerify(message)
     }
 }

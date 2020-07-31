@@ -41,9 +41,8 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').ta
     }
 }
 
-assemble.dependsOn buildExplorerJAR
-
 artifacts {
+    archives buildExplorerJAR
     runtimeArtifacts buildExplorerJAR
     publish buildExplorerJAR {
         classifier ""

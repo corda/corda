@@ -170,7 +170,6 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
@@ -204,7 +203,6 @@ plugins {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
 apply plugin: "com.r3.dependx.dependxies"
@@ -275,7 +273,7 @@ allprojects {
         toolVersion = "0.8.3"
     }
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
         options.compilerArgs << '-XDenableSunApiLintControl'
         if (warnings_as_errors) {
@@ -287,7 +285,7 @@ allprojects {
         options.encoding = 'UTF-8'
     }
 
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             languageVersion = "1.2"
             apiVersion = "1.2"
@@ -302,7 +300,7 @@ allprojects {
         task.dependsOn tasks.withType(AbstractCompile)
     }
 
-    tasks.withType(Jar) { task ->
+    tasks.withType(Jar).configureEach { task ->
         // Includes War and Ear
         manifest {
             attributes('Corda-Release-Version': corda_release_version)
@@ -314,7 +312,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         forkEvery = 10
         ignoreFailures = project.hasProperty('tests.ignoreFailures') ? project.property('tests.ignoreFailures').toBoolean() : false
         failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
@@ -339,7 +337,7 @@ allprojects {
         systemProperty 'java.security.egd', 'file:/dev/./urandom'
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         if (name.contains("integrationTest")) {
             maxParallelForks = (System.env.CORDA_INT_TESTING_FORKS == null) ? 1 : "$System.env.CORDA_INT_TESTING_FORKS".toInteger()
         }
@@ -520,7 +518,7 @@ tasks.register('detektBaseline', JavaExec) {
     args(params)
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
@@ -628,7 +626,7 @@ dependxiesModule {
     skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi) {
+tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
     baseName = "api-corda"
 }
 
@@ -664,7 +662,7 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = "5.4.1"
+    gradleVersion = '5.6.4'
     distributionType = Wrapper.DistributionType.ALL
 }
 

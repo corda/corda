@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.Reservoir
-import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -14,17 +13,18 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
-import java.time.Duration
+import java.sql.SQLException
 
 /**
  * This is the bottom execution engine of flow side-effects.
  */
 internal class ActionExecutorImpl(
-        private val services: ServiceHubInternal,
-        private val checkpointStorage: CheckpointStorage,
-        private val flowMessaging: FlowMessaging,
-        private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: CheckpointSerializationContext
+    private val services: ServiceHubInternal,
+    private val checkpointStorage: CheckpointStorage,
+    private val flowMessaging: FlowMessaging,
+    private val stateMachineManager: StateMachineManagerInternal,
+    private val actionFutureExecutor: ActionFutureExecutor,
+    private val checkpointSerializationContext: CheckpointSerializationContext
 ) : ActionExecutor {
 
     private companion object {
@@ -73,16 +73,8 @@ internal class ActionExecutorImpl(
         if (action.uuid != null) services.vaultService.softLockRelease(action.uuid)
     }
 
-    @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        services.validatedTransactions.trackTransactionWithNoWarning(action.hash).thenMatch(
-                success = { transaction ->
-                    fiber.scheduleEvent(Event.TransactionCommitted(transaction))
-                },
-                failure = { exception ->
-                    fiber.scheduleEvent(Event.Error(exception))
-                }
-        )
+        actionFutureExecutor.awaitTransaction(fiber, action)
     }
 
     @Suspendable
@@ -156,13 +148,8 @@ internal class ActionExecutorImpl(
         fiber.scheduleEvent(action.event)
     }
 
-    @Suspendable
     private fun executeSleepUntil(fiber: FlowFiber, action: Action.SleepUntil) {
-        stateMachineManager.scheduleFlowSleep(
-            fiber,
-            action.currentState,
-            Duration.between(services.clock.instant(), action.time)
-        )
+        actionFutureExecutor.sleep(fiber, action)
     }
 
     @Suspendable
@@ -208,6 +195,7 @@ internal class ActionExecutorImpl(
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCreateTransaction() {
         if (contextTransactionOrNull != null) {
             throw IllegalStateException("Refusing to create a second transaction")
@@ -224,6 +212,7 @@ internal class ActionExecutorImpl(
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCommitTransaction() {
         try {
             contextTransaction.commit()
@@ -233,19 +222,10 @@ internal class ActionExecutorImpl(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
-    @Suspendable
+    @Suppress("TooGenericExceptionCaught")
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {
-            val operationFuture = action.operation.execute(action.deduplicationId)
-            operationFuture.thenMatch(
-                    success = { result ->
-                        fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
-                    },
-                    failure = { exception ->
-                        fiber.scheduleEvent(Event.AsyncOperationThrows(exception))
-                    }
-            )
+            actionFutureExecutor.awaitAsyncOperation(fiber, action)
         } catch (e: Exception) {
             // Catch and wrap any unexpected exceptions from the async operation
             // Wrapping the exception allows it to be better handled by the flow hospital

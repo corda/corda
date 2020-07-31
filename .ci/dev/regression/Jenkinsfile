@@ -18,18 +18,33 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
  * Sense environment
  */
 boolean isReleaseTag = (env.TAG_NAME =~ /^release-.*(?<!_JDK11)$/)
+/*
+** calculate the stage for NexusIQ evaluation
+**  * build for snapshots
+**  * stage-release:  for release candidates and for health checks
+**  * operate: for final release
+*/
+def nexusIqStage = "build"
+if (isReleaseTag) {
+    switch (env.TAG_NAME) {
+        case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
+        default: nexusIqStage = "operate"
+    }
+}
 
 pipeline {
     agent { label 'k8s' }
     options {
         timestamps()
-        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
         disableConcurrentBuilds()
         timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
     }
 
     environment {
         DOCKER_TAG_TO_USE = "${env.GIT_COMMIT.subSequence(0, 8)}"
+        DOCKER_URL = "https://index.docker.io/v1/"
         EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
         BUILD_ID = "${env.BUILD_ID}-${env.JOB_NAME}"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
@@ -37,6 +52,25 @@ pipeline {
     }
 
     stages {
+        stage('Sonatype Check') {
+            steps {
+                sh "./gradlew --no-daemon clean jar"
+                script {
+                    sh "./gradlew --no-daemon properties | grep -E '^(version|group):' >version-properties"
+                    def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: //'").trim()
+                    def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
+                    def artifactId = 'corda'
+                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                }
+                nexusPolicyEvaluation (
+                        failBuildOnNetworkError: false,
+                        iqApplication: manualApplication(nexusAppId),
+                        iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
+                        iqStage: nexusIqStage
+                )
+            }
+        }
+
         stage('Deploy Nodes') {
             steps {
                 sh "./gradlew --no-daemon jar deployNodes"
@@ -115,6 +149,20 @@ pipeline {
                         serverId: 'R3-Artifactory',
                         buildName: env.ARTIFACTORY_BUILD_NAME
                 )
+            }
+        }
+
+        stage('Publish Release to Docker Hub') {
+            when {
+                expression { isReleaseTag }
+            }
+            steps {
+                withCredentials([
+                        usernamePassword(credentialsId: 'corda-publisher-docker-hub-credentials',
+                                usernameVariable: 'DOCKER_USERNAME',
+                                passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "./gradlew pushOfficialImages"
+                }
             }
         }
     }

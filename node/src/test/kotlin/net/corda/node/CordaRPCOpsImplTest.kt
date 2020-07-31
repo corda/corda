@@ -2,11 +2,13 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.RPCException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
@@ -350,6 +352,17 @@ class CordaRPCOpsImplTest {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val secureHash = rpc.uploadAttachmentWithMetadata(inputJar, RPC_UPLOADER, "Season 1")
             assertTrue(rpc.attachmentExists(secureHash))
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `trying to open attachment which doesnt exist throws error`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(invokeRpc(CordaRPCOps::openAttachment)) {
+            assertThatThrownBy {
+                rpc.openAttachment(SecureHash.zeroHash)
+            }.isInstanceOf(RPCException::class.java)
+                    .withFailMessage("Unable to open attachment with id: ${SecureHash.zeroHash}")
         }
     }
 
