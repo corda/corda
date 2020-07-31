@@ -431,7 +431,15 @@ internal class SingleThreadedStateMachineManager(
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 innerState.withLock { if (id in flows) return@mapNotNull null }
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
+                        if (!checkpointStorage.removeFlowException(id)) {
+                            logger.error("Unable to remove database exception for flow $id. Something is very wrong.")
+                            return@mapNotNull null
+                        }
+                    }
+                } ?: return@mapNotNull null
                 flowCreator.createFlowFromCheckpoint(id, checkpoint)
             }.toList()
         }

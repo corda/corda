@@ -858,7 +858,50 @@ class FlowFrameworkTests {
         assertEquals(2, counter)
         assertEquals(0, counterRes)
     }
-    //region Helpers
+
+    @Test
+    fun `Hospitalized flow, resets to 'RUNNABLE' and clears database exception on node start`() {
+        var checkpointStatusAfterRestart: Checkpoint.FlowStatus? = null
+        var dbExceptionAfterRestart: List<DBCheckpointStorage.DBFlowException>? = null
+
+        var secondRun = false
+        SuspendingFlow.hookBeforeCheckpoint = {
+            if(secondRun) {
+                aliceNode.database.transaction {
+                    checkpointStatusAfterRestart = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
+                    dbExceptionAfterRestart = findRecordsFromDatabase()
+                }
+            } else {
+                secondRun = true
+            }
+
+            throw HospitalizeFlowException("hospitalizing")
+        }
+
+        aliceNode.services.startFlow(SuspendingFlow())
+
+        var counter = 0
+        val waitUntilHospitalized = Semaphore(0)
+        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
+            ++counter
+            waitUntilHospitalized.release()
+        }
+
+        var counterRes = 0
+        StaffedFlowHospital.onFlowResuscitated.add { _, _, _ -> ++counterRes }
+
+        waitUntilHospitalized.acquire()
+        Thread.sleep(3000) // wait until flow saves overnight observation state in database
+        aliceNode = mockNet.restartNode(aliceNode)
+
+
+        waitUntilHospitalized.acquire()
+        assertEquals(2, counter)
+        assertEquals(0, counterRes)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusAfterRestart)
+        assertEquals(0, dbExceptionAfterRestart!!.size)
+    }
+        //region Helpers
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
 
