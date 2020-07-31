@@ -15,6 +15,7 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.JavaVersion
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
@@ -96,6 +97,7 @@ class X509UtilitiesTest {
                 Pair(ECDSA_SECP256K1_SHA256, RSA_SHA256),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256K1_SHA256),
                 Pair(RSA_SHA256, EDDSA_ED25519_SHA512),
+                Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256R1_SHA256),
                 Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256)
         )
 
@@ -115,7 +117,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid self-signed CA certificate`() {
-        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY }.forEach { validSelfSignedCertificate(it) }
+        Crypto.supportedSignatureSchemes().filter { it != COMPOSITE_KEY
+                && ( !JavaVersion.isVersionAtLeast(JavaVersion.Java_11) || it != SPHINCS256_SHA256)}.forEach { validSelfSignedCertificate(it) }
     }
 
     private fun validSelfSignedCertificate(signatureScheme: SignatureScheme) {
@@ -150,7 +153,8 @@ class X509UtilitiesTest {
 
     @Test(timeout=300_000)
 	fun `create valid server certificate chain`() {
-        certChainSchemeCombinations.forEach { createValidServerCertChain(it.first, it.second) }
+        certChainSchemeCombinations.filter{ !JavaVersion.isVersionAtLeast(JavaVersion.Java_11) || it.first != SPHINCS256_SHA256 }
+                                   .forEach { createValidServerCertChain(it.first, it.second) }
     }
 
     private fun createValidServerCertChain(signatureSchemeRoot: SignatureScheme, signatureSchemeChild: SignatureScheme) {

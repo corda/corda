@@ -6,15 +6,41 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.flows.*
+import net.corda.core.flows.Destination
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.FlowStackSnapshot
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.KilledFlowException
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.DeclaredField
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.isIdempotentFlow
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.location
+import net.corda.core.internal.toPath
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -37,7 +63,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
-import kotlin.reflect.KProperty1
 
 class FlowPermissionException(message: String) : FlowException(message)
 
@@ -63,57 +88,72 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
         private val SERIALIZER_BLOCKER = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER").apply { isAccessible = true }.get(null)
-    }
 
-    override val serviceHub get() = getTransientField(TransientValues::serviceHub)
+        @VisibleForTesting
+        var onReloadFlowFromCheckpoint: ((id: StateMachineRunId) -> Unit)? = null
+    }
 
     data class TransientValues(
-            val eventQueue: Channel<Event>,
-            val resultFuture: CordaFuture<Any?>,
-            val database: CordaPersistence,
-            val transitionExecutor: TransitionExecutor,
-            val actionExecutor: ActionExecutor,
-            val stateMachine: StateMachine,
-            val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: CheckpointSerializationContext,
-            val unfinishedFibers: ReusableLatch,
-            val waitTimeUpdateHook: (id: StateMachineRunId, timeout: Long) -> Unit
-    )
+        val eventQueue: Channel<Event>,
+        val resultFuture: CordaFuture<Any?>,
+        val database: CordaPersistence,
+        val transitionExecutor: TransitionExecutor,
+        val actionExecutor: ActionExecutor,
+        val stateMachine: StateMachine,
+        val serviceHub: ServiceHubInternal,
+        val checkpointSerializationContext: CheckpointSerializationContext,
+        val unfinishedFibers: ReusableLatch,
+        val waitTimeUpdateHook: (id: StateMachineRunId, timeout: Long) -> Unit
+    ) : KryoSerializable {
+        override fun write(kryo: Kryo?, output: Output?) {
+            throw IllegalStateException("${TransientValues::class.qualifiedName} should never be serialized")
+        }
 
-    internal var transientValues: TransientReference<TransientValues>? = null
-    internal var transientState: TransientReference<StateMachineState>? = null
-
-    /**
-     * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
-     * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and
-     * the de-duplication of messages it sends should not be optimised since this could be unreliable.
-     */
-    override val ourSenderUUID: String?
-        get() = transientState?.value?.senderUUID
-
-    private fun <A> getTransientField(field: KProperty1<TransientValues, A>): A {
-        val suppliedValues = transientValues ?: throw IllegalStateException("${field.name} wasn't supplied!")
-        return field.get(suppliedValues.value)
+        override fun read(kryo: Kryo?, input: Input?) {
+            throw IllegalStateException("${TransientValues::class.qualifiedName} should never be deserialized")
+        }
     }
 
-    private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
-        val transaction = contextTransaction
-        contextTransactionOrNull = null
-        return TransientReference(transaction)
-    }
+    private var transientValuesReference: TransientReference<TransientValues>? = null
+    internal var transientValues: TransientValues
+        // After the flow has been created, the transient values should never be null
+        get() = transientValuesReference!!.value
+        set(values) {
+            check(transientValuesReference?.value == null) { "The transient values should only be set once when initialising a flow" }
+            transientValuesReference = TransientReference(values)
+        }
+
+    private var transientStateReference: TransientReference<StateMachineState>? = null
+    internal var transientState: StateMachineState
+        // After the flow has been created, the transient state should never be null
+        get() = transientStateReference!!.value
+        set(state) {
+            transientStateReference = TransientReference(state)
+        }
 
     /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
     override val logger = log
-    override val resultFuture: CordaFuture<R> get() = uncheckedCast(getTransientField(TransientValues::resultFuture))
-    override val context: InvocationContext get() = transientState!!.value.checkpoint.checkpointState.invocationContext
-    override val ourIdentity: Party get() = transientState!!.value.checkpoint.checkpointState.ourIdentity
-    internal var hasSoftLockedStates: Boolean = false
-        set(value) {
-            if (value) field = value else throw IllegalArgumentException("Can only set to true")
-        }
+
+    override val instanceId: StateMachineInstanceId get() = StateMachineInstanceId(id, super.getId())
+
+    override val serviceHub: ServiceHubInternal get() = transientValues.serviceHub
+    override val stateMachine: StateMachine get() = transientValues.stateMachine
+    override val resultFuture: CordaFuture<R> get() = uncheckedCast(transientValues.resultFuture)
+
+    override val context: InvocationContext get() = transientState.checkpoint.checkpointState.invocationContext
+    override val ourIdentity: Party get() = transientState.checkpoint.checkpointState.ourIdentity
+    override val isKilled: Boolean get() = transientState.isKilled
+    /**
+     * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
+     * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and
+     * the de-duplication of messages it sends should not be optimised since this could be unreliable.
+     */
+    override val ourSenderUUID: String? get() = transientState.senderUUID
+
+    internal val softLockedStates = mutableSetOf<StateRef>()
 
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
@@ -123,12 +163,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun processEvent(transitionExecutor: TransitionExecutor, event: Event): FlowContinuation {
         setLoggingContext()
-        val stateMachine = getTransientField(TransientValues::stateMachine)
-        val oldState = transientState!!.value
-        val actionExecutor = getTransientField(TransientValues::actionExecutor)
+        val stateMachine = transientValues.stateMachine
+        val oldState = transientState
+        val actionExecutor = transientValues.actionExecutor
         val transition = stateMachine.transition(event, oldState)
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
-        transientState = TransientReference(newState)
+        // Ensure that the next state that is being written to the transient state maintains the [isKilled] flag
+        // This condition can be met if a flow is killed during [TransitionExecutor.executeTransition]
+        if (oldState.isKilled && !newState.isKilled) {
+            newState.isKilled = true
+        }
+        transientState = newState
         setLoggingContext()
         return continuation
     }
@@ -146,14 +191,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     private fun processEventsUntilFlowIsResumed(isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): Any? {
         checkDbTransaction(isDbTransactionOpenOnEntry)
-        val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
-        val eventQueue = getTransientField(TransientValues::eventQueue)
+        val transitionExecutor = transientValues.transitionExecutor
+        val eventQueue = transientValues.eventQueue
         try {
             eventLoop@ while (true) {
                 val nextEvent = try {
                     eventQueue.receive()
                 } catch (interrupted: InterruptedException) {
                     log.error("Flow interrupted while waiting for events, aborting immediately")
+                    (transientValues.resultFuture as? OpenFuture<*>)?.setException(KilledFlowException(id))
                     abortFiber()
                 }
                 val continuation = processEvent(transitionExecutor, nextEvent)
@@ -220,7 +266,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             isDbTransactionOpenOnEntry: Boolean,
             isDbTransactionOpenOnExit: Boolean): FlowContinuation {
         checkDbTransaction(isDbTransactionOpenOnEntry)
-        val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
+        val transitionExecutor = transientValues.transitionExecutor
         val continuation = processEvent(transitionExecutor, event)
         checkDbTransaction(isDbTransactionOpenOnExit)
         return continuation
@@ -244,7 +290,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun openThreadLocalWormhole() {
-        val threadLocal = getTransientField(TransientValues::database).hikariPoolThreadLocal
+        val threadLocal = transientValues.database.hikariPoolThreadLocal
         if (threadLocal != null) {
             val valueFromThread = swappedOutThreadLocalValue(threadLocal)
             threadLocal.set(valueFromThread)
@@ -258,11 +304,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
         openThreadLocalWormhole()
         setLoggingContext()
-        initialiseFlow()
 
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
+        var initialised = false
         val resultOrError = try {
+
+            initialiseFlow()
+            initialised = true
 
             // This sets the Cordapp classloader on the contextClassLoader of the current thread.
             // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
@@ -275,23 +324,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if(t.isUnrecoverable()) {
                 errorAndTerminate("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
             }
-            logger.info("Flow raised an error: ${t.message}. Sending it to flow hospital to be triaged.")
+            logFlowError(t)
             Try.Failure<R>(t)
         }
-        val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
+        val softLocksId = if (softLockedStates.isNotEmpty()) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
                 Event.FlowFinish(resultOrError.value, softLocksId)
             }
             is Try.Failure -> {
-                Event.Error(resultOrError.exception)
+                Event.Error(resultOrError.exception, initialised)
             }
         }
         // Immediately process the last event. This is to make sure the transition can assume that it has an open
         // database transaction.
         val continuation = processEventImmediately(
                 finalEvent,
-                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnEntry = initialised,
                 isDbTransactionOpenOnExit = false
         )
         if (continuation == FlowContinuation.ProcessEvents) {
@@ -303,15 +352,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
 
         recordDuration(startTime)
-        getTransientField(TransientValues::unfinishedFibers).countDown()
+        transientValues.unfinishedFibers.countDown()
     }
 
     @Suspendable
     private fun initialiseFlow() {
         processEventsUntilFlowIsResumed(
-                isDbTransactionOpenOnEntry = false,
-                isDbTransactionOpenOnExit = true
+            isDbTransactionOpenOnEntry = false,
+            isDbTransactionOpenOnExit = true
         )
+    }
+
+    private fun logFlowError(throwable: Throwable) {
+        if (contextTransactionOrNull != null) {
+            logger.info("Flow raised an error: ${throwable.message}. Sending it to flow hospital to be triaged.")
+        } else {
+            logger.error("Flow raised an error: ${throwable.message}. The flow's database transaction is missing.", throwable)
+        }
     }
 
     @Suspendable
@@ -429,9 +486,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         FlowStackSnapshotFactory.instance.persistAsJsonFile(flowClass, serviceHub.configuration.baseDirectory, id)
     }
 
+    override fun serialize(payloads: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
+        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
+
+        return payloads.mapValues { (_, payload) ->
+            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
+        }
+    }
+
     @Suspendable
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
-        val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
+        val serializationContext = TransientReference(transientValues.checkpointSerializationContext)
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
             setLoggingContext()
@@ -443,10 +508,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             contextTransactionOrNull = transaction.value
             val event = try {
                 Event.Suspend(
-                        ioRequest = ioRequest,
-                        maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.checkpointSerialize(context = serializationContext.value),
-                        progressStep = logic.progressTracker?.currentStep
+                    ioRequest = ioRequest,
+                    maySkipCheckpoint = skipPersistingCheckpoint,
+                    fiber = this.checkpointSerialize(context = serializationContext.value),
+                    progressStep = logic.progressTracker?.currentStep
                 )
             } catch (exception: Exception) {
                 Event.Error(exception)
@@ -459,9 +524,27 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents) { "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation " }
-            unpark(SERIALIZER_BLOCKER)
+
+            // If the flow has been aborted then do not resume the fiber
+            if (continuation != FlowContinuation.Abort) {
+                require(continuation == FlowContinuation.ProcessEvents) {
+                    "Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation"
+                }
+                unpark(SERIALIZER_BLOCKER)
+            }
         }
+
+        transientState.reloadCheckpointAfterSuspendCount?.let { count ->
+            if (count < transientState.checkpoint.checkpointState.numberOfSuspends) {
+                onReloadFlowFromCheckpoint?.invoke(id)
+                processEventImmediately(
+                    Event.ReloadFlowFromCheckpointAfterSuspend,
+                    isDbTransactionOpenOnEntry = false,
+                    isDbTransactionOpenOnExit = false
+                )
+            }
+        }
+
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
@@ -473,13 +556,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         return subFlowStack.any { IdempotentFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
+    private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
+        val transaction = contextTransaction
+        contextTransactionOrNull = null
+        return TransientReference(transaction)
+    }
+
     @Suspendable
     override fun scheduleEvent(event: Event) {
-        getTransientField(TransientValues::eventQueue).send(event)
+        transientValues.eventQueue.send(event)
     }
 
     override fun snapshot(): StateMachineState {
-        return transientState!!.value
+        return transientState
     }
 
     /**
@@ -487,10 +576,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * retried.
      */
     override fun updateTimedFlowTimeout(timeoutSeconds: Long) {
-        getTransientField(TransientValues::waitTimeUpdateHook).invoke(id, timeoutSeconds)
+        transientValues.waitTimeUpdateHook.invoke(id, timeoutSeconds)
     }
-
-    override val stateMachine get() = getTransientField(TransientValues::stateMachine)
 
     /**
      * Records the duration of this flow – from call() to completion or failure.
@@ -520,7 +607,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             current = current.superclass
                     ?: return found
                     ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                            "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+                            "${InitiatingFlow::class.java.name}.")
         }
     }
 

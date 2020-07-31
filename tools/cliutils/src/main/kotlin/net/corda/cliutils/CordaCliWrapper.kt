@@ -1,6 +1,5 @@
 package net.corda.cliutils
 
-import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import org.fusesource.jansi.AnsiConsole
@@ -212,6 +211,7 @@ fun printError(message: String) = System.err.println("${ShellConstants.RED}$mess
  */
 object CommonCliConstants {
     const val BASE_DIR = "--base-directory"
+    const val CONFIG_FILE = "--config-file"
 }
 
 /**

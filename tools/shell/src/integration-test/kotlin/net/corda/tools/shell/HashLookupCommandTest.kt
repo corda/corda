@@ -21,12 +21,11 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.bouncycastle.util.io.Streams
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertTrue
 
 class HashLookupCommandTest {
-    @Ignore
+
     @Test(timeout=300_000)
 	fun `hash lookup command returns correct response`() {
         val user = User("u", "p", setOf(Permissions.all()))
@@ -35,17 +34,16 @@ class HashLookupCommandTest {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
             val txId = issueTransaction(node)
+            val txIdHashed = txId.sha256()
 
-            val session = connectToShell(user, node)
-
-            testCommand(session, command = "hashLookup ${txId.sha256()}", expected = "Found a matching transaction with Id: $txId")
-            testCommand(session, command = "hashLookup ${SecureHash.randomSHA256()}", expected = "No matching transaction found")
-
-            session.disconnect()
+            testCommand(user, node, command = "hashLookup $txId", expected = "Found a matching transaction with Id: $txId")
+            testCommand(user, node, command = "hashLookup $txIdHashed", expected = "Found a matching transaction with Id: $txId")
+            testCommand(user, node, command = "hashLookup ${SecureHash.randomSHA256()}", expected = "No matching transaction found")
         }
     }
 
-    private fun testCommand(session: Session, command: String, expected: String) {
+    private fun testCommand(user: User, node: NodeHandle, command: String, expected: String) {
+        val session = connectToShell(user, node)
         val channel = session.openChannel("exec") as ChannelExec
         channel.setCommand(command)
         channel.connect(5000)
@@ -58,6 +56,7 @@ class HashLookupCommandTest {
         }
         channel.disconnect()
         assertTrue(matchFound)
+        session.disconnect()
     }
 
     private fun connectToShell(user: User, node: NodeHandle): Session {

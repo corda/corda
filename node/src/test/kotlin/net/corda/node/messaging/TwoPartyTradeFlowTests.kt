@@ -63,7 +63,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 internal fun CheckpointStorage.getAllIncompleteCheckpoints(): List<Checkpoint.Serialized> {
-    return getRunnableCheckpoints().use {
+    return getCheckpointsToRun().use {
         it.map { it.second }.toList()
     }.filter { it.status !=  Checkpoint.FlowStatus.COMPLETED }
 }
@@ -738,6 +738,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
             return database.transaction {
                 delegate.trackTransaction(id)
+            }
+        }
+
+        override fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction> {
+            return database.transaction {
+                delegate.trackTransactionWithNoWarning(id)
             }
         }
 

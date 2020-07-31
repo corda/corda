@@ -143,4 +143,4 @@ enum class WrappingMode {
     WRAPPED
 }
 
-class WrappedPrivateKey(val keyMaterial: ByteArray, val signatureScheme: SignatureScheme)
+class WrappedPrivateKey(val keyMaterial: ByteArray, val signatureScheme: SignatureScheme, val encodingVersion: Int? = null)

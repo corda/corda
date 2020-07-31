@@ -1,6 +1,5 @@
 package net.corda.core.node.services.vault
 
-import net.corda.core.node.services.vault.BinaryComparisonOperator
 import net.corda.core.node.services.vault.Builder.`in`
 import net.corda.core.node.services.vault.Builder.equal
 import net.corda.core.node.services.vault.Builder.greaterThan
@@ -13,8 +12,6 @@ import net.corda.core.node.services.vault.Builder.notEqual
 import net.corda.core.node.services.vault.Builder.notIn
 import net.corda.core.node.services.vault.Builder.notLike
 import net.corda.core.node.services.vault.Builder.notNull
-import net.corda.core.node.services.vault.CollectionOperator
-import net.corda.core.node.services.vault.ColumnPredicate
 import net.corda.core.node.services.vault.ColumnPredicate.AggregateFunction
 import net.corda.core.node.services.vault.ColumnPredicate.Between
 import net.corda.core.node.services.vault.ColumnPredicate.BinaryComparison
@@ -23,12 +20,6 @@ import net.corda.core.node.services.vault.ColumnPredicate.EqualityComparison
 import net.corda.core.node.services.vault.ColumnPredicate.Likeness
 import net.corda.core.node.services.vault.ColumnPredicate.NullExpression
 import net.corda.core.node.services.vault.CriteriaExpression.ColumnPredicateExpression
-import net.corda.core.node.services.vault.EqualityComparisonOperator
-import net.corda.core.node.services.vault.FieldInfo
-import net.corda.core.node.services.vault.LikenessOperator
-import net.corda.core.node.services.vault.NullOperator
-import net.corda.core.node.services.vault.Operator
-import net.corda.core.node.services.vault.getField
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.ObjectAssert
 import org.junit.Test

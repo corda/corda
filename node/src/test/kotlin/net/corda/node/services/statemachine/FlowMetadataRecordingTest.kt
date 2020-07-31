@@ -21,6 +21,7 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.AppServiceHub
@@ -43,6 +44,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
@@ -73,8 +75,10 @@ class FlowMetadataRecordingTest {
     fun `rpc started flows have metadata recorded`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
@@ -161,8 +165,10 @@ class FlowMetadataRecordingTest {
     fun `rpc started flows have their arguments removed from in-memory checkpoint after zero'th checkpoint`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             var context: InvocationContext? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null
@@ -213,8 +219,10 @@ class FlowMetadataRecordingTest {
     fun `initiated flows have metadata recorded`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
@@ -246,7 +254,7 @@ class FlowMetadataRecordingTest {
                     it.initialParameters.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
                 )
                 assertThat(it.launchingCordapp).contains("custom-cordapp")
-                assertEquals(6, it.platformVersion)
+                assertEquals(8, it.platformVersion)
                 assertEquals(nodeAHandle.nodeInfo.singleIdentity().name.toString(), it.startedBy)
                 assertEquals(context!!.trace.invocationId.timestamp, it.invocationInstant)
                 assertTrue(it.startInstant >= it.invocationInstant)
@@ -259,8 +267,10 @@ class FlowMetadataRecordingTest {
     fun `service started flows have metadata recorded`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             var flowId: StateMachineRunId? = null
             var context: InvocationContext? = null
@@ -305,8 +315,10 @@ class FlowMetadataRecordingTest {
     fun `scheduled flows have metadata recorded`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             val lock = Semaphore(0)
 
@@ -354,12 +366,16 @@ class FlowMetadataRecordingTest {
         }
     }
 
+    // Ignoring test since completed flows are not currently keeping their checkpoints in the database
+    @Ignore
     @Test(timeout = 300_000)
     fun `flows have their finish time recorded when completed`() {
         driver(DriverParameters(startNodesInProcess = true)) {
 
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
+                    .map { startNode(providedName = it, rpcUsers = listOf(user)) }
+                    .transpose()
+                    .getOrThrow()
 
             var flowId: StateMachineRunId? = null
             var metadata: DBCheckpointStorage.DBFlowMetadata? = null

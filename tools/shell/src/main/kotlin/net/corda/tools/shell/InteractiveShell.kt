@@ -111,6 +111,8 @@ object InteractiveShell {
         YAML
     }
 
+    private fun isShutdownCmd(cmd: String) = cmd == "shutdown" || cmd == "gracefulShutdown" || cmd == "terminate"
+
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null, standalone: Boolean = false) {
         makeRPCConnection = { username: String, password: String ->
             val connection = if (standalone) {
@@ -336,7 +338,7 @@ object InteractiveShell {
                               ansiProgressRenderer: ANSIProgressRenderer,
                               inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         val matches = try {
-            rpcOps.registeredFlows().filter { nameFragment in it }
+            rpcOps.registeredFlows().filter { nameFragment in it }.sortedBy { it.length }
         } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Decoration.bold, Color.red)
             return
@@ -623,6 +625,10 @@ object InteractiveShell {
                     throw e.rootCause
                 }
             }
+            if (isShutdownCmd(cmd)) {
+                out.println("Called 'shutdown' on the node.\nQuitting the shell now.").also { out.flush() }
+                onExit.invoke()
+            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Decoration.bold, Color.red)
             if (e !is StringToMethodCallParser.UnparseableCallException.NoSuchFile) {
@@ -633,10 +639,6 @@ object InteractiveShell {
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
-        }
-        if (cmd == "shutdown") {
-            out.println("Called 'shutdown' on the node.\nQuitting the shell now.").also { out.flush() }
-            onExit.invoke()
         }
         return result
     }

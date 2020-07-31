@@ -77,7 +77,12 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
         try {
             factory.deserialize(component, clazz.java, context)
         } catch (e: MissingAttachmentsException) {
-            throw e
+            /**
+             * [ServiceHub.signInitialTransaction] forgets to declare that
+             * it may throw any checked exceptions. Wrap this one inside
+             * an unchecked version to avoid breaking Java CorDapps.
+             */
+            throw MissingAttachmentsRuntimeException(e.ids, e.message, e)
         } catch (e: Exception) {
             throw TransactionDeserialisationException(groupEnum, internalIndex, e)
         }
@@ -88,7 +93,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
  * Exception raised if an error was encountered while attempting to deserialise a component group in a transaction.
  */
 class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: Int, cause: Exception):
-        Exception("Failed to deserialise group $groupEnum at index $index in transaction: ${cause.message}", cause)
+        RuntimeException("Failed to deserialise group $groupEnum at index $index in transaction: ${cause.message}", cause)
 
 /**
  * Method to deserialise Commands from its two groups:
@@ -171,7 +176,7 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     // Transactions created on Corda 3.x or below do not contain network parameters,
     // so no checking is done until the minimum platform version is at least 4.
     if (networkParametersHash == null) {
-        if (serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        if (serviceHub.networkParameters.minimumPlatformVersion < PlatformVersionSwitches.NETWORK_PARAMETERS_COMPONENT_GROUP) return
         else throw IllegalArgumentException("Transaction for notarisation doesn't contain network parameters hash.")
     } else {
         serviceHub.networkParametersService.lookup(networkParametersHash) ?: throw IllegalArgumentException("Transaction for notarisation contains unknown parameters hash: $networkParametersHash")

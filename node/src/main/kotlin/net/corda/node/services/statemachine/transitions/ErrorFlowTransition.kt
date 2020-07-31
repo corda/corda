@@ -59,11 +59,11 @@ class ErrorFlowTransition(
 
             // If we haven't been removed yet remove the flow.
             if (!currentState.isRemoved) {
-                actions.add(Action.CreateTransaction)
-                if (currentState.isAnyCheckpointPersisted) {
-                    actions.add(Action.RemoveCheckpoint(context.id))
-                }
+                val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+
                 actions.addAll(arrayOf(
+                        Action.CreateTransaction,
+                        Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,
@@ -72,6 +72,7 @@ class ErrorFlowTransition(
                 ))
 
                 currentState = currentState.copy(
+                        checkpoint = newCheckpoint,
                         pendingDeduplicationHandlers = emptyList(),
                         isRemoved = true
                 )
@@ -116,8 +117,9 @@ class ErrorFlowTransition(
                 sessionState
             }
         }
+        // if we have already received error message from the other side, we don't include that session in the list to avoid propagating errors.
         val initiatedSessions = sessions.values.mapNotNull { session ->
-            if (session is SessionState.Initiated && session.errors.isEmpty()) {
+            if (session is SessionState.Initiated && !session.otherSideErrored) {
                 session
             } else {
                 null

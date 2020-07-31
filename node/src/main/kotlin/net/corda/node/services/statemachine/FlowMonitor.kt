@@ -76,6 +76,7 @@ internal class FlowMonitor(
                 is FlowIORequest.Send -> "to send a message to parties ${request.sessionToMessage.keys.partiesInvolved()}"
                 is FlowIORequest.Receive -> "to receive messages from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.SendAndReceive -> "to send and receive messages from parties ${request.sessionToMessage.keys.partiesInvolved()}"
+                is FlowIORequest.CloseSessions -> "to close sessions: ${request.sessions}"
                 is FlowIORequest.WaitForLedgerCommit -> "for the ledger to commit transaction with hash ${request.hash}"
                 is FlowIORequest.GetFlowInfo -> "to get flow information from parties ${request.sessions.partiesInvolved()}"
                 is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
@@ -89,12 +90,6 @@ internal class FlowMonitor(
     }
 
     private fun Iterable<FlowSession>.partiesInvolved() = map { it.counterparty }.joinToString(", ", "[", "]")
-
-    private fun FlowStateMachineImpl<*>.ioRequest() = (snapshot().checkpoint.flowState as? FlowState.Started)?.flowIORequest
-
-    private fun FlowStateMachineImpl<*>.ongoingDuration(now: Instant): Duration {
-        return transientState?.value?.checkpoint?.timestamp?.let { Duration.between(it, now) } ?: Duration.ZERO
-    }
 
     private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
 }

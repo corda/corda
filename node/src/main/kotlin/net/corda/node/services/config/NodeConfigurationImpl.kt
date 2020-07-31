@@ -32,6 +32,7 @@ data class NodeConfigurationImpl(
         private val keyStorePassword: String,
         private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
+        override val crlCheckArtemisServer: Boolean = Defaults.crlCheckArtemisServer,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = Defaults.compatibilityZoneURL,
         override var networkServices: NetworkServicesConfig? = Defaults.networkServices,
@@ -83,7 +84,9 @@ data class NodeConfigurationImpl(
         override val blacklistedAttachmentSigningKeys: List<String> = Defaults.blacklistedAttachmentSigningKeys,
         override val configurationWithOptions: ConfigurationWithOptions,
         override val flowExternalOperationThreadPoolSize: Int = Defaults.flowExternalOperationThreadPoolSize,
-        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages
+        override val quasarExcludePackages: List<String> = Defaults.quasarExcludePackages,
+        override val reloadCheckpointAfterSuspend: Boolean = Defaults.reloadCheckpointAfterSuspend
+
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -91,6 +94,7 @@ data class NodeConfigurationImpl(
         val networkServices: NetworkServicesConfig? = null
         val tlsCertCrlDistPoint: URL? = null
         val tlsCertCrlIssuer: X500Principal? = null
+        const val crlCheckArtemisServer: Boolean = false
         val security: SecurityConfiguration? = null
         val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList()
         val rpcAddress: NetworkHostAndPort? = null
@@ -121,6 +125,7 @@ data class NodeConfigurationImpl(
         val blacklistedAttachmentSigningKeys: List<String> = emptyList()
         const val flowExternalOperationThreadPoolSize: Int = 1
         val quasarExcludePackages: List<String> = emptyList()
+        val reloadCheckpointAfterSuspend: Boolean = System.getProperty("reloadCheckpointAfterSuspend", "false")!!.toBoolean()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

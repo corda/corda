@@ -66,7 +66,7 @@ class AMQPClientSerializationScheme(
         }
     }
 
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: UseCase): Boolean {
         return magic == amqpMagic && (target == UseCase.RPCClient || target == UseCase.P2P)
     }
 

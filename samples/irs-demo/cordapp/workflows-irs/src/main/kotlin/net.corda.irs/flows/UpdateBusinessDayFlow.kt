@@ -27,6 +27,7 @@ object UpdateBusinessDayFlow {
         override fun call() {
             val message = otherPartySession.receive<UpdateBusinessDayMessage>().unwrap { it }
             (serviceHub.clock as DemoClock).updateDate(message.date)
+            otherPartySession.send(true) // Let's Broadcast know we've updated the clock
         }
     }
 
@@ -64,7 +65,7 @@ object UpdateBusinessDayFlow {
 
         @Suspendable
         private fun doNextRecipient(recipient: Party) {
-            initiateFlow(recipient).send(UpdateBusinessDayMessage(date))
+            initiateFlow(recipient).sendAndReceive<Boolean>(UpdateBusinessDayMessage(date))
         }
     }
 }

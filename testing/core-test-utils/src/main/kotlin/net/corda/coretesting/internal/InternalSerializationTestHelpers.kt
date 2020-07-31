@@ -2,6 +2,7 @@ package net.corda.coretesting.internal
 
 import net.corda.nodeapi.internal.rpc.client.AMQPClientSerializationScheme
 import net.corda.core.internal.createInstancesOfClassesImplementing
+import net.corda.core.serialization.CheckpointCustomSerializer
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
@@ -25,16 +26,21 @@ fun createTestSerializationEnv(): SerializationEnvironment {
 }
 
 fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironment {
-    val clientSerializationScheme = if (classLoader != null) {
+    var customCheckpointSerializers: Set<CheckpointCustomSerializer<*, *>> = emptySet()
+    val (clientSerializationScheme, serverSerializationScheme) = if (classLoader != null) {
         val customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
+        customCheckpointSerializers = createInstancesOfClassesImplementing(classLoader, CheckpointCustomSerializer::class.java)
+
         val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, classLoader).toSet()
-        AMQPClientSerializationScheme(customSerializers, serializationWhitelists)
+
+        Pair(AMQPClientSerializationScheme(customSerializers, serializationWhitelists),
+             AMQPServerSerializationScheme(customSerializers, serializationWhitelists))
     } else {
-        AMQPClientSerializationScheme(emptyList())
+        Pair(AMQPClientSerializationScheme(emptyList()), AMQPServerSerializationScheme(emptyList()))
     }
     val factory = SerializationFactoryImpl().apply {
         registerScheme(clientSerializationScheme)
-        registerScheme(AMQPServerSerializationScheme(emptyList()))
+        registerScheme(serverSerializationScheme)
     }
     return SerializationEnvironment.with(
             factory,
@@ -42,7 +48,7 @@ fun createTestSerializationEnv(classLoader: ClassLoader?): SerializationEnvironm
             AMQP_RPC_SERVER_CONTEXT,
             AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
-            KRYO_CHECKPOINT_CONTEXT,
+            KRYO_CHECKPOINT_CONTEXT.withCheckpointCustomSerializers(customCheckpointSerializers),
             KryoCheckpointSerializer
     )
 }

@@ -1,0 +1,22 @@
+import static org.gradle.api.JavaVersion.VERSION_1_8
+
+/*
+ * Gradle script plugin: Configure a module such that Java and Kotlin
+ * are always compiled for Java 8.
+ */
+apply plugin: 'kotlin'
+
+tasks.withType(AbstractCompile).configureEach {
+    // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
+    // as it does the built-in JavaCompile task.
+    if (it.class.name.startsWith('org.jetbrains.kotlin.gradle.tasks.KotlinCompile')) {
+        kotlinOptions {
+            jvmTarget = VERSION_1_8
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    sourceCompatibility = VERSION_1_8
+    targetCompatibility = VERSION_1_8
+}

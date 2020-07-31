@@ -1,5 +1,8 @@
 package net.corda.core.serialization.internal
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -17,9 +20,11 @@ import net.corda.core.utilities.debug
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.lang.ref.WeakReference
 import java.net.*
 import java.security.Permission
 import java.util.*
+import java.util.function.Function
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -52,14 +57,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
         // In the AttachmentsClassLoader we just block any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
-
-        @VisibleForTesting
-        private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
-            ByteArrayOutputStream().use {
-                attachment.extractFile(filepath, it)
-                return it.toByteArray()
-            }
-        }
 
         /**
          * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
@@ -123,8 +120,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
         if (untrusted.isNotEmpty()) {
             log.warn("Cannot verify transaction $sampleTxId as the following attachment IDs are untrusted: $untrusted." +
-                    "You will need to manually install the CorDapp to whitelist it for use. " +
-                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
+                    "You will need to manually install the CorDapp to whitelist it for use.")
             throw TransactionVerificationException.UntrustedAttachmentsException(sampleTxId, untrusted)
         }
 
@@ -154,7 +150,8 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
 
         return when {
             path.endsWith("/") -> false                     // Directories (packages) can overlap.
-            targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
+            targetPlatformVersion < PlatformVersionSwitches.IGNORE_JOLOKIA_JSON_SIMPLE_IN_CORDAPPS &&
+                    ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
             path.endsWith(".class") -> true                 // All class files need to be unique.
             !path.startsWith("meta-inf") -> true            // All files outside of META-INF need to be unique.
             (path == "meta-inf/services/net.corda.core.serialization.serializationwhitelist") -> false // Allow overlapping on the SerializationWhitelist.
@@ -296,34 +293,36 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  */
 @VisibleForTesting
 object AttachmentsClassLoaderBuilder {
-    private const val CACHE_SIZE = 1000
+    const val CACHE_SIZE = 16
 
-    // We use a set here because the ordering of attachments doesn't affect code execution, due to the no
-    // overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
-    // can just do unordered comparisons here. But the same attachments run with different network parameters
-    // may behave differently, so that has to be a part of the cache key.
-    private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
-
-    // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Key, SerializationContext> = createSimpleCache<Key, SerializationContext>(CACHE_SIZE).toSynchronised()
+    private val fallBackCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderSimpleCacheImpl(CACHE_SIZE)
 
     /**
      * Runs the given block with serialization execution context set up with a (possibly cached) attachments classloader.
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
+    @Suppress("LongParameterList")
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>,
                                               params: NetworkParameters,
                                               txId: SecureHash,
                                               isAttachmentTrusted: (Attachment) -> Boolean,
                                               parent: ClassLoader = ClassLoader.getSystemClassLoader(),
+                                              attachmentsClassLoaderCache: AttachmentsClassLoaderCache?,
                                               block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map(Attachment::id).toSet()
 
-        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
+        val cache = attachmentsClassLoaderCache ?: fallBackCache
+        val serializationContext = cache.computeIfAbsent(AttachmentsClassLoaderKey(attachmentIds, params), Function {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, isAttachmentTrusted, parent)
-            val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+            val serializers = try {
+                createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java,
+                        JDK1_2_CLASS_FILE_FORMAT_MAJOR_VERSION..JDK8_CLASS_FILE_FORMAT_MAJOR_VERSION)
+                }
+                catch(ex: UnsupportedClassVersionError) {
+                    throw TransactionVerificationException.UnsupportedClassVersionError(txId, ex.message!!, ex)
+                }
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap(SerializationWhitelist::whitelist)
 
@@ -337,7 +336,7 @@ object AttachmentsClassLoaderBuilder {
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
                     .withoutCarpenter()
-        }
+        })
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
@@ -353,8 +352,7 @@ object AttachmentsClassLoaderBuilder {
 object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     internal const val attachmentScheme = "attachment"
 
-    // TODO - what happens if this grows too large?
-    private val loadedAttachments = mutableMapOf<String, Attachment>().toSynchronised()
+    private val loadedAttachments: AttachmentsHolder = AttachmentsHolderImpl()
 
     override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
         return if (attachmentScheme == protocol) {
@@ -362,34 +360,109 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
         } else null
     }
 
+    @Synchronized
     fun toUrl(attachment: Attachment): URL {
-        val id = attachment.id.toString()
-        loadedAttachments[id] = attachment
-        return URL(attachmentScheme, "", -1, id, AttachmentURLStreamHandler)
+        val proposedURL = URL(attachmentScheme, "", -1, attachment.id.toString(), AttachmentURLStreamHandler)
+        val existingURL = loadedAttachments.getKey(proposedURL)
+        return if (existingURL == null) {
+            loadedAttachments[proposedURL] = attachment
+            proposedURL
+        } else {
+            existingURL
+        }
     }
+
+    @VisibleForTesting
+    fun loadedAttachmentsSize(): Int = loadedAttachments.size
 
     private object AttachmentURLStreamHandler : URLStreamHandler() {
         override fun openConnection(url: URL): URLConnection {
             if (url.protocol != attachmentScheme) throw IOException("Cannot handle protocol: ${url.protocol}")
-            val attachment = loadedAttachments[url.path] ?: throw IOException("Could not load url: $url .")
+            val attachment = loadedAttachments[url] ?: throw IOException("Could not load url: $url .")
             return AttachmentURLConnection(url, attachment)
         }
+
+        override fun equals(attachmentUrl: URL, otherURL: URL?): Boolean {
+            if (attachmentUrl.protocol != otherURL?.protocol) return false
+            if (attachmentUrl.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${attachmentUrl.protocol}")
+            return attachmentUrl.file == otherURL?.file
+        }
+
+        override fun hashCode(url: URL): Int {
+            if (url.protocol != attachmentScheme) throw IllegalArgumentException("Cannot handle protocol: ${url.protocol}")
+            return url.file.hashCode()
+        }
+    }
+}
+
+interface AttachmentsHolder {
+    val size: Int
+    fun getKey(key: URL): URL?
+    operator fun get(key: URL): Attachment?
+    operator fun set(key: URL, value: Attachment)
+}
+
+private class AttachmentsHolderImpl : AttachmentsHolder {
+    private val attachments = WeakHashMap<URL, Pair<WeakReference<URL>, Attachment>>().toSynchronised()
+
+    override val size: Int get() = attachments.size
+
+    override fun getKey(key: URL): URL? {
+        return attachments[key]?.first?.get()
     }
 
-    private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
-        override fun getContentLengthLong(): Long = attachment.size.toLong()
-        override fun getInputStream(): InputStream = attachment.open()
-        /**
-         * Define the permissions that [AttachmentsClassLoader] will need to
-         * use this [URL]. The attachment is stored in memory, and so we
-         * don't need any extra permissions here. But if we don't override
-         * [getPermission] then [AttachmentsClassLoader] will assign the
-         * default permission of ALL_PERMISSION to these classes'
-         * [java.security.ProtectionDomain]. This would be a security hole!
-         */
-        override fun getPermission(): Permission? = null
-        override fun connect() {
-            connected = true
-        }
+    override fun get(key: URL): Attachment? {
+        return attachments[key]?.second
+    }
+
+    override fun set(key: URL, value: Attachment) {
+        attachments[key] = WeakReference(key) to value
+    }
+}
+
+interface AttachmentsClassLoaderCache {
+    fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext
+}
+
+@DeleteForDJVM
+class AttachmentsClassLoaderCacheImpl(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), AttachmentsClassLoaderCache {
+
+    private val cache: Cache<AttachmentsClassLoaderKey, SerializationContext> = cacheFactory.buildNamed(Caffeine.newBuilder(), "AttachmentsClassLoader_cache")
+
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        return cache.get(key, mappingFunction)  ?: throw NullPointerException("null returned from cache mapping function")
+    }
+}
+
+class AttachmentsClassLoaderSimpleCacheImpl(cacheSize: Int) : AttachmentsClassLoaderCache {
+
+    private val cache: MutableMap<AttachmentsClassLoaderKey, SerializationContext>
+            = createSimpleCache<AttachmentsClassLoaderKey, SerializationContext>(cacheSize).toSynchronised()
+
+    override fun computeIfAbsent(key: AttachmentsClassLoaderKey, mappingFunction: Function<in AttachmentsClassLoaderKey, out SerializationContext>): SerializationContext {
+        return cache.computeIfAbsent(key, mappingFunction)
+    }
+}
+
+// We use a set here because the ordering of attachments doesn't affect code execution, due to the no
+// overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
+// can just do unordered comparisons here. But the same attachments run with different network parameters
+// may behave differently, so that has to be a part of the cache key.
+data class AttachmentsClassLoaderKey(val hashes: Set<SecureHash>, val params: NetworkParameters)
+
+private class AttachmentURLConnection(url: URL, private val attachment: Attachment) : URLConnection(url) {
+    override fun getContentLengthLong(): Long = attachment.size.toLong()
+    override fun getInputStream(): InputStream = attachment.open()
+    /**
+     * Define the permissions that [AttachmentsClassLoader] will need to
+     * use this [URL]. The attachment is stored in memory, and so we
+     * don't need any extra permissions here. But if we don't override
+     * [getPermission] then [AttachmentsClassLoader] will assign the
+     * default permission of ALL_PERMISSION to these classes'
+     * [java.security.ProtectionDomain]. This would be a security hole!
+     */
+    override fun getPermission(): Permission? = null
+    override fun connect() {
+        connected = true
     }
 }

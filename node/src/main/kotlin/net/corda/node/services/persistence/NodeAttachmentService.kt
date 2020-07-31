@@ -458,15 +458,36 @@ class NodeAttachmentService @JvmOverloads constructor(
         }
     }
 
-    // TODO do not retrieve whole attachments only to return ids - https://r3-cev.atlassian.net/browse/CORDA-3191 raised to address this
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
-            createAttachmentsQuery(
+            createAttachmentsIdsQuery(
                 criteria,
                 sorting
-            ).resultList.map { AttachmentId.parse(it.attId) }
+            ).resultList.map { AttachmentId.parse(it) }
         }
+    }
+
+    private fun createAttachmentsIdsQuery(
+            criteria: AttachmentQueryCriteria,
+            sorting: AttachmentSort?
+    ): Query<String> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+
+        val criteriaQuery = criteriaBuilder.createQuery(String::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+        criteriaQuery.select(root.get("${DBAttachment::attId.name}"))
+
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser<DBAttachment,String>(
+                criteriaBuilder,
+                criteriaQuery,
+                root
+        )
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
+        // prepare query for execution
+        return session.createQuery(criteriaQuery)
     }
 
     private fun createAttachmentsQuery(
@@ -477,11 +498,13 @@ class NodeAttachmentService @JvmOverloads constructor(
         val criteriaBuilder = session.criteriaBuilder
 
         val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+        criteriaQuery.select(root)
 
-        val criteriaParser = HibernateAttachmentQueryCriteriaParser(
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser<DBAttachment,DBAttachment>(
             criteriaBuilder,
             criteriaQuery,
-            criteriaQuery.from(DBAttachment::class.java)
+            root
         )
 
         // parse criteria and build where predicates

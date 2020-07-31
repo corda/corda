@@ -60,13 +60,11 @@ import net.corda.nodeapi.internal.lifecycle.NodeLifecycleObserver.Companion.repo
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.node.services.statemachine.ErrorState
-import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.ExistingSessionMessagePayload
 import net.corda.node.services.statemachine.FlowSessionImpl
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.InitiatedSessionState
 import net.corda.node.services.statemachine.SessionId
 import net.corda.node.services.statemachine.SessionState
 import net.corda.node.services.statemachine.SubFlow
@@ -90,6 +88,11 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     companion object {
         internal val TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(UTC)
         private val log = contextLogger()
+        private val DUMPABLE_CHECKPOINTS = setOf(
+            Checkpoint.FlowStatus.RUNNABLE,
+            Checkpoint.FlowStatus.HOSPITALIZED,
+            Checkpoint.FlowStatus.PAUSED
+        )
     }
 
     override val priority: Int = SERVICE_PRIORITY_NORMAL
@@ -141,7 +144,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
         try {
             if (lock.getAndIncrement() == 0 && !file.exists()) {
                 database.transaction {
-                    checkpointStorage.getRunnableCheckpoints().use { stream ->
+                    checkpointStorage.getCheckpoints(DUMPABLE_CHECKPOINTS).use { stream ->
                         ZipOutputStream(file.outputStream()).use { zip ->
                             stream.forEach { (runId, serialisedCheckpoint) ->
 
@@ -204,7 +207,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
                 val fiber = flowState.frozenFiber.checkpointDeserialize(context = checkpointSerializationContext)
                 fiber to fiber.logic
             }
-            is FlowState.Completed -> {
+            else -> {
                 throw IllegalStateException("Only runnable checkpoints with their flow stack are output by the checkpoint dumper")
             }
         }
@@ -320,6 +323,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             val send: List<SendJson>? = null,
             val receive: NonEmptySet<FlowSession>? = null,
             val sendAndReceive: List<SendJson>? = null,
+            val closeSessions: NonEmptySet<FlowSession>? = null,
             val waitForLedgerCommit: SecureHash? = null,
             val waitForStateConsumption: Set<StateRef>? = null,
             val getFlowInfo: NonEmptySet<FlowSession>? = null,
@@ -347,6 +351,7 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
             is FlowIORequest.Send -> SuspendedOn(send = sessionToMessage.toJson())
             is FlowIORequest.Receive -> SuspendedOn(receive = sessions)
             is FlowIORequest.SendAndReceive -> SuspendedOn(sendAndReceive = sessionToMessage.toJson())
+            is FlowIORequest.CloseSessions -> SuspendedOn(closeSessions = sessions)
             is FlowIORequest.WaitForLedgerCommit -> SuspendedOn(waitForLedgerCommit = hash)
             is FlowIORequest.GetFlowInfo -> SuspendedOn(getFlowInfo = sessions)
             is FlowIORequest.Sleep -> SuspendedOn(sleepTill = wakeUpAfter)
@@ -374,16 +379,14 @@ class CheckpointDumperImpl(private val checkpointStorage: CheckpointStorage, pri
     private class ActiveSession(
             val peer: Party,
             val ourSessionId: SessionId,
-            val receivedMessages: List<DataSessionMessage>,
-            val errors: List<FlowError>,
+            val receivedMessages: List<ExistingSessionMessagePayload>,
             val peerFlowInfo: FlowInfo,
             val peerSessionId: SessionId?
     )
 
     private fun SessionState.toActiveSession(sessionId: SessionId): ActiveSession? {
         return if (this is SessionState.Initiated) {
-            val peerSessionId = (initiatedState as? InitiatedSessionState.Live)?.peerSinkSessionId
-            ActiveSession(peerParty, sessionId, receivedMessages, errors, peerFlowInfo, peerSessionId)
+            ActiveSession(peerParty, sessionId, receivedMessages, peerFlowInfo, peerSinkSessionId)
         } else {
             null
         }

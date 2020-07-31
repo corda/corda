@@ -265,8 +265,6 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
                 logger.warnOnce("""
                             State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                             is bundled in TransactionState with ${state.contract}.
-
-                            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
                             """.trimIndent().replace('\n', ' '))
             }
     }
@@ -329,13 +327,19 @@ abstract class Verifier(val ltx: LedgerTransaction, protected val transactionCla
         allStates.map { it.contract to it.constraint }.toSet().forEach { (contract, constraint) ->
             if (constraint is SignatureAttachmentConstraint) {
                 /**
-                 * Support for signature constraints has been added on min. platform version >= 4.
-                 * On minimum platform version >= 5, an explicit check has been introduced on the supported number of leaf keys
-                 * in composite keys of signature constraints in order to harden consensus.
+                 * Support for signature constraints has been added on
+                 * min. platform version >= [PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS].
+                 * On minimum platform version >= [PlatformVersionSwitches.LIMIT_KEYS_IN_SIGNATURE_CONSTRAINTS], an explicit check has
+                 * been introduced on the supported number of leaf keys in composite keys of signature constraints in
+                 * order to harden consensus.
                  */
-                checkMinimumPlatformVersion(ltx.networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
+                checkMinimumPlatformVersion(
+                        ltx.networkParameters?.minimumPlatformVersion ?: PlatformVersionSwitches.FIRST_VERSION,
+                        PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS,
+                        "Signature constraints"
+                )
                 val constraintKey = constraint.key
-                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= 5) {
+                if (ltx.networkParameters?.minimumPlatformVersion ?: 1 >= PlatformVersionSwitches.LIMIT_KEYS_IN_SIGNATURE_CONSTRAINTS) {
                     if (constraintKey is CompositeKey && constraintKey.leafKeys.size > MAX_NUMBER_OF_KEYS_IN_SIGNATURE_CONSTRAINT) {
                         throw TransactionVerificationException.InvalidConstraintRejection(ltx.id, contract,
                                 "Signature constraint contains composite key with ${constraintKey.leafKeys.size} leaf keys, " +
@@ -401,8 +405,7 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
 
     override fun apply(ltx: LedgerTransaction) {
         val contractClassNames = (ltx.inputs.map(StateAndRef<ContractState>::state) + ltx.outputs)
-            .map(TransactionState<*>::contract)
-            .toSet()
+            .mapTo(LinkedHashSet(), TransactionState<*>::contract)
 
         contractClassNames.associateBy(
             { it }, { createContractClass(ltx.id, it) }
@@ -410,7 +413,7 @@ class ContractVerifier(private val transactionClassLoader: ClassLoader) : Functi
             try {
                 /**
                  * This function must execute with the DJVM's sandbox, which does not
-                 * permit user code to access [java.lang.reflect.Constructor] objects.
+                 * permit user code to invoke [java.lang.Class.getDeclaredConstructor].
                  *
                  * [Class.newInstance] is deprecated as of Java 9.
                  */

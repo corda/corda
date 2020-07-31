@@ -4,6 +4,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -19,6 +20,7 @@ import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang3.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.hibernate.annotations.Type
 import java.sql.Connection
 import java.sql.SQLException
@@ -26,15 +28,12 @@ import java.time.Clock
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
-import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.FetchType
-import javax.persistence.GeneratedValue
-import javax.persistence.GenerationType
 import javax.persistence.Id
-import javax.persistence.JoinColumn
 import javax.persistence.OneToOne
+import javax.persistence.PrimaryKeyJoinColumn
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -50,10 +49,14 @@ class DBCheckpointStorage(
 
         private const val HMAC_SIZE_BYTES = 16
 
-        private const val MAX_PROGRESS_STEP_LENGTH = 256
+        @VisibleForTesting
+        const val MAX_STACKTRACE_LENGTH = 2000
+        private const val MAX_EXC_MSG_LENGTH = 2000
+        private const val MAX_EXC_TYPE_LENGTH = 256
         private const val MAX_FLOW_NAME_LENGTH = 128
+        private const val MAX_PROGRESS_STEP_LENGTH = 256
 
-        private val NOT_RUNNABLE_CHECKPOINTS = listOf(FlowStatus.COMPLETED, FlowStatus.FAILED, FlowStatus.KILLED)
+        private val RUNNABLE_CHECKPOINTS = setOf(FlowStatus.RUNNABLE, FlowStatus.HOSPITALIZED)
 
         /**
          * This needs to run before Hibernate is initialised.
@@ -85,25 +88,25 @@ class DBCheckpointStorage(
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
-    class DBFlowCheckpoint(
+    data class DBFlowCheckpoint(
         @Id
         @Column(name = "flow_id", length = 64, nullable = false)
-        var id: String,
-
-        @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-        @JoinColumn(name = "checkpoint_blob_id", referencedColumnName = "id")
-        var blob: DBFlowCheckpointBlob,
+        var flowId: String,
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
-        @JoinColumn(name = "result_id", referencedColumnName = "id")
+        @PrimaryKeyJoinColumn
+        var blob: DBFlowCheckpointBlob?,
+
+        @OneToOne(fetch = FetchType.LAZY, optional = true)
+        @PrimaryKeyJoinColumn
         var result: DBFlowResult?,
 
         @OneToOne(fetch = FetchType.LAZY, optional = true)
-        @JoinColumn(name = "error_id", referencedColumnName = "id")
+        @PrimaryKeyJoinColumn
         var exceptionDetails: DBFlowException?,
 
         @OneToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "flow_id", referencedColumnName = "flow_id")
+        @PrimaryKeyJoinColumn
         var flowMetadata: DBFlowMetadata,
 
         @Column(name = "status", nullable = false)
@@ -124,11 +127,10 @@ class DBCheckpointStorage(
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoint_blobs")
-    class DBFlowCheckpointBlob(
+    data class DBFlowCheckpointBlob(
         @Id
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        @Column(name = "id", nullable = false)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flowId: String,
 
         @Type(type = "corda-blob")
         @Column(name = "checkpoint_value", nullable = false)
@@ -138,20 +140,48 @@ class DBCheckpointStorage(
         @Column(name = "flow_state")
         var flowStack: ByteArray?,
 
+        @Type(type = "corda-wrapper-binary")
         @Column(name = "hmac")
         var hmac: ByteArray,
 
         @Column(name = "timestamp")
         var persistedInstant: Instant
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as DBFlowCheckpointBlob
+
+            if (flowId != other.flowId) return false
+            if (!checkpoint.contentEquals(other.checkpoint)) return false
+
+            if (!(flowStack ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.flowStack ?: EMPTY_BYTE_ARRAY)) {
+                return false
+            }
+
+            if (!hmac.contentEquals(other.hmac)) return false
+            if (persistedInstant != other.persistedInstant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = flowId.hashCode()
+            result = 31 * result + checkpoint.contentHashCode()
+            result = 31 * result + (flowStack?.contentHashCode() ?: 0)
+            result = 31 * result + hmac.contentHashCode()
+            result = 31 * result + persistedInstant.hashCode()
+            return result
+        }
+    }
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_results")
-    class DBFlowResult(
+    data class DBFlowResult(
         @Id
-        @Column(name = "id", nullable = false)
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flow_id: String,
 
         @Type(type = "corda-blob")
         @Column(name = "result_value", nullable = false)
@@ -159,36 +189,85 @@ class DBCheckpointStorage(
 
         @Column(name = "timestamp")
         val persistedInstant: Instant
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as DBFlowResult
+
+            if (flow_id != other.flow_id) return false
+            if (!value.contentEquals(other.value)) return false
+            if (persistedInstant != other.persistedInstant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = flow_id.hashCode()
+            result = 31 * result + value.contentHashCode()
+            result = 31 * result + persistedInstant.hashCode()
+            return result
+        }
+    }
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_exceptions")
-    class DBFlowException(
+    data class DBFlowException(
         @Id
-        @Column(name = "id", nullable = false)
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        var id: Long = 0,
+        @Column(name = "flow_id", length = 64, nullable = false)
+        var flow_id: String,
 
         @Column(name = "type", nullable = false)
-        var type: Class<out Throwable>,
-
-        @Type(type = "corda-blob")
-        @Column(name = "exception_value", nullable = false)
-        var value: ByteArray = EMPTY_BYTE_ARRAY,
+        var type: String,
 
         @Column(name = "exception_message")
         var message: String? = null,
 
+        @Column(name = "stack_trace", nullable = false)
+        var stackTrace: String,
+
+        @Type(type = "corda-blob")
+        @Column(name = "exception_value")
+        var value: ByteArray? = null,
+
         @Column(name = "timestamp")
         val persistedInstant: Instant
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as DBFlowException
+
+            if (flow_id != other.flow_id) return false
+            if (type != other.type) return false
+            if (message != other.message) return false
+            if (stackTrace != other.stackTrace) return false
+            if (!(value ?: EMPTY_BYTE_ARRAY)!!.contentEquals(other.value ?: EMPTY_BYTE_ARRAY)) {
+                return false
+            }
+            if (persistedInstant != other.persistedInstant) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = flow_id.hashCode()
+            result = 31 * result + type.hashCode()
+            result = 31 * result + (message?.hashCode() ?: 0)
+            result = 31 * result + stackTrace.hashCode()
+            result = 31 * result + (value?.contentHashCode() ?: 0)
+            result = 31 * result + persistedInstant.hashCode()
+            return result
+        }
+    }
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}flow_metadata")
-    class DBFlowMetadata(
-
+    data class DBFlowMetadata(
         @Id
-        @Column(name = "flow_id", nullable = false)
+        @Column(name = "flow_id", length = 64, nullable = false)
         var flowId: String,
 
         @Column(name = "invocation_id", nullable = false)
@@ -203,6 +282,7 @@ class DBCheckpointStorage(
         @Column(name = "started_type", nullable = false)
         var startType: StartReason,
 
+        @Type(type = "corda-blob")
         @Column(name = "flow_parameters", nullable = false)
         var initialParameters: ByteArray = EMPTY_BYTE_ARRAY,
 
@@ -264,70 +344,29 @@ class DBCheckpointStorage(
         }
     }
 
-    override fun addCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>) {
-        currentDBSession().save(createDBCheckpoint(id, checkpoint, serializedFlowState))
-    }
-
-    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?) {
-        currentDBSession().update(updateDBCheckpoint(id, checkpoint, serializedFlowState))
-    }
-
-    override fun removeCheckpoint(id: StateMachineRunId): Boolean {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val delete = criteriaBuilder.createCriteriaDelete(DBFlowCheckpoint::class.java)
-        val root = delete.from(DBFlowCheckpoint::class.java)
-        delete.where(criteriaBuilder.equal(root.get<String>(DBFlowCheckpoint::id.name), id.uuid.toString()))
-        return session.createQuery(delete).executeUpdate() > 0
-    }
-
-    override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
-        return getDBCheckpoint(id)?.toSerializedCheckpoint()
-    }
-
-    override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaQuery = session.criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
-    }
-
-    override fun getRunnableCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
-        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
-        criteriaQuery.select(root)
-                .where(criteriaBuilder.not(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(NOT_RUNNABLE_CHECKPOINTS)))
-        return session.createQuery(criteriaQuery).stream().map {
-            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
-        }
-    }
-
-    private fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
-        return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
-    }
-
-    private fun createDBCheckpoint(
+    override fun addCheckpoint(
         id: StateMachineRunId,
         checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>
-    ): DBFlowCheckpoint {
-        val flowId = id.uuid.toString()
+        serializedFlowState: SerializedBytes<FlowState>,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
         val now = clock.instant()
+        val flowId = id.uuid.toString()
 
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
         checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
 
-        val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
+        val blob = createDBCheckpointBlob(
+            flowId,
+            serializedCheckpointState,
+            serializedFlowState,
+            now
+        )
 
-        val metadata = createMetadata(flowId, checkpoint)
+        val metadata = createDBFlowMetadata(flowId, checkpoint)
+
         // Most fields are null as they cannot have been set when creating the initial checkpoint
-        return DBFlowCheckpoint(
-            id = flowId,
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
             blob = blob,
             result = null,
             exceptionDetails = null,
@@ -338,9 +377,134 @@ class DBCheckpointStorage(
             ioRequestType = null,
             checkpointInstant = now
         )
+
+        currentDBSession().save(dbFlowCheckpoint)
+        currentDBSession().save(blob)
+        currentDBSession().save(metadata)
     }
 
-    private fun createMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
+    override fun updateCheckpoint(
+        id: StateMachineRunId, checkpoint: Checkpoint, serializedFlowState: SerializedBytes<FlowState>?,
+        serializedCheckpointState: SerializedBytes<CheckpointState>
+    ) {
+        val now = clock.instant()
+        val flowId = id.uuid.toString()
+
+        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
+        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            null
+        } else {
+            checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
+            createDBCheckpointBlob(
+                flowId,
+                serializedCheckpointState,
+                serializedFlowState,
+                now
+            )
+        }
+
+        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
+        //val result = updateDBFlowResult(entity, checkpoint, now)
+        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
+
+        val metadata = createDBFlowMetadata(flowId, checkpoint)
+
+        val dbFlowCheckpoint = DBFlowCheckpoint(
+            flowId = flowId,
+            blob = blob,
+            result = null,
+            exceptionDetails = exceptionDetails,
+            flowMetadata = metadata,
+            status = checkpoint.status,
+            compatible = checkpoint.compatible,
+            progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH),
+            ioRequestType = checkpoint.flowIoRequest,
+            checkpointInstant = now
+        )
+
+        currentDBSession().update(dbFlowCheckpoint)
+        blob?.let { currentDBSession().update(it) }
+        if (checkpoint.isFinished()) {
+            metadata.finishInstant = now
+            currentDBSession().update(metadata)
+        }
+    }
+
+    override fun markAllPaused() {
+        val session = currentDBSession()
+        val runnableOrdinals = RUNNABLE_CHECKPOINTS.map { "${it.ordinal}" }.joinToString { it }
+        val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${FlowStatus.PAUSED.ordinal} " +
+                "where status in ($runnableOrdinals)"
+        val query = session.createNativeQuery(sqlQuery)
+        query.executeUpdate()
+    }
+
+    // DBFlowResult and DBFlowException to be integrated with rest of schema
+    @Suppress("MagicNumber")
+    override fun removeCheckpoint(id: StateMachineRunId): Boolean {
+        var deletedRows = 0
+        val flowId = id.uuid.toString()
+        deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
+//        resultId?.let { deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, it.toString()) }
+//        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
+        return deletedRows == 3
+    }
+
+    private fun <T> deleteRow(clazz: Class<T>, pk: String, value: String): Int {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val delete = criteriaBuilder.createCriteriaDelete(clazz)
+        val root = delete.from(clazz)
+        delete.where(criteriaBuilder.equal(root.get<String>(pk), value))
+        return session.createQuery(delete).executeUpdate()
+    }
+
+    @Throws(SQLException::class)
+    override fun getCheckpoint(id: StateMachineRunId): Checkpoint.Serialized? {
+        return getDBCheckpoint(id)?.toSerializedCheckpoint()
+    }
+
+    override fun getCheckpoints(statuses: Collection<FlowStatus>): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(DBFlowCheckpoint::class.java)
+        val root = criteriaQuery.from(DBFlowCheckpoint::class.java)
+        criteriaQuery.select(root)
+            .where(criteriaBuilder.isTrue(root.get<FlowStatus>(DBFlowCheckpoint::status.name).`in`(statuses)))
+        return session.createQuery(criteriaQuery).stream().map {
+            StateMachineRunId(UUID.fromString(it.flowId)) to it.toSerializedCheckpoint()
+        }
+    }
+
+    override fun getCheckpointsToRun(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        return getCheckpoints(RUNNABLE_CHECKPOINTS)
+    }
+
+    @VisibleForTesting
+    internal fun getDBCheckpoint(id: StateMachineRunId): DBFlowCheckpoint? {
+        return currentDBSession().find(DBFlowCheckpoint::class.java, id.uuid.toString())
+    }
+
+    override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
+        val session = currentDBSession()
+        val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
+                checkpoint.progressStep, checkpoint.ioRequestType, checkpoint.compatible) from ${DBFlowCheckpoint::class.java.name}
+                checkpoint join ${DBFlowCheckpointBlob::class.java.name} blob on checkpoint.blob = blob.id where
+                checkpoint.status = ${FlowStatus.PAUSED.ordinal}""".trimIndent()
+        val query = session.createQuery(jpqlQuery, DBPausedFields::class.java)
+        return query.resultList.stream().map {
+            StateMachineRunId(UUID.fromString(it.id)) to it.toSerializedCheckpoint()
+        }
+    }
+
+    override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
+        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set status = ${flowStatus.ordinal} where flow_id = '${runId.uuid}'"
+        currentDBSession().createNativeQuery(update).executeUpdate()
+    }
+
+    private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()
         return DBFlowMetadata(
@@ -359,58 +523,17 @@ class DBCheckpointStorage(
             invocationInstant = context.trace.invocationId.timestamp,
             startInstant = clock.instant(),
             finishInstant = null
-        ).apply {
-            currentDBSession().save(this)
-        }
-    }
-
-    private fun updateDBCheckpoint(
-        id: StateMachineRunId,
-        checkpoint: Checkpoint,
-        serializedFlowState: SerializedBytes<FlowState>?
-    ): DBFlowCheckpoint {
-        val flowId = id.uuid.toString()
-        val now = clock.instant()
-
-        // Load the previous entity from the hibernate cache so the meta data join does not get updated
-        val entity = currentDBSession().find(DBFlowCheckpoint::class.java, flowId)
-
-        val serializedCheckpointState = checkpoint.checkpointState.storageSerialize()
-        checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
-
-        val blob = createDBCheckpointBlob(serializedCheckpointState, serializedFlowState, now)
-        //This code needs to be added back in when we want to persist the result. For now this requires the result to be @CordaSerializable.
-        //val result = updateDBFlowResult(entity, checkpoint, now)
-        val exceptionDetails = updateDBFlowException(entity, checkpoint, now)
-
-        val metadata = entity.flowMetadata.apply {
-            if (checkpoint.isFinished() && finishInstant == null) {
-                finishInstant = now
-                currentDBSession().update(this)
-            }
-        }
-
-        return entity.apply {
-            this.blob = blob
-            //Set the result to null for now.
-            this.result = null
-            this.exceptionDetails = exceptionDetails
-            // Do not update the meta data relationship on updates
-            this.flowMetadata = metadata
-            this.status = checkpoint.status
-            this.compatible = checkpoint.compatible
-            this.progressStep = checkpoint.progressStep?.take(MAX_PROGRESS_STEP_LENGTH)
-            this.ioRequestType = checkpoint.flowIoRequest
-            this.checkpointInstant = now
-        }
+        )
     }
 
     private fun createDBCheckpointBlob(
+        flowId: String,
         serializedCheckpointState: SerializedBytes<CheckpointState>,
         serializedFlowState: SerializedBytes<FlowState>?,
         now: Instant
     ): DBFlowCheckpointBlob {
         return DBFlowCheckpointBlob(
+            flowId = flowId,
             checkpoint = serializedCheckpointState.bytes,
             flowStack = serializedFlowState?.bytes,
             hmac = ByteArray(HMAC_SIZE_BYTES),
@@ -428,11 +551,11 @@ class DBCheckpointStorage(
      * The existing [DBFlowResult] is deleted if [DBFlowCheckpoint.result] exists and the [Checkpoint] has no result.
      * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] do not have a result.
      */
-    private fun updateDBFlowResult(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
-        val result = checkpoint.result?.let { createDBFlowResult(it, now) }
+    private fun updateDBFlowResult(flowId: String, entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowResult? {
+        val result = checkpoint.result?.let { createDBFlowResult(flowId, it, now) }
         if (entity.result != null) {
             if (result != null) {
-                result.id = entity.result!!.id
+                result.flow_id = entity.result!!.flow_id
                 currentDBSession().update(result)
             } else {
                 currentDBSession().delete(entity.result)
@@ -443,8 +566,9 @@ class DBCheckpointStorage(
         return result
     }
 
-    private fun createDBFlowResult(result: Any, now: Instant): DBFlowResult {
+    private fun createDBFlowResult(flowId: String, result: Any, now: Instant): DBFlowResult {
         return DBFlowResult(
+            flow_id = flowId,
             value = result.storageSerialize().bytes,
             persistedInstant = now
         )
@@ -460,27 +584,35 @@ class DBCheckpointStorage(
      * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
      * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
      */
-    private fun updateDBFlowException(entity: DBFlowCheckpoint, checkpoint: Checkpoint, now: Instant): DBFlowException? {
-        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(it, now) }
-        if (entity.exceptionDetails != null) {
-            if (exceptionDetails != null) {
-                exceptionDetails.id = entity.exceptionDetails!!.id
-                currentDBSession().update(exceptionDetails)
-            } else {
-                currentDBSession().delete(entity.exceptionDetails)
-            }
-        } else if (exceptionDetails != null) {
-            currentDBSession().save(exceptionDetails)
-        }
+    // DBFlowException to be integrated with rest of schema
+    // Add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
+    private fun updateDBFlowException(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowException? {
+        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(flowId, it, now) }
+//        if (checkpoint.dbExoSkeleton.dbFlowExceptionId != null) {
+//            if (exceptionDetails != null) {
+//                exceptionDetails.flow_id = checkpoint.dbExoSkeleton.dbFlowExceptionId!!
+//                currentDBSession().update(exceptionDetails)
+//            } else {
+//                val session = currentDBSession()
+//                val entity = session.get(DBFlowException::class.java, checkpoint.dbExoSkeleton.dbFlowExceptionId)
+//                session.delete(entity)
+//                return null
+//            }
+//        } else if (exceptionDetails != null) {
+//            currentDBSession().save(exceptionDetails)
+//            checkpoint.dbExoSkeleton.dbFlowExceptionId = exceptionDetails.flow_id
+//        }
         return exceptionDetails
     }
 
-    private fun createDBFlowException(errorState: ErrorState.Errored, now: Instant): DBFlowException {
+    private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
-                type = it::class.java,
-                message = it.message,
-                value = it.storageSerialize().bytes,
+                flow_id = flowId,
+                type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
+                message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
+                stackTrace = it.stackTraceToString(),
+                value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
                 persistedInstant = now
             )
         }
@@ -497,7 +629,7 @@ class DBCheckpointStorage(
 
     private fun InvocationContext.getFlowParameters(): List<Any?> {
         // Only RPC flows have parameters which are found in index 1
-        return if(arguments.isNotEmpty()) {
+        return if (arguments.isNotEmpty()) {
             uncheckedCast<Any?, Array<Any?>>(arguments[1]).toList()
         } else {
             emptyList()
@@ -505,9 +637,9 @@ class DBCheckpointStorage(
     }
 
     private fun DBFlowCheckpoint.toSerializedCheckpoint(): Checkpoint.Serialized {
-        val serialisedFlowState = blob.flowStack?.let { SerializedBytes<FlowState>(it) }
+        val serialisedFlowState = blob!!.flowStack?.let { SerializedBytes<FlowState>(it) }
         return Checkpoint.Serialized(
-            serializedCheckpointState = SerializedBytes(blob.checkpoint),
+            serializedCheckpointState = SerializedBytes(blob!!.checkpoint),
             serializedFlowState = serialisedFlowState,
             // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
             errorState = ErrorState.Clean,
@@ -520,12 +652,57 @@ class DBCheckpointStorage(
         )
     }
 
+    private class DBPausedFields(
+        val id: String,
+        val checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
+        val status: FlowStatus,
+        val progressStep: String?,
+        val ioRequestType: String?,
+        val compatible: Boolean
+    ) {
+        fun toSerializedCheckpoint(): Checkpoint.Serialized {
+            return Checkpoint.Serialized(
+                serializedCheckpointState = SerializedBytes(checkpoint),
+                serializedFlowState = null,
+                // Always load as a [Clean] checkpoint to represent that the checkpoint is the last _good_ checkpoint
+                errorState = ErrorState.Clean,
+                result = null,
+                status = status,
+                progressStep = progressStep,
+                flowIoRequest = ioRequestType,
+                compatible = compatible
+            )
+        }
+    }
+
     private fun <T : Any> T.storageSerialize(): SerializedBytes<T> {
         return serialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
-    private fun Checkpoint.isFinished() = when(status) {
+    private fun Checkpoint.isFinished() = when (status) {
         FlowStatus.COMPLETED, FlowStatus.KILLED, FlowStatus.FAILED -> true
         else -> false
+    }
+
+    private fun String.truncate(maxLength: Int, withWarnings: Boolean): String {
+        var str = this
+        if (length > maxLength) {
+            if (withWarnings) {
+                log.warn("Truncating long string before storing it into the database. String: $str.")
+            }
+            str = str.substring(0, maxLength)
+        }
+        return str
+    }
+
+    private fun Throwable.stackTraceToString(): String {
+        var stackTraceStr = ExceptionUtils.getStackTrace(this)
+        if (stackTraceStr.length > MAX_STACKTRACE_LENGTH) {
+            // cut off the last line, which will be a half line
+            val lineBreak = System.getProperty("line.separator")
+            val truncateIndex = stackTraceStr.lastIndexOf(lineBreak, MAX_STACKTRACE_LENGTH - 1)
+            stackTraceStr = stackTraceStr.substring(0, truncateIndex + lineBreak.length) // include last line break in
+        }
+        return stackTraceStr
     }
 }

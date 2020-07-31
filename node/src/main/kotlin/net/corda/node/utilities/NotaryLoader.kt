@@ -9,10 +9,10 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
+import net.corda.notary.jpa.JPANotaryService
 import java.lang.reflect.InvocationTargetException
 import java.security.PublicKey
 
@@ -44,8 +44,8 @@ class NotaryLoader(
                     RaftNotaryService::class.java
                 }
                 else -> {
-                    builtInNotary = VirtualCordapp.generateSimpleNotary(versionInfo)
-                    SimpleNotaryService::class.java
+                    builtInNotary = VirtualCordapp.generateJPANotary(versionInfo)
+                    JPANotaryService::class.java
                 }
             }
         } else {
@@ -56,13 +56,15 @@ class NotaryLoader(
     }
 
     fun loadService(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal, cordappLoader: CordappLoader): NotaryService {
+
+        val notaryKey = myNotaryIdentity?.owningKey
+                ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
+
+        warnIfNotaryNotWhitelisted(myNotaryIdentity, services)
         validateNotaryType(myNotaryIdentity, services)
 
         val serviceClass = builtInServiceClass ?: scanCorDapps(cordappLoader)
         log.info("Starting notary service: $serviceClass")
-
-        val notaryKey = myNotaryIdentity?.owningKey
-                ?: throw IllegalArgumentException("Unable to start notary service: notary identity not found")
 
         /** Some notary implementations only work with Java serialization. */
         maybeInstallSerializationFilter(serviceClass)
@@ -78,15 +80,26 @@ class NotaryLoader(
         }
     }
 
-    /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */
-    private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal) {
-        var configuredAsValidatingNotary = services.configuration.notary?.validating
-        val notaryParty = myNotaryIdentity?.party ?: throw IllegalStateException("Could not establish notary identity of this node")
-        var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
+    /** Log a warning if the notary is not whitelisted in the network parameters. */
+    private fun warnIfNotaryNotWhitelisted(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
+        val ourParty = myNotaryIdentity.party
+        if (!services.networkMapCache.isNotary(ourParty)) {
+            log.warn("Provided notary identity is not in whitelist")
+        }
+    }
+
+    /**
+     * Validates that the notary is correctly configured by comparing the configured type against the
+     * type advertised in the network map cache.
+     */
+    private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate, services: ServiceHubInternal) {
+        val configuredAsValidatingNotary = services.configuration.notary?.validating
+        val notaryParty = myNotaryIdentity.party
+        val validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
-            throw IllegalStateException("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. " 
-            + "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")    
+            log.warn("There is a discrepancy in the configured notary type and the one advertised in the network parameters. " +
+            "Configured as validating: $configuredAsValidatingNotary. Advertised as validating: $validatingNotaryInNetworkMapCache")
         }
     }
     

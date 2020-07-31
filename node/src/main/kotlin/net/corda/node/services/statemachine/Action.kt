@@ -17,7 +17,7 @@ sealed class Action {
     /**
      * Track a transaction hash and notify the state machine once the corresponding transaction has committed.
      */
-    data class TrackTransaction(val hash: SecureHash) : Action()
+    data class TrackTransaction(val hash: SecureHash, val currentState: StateMachineState) : Action()
 
     /**
      * Send an initial session message to [destination].
@@ -114,7 +114,7 @@ sealed class Action {
     /**
      * Sleep until [time].
      */
-    data class SleepUntil(val time: Instant) : Action()
+    data class SleepUntil(val currentState: StateMachineState, val time: Instant) : Action()
 
     /**
      * Create a new database transaction.
@@ -140,7 +140,11 @@ sealed class Action {
     /**
      * Execute the specified [operation].
      */
-    data class ExecuteAsyncOperation(val deduplicationId: String, val operation: FlowAsyncOperation<*>) : Action()
+    data class ExecuteAsyncOperation(
+        val deduplicationId: String,
+        val operation: FlowAsyncOperation<*>,
+        val currentState: StateMachineState
+    ) : Action()
 
     /**
      * Release soft locks associated with given ID (currently the flow ID).

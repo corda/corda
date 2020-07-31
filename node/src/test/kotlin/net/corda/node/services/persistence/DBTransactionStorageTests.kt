@@ -1,6 +1,7 @@
 package net.corda.node.services.persistence
 
 import junit.framework.TestCase.assertTrue
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -20,14 +21,23 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.Appender
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.appender.WriterAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import rx.plugins.RxJavaHooks
+import java.io.StringWriter
+import java.util.concurrent.Semaphore
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class DBTransactionStorageTests {
@@ -38,7 +48,7 @@ class DBTransactionStorageTests {
 
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(inheritable = true)
 
     private lateinit var database: CordaPersistence
     private lateinit var transactionStorage: DBTransactionStorage
@@ -311,6 +321,107 @@ class DBTransactionStorageTests {
             transactionStorage.addUnverifiedTransaction(secondTransaction)
         }
         assertTransactionIsRetrievable(secondTransaction)
+    }
+
+    @Suppress("UnstableApiUsage")
+    @Test(timeout=300_000)
+    fun `race condition - failure path`() {
+
+        // Insert a sleep into trackTransaction
+        RxJavaHooks.setOnObservableCreate {
+            Thread.sleep(1_000)
+            it
+        }
+        try {
+            `race condition - ok path`()
+        } finally {
+            // Remove sleep so it does not affect other tests
+            RxJavaHooks.setOnObservableCreate { it }
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `race condition - ok path`() {
+
+        // Arrange
+
+        val signedTransaction =  newTransaction()
+
+        val threadCount = 2
+        val finishedThreadsSemaphore = Semaphore(threadCount)
+        finishedThreadsSemaphore.acquire(threadCount)
+
+        // Act
+
+        thread(name = "addTransaction") {
+            transactionStorage.addTransaction(signedTransaction)
+            finishedThreadsSemaphore.release()
+        }
+
+        var result: CordaFuture<SignedTransaction>? = null
+        thread(name = "trackTransaction") {
+            result =  transactionStorage.trackTransaction(signedTransaction.id)
+            finishedThreadsSemaphore.release()
+        }
+
+        if (!finishedThreadsSemaphore.tryAcquire(threadCount, 1, TimeUnit.MINUTES)) {
+            Assert.fail("Threads did not finish")
+        }
+
+        // Assert
+
+        assertThat(result).isNotNull()
+        assertThat(result?.get(20, TimeUnit.SECONDS)?.id).isEqualTo(signedTransaction.id)
+    }
+
+    @Test(timeout=300_000)
+    fun `race condition - transaction warning`() {
+
+        // Arrange
+        val signedTransaction =  newTransaction()
+
+        // Act
+        val logMessages = collectLogsFrom {
+            database.transaction {
+                val result = transactionStorage.trackTransaction(signedTransaction.id)
+                result.cancel(false)
+            }
+        }
+
+        // Assert
+        assertThat(logMessages).contains("trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions.")
+    }
+
+    private fun collectLogsFrom(statement: () -> Unit): String {
+        // Create test appender
+        val stringWriter = StringWriter()
+        val appenderName = this::collectLogsFrom.name
+        val appender: Appender = WriterAppender.createAppender(
+                null,
+                null,
+                stringWriter,
+                appenderName,
+                false,
+                true
+        )
+        appender.start()
+
+        // Add test appender
+        val context = LogManager.getContext(false) as LoggerContext
+        val configuration = context.configuration
+        configuration.addAppender(appender)
+        configuration.loggers.values.forEach { it.addAppender(appender, null, null) }
+
+        try {
+            statement()
+        } finally {
+            // Remove test appender
+            configuration.loggers.values.forEach { it.removeAppender(appenderName) }
+            configuration.appenders.remove(appenderName)
+            appender.stop()
+        }
+
+        return stringWriter.toString()
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {

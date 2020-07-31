@@ -9,6 +9,7 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -218,16 +219,24 @@ class DriverDSLImpl(
         }
     }
 
-    private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
+    /**
+     * @param pollInterval the interval to wait between attempting to connect, if
+     * a connection attempt fails.
+     */
+    private fun establishRpc(config: NodeConfig,
+                             processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
-        val connectionFuture = poll(executorService, "RPC connection") {
+        val connectionFuture = poll(
+                executorService = executorService,
+                pollName = "RPC connection",
+                pollInterval = RPC_CONNECT_POLL_INTERVAL) {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
-            } catch (e: Exception) {
+            } catch (e: RPCException) {
                 if (processDeathFuture.isDone) throw e
-                log.info("Exception while connecting to RPC, retrying to connect at $rpcAddress", e)
+                log.info("Failed to connect to RPC at $rpcAddress")
                 null
             }
         }
@@ -562,9 +571,13 @@ class DriverDSLImpl(
     private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
         val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         return startRegisteredNode(
-                spec.name,
-                localNetworkMap,
-                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides, maximumHeapSize = spec.maximumHeapSize)
+            spec.name,
+            localNetworkMap,
+            NodeParameters(rpcUsers = spec.rpcUsers,
+                verifierType = spec.verifierType,
+                startInSameProcess = spec.startInProcess,
+                customOverrides = notaryConfig + customOverrides,
+                maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
     }
 
@@ -673,6 +686,7 @@ class DriverDSLImpl(
                     }
             )
             val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
+                node.node.nodeReadyFuture.get() // Wait for the node to be ready before we connect to the node
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
@@ -719,7 +733,7 @@ class DriverDSLImpl(
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = nodeMustBeStartedFuture(
                 executorService,
-                effectiveP2PAddress,
+                config.corda.baseDirectory / "net.corda.node.Corda.${identifier}.stdout.log",
                 process
             ) {
                 NodeListenProcessDeathException(
@@ -779,6 +793,7 @@ class DriverDSLImpl(
     }
 
     companion object {
+        private val RPC_CONNECT_POLL_INTERVAL: Duration = 100.millis
         internal val log = contextLogger()
 
         // While starting with inProcess mode, we need to have different names to avoid clashes
@@ -868,7 +883,12 @@ class DriverDSLImpl(
                 val nodeInfo = node.start()
                 val nodeWithInfo = NodeWithInfo(node, nodeInfo)
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
-                    node.run()
+                    try {
+                        node.run()
+                    } catch (th: Throwable) {
+                        log.error("Node run terminated unexpectedly", th)
+                    }
+                    log.info("Node run completed")
                 }
                 nodeWithInfo to nodeThread
             }.flatMap { nodeAndThread ->

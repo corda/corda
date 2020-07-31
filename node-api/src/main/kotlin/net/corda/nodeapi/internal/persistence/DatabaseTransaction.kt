@@ -6,6 +6,7 @@ import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import java.sql.Connection
+import java.sql.SQLException
 import java.util.UUID
 import javax.persistence.EntityManager
 
@@ -39,9 +40,13 @@ class DatabaseTransaction(
     }
 
     // Returns a delegate which overrides certain operations that we do not want CorDapp developers to call.
-    val restrictedEntityManager: RestrictedEntityManager by lazy {
-        val entityManager = session as EntityManager
-        RestrictedEntityManager(entityManager)
+
+    val entityManager: EntityManager get() {
+        // Always retrieve new session ([Session] implements [EntityManager])
+        // Note, this does not replace the top level hibernate session
+        val session = database.entityManagerFactory.withOptions().connection(connection).openSession()
+        session.beginTransaction()
+        return session
     }
 
     val session: Session by sessionDelegate
@@ -73,12 +78,17 @@ class DatabaseTransaction(
             throw DatabaseTransactionException(it)
         }
         if (sessionDelegate.isInitialized()) {
+            // The [sessionDelegate] must be initialised otherwise calling [entityManager] will cause an exception
+            if(session.transaction.rollbackOnly) {
+                throw RolledBackDatabaseSessionException()
+            }
             hibernateTransaction.commit()
         }
         connection.commit()
         committed = true
     }
 
+    @Throws(SQLException::class)
     fun rollback() {
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.clear()
@@ -89,16 +99,20 @@ class DatabaseTransaction(
         clearException()
     }
 
+    @Throws(SQLException::class)
     fun close() {
-        if (sessionDelegate.isInitialized() && session.isOpen) {
-            session.close()
+        try {
+            if (sessionDelegate.isInitialized() && session.isOpen) {
+                session.close()
+            }
+            if (database.closeConnection) {
+                connection.close()
+            }
+        } finally {
+            clearException()
+            contextTransactionOrNull = outerTransaction
         }
-        if (database.closeConnection) {
-            connection.close()
-        }
-        clearException()
 
-        contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {
                 closed = true
@@ -125,3 +139,5 @@ class DatabaseTransaction(
  * Wrapper exception, for any exception registered as [DatabaseTransaction.firstExceptionInDatabaseTransaction].
  */
 class DatabaseTransactionException(override val cause: Throwable): CordaRuntimeException(cause.message, cause)
+
+class RolledBackDatabaseSessionException : CordaRuntimeException("Attempted to commit database transaction marked for rollback")

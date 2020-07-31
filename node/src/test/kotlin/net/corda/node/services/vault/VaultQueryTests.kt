@@ -250,6 +250,27 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test(timeout=300_000)
+    fun `returns zero states when exact participants list is empty`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP))
+            vaultFiller.fillWithDummyState(participants = listOf(MEGA_CORP, BIG_CORP))
+
+            val criteria = VaultQueryCriteria(exactParticipants = emptyList())
+            val results = vaultService.queryBy<ContractState>(criteria)
+            assertThat(results.states).hasSize(0)
+
+            val criteriaWithOneExactParticipant = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP))
+            val resultsWithOneExactParticipant = vaultService.queryBy<ContractState>(criteriaWithOneExactParticipant)
+            assertThat(resultsWithOneExactParticipant.states).hasSize(1)
+
+            val criteriaWithMoreExactParticipants = VaultQueryCriteria(exactParticipants = listOf(MEGA_CORP, BIG_CORP))
+            val resultsWithMoreExactParticipants = vaultService.queryBy<ContractState>(criteriaWithMoreExactParticipants)
+            assertThat(resultsWithMoreExactParticipants.states).hasSize(1)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `unconsumed base contract states for two participants`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BIG_CORP_IDENTITY)
@@ -264,6 +285,31 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val strictCriteria = VaultQueryCriteria().withExactParticipants(listOf(MEGA_CORP, BIG_CORP))
             val strictResults = vaultService.queryBy<ContractState>(strictCriteria)
             assertThat(strictResults.states).hasSize(1)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `VaultQueryCriteria returns empty resultset without errors if there is an empty list after the 'in' clause`() {
+        database.transaction {
+            val states = vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
+            val stateRefs = states.states.map { it.ref }
+
+            val criteria = VaultQueryCriteria(notary = listOf(DUMMY_NOTARY))
+            val results = vaultService.queryBy<LinearState>(criteria)
+            assertThat(results.states).hasSize(1)
+
+            val emptyCriteria = VaultQueryCriteria(notary = emptyList())
+            val emptyResults = vaultService.queryBy<LinearState>(emptyCriteria)
+            assertThat(emptyResults.states).hasSize(0)
+
+            val stateCriteria = VaultQueryCriteria(stateRefs = stateRefs)
+            val stateResults = vaultService.queryBy<LinearState>(stateCriteria)
+            assertThat(stateResults.states).hasSize(1)
+
+            val emptyStateCriteria = VaultQueryCriteria(stateRefs = emptyList())
+            val emptyStateResults = vaultService.queryBy<LinearState>(emptyStateCriteria)
+            assertThat(emptyStateResults.states).hasSize(0)
+
         }
     }
 
@@ -453,6 +499,41 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             }
 
             assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+
+    @Ignore
+    @Test(timeout=300_000)
+    fun `query with sort criteria and pagination on large volume of states should complete in time`() {
+        val numberOfStates = 1000
+        val pageSize = 1000
+
+        for (i in 1..50) {
+            database.transaction {
+                vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+            }
+        }
+
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+
+            val start = System.currentTimeMillis()
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            val elapsed = System.currentTimeMillis() - start
+            assertThat(elapsed).isLessThan(1000)
         }
     }
 
@@ -1824,6 +1905,33 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     /** LinearState tests */
 
     @Test(timeout=300_000)
+    fun `LinearStateQueryCriteria returns empty resultset without errors if there is an empty list after the 'in' clause`() {
+        database.transaction {
+            val uid = UniqueIdentifier("999")
+            vaultFiller.fillWithSomeTestLinearStates(numberToCreate = 1, uniqueIdentifier = uid)
+            vaultFiller.fillWithSomeTestLinearStates(numberToCreate = 1, externalId = "1234")
+
+            val uuidCriteria = LinearStateQueryCriteria(uuid = listOf(uid.id))
+            val externalIdCriteria = LinearStateQueryCriteria(externalId = listOf("1234"))
+
+            val uuidResults = vaultService.queryBy<ContractState>(uuidCriteria)
+            val externalIdResults = vaultService.queryBy<ContractState>(externalIdCriteria)
+
+            assertThat(uuidResults.states).hasSize(1)
+            assertThat(externalIdResults.states).hasSize(1)
+
+            val uuidCriteriaEmpty = LinearStateQueryCriteria(uuid = emptyList())
+            val externalIdCriteriaEmpty = LinearStateQueryCriteria(externalId = emptyList())
+
+            val uuidResultsEmpty = vaultService.queryBy<ContractState>(uuidCriteriaEmpty)
+            val externalIdResultsEmpty = vaultService.queryBy<ContractState>(externalIdCriteriaEmpty)
+
+            assertThat(uuidResultsEmpty.states).hasSize(0)
+            assertThat(externalIdResultsEmpty.states).hasSize(0)
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `unconsumed linear heads for linearId without external Id`() {
         database.transaction {
             val issuedStates = vaultFiller.fillWithSomeTestLinearStates(10)
@@ -2029,6 +2137,46 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     /** FungibleAsset tests */
+
+    @Test(timeout=300_000)
+    fun `FungibleAssetQueryCriteria returns empty resultset without errors if there is an empty list after the 'in' clause`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, MEGA_CORP.ref(0))
+
+            val ownerCriteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
+            val ownerResults = vaultService.queryBy<FungibleAsset<*>>(ownerCriteria)
+
+            assertThat(ownerResults.states).hasSize(1)
+
+            val emptyOwnerCriteria = FungibleAssetQueryCriteria(owner = emptyList())
+            val emptyOwnerResults = vaultService.queryBy<FungibleAsset<*>>(emptyOwnerCriteria)
+
+            assertThat(emptyOwnerResults.states).hasSize(0)
+
+            // Issuer field checks
+            val issuerCriteria = FungibleAssetQueryCriteria(issuer = listOf(MEGA_CORP))
+            val issuerResults = vaultService.queryBy<FungibleAsset<*>>(issuerCriteria)
+
+            assertThat(issuerResults.states).hasSize(1)
+
+            val emptyIssuerCriteria = FungibleAssetQueryCriteria(issuer = emptyList())
+            val emptyIssuerResults = vaultService.queryBy<FungibleAsset<*>>(emptyIssuerCriteria)
+
+            assertThat(emptyIssuerResults.states).hasSize(0)
+
+            // Issuer Ref field checks
+            val issuerRefCriteria = FungibleAssetQueryCriteria(issuerRef = listOf(MINI_CORP.ref(0).reference))
+            val issuerRefResults = vaultService.queryBy<FungibleAsset<*>>(issuerRefCriteria)
+
+            assertThat(issuerRefResults.states).hasSize(1)
+
+            val emptyIssuerRefCriteria = FungibleAssetQueryCriteria(issuerRef = emptyList())
+            val emptyIssuerRefResults = vaultService.queryBy<FungibleAsset<*>>(emptyIssuerRefCriteria)
+
+            assertThat(emptyIssuerRefResults.states).hasSize(0)
+
+        }
+    }
 
     @Test(timeout=300_000)
 	fun `unconsumed fungible assets for specific issuer party and refs`() {

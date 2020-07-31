@@ -71,7 +71,7 @@ dependencies {
     integrationTestCompile project(':node-driver')
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     // Resolves a Gradle warning about not scanning for pre-processors.
     options.compilerArgs << '-proc:none'
 }

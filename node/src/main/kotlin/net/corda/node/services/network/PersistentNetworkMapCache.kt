@@ -38,9 +38,10 @@ import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
+@Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -53,6 +54,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override val nodeReady: OpenFuture<Void?> = openFuture()
 
+    @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
@@ -323,9 +325,10 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun queryIdentityByLegalName(session: Session, name: CordaX500Name): PartyAndCertificate? {
         val query = session.createQuery(
                 // We do the JOIN here to restrict results to those present in the network map
-                "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                "SELECT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n INNER JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
                 NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
         query.setParameter("name", name.toString())
+        query.maxResults = 1 // instead of DISTINCT in the query, DISTINCT is not supported in Oracle when one of the columns is BLOB
         val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
         // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
         return candidates.firstOrNull()
@@ -384,5 +387,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
+    }
+
+    override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+        this.notaries = notaries
     }
 }

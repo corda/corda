@@ -6,6 +6,8 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.printError
 import net.corda.common.logging.CordaVersion
+import net.corda.common.logging.errorReporting.CordaErrorContextProvider
+import net.corda.common.logging.errorReporting.ErrorCode
 import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
@@ -16,6 +18,8 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
+import net.corda.common.logging.errorReporting.ErrorReporting
+import net.corda.common.logging.errorReporting.report
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
@@ -140,6 +144,7 @@ open class NodeStartup : NodeStartupLogging {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        const val ERROR_CODE_RESOURCE_LOCATION = "error-codes"
     }
 
     lateinit var cmdLineOptions: SharedNodeCmdLineOptions
@@ -169,6 +174,10 @@ open class NodeStartup : NodeStartupLogging {
                 ?: return ExitCodes.FAILURE
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional
                 ?: return ExitCodes.FAILURE
+        ErrorReporting()
+                .usingResourcesAt(ERROR_CODE_RESOURCE_LOCATION)
+                .withContextProvider(CordaErrorContextProvider())
+                .initialiseReporting()
 
         // Step 6. Check if we can access the certificates directory
         if (requireCertificates && !canReadCertificatesDirectory(configuration.certificatesDirectory, configuration.devMode)) return ExitCodes.FAILURE
@@ -324,9 +333,7 @@ open class NodeStartup : NodeStartupLogging {
         if (devMode) return true
 
         if (!certDirectory.isDirectory()) {
-            printError("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator.")
-            printError("Please see https://docs.corda.net/joining-a-compatibility-zone.html for more information.")
-            printError("Node will now shutdown.")
+            logger.error("Unable to access certificates directory ${certDirectory}. This could be because the node has not been registered with the Identity Operator. Node will now shutdown")
             return false
         }
         return true
@@ -341,9 +348,7 @@ open class NodeStartup : NodeStartupLogging {
             //
             // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
             val messages = listOf(
-                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
-                    "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ",
-                    "It will only take a few seconds for you to resolve."
+                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed."
             )
             logger.warn(messages.joinToString(""))
             Emoji.renderIfSupported {
@@ -482,6 +487,7 @@ interface NodeStartupLogging {
 
     fun handleStartError(error: Throwable) {
         when {
+            error is ErrorCode<*> -> logger.report(error)
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
@@ -497,6 +503,7 @@ interface NodeStartupLogging {
 
 fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
+    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     if (verbose) {
         System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
@@ -519,7 +526,6 @@ fun CliWrapperBase.initLogging(baseDirectory: Path): Boolean {
         return false
     }
 
-    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
     SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
     SLF4JBridgeHandler.install()
     return true

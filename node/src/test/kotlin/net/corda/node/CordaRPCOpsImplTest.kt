@@ -1,14 +1,14 @@
 package net.corda.node
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.RPCException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
@@ -17,18 +17,19 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.*
-import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.ColumnPredicate
 import net.corda.core.node.services.vault.EqualityComparisonOperator
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
 import net.corda.finance.contracts.asset.Cash
@@ -36,7 +37,6 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.rpc.CURRENT_RPC_CONTEXT
@@ -54,14 +54,15 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -355,6 +356,17 @@ class CordaRPCOpsImplTest {
     }
 
     @Test(timeout=300_000)
+    fun `trying to open attachment which doesnt exist throws error`() {
+        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
+        withPermissions(invokeRpc(CordaRPCOps::openAttachment)) {
+            assertThatThrownBy {
+                rpc.openAttachment(SecureHash.zeroHash)
+            }.isInstanceOf(RPCException::class.java)
+                    .withFailMessage("Unable to open attachment with id: ${SecureHash.zeroHash}")
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `attachment uploaded with metadata has specified uploader`() {
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::queryAttachments)) {
@@ -380,72 +392,6 @@ class CordaRPCOpsImplTest {
             assertThatExceptionOfType(NonRpcFlowException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `kill a stuck flow through RPC`() {
-        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
-        withPermissions(
-                startFlow<NewJoinerFlow>(),
-                invokeRpc(CordaRPCOps::killFlow),
-                invokeRpc(CordaRPCOps::stateMachinesFeed),
-                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
-        ) {
-            val flow = rpc.startFlow(::NewJoinerFlow)
-            val killed = rpc.killFlow(flow.id)
-            assertThat(killed).isTrue()
-            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `kill a waiting flow through RPC`() {
-        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
-        withPermissions(
-                startFlow<HopefulFlow>(),
-                invokeRpc(CordaRPCOps::killFlow),
-                invokeRpc(CordaRPCOps::stateMachinesFeed),
-                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
-        ) {
-            val flow = rpc.startFlow(::HopefulFlow, alice)
-            val killed = rpc.killFlow(flow.id)
-            assertThat(killed).isTrue()
-            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
-        }
-    }
-
-    @Test(timeout=300_000)
-	fun `killing a flow releases soft lock`() {
-        CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
-        withPermissions(all()) {
-            val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
-            val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
-
-            val flow = rpc.startFlow(::SoftLock, cash.ref, Duration.ofMinutes(5))
-
-            var locked = false
-            while (!locked) {
-                try {
-                    rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow()
-                } catch (e: StatesNotAvailableException) {
-                    locked = true
-                }
-            }
-
-            val killed = rpc.killFlow(flow.id)
-            assertThat(killed).isTrue()
-            assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()
-        }
-    }
-
-    @StartableByRPC
-    class SoftLock(private val stateRef: StateRef, private val duration: Duration) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            logger.info("Soft locking state with hash $stateRef...")
-            serviceHub.vaultService.softLockReserve(runId.uuid, NonEmptySet.of(stateRef))
-            sleep(duration)
         }
     }
 
@@ -476,25 +422,6 @@ class CordaRPCOpsImplTest {
             val result = rpc.startFlow(::VoidRPCFlow)
             mockNet.runNetwork()
             assertNull(result.returnValue.getOrThrow())
-        }
-    }
-
-    @StartableByRPC
-    class NewJoinerFlow : FlowLogic<String>() {
-        @Suspendable
-        override fun call(): String {
-            logger.info("When can I join you say? Almost there buddy...")
-            Fiber.currentFiber().join()
-            return "You'll never get me!"
-        }
-    }
-
-    @StartableByRPC
-    class HopefulFlow(private val party: Party) : FlowLogic<String>() {
-        @Suspendable
-        override fun call(): String {
-            logger.info("Waiting for a miracle...")
-            return initiateFlow(party).receive<String>().unwrap { it }
         }
     }
 

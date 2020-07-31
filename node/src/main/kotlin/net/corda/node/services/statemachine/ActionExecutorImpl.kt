@@ -1,14 +1,8 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.Gauge
-import com.codahale.metrics.Histogram
-import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.Reservoir
-import com.codahale.metrics.SlidingTimeWindowArrayReservoir
-import com.codahale.metrics.SlidingTimeWindowReservoir
-import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
@@ -19,19 +13,18 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
-import java.time.Duration
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
+import java.sql.SQLException
 
 /**
  * This is the bottom execution engine of flow side-effects.
  */
-class ActionExecutorImpl(
-        private val services: ServiceHubInternal,
-        private val checkpointStorage: CheckpointStorage,
-        private val flowMessaging: FlowMessaging,
-        private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: CheckpointSerializationContext
+internal class ActionExecutorImpl(
+    private val services: ServiceHubInternal,
+    private val checkpointStorage: CheckpointStorage,
+    private val flowMessaging: FlowMessaging,
+    private val stateMachineManager: StateMachineManagerInternal,
+    private val actionFutureExecutor: ActionFutureExecutor,
+    private val checkpointSerializationContext: CheckpointSerializationContext
 ) : ActionExecutor {
 
     private companion object {
@@ -57,7 +50,7 @@ class ActionExecutorImpl(
             is Action.AcknowledgeMessages -> executeAcknowledgeMessages(action)
             is Action.PropagateErrors -> executePropagateErrors(action)
             is Action.ScheduleEvent -> executeScheduleEvent(fiber, action)
-            is Action.SleepUntil -> executeSleepUntil(action)
+            is Action.SleepUntil -> executeSleepUntil(fiber, action)
             is Action.RemoveCheckpoint -> executeRemoveCheckpoint(action)
             is Action.SendInitial -> executeSendInitial(action)
             is Action.SendExisting -> executeSendExisting(action)
@@ -82,14 +75,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeTrackTransaction(fiber: FlowFiber, action: Action.TrackTransaction) {
-        services.validatedTransactions.trackTransaction(action.hash).thenMatch(
-                success = { transaction ->
-                    fiber.scheduleEvent(Event.TransactionCommitted(transaction))
-                },
-                failure = { exception ->
-                    fiber.scheduleEvent(Event.Error(exception))
-                }
-        )
+        actionFutureExecutor.awaitTransaction(fiber, action)
     }
 
     @Suspendable
@@ -98,15 +84,18 @@ class ActionExecutorImpl(
         val flowState = checkpoint.flowState
         val serializedFlowState = when(flowState) {
             FlowState.Completed -> null
+            // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the flowState as it will not get saved in the DB
             else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
+        // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the serializedCheckpointState as it will not get saved in the DB
+        val serializedCheckpointState: SerializedBytes<CheckpointState> = checkpoint.checkpointState.checkpointSerialize(checkpointSerializationContext)
         if (action.isCheckpointUpdate) {
-            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState)
+            checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
             if (flowState is FlowState.Completed) {
                 throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
             }
-            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!)
+            checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
         }
     }
 
@@ -141,13 +130,9 @@ class ActionExecutorImpl(
             log.warn("Propagating error", exception)
         }
         for (sessionState in action.sessions) {
-            // We cannot propagate if the session isn't live.
-            if (sessionState.initiatedState !is InitiatedSessionState.Live) {
-                continue
-            }
             // Don't propagate errors to the originating session
             for (errorMessage in action.errorMessages) {
-                val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
+                val sinkSessionId = sessionState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
                 val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
                 flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
@@ -160,12 +145,8 @@ class ActionExecutorImpl(
         fiber.scheduleEvent(action.event)
     }
 
-    @Suspendable
-    private fun executeSleepUntil(action: Action.SleepUntil) {
-        // TODO introduce explicit sleep state + wakeup event instead of relying on Fiber.sleep. This is so shutdown
-        // conditions may "interrupt" the sleep instead of waiting until wakeup.
-        val duration = Duration.between(services.clock.instant(), action.time)
-        Fiber.sleep(duration.toNanos(), TimeUnit.NANOSECONDS)
+    private fun executeSleepUntil(fiber: FlowFiber, action: Action.SleepUntil) {
+        actionFutureExecutor.sleep(fiber, action)
     }
 
     @Suspendable
@@ -211,6 +192,7 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCreateTransaction() {
         if (contextTransactionOrNull != null) {
             throw IllegalStateException("Refusing to create a second transaction")
@@ -220,10 +202,14 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRollbackTransaction() {
-        contextTransactionOrNull?.close()
+        contextTransactionOrNull?.run {
+            rollback()
+            close()
+        }
     }
 
     @Suspendable
+    @Throws(SQLException::class)
     private fun executeCommitTransaction() {
         try {
             contextTransaction.commit()
@@ -233,19 +219,11 @@ class ActionExecutorImpl(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // this is fully intentional here, see comment in the catch clause
+    @Suppress("TooGenericExceptionCaught")
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         try {
-            val operationFuture = action.operation.execute(action.deduplicationId)
-            operationFuture.thenMatch(
-                    success = { result ->
-                        fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
-                    },
-                    failure = { exception ->
-                        fiber.scheduleEvent(Event.AsyncOperationThrows(exception))
-                    }
-            )
+            actionFutureExecutor.awaitAsyncOperation(fiber, action)
         } catch (e: Exception) {
             // Catch and wrap any unexpected exceptions from the async operation
             // Wrapping the exception allows it to be better handled by the flow hospital

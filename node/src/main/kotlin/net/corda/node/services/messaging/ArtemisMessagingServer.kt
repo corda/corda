@@ -17,8 +17,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_P
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.SECURITY_INVALIDATION_INTERVAL
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
+import net.corda.nodeapi.internal.protonwrapper.netty.RevocationConfig
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
+import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
@@ -51,7 +54,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
-                             private val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val maxMessageSize: Int,
+                             private val journalBufferTimeout : Int?) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -102,7 +106,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
         try {
             activeMQServer.start()
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
+            log.error("Unable to start message broker", e)
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
             } else {
@@ -134,6 +139,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         isPopulateValidatedUser = true
         journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
         journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+        journalBufferTimeout_NIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutNio()
+        journalBufferTimeout_AIO = journalBufferTimeout ?: ActiveMQDefaultConfiguration.getDefaultJournalBufferTimeoutAio()
         journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
 
@@ -142,6 +149,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             isJMXManagementEnabled = true
             isJMXUseBrokerName = true
         }
+        // Validate user in AMQP message header against authenticated session
+        registerBrokerPlugin(UserValidationPlugin())
 
     }.configureAddressSecurity()
 
@@ -156,6 +165,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val nodeInternalRole = Role(NODE_P2P_ROLE, true, true, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
+        securityInvalidationInterval = SECURITY_INVALIDATION_INTERVAL
         return this
     }
 
@@ -170,12 +180,17 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = config.p2pSslOptions.keyStore.get().value.internal
         val trustStore = config.p2pSslOptions.trustStore.get().value.internal
+        val revocationMode = when {
+            config.crlCheckArtemisServer && config.crlCheckSoftFail -> RevocationConfig.Mode.SOFT_FAIL
+            config.crlCheckArtemisServer && !config.crlCheckSoftFail -> RevocationConfig.Mode.HARD_FAIL
+            else -> RevocationConfig.Mode.OFF
+        }
 
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore),
+                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore, revocationMode),
                         BrokerJaasLoginModule.NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
                 )
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))

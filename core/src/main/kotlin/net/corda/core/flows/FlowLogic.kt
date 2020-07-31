@@ -24,10 +24,8 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
@@ -129,6 +127,32 @@ abstract class FlowLogic<out T> {
      * access this lazily or from inside [call].
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
+
+    /**
+     * Returns `true` when the current [FlowLogic] has been killed (has received a command to halt its progress and terminate).
+     *
+     * Check this property in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * while (!isKilled) {
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Ideal usage would include throwing a [KilledFlowException] which will lead to the termination of the flow:
+     * ```
+     * for (item in list) {
+     *   if (isKilled) {
+     *     throw KilledFlowException(runId)
+     *   }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * Note, once the [isKilled] flag is set to `true` the flow may terminate once it reaches the next API function marked with the
+     * @[Suspendable] annotation. Therefore, it is possible to write a flow that does not interact with the [isKilled] flag while still
+     * terminating correctly.
+     */
+    val isKilled: Boolean get() = stateMachine.isKilled
 
     /**
      * Creates a communication session with [destination]. Subsequently you may send/receive using this session object. How the messaging
@@ -267,7 +291,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
         val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                sessionToMessage = stateMachine.serialize(mapOf(this to payload)),
                 shouldRetrySend = true
         )
         return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
@@ -350,20 +374,26 @@ abstract class FlowLogic<out T> {
     @JvmOverloads
     fun sendAllMap(payloadsPerSession: Map<FlowSession, Any>, maySkipCheckpoint: Boolean = false) {
         val request = FlowIORequest.Send(
-                sessionToMessage = serializePayloads(payloadsPerSession)
+                sessionToMessage = stateMachine.serialize(payloadsPerSession)
         )
         stateMachine.suspend(request, maySkipCheckpoint)
     }
 
+    /**
+     * Closes the provided sessions and performs cleanup of any resources tied to these sessions.
+     *
+     * Note that sessions are closed automatically when the corresponding top-level flow terminates.
+     * So, it's beneficial to eagerly close them in long-lived flows that might have many open sessions that are not needed anymore and consume resources (e.g. memory, disk etc.).
+     * A closed session cannot be used anymore, e.g. to send or receive messages. So, you have to ensure you are calling this method only when the provided sessions are not going to be used anymore.
+     * As a result, any operations on a closed session will fail with an [UnexpectedFlowEndException].
+     * When a session is closed, the other side is informed and the session is closed there too eventually.
+     * To prevent misuse of the API, if there is an attempt to close an uninitialised session the invocation will fail with an [IllegalStateException].
+     */
     @Suspendable
-    private fun serializePayloads(payloadsPerSession: Map<FlowSession, Any>): Map<FlowSession, SerializedBytes<Any>> {
-        val cachedSerializedPayloads = mutableMapOf<Any, SerializedBytes<Any>>()
-
-        return payloadsPerSession.mapValues { (_, payload) ->
-            cachedSerializedPayloads[payload] ?: payload.serialize(context = SerializationDefaults.P2P_CONTEXT).also { cachedSerializedPayloads[payload] = it }
-        }
+    fun close(sessions: NonEmptySet<FlowSession>) {
+        val request = FlowIORequest.CloseSessions(sessions)
+        stateMachine.suspend(request, false)
     }
-
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
@@ -582,6 +612,46 @@ abstract class FlowLogic<out T> {
         val flowAsyncOperation = WrappedFlowExternalOperation(serviceHub as ServiceHubCoreInternal, operation)
         val request = FlowIORequest.ExecuteAsyncOperation(flowAsyncOperation)
         return stateMachine.suspend(request, false)
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed.
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled()
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled() {
+        if (isKilled) {
+            throw KilledFlowException(runId)
+        }
+    }
+
+    /**
+     * Helper function that throws a [KilledFlowException] if the current [FlowLogic] has been killed. The provided message is added to the
+     * thrown [KilledFlowException].
+     *
+     * Call this function in long-running computation loops to exit a flow that has been killed:
+     * ```
+     * for (item in list) {
+     *   checkFlowIsNotKilled { "The flow $runId was killed while iterating through the list of items" }
+     *   // do some computation
+     * }
+     * ```
+     *
+     * See the [isKilled] property for more information.
+     */
+    fun checkFlowIsNotKilled(lazyMessage: () -> Any) {
+        if (isKilled) {
+            val message = lazyMessage()
+            throw KilledFlowException(runId, message.toString())
+        }
     }
 }
 

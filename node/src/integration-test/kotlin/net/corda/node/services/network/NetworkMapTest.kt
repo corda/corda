@@ -1,8 +1,10 @@
 package net.corda.node.services.network
 
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
@@ -11,6 +13,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
@@ -73,7 +76,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
 
         )
     }
-
 
     @Before
     fun start() {
@@ -139,6 +141,102 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     .readObject<SignedNetworkParameters>().verified()
             assertEquals(networkParameters, laterParams)
         }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Can hotload parameters if the notary changes`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList()
+        ) {
+
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithNewNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
+
+            val alice = startNodeAndRunFlagDay(paramsWithNewNotary)
+            eventually { assertEquals(paramsWithNewNotary, alice.rpc.networkParameters) }
+
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `If only the notary changes but parameters were not accepted, the node will still shut down on the flag day`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList()
+        ) {
+
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithNewNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
+
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
+            networkMapServer.scheduleParametersUpdate(paramsWithNewNotary, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
+            // Wait for network map client to poll for the next update.
+            Thread.sleep(cacheTimeout.toMillis() * 2)
+            networkMapServer.advertiseNewParameters()
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Can not hotload parameters if non-hotloadable parameter changes and the node will shut down`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList()
+        ) {
+
+            val oldParams = networkMapServer.networkParameters
+            val paramsWithUpdatedMaxMessageSize = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = oldParams.maxMessageSize + 1)
+            val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSize)
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `Can not hotload parameters if notary and a non-hotloadable parameter changes and the node will shut down`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList()
+        ) {
+
+            val oldParams = networkMapServer.networkParameters
+            val notary: Party = TestIdentity.fresh("test notary").party
+            val paramsWithUpdatedMaxMessageSizeAndNotary = oldParams.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = oldParams.maxMessageSize + 1).addNotary(notary)
+            val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSizeAndNotary)
+            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+        }
+    }
+
+    private fun DriverDSLImpl.startNodeAndRunFlagDay(newParams: NetworkParameters): NodeHandleInternal {
+
+        val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
+        val nextHash = newParams.serialize().hash
+
+        networkMapServer.scheduleParametersUpdate(newParams, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
+        // Wait for network map client to poll for the next update.
+        Thread.sleep(cacheTimeout.toMillis() * 2)
+        alice.rpc.acceptNewNetworkParameters(nextHash)
+        assertEquals(nextHash, networkMapServer.latestParametersAccepted(alice.nodeInfo.legalIdentities.first().owningKey))
+        assertEquals(networkMapServer.networkParameters, alice.rpc.networkParameters)
+        networkMapServer.advertiseNewParameters()
+        return alice
     }
 
     @Test(timeout=300_000)

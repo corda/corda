@@ -9,6 +9,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -51,7 +52,11 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = incrementalPortAllocation() // use 15000 to move us out of harms way
+    companion object {
+        private val log = contextLogger()
+    }
+
+    private val portAllocation = incrementalPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()
@@ -350,7 +355,8 @@ class ProtonWrapperTests {
             val connection2ID = CordaX500Name.build(connection2.remoteCert!!.subjectX500Principal)
             assertEquals("client 1", connection2ID.organisationUnit)
             val source2 = connection2.remoteAddress
-            // Stopping one shouldn't disconnect the other
+
+            log.info("Stopping one shouldn't disconnect the other")
             amqpClient1.stop()
             val connection3 = connectionEvents.next()
             assertEquals(false, connection3.connected)
@@ -358,14 +364,16 @@ class ProtonWrapperTests {
             assertEquals(false, amqpClient1.connected)
             client2Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient2.connected)
-            // Now shutdown both
+
+            log.info("Now shutdown both")
             amqpClient2.stop()
             val connection4 = connectionEvents.next()
             assertEquals(false, connection4.connected)
             assertEquals(source2, connection4.remoteAddress)
             assertEquals(false, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
-            // Now restarting one should work
+
+            log.info("Now restarting one should work")
             val client1Connected = amqpClient1.onConnection.toFuture()
             amqpClient1.start()
             val connection5 = connectionEvents.next()
@@ -375,7 +383,8 @@ class ProtonWrapperTests {
             client1Connected.get(60, TimeUnit.SECONDS)
             assertEquals(true, amqpClient1.connected)
             assertEquals(false, amqpClient2.connected)
-            // Cleanup
+
+            log.info("Cleanup")
             amqpClient1.stop()
             sharedThreads.shutdownGracefully()
             sharedThreads.terminationFuture().sync()
@@ -386,13 +395,16 @@ class ProtonWrapperTests {
 	fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
-        var connected = false
+        // AmqpClient is set to auto-reconnect, there might be multiple connect/disconnect rounds
+        val connectedStack = mutableListOf<Boolean>()
         amqpClient.onConnection.subscribe { change ->
-            connected = change.connected
+            connectedStack.add(change.connected)
         }
         val clientConnected = amqpClient.onConnection.toFuture()
         amqpClient.start()
         assertEquals(true, clientConnected.get().connected)
+        assertEquals(1, connectedStack.size)
+        assertTrue(connectedStack.contains(true))
         assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
         val sendAddress = P2P_PREFIX + "Test"
         val testData = "Test".toByteArray()
@@ -401,7 +413,7 @@ class ProtonWrapperTests {
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)
         assertEquals(MessageStatus.Rejected, message.onComplete.get())
-        assertEquals(false, connected)
+        assertTrue(connectedStack.contains(false))
         amqpClient.stop()
         artemisClient.stop()
         server.stop()
@@ -421,10 +433,11 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(true).whenever(it).crlCheckArtemisServer
         }
         artemisConfig.configureWithDevSSLCertificate()
 
-        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize)
+        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize, null)
         val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", artemisPort), maxMessageSize)
         server.start()
         client.start()

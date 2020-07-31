@@ -4,7 +4,6 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.utilities.Try
 import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.*
@@ -63,11 +62,11 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         val versionInfo = startup.getVersionInfo()
 
         println("\n" +
-                "******************************************************************\n" +
-                "*                                                                *\n" +
-                "*      Registering as a new participant with a Corda network     *\n" +
-                "*                                                                *\n" +
-                "******************************************************************\n")
+                "*******************************************************************\n" +
+                "*                                                                 *\n" +
+                "*      Registering as a new participant with a Corda network      *\n" +
+                "*                                                                 *\n" +
+                "*******************************************************************\n")
 
         NodeRegistrationHelper(NodeRegistrationConfiguration(conf),
                 HTTPNetworkRegistrationService(

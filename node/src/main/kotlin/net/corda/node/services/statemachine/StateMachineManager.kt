@@ -10,7 +10,6 @@ import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
-import java.util.concurrent.Future
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -30,12 +29,18 @@ import java.util.concurrent.Future
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 interface StateMachineManager {
+
+    enum class StartMode {
+        ExcludingPaused, // Resume all flows except paused flows.
+        Safe // Mark all flows as paused.
+    }
+
     /**
      * Starts the state machine manager, loading and starting the state machines in storage.
      *
      * @return `Future` which completes when SMM is fully started
      */
-    fun start(tokenizableServices: List<Any>) : CordaFuture<Unit>
+    fun start(tokenizableServices: List<Any>, startMode: StartMode = StartMode.ExcludingPaused) : CordaFuture<Unit>
 
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
@@ -96,7 +101,7 @@ interface StateMachineManager {
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
 // these functions again
-interface StateMachineManagerInternal {
+internal interface StateMachineManagerInternal {
     fun signalFlowHasStarted(flowId: StateMachineRunId)
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)

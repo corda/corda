@@ -84,33 +84,33 @@ fun X509Certificate.distributionPointsToString() : String {
     }
 }
 
+fun certPathToString(certPath: Array<out X509Certificate>?): String {
+    if (certPath == null) {
+        return "<empty certpath>"
+    }
+    val certs = certPath.map {
+        val bcCert = it.toBc()
+        val subject = bcCert.subject.toString()
+        val issuer = bcCert.issuer.toString()
+        val keyIdentifier = try {
+            SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
+        } catch (ex: Exception) {
+            "null"
+        }
+        val authorityKeyIdentifier = try {
+            AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
+        } catch (ex: Exception) {
+            "null"
+        }
+        "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
+    }
+    return certs.joinToString("\r\n")
+}
+
 @VisibleForTesting
 class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
         val log = contextLogger()
-    }
-
-    private fun certPathToString(certPath: Array<out X509Certificate>?): String {
-        if (certPath == null) {
-            return "<empty certpath>"
-        }
-        val certs = certPath.map {
-            val bcCert = it.toBc()
-            val subject = bcCert.subject.toString()
-            val issuer = bcCert.issuer.toString()
-            val keyIdentifier = try {
-                SubjectKeyIdentifier.getInstance(bcCert.getExtension(Extension.subjectKeyIdentifier).parsedValue).keyIdentifier.toHex()
-            } catch (ex: Exception) {
-                "null"
-            }
-            val authorityKeyIdentifier = try {
-                AuthorityKeyIdentifier.getInstance(bcCert.getExtension(Extension.authorityKeyIdentifier).parsedValue).keyIdentifier.toHex()
-            } catch (ex: Exception) {
-                "null"
-            }
-            "  $subject[$keyIdentifier] issued by $issuer[$authorityKeyIdentifier] [${it.distributionPointsToString()}]"
-        }
-        return certs.joinToString("\r\n")
     }
 
     private fun certPathToStringFull(chain: Array<out X509Certificate>?): String {
@@ -200,10 +200,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
                                    expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
-    val sslContext = SSLContext.getInstance("TLS")
-    val keyManagers = keyManagerFactory.keyManagers
-    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
-    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    val sslContext = createAndInitSslContext(keyManagerFactory, trustManagerFactory)
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
@@ -239,10 +236,7 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
 internal fun createServerSslHandler(keyStore: CertificateStore,
                                     keyManagerFactory: KeyManagerFactory,
                                     trustManagerFactory: TrustManagerFactory): SslHandler {
-    val sslContext = SSLContext.getInstance("TLS")
-    val keyManagers = keyManagerFactory.keyManagers
-    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
-    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    val sslContext = createAndInitSslContext(keyManagerFactory, trustManagerFactory)
     val sslEngine = sslContext.createSSLEngine()
     sslEngine.useClientMode = false
     sslEngine.needClientAuth = true
@@ -254,6 +248,15 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     sslEngine.sslParameters = sslParameters
     @Suppress("DEPRECATION")
     return SslHandler(sslEngine, false, LoggingImmediateExecutor)
+}
+
+fun createAndInitSslContext(keyManagerFactory: KeyManagerFactory, trustManagerFactory: TrustManagerFactory): SSLContext {
+    val sslContext = SSLContext.getInstance("TLS")
+    val keyManagers = keyManagerFactory.keyManagers
+    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java)
+            .map { LoggingTrustManagerWrapper(it) }.toTypedArray()
+    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    return sslContext
 }
 
 @VisibleForTesting

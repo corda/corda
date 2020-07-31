@@ -73,6 +73,7 @@ import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.node.utilities.errorAndTerminate
 import net.corda.nodeapi.internal.ArtemisMessagingClient
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -279,6 +280,8 @@ open class Node(configuration: NodeConfiguration,
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var rpcBroker: ArtemisBroker? = null
 
+    protected open val journalBufferTimeout : Int? = null
+
     private var shutdownHook: ShutdownHook? = null
 
     // DISCUSSION
@@ -360,7 +363,7 @@ open class Node(configuration: NodeConfiguration,
         val messageBroker = if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress
                     ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
+            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, journalBufferTimeout)
         } else {
             null
         }
@@ -435,9 +438,11 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE,
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE,
+                                journalBufferTimeout, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.addresses
@@ -512,7 +517,10 @@ open class Node(configuration: NodeConfiguration,
             if (effectiveH2Settings?.address != null) {
                 if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
                         && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
-                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                    throw CouldNotCreateDataSourceException(
+                            "Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.",
+                            NodeDatabaseErrors.PASSWORD_REQUIRED_FOR_H2,
+                            listOf(InetAddress.getByName(effectiveH2Settings.address.host).toString()))
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val baseDir = Paths.get(databaseName).parent.toString()
@@ -528,6 +536,7 @@ open class Node(configuration: NodeConfiguration,
                 val url = try {
                     server.start().url
                 } catch (e: JdbcSQLNonTransientConnectionException) {
+                    log.error("Unexpected database connectivity error", e)
                     if (e.cause is BindException) {
                         throw AddressBindingException(effectiveH2Settings.address)
                     } else {
@@ -635,8 +644,8 @@ open class Node(configuration: NodeConfiguration,
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
 
                 checkpointSerializer = KryoCheckpointSerializer,
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader)
-            )
+                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader).withCheckpointCustomSerializers(cordappLoader.cordapps.flatMap { it.checkpointCustomSerializers })
+        )
     }
 
     /** Starts a blocking event loop for message dispatch. */

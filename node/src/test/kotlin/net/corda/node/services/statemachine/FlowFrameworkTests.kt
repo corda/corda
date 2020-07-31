@@ -15,20 +15,23 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.ReceiveFinalityFlow
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.Party
 import net.corda.core.internal.DeclaredField
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.declaredField
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -41,9 +44,8 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.checkpoints
-import net.corda.nodeapi.internal.persistence.contextDatabase
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.ALICE_NAME
@@ -55,11 +57,13 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.getMessage
 import net.corda.testing.node.internal.startFlow
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -70,19 +74,20 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import rx.Notification
 import rx.Observable
-import java.sql.SQLException
+import java.sql.SQLTransientConnectionException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.ArrayList
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FlowFrameworkTests {
@@ -115,7 +120,7 @@ class FlowFrameworkTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
+            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, FINANCE_CONTRACTS_CORDAPP),
             servicePeerAllocationStrategy = RoundRobin()
         )
 
@@ -138,6 +143,9 @@ class FlowFrameworkTests {
     fun cleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
+
+        SuspendingFlow.hookBeforeCheckpoint = {}
+        SuspendingFlow.hookAfterCheckpoint = {}
     }
 
     @Test(timeout=300_000)
@@ -166,9 +174,12 @@ class FlowFrameworkTests {
         val flow = ReceiveFlow(bob)
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
-        val throwingActionExecutor = SuspendThrowingActionExecutor(Exception("Thrown during suspend"),
-                fiber.transientValues!!.value.actionExecutor)
-        fiber.transientValues = TransientReference(fiber.transientValues!!.value.copy(actionExecutor = throwingActionExecutor))
+        val throwingActionExecutor = SuspendThrowingActionExecutor(
+            Exception("Thrown during suspend"),
+            fiber.transientValues.actionExecutor
+        )
+        fiber.declaredField<TransientReference<FlowStateMachineImpl.TransientValues>>("transientValuesReference").value =
+            TransientReference(fiber.transientValues.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
         fiber.resultFuture.getOrThrow()
         assertThat(aliceNode.smm.allStateMachines).isEmpty()
@@ -194,7 +205,7 @@ class FlowFrameworkTests {
     }
 
     @Test(timeout=300_000)
-	fun `other side ends before doing expected send`() {
+    fun `other side ends before doing expected send`() {
         bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
@@ -301,7 +312,8 @@ class FlowFrameworkTests {
             .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
             .withStackTraceContaining("Received counter-flow exception from peer")
         bobNode.database.transaction {
-            assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
+            val checkpoint = bobNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
         }
 
         assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
@@ -347,7 +359,7 @@ class FlowFrameworkTests {
 
     //We should update this test when we do the work to persists the flow result.
     @Test(timeout = 300_000)
-    fun `Flow status is set to completed in database when the flow finishes and serialised flow state is null`() {
+    fun `Checkpoint and all its related records are deleted when the flow finishes`() {
         val terminationSignal = Semaphore(0)
         val flow = aliceNode.services.startFlow(NoOpFlow( terminateUponSignal = terminationSignal))
         mockNet.waitQuiescent() // current thread needs to wait fiber running on a different thread, has reached the blocking point
@@ -361,12 +373,15 @@ class FlowFrameworkTests {
         mockNet.waitQuiescent()
         aliceNode.database.transaction {
             val checkpoint = dbCheckpointStorage.getCheckpoint(flow.id)
-            assertNull(checkpoint!!.result)
-            assertNull(checkpoint.serializedFlowState)
-            assertEquals(Checkpoint.FlowStatus.COMPLETED, checkpoint.status)
+            assertNull(checkpoint)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
         }
     }
 
+    // Ignoring test since completed flows are not currently keeping their checkpoints in the database
+    @Ignore
     @Test(timeout = 300_000)
     fun `Flow metadata finish time is set in database when the flow finishes`() {
         val terminationSignal = Semaphore(0)
@@ -664,83 +679,171 @@ class FlowFrameworkTests {
     @Test(timeout=300_000)
     fun `Checkpoint status changes to RUNNABLE when flow is loaded from checkpoint - FlowState Unstarted`() {
         var firstExecution = true
-        var checkpointStatusInDBBeforeSuspension: Checkpoint.FlowStatus? = null
-        var checkpointStatusInDBAfterSuspension: Checkpoint.FlowStatus? = null
-        var checkpointStatusInMemoryBeforeSuspension: Checkpoint.FlowStatus? = null
+        var flowState: FlowState? = null
+        var dbCheckpointStatusBeforeSuspension: Checkpoint.FlowStatus? = null
+        var dbCheckpointStatusAfterSuspension: Checkpoint.FlowStatus? = null
+        var inMemoryCheckpointStatusBeforeSuspension: Checkpoint.FlowStatus? = null
+        val futureFiber = openFuture<FlowStateMachineImpl<*>>().toCompletableFuture()
 
         SuspendingFlow.hookBeforeCheckpoint = {
             val flowFiber = this as? FlowStateMachineImpl<*>
-            assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Unstarted)
+            flowState = flowFiber!!.transientState.checkpoint.flowState
 
             if (firstExecution) {
-                // the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
-                manuallyFailCheckpointInDB(aliceNode)
-
-                firstExecution = false
-                throw SQLException("deadlock") // will cause flow to retry
+                throw HospitalizeFlowException()
             } else {
-                // The persisted Checkpoint should be still failed here -> it should change to RUNNABLE after suspension
-                checkpointStatusInDBBeforeSuspension = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
-                checkpointStatusInMemoryBeforeSuspension = flowFiber.transientState!!.value.checkpoint.status
+                dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
+                currentDBSession().clear() // clear session as Hibernate with fails with 'org.hibernate.NonUniqueObjectException' once it tries to save a DBFlowCheckpoint upon checkpoint
+                inMemoryCheckpointStatusBeforeSuspension = flowFiber.transientState.checkpoint.status
+
+                futureFiber.complete(flowFiber)
             }
         }
-
         SuspendingFlow.hookAfterCheckpoint = {
-            checkpointStatusInDBAfterSuspension = aliceNode.internals.checkpointStorage.getRunnableCheckpoints().toList().single().second.status
+            dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getCheckpointsToRun().toList().single()
+                    .second.status
         }
 
-        aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
-
-        assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatusInDBBeforeSuspension)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInMemoryBeforeSuspension)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInDBAfterSuspension)
-
-        SuspendingFlow.hookBeforeCheckpoint = {}
-        SuspendingFlow.hookAfterCheckpoint = {}
+        assertFailsWith<TimeoutException> {
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
+        }
+        // flow is in hospital
+        assertTrue(flowState is FlowState.Unstarted)
+        val inMemoryHospitalizedCheckpointStatus = aliceNode.internals.smm.snapshot().first().transientState.checkpoint.status
+        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, inMemoryHospitalizedCheckpointStatus)
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second
+            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+        }
+        // restart Node - flow will be loaded from checkpoint
+        firstExecution = false
+        aliceNode = mockNet.restartNode(aliceNode)
+        futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
+        // checkpoint states ,after flow retried, before and after suspension
+        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatusBeforeSuspension)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatusBeforeSuspension)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatusAfterSuspension)
     }
 
     @Test(timeout=300_000)
     fun `Checkpoint status changes to RUNNABLE when flow is loaded from checkpoint - FlowState Started`() {
         var firstExecution = true
-        var checkpointStatusInDB: Checkpoint.FlowStatus? = null
-        var checkpointStatusInMemory: Checkpoint.FlowStatus? = null
+        var flowState: FlowState? = null
+        var dbCheckpointStatus: Checkpoint.FlowStatus? = null
+        var inMemoryCheckpointStatus: Checkpoint.FlowStatus? = null
+        val futureFiber = openFuture<FlowStateMachineImpl<*>>().toCompletableFuture()
 
         SuspendingFlow.hookAfterCheckpoint = {
             val flowFiber = this as? FlowStateMachineImpl<*>
-            assertTrue(flowFiber!!.transientState!!.value.checkpoint.flowState is FlowState.Started)
+            flowState = flowFiber!!.transientState.checkpoint.flowState
 
             if (firstExecution) {
-                // the following manual persisting Checkpoint.status to FAILED should be removed when implementing CORDA-3604.
-                manuallyFailCheckpointInDB(aliceNode)
-
-                firstExecution = false
-                throw SQLException("deadlock") // will cause flow to retry
+                throw HospitalizeFlowException()
             } else {
-                checkpointStatusInDB = aliceNode.internals.checkpointStorage.getAllCheckpoints().toList().single().second.status
-                checkpointStatusInMemory = flowFiber.transientState!!.value.checkpoint.status
+                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
+                inMemoryCheckpointStatus = flowFiber.transientState.checkpoint.status
+
+                futureFiber.complete(flowFiber)
+            }
+        }
+
+        assertFailsWith<TimeoutException> {
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
+        }
+        // flow is in hospital
+        assertTrue(flowState is FlowState.Started)
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second
+            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+        }
+        // restart Node - flow will be loaded from checkpoint
+        firstExecution = false
+        aliceNode = mockNet.restartNode(aliceNode)
+        futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
+        // checkpoint states ,after flow retried, after suspension
+        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatus)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+    }
+
+    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
+    @Ignore
+    @Test(timeout=300_000)
+    fun `Checkpoint is updated in DB with FAILED status and the error when flow fails`() {
+        var flowId: StateMachineRunId? = null
+
+        val e = assertFailsWith<FlowException> {
+            val fiber = aliceNode.services.startFlow(ExceptionFlow { FlowException("Just an exception") })
+            flowId = fiber.id
+            fiber.resultFuture.getOrThrow()
+        }
+
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
+
+            // assert all fields of DBFlowException
+            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
+            assertEquals(FlowException::class.java.name, persistedException!!.type)
+            assertEquals("Just an exception", persistedException.message)
+            assertEquals(ExceptionUtils.getStackTrace(e), persistedException.stackTrace)
+            assertEquals(null, persistedException.value)
+        }
+    }
+
+    // Upon implementing CORDA-3681 unignore this test; DBFlowException is not currently integrated
+    @Ignore
+    @Test(timeout=300_000)
+    fun `Checkpoint is updated in DB with HOSPITALIZED status and the error when flow is kept for overnight observation` () {
+        var flowId: StateMachineRunId? = null
+
+        assertFailsWith<TimeoutException> {
+            val fiber = aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("Overnight observation") })
+            flowId = fiber.id
+            fiber.resultFuture.getOrThrow(10.seconds)
+        }
+
+        aliceNode.database.transaction {
+            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
+            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
+
+            // assert all fields of DBFlowException
+            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
+            assertEquals(HospitalizeFlowException::class.java.name, persistedException!!.type)
+            assertEquals("Overnight observation", persistedException.message)
+            assertEquals(null, persistedException.value)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `Checkpoint status and error in memory and in DB are not dirtied upon flow retry`() {
+        var firstExecution = true
+        var dbCheckpointStatus: Checkpoint.FlowStatus? = null
+        var inMemoryCheckpointStatus: Checkpoint.FlowStatus? = null
+        var persistedException: DBCheckpointStorage.DBFlowException? = null
+
+        SuspendingFlow.hookAfterCheckpoint = {
+            if (firstExecution) {
+                firstExecution = false
+                throw SQLTransientConnectionException("connection is not available")
+            } else {
+                val flowFiber = this as? FlowStateMachineImpl<*>
+                dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
+                inMemoryCheckpointStatus = flowFiber!!.transientState.checkpoint.status
+                persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowFiber.id)!!.exceptionDetails
             }
         }
 
         aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow()
-
-        assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatusInDB)
-        assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusInMemory)
-
-        SuspendingFlow.hookAfterCheckpoint = {}
+        // checkpoint states ,after flow retried, after suspension
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
+        assertEquals(null, persistedException)
     }
 
-    // the following method should be removed when implementing CORDA-3604.
-    private fun manuallyFailCheckpointInDB(node: TestStartedNode) {
-        val idCheckpoint = node.internals.checkpointStorage.getRunnableCheckpoints().toList().single()
-        val checkpoint = idCheckpoint.second
-        val updatedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
-        node.internals.checkpointStorage.updateCheckpoint(idCheckpoint.first,
-                updatedCheckpoint.deserialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT),
-                updatedCheckpoint.serializedFlowState)
-        contextTransaction.commit()
-        contextTransaction.close()
-        contextTransactionOrNull = null
-        contextDatabase.newTransaction()
+    private inline fun <reified T> DatabaseTransaction.findRecordsFromDatabase(): List<T> {
+        val criteria = session.criteriaBuilder.createQuery(T::class.java)
+        criteria.select(criteria.from(T::class.java))
+        return session.createQuery(criteria).resultList
     }
 
     //region Helpers
@@ -773,6 +876,7 @@ class FlowFrameworkTests {
             session.send(1)
             // ... then pause this one until it's received the session-end message from the other side
             receivedOtherFlowEnd.acquire()
+
             session.sendAndReceive<Int>(2)
         }
     }

@@ -35,7 +35,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         project(':testing:testserver').tasks.jar,
         project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
         project(':testing:testserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
-        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        project(':node').buildDir.toString() + '/resources/main/corda-reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
     )
@@ -43,7 +43,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
 
     capsuleManifest {
         applicationVersion = corda_release_version
-        javaAgents = quasar_classifier == null ? ["quasar-core-${quasar_version}.jar"] : ["quasar-core-${quasar_version}-${quasar_classifier}.jar"]
+        javaAgents = quasar_classifier ? ["quasar-core-${quasar_version}-${quasar_classifier}.jar"] : ["quasar-core-${quasar_version}.jar"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
@@ -56,11 +56,16 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
     }
+
+    manifest {
+        if (JavaVersion.current() == JavaVersion.VERSION_11) {
+            attributes('Add-Opens': 'java.management/com.sun.jmx.mbeanserver java.base/java.lang')
+        }
+    }
 }
 
-assemble.dependsOn buildWebserverJar
-
 artifacts {
+    archives buildWebserverJar
     runtimeArtifacts buildWebserverJar
     publish buildWebserverJar {
         classifier ''

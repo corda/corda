@@ -1,0 +1,39 @@
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+pipeline {
+    agent {
+        dockerfile {
+            label 'k8s'
+            additionalBuildArgs "--build-arg USER=stresstester"
+            filename '.ci/dev/compatibility/DockerfileJDK11'
+        }
+    }
+    options {
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+    }
+
+    stages {
+        stage('JDK 11 Compile') {
+            steps {
+                sh "./gradlew --no-daemon -Pcompilation.allWarningsAsErrors=true -Ptests.failFast=false " +
+                "-Ptests.ignoreFailures=true clean compileAll --stacktrace"
+            }
+        }
+        stage('Deploy nodes') {
+            steps {
+                sh "./gradlew --no-daemon deployNodes"
+            }
+        }
+    }
+
+    post {
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}

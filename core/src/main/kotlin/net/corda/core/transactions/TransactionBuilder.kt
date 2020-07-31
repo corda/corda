@@ -100,7 +100,7 @@ open class TransactionBuilder(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                references = references,
+                references = ArrayList(references),
                 serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
@@ -134,7 +134,7 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
-     * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
+     * @throws [ZoneVersionTooLowException] if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services, null)
@@ -516,7 +516,7 @@ open class TransactionBuilder(
             services: ServicesForResolution
     ): Boolean {
         return HashAttachmentConstraint.disableHashConstraints
-                && services.networkParameters.minimumPlatformVersion >= 4
+                && services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_HASH_TO_SIGNATURE_CONSTRAINTS
                 // `disableHashConstraints == true` therefore it does not matter if there are
                 // multiple input states with different hash constraints
                 && inputStates?.any { it.constraint is HashAttachmentConstraint } == true
@@ -534,8 +534,8 @@ open class TransactionBuilder(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse, services)
-        attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
-            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
+        attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS -> {
+            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of ${PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS}. Current is: ${services.networkParameters.minimumPlatformVersion}.")
             if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
                 log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
                 WhitelistedByZoneAttachmentConstraint
@@ -583,7 +583,10 @@ open class TransactionBuilder(
             throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
 
         // This ensures a smooth migration from a Whitelist Constraint to a Signature Constraint
-        constraints.any { it is WhitelistedByZoneAttachmentConstraint } && attachmentToUse.isSigned && services.networkParameters.minimumPlatformVersion >= 4 -> transitionToSignatureConstraint(constraints, attachmentToUse)
+        constraints.any { it is WhitelistedByZoneAttachmentConstraint } &&
+                attachmentToUse.isSigned &&
+                services.networkParameters.minimumPlatformVersion >= PlatformVersionSwitches.MIGRATE_ATTACHMENT_TO_SIGNATURE_CONSTRAINTS ->
+            transitionToSignatureConstraint(constraints, attachmentToUse)
 
         // This condition is hit when the current node has not installed the latest signed version but has already received states that have been migrated
         constraints.any { it is SignatureAttachmentConstraint } && !attachmentToUse.isSigned ->

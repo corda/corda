@@ -324,4 +324,17 @@ class TransactionVerificationExceptionSerialisationTests {
         assertEquals(exception.cause?.message, exception2.cause?.message)
         assertEquals(exception.txId, exception2.txId)
     }
+
+    @Test(timeout=300_000)
+    fun unsupportedClassVersionErrorTest() {
+        val cause = UnsupportedClassVersionError("wobble")
+        val exception = TransactionVerificationException.UnsupportedClassVersionError(txid, cause.message!!, cause)
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
+
+        assertEquals(exception.message, exception2.message)
+        assertEquals("java.lang.UnsupportedClassVersionError: ${exception.cause?.message}", exception2.cause?.message)
+        assertEquals(exception.txId, exception2.txId)
+    }
 }

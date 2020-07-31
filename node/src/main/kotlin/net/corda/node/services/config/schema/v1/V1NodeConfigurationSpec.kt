@@ -8,6 +8,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.*
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
+import net.corda.node.services.config.NodeConfigurationImpl.Defaults.reloadCheckpointAfterSuspend
 import net.corda.node.services.config.schema.parsers.*
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
@@ -47,6 +48,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val flowMonitorPeriodMillis by duration().optional().withDefaultValue(Defaults.flowMonitorPeriodMillis)
     private val flowMonitorSuspensionLoggingThresholdMillis by duration().optional().withDefaultValue(Defaults.flowMonitorSuspensionLoggingThresholdMillis)
     private val crlCheckSoftFail by boolean()
+    private val crlCheckArtemisServer by boolean().optional().withDefaultValue(Defaults.crlCheckArtemisServer)
     private val jmxReporterType by enum(JmxReporterType::class).optional().withDefaultValue(Defaults.jmxReporterType)
     private val baseDirectory by string().mapValid(::toPath)
     private val flowOverrides by nested(FlowOverridesConfigSpec).optional()
@@ -65,6 +67,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
             .withDefaultValue(Defaults.networkParameterAcceptanceSettings)
     private val flowExternalOperationThreadPoolSize by int().optional().withDefaultValue(Defaults.flowExternalOperationThreadPoolSize)
     private val quasarExcludePackages by string().list().optional().withDefaultValue(Defaults.quasarExcludePackages)
+    private val reloadCheckpointAfterSuspend by boolean().optional().withDefaultValue(Defaults.reloadCheckpointAfterSuspend)
     @Suppress("unused")
     private val custom by nestedObject().optional()
     @Suppress("unused")
@@ -76,7 +79,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val messagingServerExternal = config[messagingServerExternal] ?: Defaults.messagingServerExternal(config[messagingServerAddress])
         val database = config[database] ?: Defaults.database(config[devMode])
         val baseDirectoryPath = config[baseDirectory]
-        val cordappDirectories = config[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectoryPath)
+        val cordappDirectories = config[cordappDirectories]?.map { baseDirectoryPath.resolve(it) } ?: Defaults.cordappsDirectories(baseDirectoryPath)
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                     baseDirectory = baseDirectoryPath,
@@ -86,6 +89,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     keyStorePassword = config[keyStorePassword],
                     trustStorePassword = config[trustStorePassword],
                     crlCheckSoftFail = config[crlCheckSoftFail],
+                    crlCheckArtemisServer = config[crlCheckArtemisServer],
                     dataSourceProperties = config[dataSourceProperties],
                     rpcUsers = config[rpcUsers],
                     verifierType = config[verifierType],
@@ -125,13 +129,14 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     attachmentContentCacheSizeMegaBytes = config[attachmentContentCacheSizeMegaBytes],
                     h2port = config[h2port],
                     jarDirs = config[jarDirs],
-                    cordappDirectories = cordappDirectories.map { baseDirectoryPath.resolve(it) },
+                    cordappDirectories = cordappDirectories,
                     cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
                     blacklistedAttachmentSigningKeys = config[blacklistedAttachmentSigningKeys],
                     networkParameterAcceptanceSettings = config[networkParameterAcceptanceSettings],
                     configurationWithOptions = ConfigurationWithOptions(configuration, Configuration.Options.defaults),
                     flowExternalOperationThreadPoolSize = config[flowExternalOperationThreadPoolSize],
-                    quasarExcludePackages = config[quasarExcludePackages]
+                    quasarExcludePackages = config[quasarExcludePackages],
+                    reloadCheckpointAfterSuspend = config[reloadCheckpointAfterSuspend]
             ))
         } catch (e: Exception) {
             return when (e) {

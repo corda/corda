@@ -8,7 +8,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.messaging.DeduplicationHandler
-import java.util.*
+import java.util.UUID
 
 /**
  * Transitions in the flow state machine are triggered by [Event]s that may originate from the flow itself or from
@@ -41,7 +41,7 @@ sealed class Event {
      * Signal that an error has happened. This may be due to an uncaught exception in the flow or some external error.
      * @param exception the exception itself.
      */
-    data class Error(val exception: Throwable) : Event()
+    data class Error(val exception: Throwable, val rollback: Boolean = true) : Event()
 
     /**
      * Signal that a ledger transaction has committed. This is an event completing a [FlowIORequest.WaitForLedgerCommit]
@@ -105,18 +105,18 @@ sealed class Event {
      * @param progressStep the current progress tracker step.
      */
     data class Suspend(
-            val ioRequest: FlowIORequest<*>,
-            val maySkipCheckpoint: Boolean,
-            val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
-            var progressStep: ProgressTracker.Step?
+        val ioRequest: FlowIORequest<*>,
+        val maySkipCheckpoint: Boolean,
+        val fiber: SerializedBytes<FlowStateMachineImpl<*>>,
+        var progressStep: ProgressTracker.Step?
     ) : Event() {
         override fun toString() =
-                "Suspend(" +
-                        "ioRequest=$ioRequest, " +
-                        "maySkipCheckpoint=$maySkipCheckpoint, " +
-                        "fiber=${fiber.hash}, " +
-                        "currentStep=${progressStep?.label}" +
-                        ")"
+            "Suspend(" +
+                    "ioRequest=$ioRequest, " +
+                    "maySkipCheckpoint=$maySkipCheckpoint, " +
+                    "fiber=${fiber.hash}, " +
+                    "currentStep=${progressStep?.label}" +
+                    ")"
     }
 
     /**
@@ -148,10 +148,35 @@ sealed class Event {
     data class AsyncOperationThrows(val throwable: Throwable) : Event()
 
     /**
-     * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     * Retry a flow from its last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
      */
     object RetryFlowFromSafePoint : Event() {
         override fun toString() = "RetryFlowFromSafePoint"
+    }
+
+    /**
+     * Reload a flow from its last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     * This is separate from [RetryFlowFromSafePoint] which is used for error handling within the state machine.
+     * [ReloadFlowFromCheckpointAfterSuspend] is only used when [NodeConfiguration.reloadCheckpointAfterSuspend] is true.
+     */
+    object ReloadFlowFromCheckpointAfterSuspend : Event() {
+        override fun toString() = "ReloadFlowFromCheckpointAfterSuspend"
+    }
+
+    /**
+     * Keeps a flow for overnight observation. Overnight observation practically sends the fiber to get suspended,
+     * in [FlowStateMachineImpl.processEventsUntilFlowIsResumed]. Since the fiber's channel will have no more events to process,
+     * the fiber gets suspended (i.e. hospitalized).
+     */
+    object OvernightObservation : Event() {
+        override fun toString() = "OvernightObservation"
+    }
+
+    /**
+     * Wake a flow up from its sleep.
+     */
+    object WakeUpFromSleep : Event() {
+        override fun toString() = "WakeUpSleepyFlow"
     }
 
     /**

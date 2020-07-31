@@ -15,6 +15,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.Permissions
+import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
@@ -48,6 +49,38 @@ class CordaRPCClientReconnectionTest {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     }
+
+
+
+
+
+    @Test(timeout=300_000)
+    fun `rpc node start when FlowsDrainingModeEnabled throws RejectedCommandException and won't attempt to reconnect`() {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress,
+                    config.copy(maxReconnectAttempts = 1))
+
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                rpcOps.setFlowsDrainingModeEnabled(true)
+
+                assertThatThrownBy { rpcOps.startTrackedFlow(::CashIssueFlow, 10.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.get() }
+                        .isInstanceOf(RejectedCommandException::class.java).hasMessage("Node is draining before shutdown. Cannot start new flows through RPC.")
+            }
+        }
+    }
+
 
     @Test(timeout=300_000)
     fun `rpc client calls and returned observables continue working when the server crashes and restarts`() {
@@ -291,6 +324,29 @@ class CordaRPCClientReconnectionTest {
             // After two tries we throw RPCException
             assertThatThrownBy { connection.proxy.isWaitingForShutdown() }
                     .isInstanceOf(RPCException::class.java)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `rpc client does not attempt to reconnect after shutdown`() {
+        driver(DriverParameters(cordappsForAllNodes = emptyList())) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                        providedName = CHARLIE_NAME,
+                        rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                        customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                rpcOps.shutdown()
+                // If we get here we know we're not stuck in a reconnect cycle with a node that's been shut down
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
         }
     }
 }

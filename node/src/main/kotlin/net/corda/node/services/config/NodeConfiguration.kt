@@ -70,6 +70,7 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val crlCheckSoftFail: Boolean
+    val crlCheckArtemisServer: Boolean
     val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
 
     val baseDirectory: Path
@@ -91,6 +92,8 @@ interface NodeConfiguration : ConfigurationWithOptionsContainer {
     val flowExternalOperationThreadPoolSize: Int
 
     val quasarExcludePackages: List<String>
+
+    val reloadCheckpointAfterSuspend: Boolean
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -124,9 +127,13 @@ enum class JmxReporterType {
 }
 
 data class DevModeOptions(
-        val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
-        val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
-        val djvm: DJVMOptions? = null
+    @Deprecated(
+        "The checkpoint checker has been replaced by the ability to reload a checkpoint from the database after every suspend" +
+                "Use [NodeConfiguration.disableReloadCheckpointAfterSuspend] instead."
+    )
+    val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker,
+    val allowCompatibilityZone: Boolean = Defaults.allowCompatibilityZone,
+    val djvm: DJVMOptions? = null
 ) {
     internal object Defaults {
         val disableCheckpointChecker = false
@@ -139,10 +146,6 @@ data class DJVMOptions(
    val cordaSource: List<String>
 )
 
-fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
-    return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
-}
-
 fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
 fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
 fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
@@ -150,7 +153,7 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(
         /** Specifies whether the notary validates transactions or not. */
         val validating: Boolean,
-        /** The legal name of cluster in case of a distributed notary service. */
+        /** The legal name of the notary service identity. */
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
         val className: String? = null,

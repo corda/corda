@@ -50,13 +50,13 @@ class FinalityHandlerTest {
             getOrThrow()
         }
 
-        bob.assertFlowSentForObservationDueToConstraintError(finalityHandlerId)
+        bob.assertFlowSentForObservationDueToUntrustedAttachmentsException(finalityHandlerId)
         assertThat(bob.getTransaction(stx.id)).isNull()
 
         bob = mockNet.restartNode(bob)
         // Since we've not done anything to fix the orignal error, we expect the finality handler to be sent to the hospital
         // again on restart
-        bob.assertFlowSentForObservationDueToConstraintError(finalityHandlerId)
+        bob.assertFlowSentForObservationDueToUntrustedAttachmentsException(finalityHandlerId)
         assertThat(bob.getTransaction(stx.id)).isNull()
     }
 
@@ -96,7 +96,7 @@ class FinalityHandlerTest {
                 .ofType(R::class.java)
     }
 
-    private fun TestStartedNode.assertFlowSentForObservationDueToConstraintError(runId: StateMachineRunId) {
+    private fun TestStartedNode.assertFlowSentForObservationDueToUntrustedAttachmentsException(runId: StateMachineRunId) {
         val observation = medicalRecordsOfType<MedicalRecord.Flow>()
                 .filter { it.flowId == runId }
                 .toBlocking()
@@ -104,7 +104,7 @@ class FinalityHandlerTest {
         assertThat(observation.outcome).isEqualTo(Outcome.OVERNIGHT_OBSERVATION)
         assertThat(observation.by).contains(FinalityDoctor)
         val error = observation.errors.single()
-        assertThat(error).isInstanceOf(TransactionVerificationException.ContractConstraintRejection::class.java)
+        assertThat(error).isInstanceOf(TransactionVerificationException.UntrustedAttachmentsException::class.java)
     }
 
     private fun TestStartedNode.getTransaction(id: SecureHash): SignedTransaction? {

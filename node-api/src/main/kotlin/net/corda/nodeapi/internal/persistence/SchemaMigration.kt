@@ -265,8 +265,7 @@ class OutstandingDatabaseChangesException(@Suppress("MemberVisibilityCanBePrivat
 
 class CheckpointsException : DatabaseMigrationException("Attempting to update the database while there are flows in flight. " +
         "This is dangerous because the node might not be able to restore the flows correctly and could consequently fail. " +
-        "Updating the database would make reverting to the previous version more difficult. " +
-        "Please drain your node first. See: https://docs.corda.net/upgrading-cordapps.html#flow-drains")
+        "Updating the database would make reverting to the previous version more difficult.")
 
 class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") private val reason: String) : DatabaseMigrationException(errorMessageFor(reason)) {
     internal companion object {

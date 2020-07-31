@@ -259,6 +259,24 @@ class NodeAttachmentServiceTest {
     }
 
     @Test(timeout=300_000)
+    fun `AttachmentsQueryCriteria returns empty resultset without errors if there is an empty list after the 'in' clause`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            contractJar.read { storage.importAttachment(it, "uploaderB", "contract.jar") }
+
+            assertEquals(
+                    1,
+                    storage.queryAttachments(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")))).size
+            )
+
+            assertEquals(
+                    0,
+                    storage.queryAttachments(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(emptyList()))).size
+            )
+        }
+    }
+
+    @Test(timeout=300_000)
 	fun `contract class, versioning and signing metadata can be used to search`() {
         SelfCleaningDir().use { file ->
             val (sampleJar, _) = makeTestJar()

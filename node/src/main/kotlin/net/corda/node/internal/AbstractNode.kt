@@ -6,6 +6,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.zaxxer.hikari.pool.HikariPool
+import net.corda.common.logging.errorReporting.NodeDatabaseErrors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -58,6 +59,8 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCache
+import net.corda.core.serialization.internal.AttachmentsClassLoaderCacheImpl
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NetworkHostAndPort
@@ -106,6 +109,8 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NetworkParameterUpdateListener
+import net.corda.node.services.network.NetworkParametersHotloader
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.AbstractPartyDescriptor
@@ -131,7 +136,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BasicVerifierFactoryService
 import net.corda.node.services.transactions.DeterministicVerifierFactoryService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.VerifierFactoryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
@@ -152,8 +156,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_KEY_ALIAS
-import net.corda.node.utilities.cryptoservice.CryptoServiceFactory
-import net.corda.node.utilities.cryptoservice.SupportedCryptoServices
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEventsDistributor
@@ -163,7 +166,10 @@ import net.corda.nodeapi.internal.persistence.CordaTransactionSupportImpl
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.OutstandingDatabaseChangesException
+import net.corda.nodeapi.internal.persistence.RestrictedConnection
+import net.corda.nodeapi.internal.persistence.RestrictedEntityManager
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -178,10 +184,11 @@ import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 import java.sql.Connection
+import java.sql.Savepoint
 import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -191,7 +198,6 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import kotlin.collections.ArrayList
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -267,11 +273,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         configuration.devMode
     ).tokenize()
     val attachmentTrustCalculator = makeAttachmentTrustCalculator(configuration, database)
-    val cryptoService = CryptoServiceFactory.makeCryptoService(
-            SupportedCryptoServices.BC_SIMPLE,
-            configuration.myLegalName,
-            configuration.signingCertificateStore
-    )
+    @Suppress("LeakingThis")
+    val cryptoService = makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
@@ -318,6 +321,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     } else {
         BasicVerifierFactoryService()
     }
+    private val attachmentsClassLoaderCache: AttachmentsClassLoaderCache = AttachmentsClassLoaderCacheImpl(cacheFactory).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
@@ -373,6 +377,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private var _started: S? = null
 
     private val checkpointDumper = CheckpointDumperImpl(checkpointStorage, database, services, services.configuration.baseDirectory)
+
+    private var notaryService: NotaryService? = null
 
     private val nodeServicesContext = object : NodeServicesContext {
         override val platformVersion = versionInfo.platformVersion
@@ -459,6 +465,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    @Suppress("ComplexMethod")
     open fun start(): S {
         check(started == null) { "Node has already been started" }
 
@@ -484,7 +491,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         startShell()
         networkMapClient?.start(trustRoot)
 
-        val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
+        val networkParametersReader = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory)
+        val (netParams, signedNetParams) = networkParametersReader.read()
         log.info("Loaded network parameters: $netParams")
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
@@ -505,13 +513,27 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
+
+        val networkParametersHotloader = if (networkMapClient == null) {
+            null
+        } else {
+            NetworkParametersHotloader(networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
+                it.addNotaryUpdateListener(networkMapCache)
+                it.addNotaryUpdateListener(identityService)
+                it.addNetworkParametersChangedListeners(services)
+                it.addNetworkParametersChangedListeners(networkMapUpdater)
+            }
+        }
+
         networkMapUpdater.start(
                 trustRoot,
                 signedNetParams.raw.hash,
                 signedNodeInfo,
                 netParams,
                 keyManagementService,
-                configuration.networkParameterAcceptanceSettings!!)
+                configuration.networkParameterAcceptanceSettings!!,
+                networkParametersHotloader)
+
         try {
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
@@ -531,8 +553,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs)
-            val notaryService = maybeStartNotaryService(myNotaryIdentity)
             installCordaServices()
+            notaryService = maybeStartNotaryService(myNotaryIdentity)
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -611,11 +633,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
-                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryServiceIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
-                // In case of a single notary service myNotaryIdentity will be the node's single identity.
+                // The only case where the myNotaryIdentity will be the node's legal identity is for existing single notary services running
+                // an older version. Current single notary services (V4.6+) sign requests using a separate notary service identity so the
+                // notary identity will be different from the node's legal identity.
+
+                // This check is here to ensure that a user does not accidentally/intentionally remove the serviceLegalName configuration
+                // parameter after a notary has been registered. If that was possible then notary would start and sign incoming requests
+                // with the node's legal identity key, corrupting the data.
+                check (!cryptoService.containsKey(DISTRIBUTED_NOTARY_KEY_ALIAS)) {
+                    "The notary service key exists in the key store but no notary service legal name has been configured. " +
+                    "Either include the relevant 'notary.serviceLegalName' configuration or validate this key is not necessary " +
+                    "and remove from the key store."
+                }
                 identity
             }
         }
@@ -778,10 +811,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         )
     }
 
-    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
-        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
-    }
-
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices() {
@@ -883,6 +912,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
     }
 
+    protected open fun makeCryptoService(): CryptoService {
+        return BCCryptoService(configuration.myLegalName.x500Principal, configuration.signingCertificateStore)
+    }
+
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
@@ -907,8 +940,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
-                        "Read more at: https://docs.corda.net/permissioning.html"
+                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
             }
         } catch (e: KeyStoreException) {
             throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
@@ -1051,8 +1083,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /** Loads pre-generated notary service cluster identity. */
-    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+    /**
+     * Loads notary service identity. In the case of the experimental RAFT and BFT notary clusters, this loads the pre-generated
+     * cluster identity that all worker nodes share. In the case of a simple single notary, this loads the notary service identity
+     * that is generated during initial registration and is used to sign notarisation requests.
+     * */
+    private fun loadNotaryServiceIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
         val privateKeyAlias = "$DISTRIBUTED_NOTARY_KEY_ALIAS"
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS"
 
@@ -1137,7 +1173,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution {
+    inner class ServiceHubInternalImpl : SingletonSerializeAsToken(), ServiceHubInternal, ServicesForResolution by servicesForResolution, NetworkParameterUpdateListener {
         override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
         override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage(database)
         override val identityService: IdentityService get() = this@AbstractNode.identityService
@@ -1163,10 +1199,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val attachmentTrustCalculator: AttachmentTrustCalculator get() = this@AbstractNode.attachmentTrustCalculator
         override val diagnosticsService: DiagnosticsService get() = this@AbstractNode.diagnosticsService
         override val externalOperationExecutor: ExecutorService get() = this@AbstractNode.externalOperationExecutor
+        override val notaryService: NotaryService? get() = this@AbstractNode.notaryService
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
 
+        override val attachmentsClassLoaderCache: AttachmentsClassLoaderCache get() = this@AbstractNode.attachmentsClassLoaderCache
+
+        @Volatile
         private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
@@ -1185,13 +1225,57 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
-        override fun jdbcSession(): Connection = database.createSession()
+        /**
+         * Exposes the database connection as a [RestrictedConnection] to the users.
+         */
+        override fun jdbcSession(): Connection = RestrictedConnection(database.createSession())
 
+        @Suppress("TooGenericExceptionCaught")
         override fun <T : Any?> withEntityManager(block: EntityManager.() -> T): T {
-            return database.transaction {
+            return database.transaction(useErrorHandler = false) {
                 session.flush()
-                block(restrictedEntityManager)
+                val manager = entityManager
+                withSavePoint { savepoint ->
+                    // Restrict what entity manager they can use inside the block
+                    try {
+                        block(RestrictedEntityManager(manager)).also {
+                            if (!manager.transaction.rollbackOnly) {
+                                manager.flush()
+                            } else {
+                                connection.rollback(savepoint)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        if (manager.transaction.rollbackOnly) {
+                            connection.rollback(savepoint)
+                        }
+                        throw e
+                    } finally {
+                        manager.close()
+                    }
+                }
             }
+        }
+
+        private fun <T: Any?> DatabaseTransaction.withSavePoint(block: (savepoint: Savepoint) -> T) : T {
+            val savepoint = connection.setSavepoint()
+            return try {
+                block(savepoint)
+            } finally {
+                // Release the save point even if we occur an error
+                if (savepoint.supportsReleasing()) {
+                    connection.releaseSavepoint(savepoint)
+                }
+            }
+        }
+
+        /**
+         * Not all databases support releasing of savepoints.
+         * The type of savepoints are referenced by string names since we do not have access to the JDBC drivers
+         * at compile time.
+         */
+        private fun Savepoint.supportsReleasing(): Boolean {
+            return this::class.simpleName != "SQLServerSavepoint" && this::class.simpleName != "OracleSavepoint"
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
@@ -1208,6 +1292,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun specialise(ltx: LedgerTransaction): LedgerTransaction {
             val ledgerTransaction = servicesForResolution.specialise(ltx)
             return verifierFactoryService.apply(ledgerTransaction)
+        }
+
+        override fun onNewNetworkParameters(networkParameters: NetworkParameters) {
+            this._networkParameters = networkParameters
         }
     }
 }
@@ -1305,10 +1393,22 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         start(dataSource)
     } catch (ex: Exception) {
         when {
-            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException(
+                    "Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.",
+                    NodeDatabaseErrors.COULD_NOT_CONNECT,
+                    cause = ex)
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
+                    "Could not find the database driver class. Please add it to the 'drivers' folder.",
+                    NodeDatabaseErrors.MISSING_DRIVER)
             ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
-            else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
+            else -> {
+                val msg = ex.message ?: ex::class.java.canonicalName
+                throw CouldNotCreateDataSourceException(
+                        "Could not create the DataSource: ${ex.message}",
+                        NodeDatabaseErrors.FAILED_STARTUP,
+                        cause = ex,
+                        parameters = listOf(msg))
+            }
         }
     }
 }

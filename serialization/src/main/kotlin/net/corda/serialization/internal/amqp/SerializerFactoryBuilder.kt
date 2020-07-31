@@ -97,13 +97,11 @@ object SerializerFactoryBuilder {
                             mustPreserveDataWhenEvolving: Boolean): SerializerFactory {
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
 
-        val localTypeModel = ConfigurableLocalTypeModel(
-                WhitelistBasedTypeModelConfiguration(
-                        whitelist,
-                        customSerializerRegistry))
+        val typeModelConfiguration = WhitelistBasedTypeModelConfiguration(whitelist, customSerializerRegistry)
+        val localTypeModel = ConfigurableLocalTypeModel(typeModelConfiguration)
 
         val fingerPrinter = overrideFingerPrinter ?:
-            TypeModellingFingerPrinter(customSerializerRegistry)
+            TypeModellingFingerPrinter(customSerializerRegistry, classCarpenter.classloader)
 
         val localSerializerFactory = DefaultLocalSerializerFactory(
                 whitelist,
@@ -124,7 +122,8 @@ object SerializerFactoryBuilder {
                 localSerializerFactory,
                 classCarpenter.classloader,
                 mustPreserveDataWhenEvolving,
-                javaPrimitiveTypes
+                javaPrimitiveTypes,
+                typeModelConfiguration.baseTypes
         ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(

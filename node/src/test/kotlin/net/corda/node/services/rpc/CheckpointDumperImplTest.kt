@@ -10,23 +10,17 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
 import net.corda.core.internal.readFully
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.core.utilities.toNonEmptySet
-import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
-import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.persistence.CheckpointPerformanceRecorder
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -35,6 +29,8 @@ import net.corda.node.services.statemachine.CheckpointState
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.statemachine.FlowState
 import net.corda.node.services.statemachine.SubFlowVersion
+import net.corda.nodeapi.internal.lifecycle.NodeLifecycleEvent
+import net.corda.nodeapi.internal.lifecycle.NodeServicesContext
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -45,12 +41,10 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.util.zip.ZipInputStream
-import kotlin.test.assertEquals
 
 class CheckpointDumperImplTest {
 
@@ -114,7 +108,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -129,14 +123,14 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
         val newCheckpoint = checkpoint.copy(
             flowState = FlowState.Completed,
             status = Checkpoint.FlowStatus.COMPLETED
         )
         database.transaction {
-            checkpointStorage.updateCheckpoint(id, newCheckpoint, null)
+            checkpointStorage.updateCheckpoint(id, newCheckpoint, null, serializeCheckpointState(newCheckpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -169,7 +163,7 @@ class CheckpointDumperImplTest {
         // add a checkpoint
         val (id, checkpoint) = newCheckpoint()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint))
+            checkpointStorage.addCheckpoint(id, checkpoint, serializeFlowState(checkpoint), serializeCheckpointState(checkpoint))
         }
 
         dumper.dumpCheckpoints()
@@ -206,5 +200,9 @@ class CheckpointDumperImplTest {
 
     private fun serializeFlowState(checkpoint: Checkpoint): SerializedBytes<FlowState> {
         return checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+    }
+
+    private fun serializeCheckpointState(checkpoint: Checkpoint): SerializedBytes<CheckpointState> {
+        return checkpoint.checkpointState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 }

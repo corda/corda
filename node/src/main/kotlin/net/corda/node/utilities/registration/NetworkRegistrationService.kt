@@ -1,7 +1,6 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.CordaException
-import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.X509Certificate
 import java.time.Duration

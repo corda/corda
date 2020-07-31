@@ -252,7 +252,7 @@ interface CordaRPCOps : RPCOps {
      * Note: This operation may be restricted only to node administrators.
      * @param parametersHash hash of network parameters to accept
      * @throws IllegalArgumentException if network map advertises update with different parameters hash then the one accepted by node's operator.
-     * @throws IOException if failed to send the approval to network map
+     * @throws [IOException] if failed to send the approval to network map
      */
     // TODO This operation should be restricted to just node admins.
     fun acceptNewNetworkParameters(parametersHash: SecureHash)
@@ -302,7 +302,12 @@ interface CordaRPCOps : RPCOps {
     /** Checks whether an attachment with the given hash is stored on the node. */
     fun attachmentExists(id: SecureHash): Boolean
 
-    /** Download an attachment JAR by ID. */
+    /**
+     * Download an attachment JAR by ID.
+     * @param id the id of the attachment to open
+     * @return the stream of the JAR
+     * @throws RPCException if the attachment doesn't exist
+     * */
     fun openAttachment(id: SecureHash): InputStream
 
     /** Uploads a jar to the node, returns it's hash. */
