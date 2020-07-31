@@ -74,6 +74,23 @@ class NetworkParametersReaderTest {
     }
 
     @Test(timeout=300_000)
+    fun `read correct set of parameters from specified network parameters path`() {
+        val baseDirectory = fs.getPath("/node").createDirectories()
+        val networkParamsPath = (baseDirectory / "network").createDirectories()
+        val oldParameters = testNetworkParameters(epoch = 1)
+        NetworkParametersCopier(oldParameters).install(networkParamsPath)
+        NetworkParametersCopier(server.networkParameters, update = true).install(networkParamsPath) // Parameters update file.
+        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory, networkParamsPath).read().networkParameters
+        assertFalse((networkParamsPath / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
+        assertEquals(server.networkParameters, parameters)
+        // Parameters from update should be moved to `network-parameters` file.
+        val parametersFromFile = (networkParamsPath / NETWORK_PARAMS_FILE_NAME)
+                .readObject<SignedNetworkParameters>()
+                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        assertEquals(server.networkParameters, parametersFromFile)
+    }
+
+    @Test(timeout=300_000)
 	fun `read network parameters from file when network map server is down`() {
         server.close()
         val baseDirectory = fs.getPath("/node").createDirectories()

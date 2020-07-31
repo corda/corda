@@ -332,6 +332,18 @@ class NodeConfigurationImplTest {
         assertTrue(rawConfig.parseAsNodeConfiguration().value().crlCheckArtemisServer)
     }
 
+    @Test(timeout=3_000)
+    fun `network parameters path is set as specified by node config`() {
+        val nodeConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("networkParametersPath" to "./network"))).parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath.toString(), "./network")
+    }
+
+    @Test(timeout=3_000)
+    fun `network parameters path defaults to base directory`() {
+        val nodeConfig = getConfig("working-config.conf").parseAsNodeConfiguration().value()
+        assertEquals(nodeConfig.networkParametersPath, nodeConfig.baseDirectory)
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
