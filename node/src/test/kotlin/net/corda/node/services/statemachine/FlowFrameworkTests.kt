@@ -64,7 +64,6 @@ import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.getMessage
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
-import org.apache.commons.lang3.exception.ExceptionUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -817,7 +816,7 @@ class FlowFrameworkTests {
 
         var firstRun = true
         var counter = 0
-        val flowHospitalizedTwice = Semaphore(-1)
+        val waitUntilHospitalizedTwice = Semaphore(-1)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
             ++counter
             if (firstRun) {
@@ -829,9 +828,9 @@ class FlowFrameworkTests {
                     fiber.scheduleEvent(Event.RetryFlowFromSafePoint)
                 }
             }
-            flowHospitalizedTwice.release()
+            waitUntilHospitalizedTwice.release()
         }
-        flowHospitalizedTwice.acquire()
+        waitUntilHospitalizedTwice.acquire()
         assertEquals(2, counter)
     }
     //region Helpers
