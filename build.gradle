@@ -1,5 +1,4 @@
 import com.r3.testing.DistributeTestsBy
-import com.r3.testing.ParallelTestGroup
 import com.r3.testing.PodLogLevel
 
 import static org.gradle.api.JavaVersion.VERSION_11
@@ -218,9 +217,12 @@ buildscript {
         // Capsule gradle plugin forked and maintained locally to support Gradle 5.x
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
-        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
-        classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
+        classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.3-SNAPSHOT", changing: true
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
+    }
+
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
 
@@ -235,7 +237,7 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: "com.bmuschko.docker-remote-api"
+apply plugin: 'com.r3.testing.distributed-testing'
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
@@ -733,77 +735,45 @@ buildScan {
     termsOfServiceAgree = 'yes'
 }
 
-ext.generalPurpose  = [
-        numberOfShards: 15,
-        streamOutput: false,
-        coresPerFork: 2,
-        memoryInGbPerFork: 12,
-        nodeTaints: "small"
-]
+distributedTesting {
+    profilesURL = 'https://raw.githubusercontent.com/corda/infrastructure-profiles/master'
 
-ext.largeScaleSet  = [
-        numberOfShards: 15,
-        streamOutput: false,
-        coresPerFork: 6,
-        memoryInGbPerFork: 10,
-        nodeTaints: "big"
-]
+    parallelTestGroups {
+        allParallelIntegrationTest {
+            testGroups 'integrationTest'
+            profile 'generalPurpose.yml'
+            podLogLevel PodLogLevel.INFO
+            distribution DistributeTestsBy.METHOD
+        }
+        allParallelUnitTest {
+            podLogLevel PodLogLevel.INFO
+            testGroups 'test'
+            profile 'generalPurpose.yml'
+            distribution DistributeTestsBy.CLASS
+        }
+        allParallelUnitAndIntegrationTest {
+            testGroups 'test', 'integrationTest'
+            profile 'generalPurpose.yml'
+            distribution DistributeTestsBy.METHOD
+        }
+        parallelRegressionTest {
+            testGroups 'test', 'integrationTest', 'smokeTest'
+            profile 'generalPurpose.yml'
+            distribution DistributeTestsBy.METHOD
+        }
+        allParallelSmokeTest {
+            testGroups 'smokeTest'
+            profile 'generalPurpose.yml'
+            distribution DistributeTestsBy.METHOD
+        }
+        allParallelSlowIntegrationTest {
+            testGroups 'slowIntegrationTest'
+            profile 'generalPurpose.yml'
+            distribution DistributeTestsBy.METHOD
+        }
+    }
 
-task allParallelIntegrationTest(type: ParallelTestGroup) {
-    podLogLevel PodLogLevel.INFO
-    testGroups "integrationTest"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.METHOD
+    ignoredTests = [
+        ':core-deterministic:testing:data:test'
+    ]
 }
-task allParallelUnitTest(type: ParallelTestGroup) {
-    podLogLevel PodLogLevel.INFO
-    testGroups "test"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.CLASS
-}
-task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
-    testGroups "test", "integrationTest"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.METHOD
-}
-task parallelRegressionTest(type: ParallelTestGroup) {
-    testGroups "test", "integrationTest", "smokeTest"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.METHOD
-}
-task allParallelSmokeTest(type: ParallelTestGroup) {
-    testGroups "smokeTest"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.METHOD
-}
-task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
-    testGroups "slowIntegrationTest"
-    numberOfShards generalPurpose.numberOfShards
-    streamOutput generalPurpose.streamOutput
-    coresPerFork generalPurpose.coresPerFork
-    memoryInGbPerFork generalPurpose.memoryInGbPerFork
-    nodeTaints generalPurpose.nodeTaints
-    distribute DistributeTestsBy.METHOD
-}
-apply plugin: 'com.r3.testing.distributed-testing'
-apply plugin: 'com.r3.testing.image-building'
