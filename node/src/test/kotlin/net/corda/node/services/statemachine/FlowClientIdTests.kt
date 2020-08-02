@@ -181,8 +181,6 @@ class FlowClientIdTests {
         Assert.assertEquals(result0, result1)
     }
 
-    // TODO: this is to be unignored upon implementing CORDA-3681 (saving of exception blob in the database)
-    @Ignore
     @Test(timeout=300_000)
     fun `failing flow's exception is available after flow's lifetime if flow is started with a client id`() {
         ResultFlow.hook = { throw IllegalStateException() }
@@ -192,21 +190,7 @@ class FlowClientIdTests {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         }
 
-        // assert DB status
-//        aliceNode.database.transaction {
-//            val checkpoint = aliceNode.internals.checkpointStorage.checkpoints().single()
-//            Assert.assertEquals(Checkpoint.FlowStatus.FAILED, checkpoint.status)
-//
-//            // assert all fields of DBFlowException
-//            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
-//            Assert.assertEquals(FlowException::class.java.name, persistedException!!.type)
-//            Assert.assertEquals("Just an exception", persistedException.message)
-//            Assert.assertEquals(ExceptionUtils.getStackTrace(e), persistedException.stackTrace)
-//            // TODO: this needs change once we save the exception blob
-//            Assert.assertEquals(null, persistedException.value)
-//        }
-
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<CordaRuntimeException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         }
     }
@@ -526,7 +510,6 @@ class FlowClientIdTests {
         }
     }
 
-    // TODO: Hospitalization tests -> ()
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {

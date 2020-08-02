@@ -533,6 +533,10 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
     }
 
+    private fun getDBFlowException(id: StateMachineRunId): DBFlowException? {
+        return currentDBSession().find(DBFlowException::class.java, id.uuid.toString())
+    }
+
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
@@ -565,6 +569,15 @@ class DBCheckpointStorage(
         }
         val serializedFlowResult = dbFlowResult?.value?.let { SerializedBytes<Any>(it) }
         return serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
+    override fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean): Any? {
+        val dbFlowException = getDBFlowException(id)
+        if (throwIfMissing && dbFlowException == null) {
+            throw IllegalStateException("Flow's $id exception was not found in the database. Something is very wrong.")
+        }
+        val serializedFlowException = dbFlowException?.value?.let { SerializedBytes<Any>(it) }
+        return serializedFlowException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
     }
 
     override fun removeFlowException(id: StateMachineRunId): Boolean {
