@@ -367,6 +367,7 @@ class FlowClientIdTests {
         Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
     }
 
+    // the below test has to be made available only in ENT
 //    @Test(timeout=300_000)
 //    fun `on node restart -paused- flows with client id are hook-able`() {
 //        val clientId = UUID.randomUUID().toString()
@@ -465,6 +466,7 @@ class FlowClientIdTests {
         assertEquals(1, counter)
     }
 
+    // the below test has to be made available only in ENT
 //    @Test(timeout=300_000)
 //    fun `On 'startFlowInternal' throwing, subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
 //        val clientId = UUID.randomUUID().toString()
