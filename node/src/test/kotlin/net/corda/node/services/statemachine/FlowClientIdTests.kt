@@ -184,16 +184,28 @@ class FlowClientIdTests {
 
     @Test(timeout=300_000)
     fun `failing flow's exception is available after flow's lifetime if flow is started with a client id`() {
-        ResultFlow.hook = { throw IllegalStateException() }
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+            throw IllegalStateException()
+        }
         val clientId = UUID.randomUUID().toString()
 
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
         assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
         }
 
+        var flowHandle1: FlowStateMachineHandle<Int>? = null
         assertFailsWith<CordaRuntimeException> {
-            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+            flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle1!!.resultFuture.getOrThrow()
         }
+
+        // Assert no new flow has started
+        assertEquals(flowHandle0!!.id, flowHandle1!!.id)
+        assertEquals(1, counter)
     }
 
     @Test(timeout=300_000)
@@ -204,8 +216,8 @@ class FlowClientIdTests {
             throw IllegalStateException()
         }
         val clientId = UUID.randomUUID().toString()
-        var flowHandle0: FlowStateMachineHandle<Int>? = null
 
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
         assertFailsWith<IllegalStateException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
             flowHandle0!!.resultFuture.getOrThrow()
