@@ -452,6 +452,7 @@ class DBCheckpointStorageTests {
             assertEquals(exception::class.java.name, exceptionDetails!!.type)
             assertEquals(exception.message, exceptionDetails.message)
             val deserializedException = exceptionDetails.value?.let { SerializedBytes<Any>(it) }?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            // IllegalStateException does not implement [CordaThrowable] therefore gets deserialized as a [CordaRuntimeException]
             assertTrue(deserializedException is CordaRuntimeException)
             val cordaRuntimeException = deserializedException as CordaRuntimeException
             assertEquals(IllegalStateException::class.java.name, cordaRuntimeException.originalExceptionClassName)
