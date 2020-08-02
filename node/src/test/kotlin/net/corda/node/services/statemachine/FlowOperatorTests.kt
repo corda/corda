@@ -21,7 +21,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
-@Suppress("TooGenericExceptionCaught")
 class FlowOperatorTests {
 
     companion object {
@@ -42,7 +41,7 @@ class FlowOperatorTests {
     private lateinit var carolParty: Party
     lateinit var daveNode: TestStartedNode
     lateinit var daveParty: Party
-    lateinit var eugeneNode: TestStartedNode
+    private lateinit var eugeneNode: TestStartedNode
     private lateinit var eugeneParty: Party
 
     @Before
@@ -73,6 +72,7 @@ class FlowOperatorTests {
         daveParty = daveNode.info.legalIdentities.first()
         eugeneParty = eugeneNode.info.legalIdentities.first()
 
+        // put nodes offline, alice and carol are staying online
         bobNode.dispose()
         daveNode.dispose()
         eugeneNode.dispose()
@@ -85,13 +85,11 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return all flows which are waiting for other party to process`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        carolNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
+        carolNode.registerCordappFlowFactory(TestReceiveInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
 
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(bobParty))).resultFuture
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
-        carolNode.services.startFlow(TestInitiatingFlow("Hello", listOf(carolParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        carolNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(carolParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -115,11 +113,8 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return only requested by party flows which are waiting for other party to process`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(bobParty))).resultFuture
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -133,12 +128,32 @@ class FlowOperatorTests {
     }
 
     @Test(timeout=300_000)
-    fun `getFlowsCurrentlyWaitingForParties should return only flows which are waiting for other party to process and not in the hospital`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
+    fun `getFlowsCurrentlyWaitingForParties should return all parties in a flow which are waiting for other parties to process`() {
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty, daveParty))).resultFuture
 
-        aliceNode.services.startFlow(TestInitiatingFlow("Fail", listOf(bobParty))).resultFuture
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        Thread.sleep(1000) // let time to settle all flow states properly
+
+        val result1 = cut.getFlowsCurrentlyWaitingForParties(listOf(aliceParty, bobParty, carolParty, daveParty, eugeneParty))
+
+        assertEquals(1, result1.size)
+        assertEquals(2, result1.first().waitingForParties.size)
+        val firstName = result1.first().waitingForParties.first().name
+        val lastName = result1.first().waitingForParties.last().name
+        assertNotEquals(firstName, lastName)
+        if(firstName == bobX500Name) {
+            assertEquals(daveX500Name, lastName)
+        } else {
+            assertEquals(daveX500Name, firstName)
+            assertEquals(bobX500Name, lastName)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `getFlowsCurrentlyWaitingForParties should return only flows which are waiting for other party to process and not in the hospital`() {
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Fail", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -153,12 +168,9 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForParties should return only flows which are waiting more than 4 seconds for other party to process`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty))).resultFuture
         Thread.sleep(4500) // let time to settle all flow states properly
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -173,11 +185,8 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getFlowsCurrentlyWaitingForPartiesGrouped should return all flows which are waiting for other party to process grouped by party`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(bobParty))).resultFuture
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -196,11 +205,8 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getWaitingFlows should return all flow state machines which are waiting for other party to process`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(bobParty))).resultFuture
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(bobParty))).resultFuture
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -212,13 +218,9 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `getWaitingFlows should return only requested by id flows which are waiting for other party to process`() {
-        bobNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        daveNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-        eugeneNode.registerCordappFlowFactory(TestInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
-        val bobStart = aliceNode.services.startFlow(TestInitiatingFlow("Fail", listOf(bobParty)))
-        aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(daveParty)))
-        val eugeneStart = aliceNode.services.startFlow(TestInitiatingFlow("Hello", listOf(eugeneParty)))
+        val bobStart = aliceNode.services.startFlow(TestReceiveInitiatingFlow("Fail", listOf(bobParty)))
+        aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(daveParty)))
+        val eugeneStart = aliceNode.services.startFlow(TestReceiveInitiatingFlow("Hello", listOf(eugeneParty)))
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
 
@@ -233,8 +235,6 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `should return all flows which are waiting for getting info about other party`() {
-        eugeneNode.registerCordappFlowFactory(TestSendStuckInGetFlowInfoFlow::class) { TestAcceptingFlow("Hello", it) }
-
         aliceNode.services.startFlow(TestSendStuckInGetFlowInfoFlow("Hello", listOf(eugeneParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
@@ -250,8 +250,6 @@ class FlowOperatorTests {
 
     @Test(timeout=300_000)
     fun `should return all flows which are waiting for sending and receiving from other party`() {
-        eugeneNode.registerCordappFlowFactory(TestSendAndReceiveInitiatingFlow::class) { TestAcceptingFlow("Hello", it) }
-
         aliceNode.services.startFlow(TestSendAndReceiveInitiatingFlow("Hello", listOf(eugeneParty))).resultFuture
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
@@ -266,24 +264,7 @@ class FlowOperatorTests {
     }
 
     @InitiatingFlow
-    class TestSendStuckInGetFlowInfoFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<FlowInfo>() {
-        init {
-            require(otherParties.isNotEmpty())
-        }
-
-        @Suspendable
-        override fun call(): FlowInfo {
-            val flowInfo = otherParties.map {
-                val session = initiateFlow(it)
-                session.send(payload)
-                session.getCounterpartyFlowInfo()
-            }.toList()
-            return flowInfo.first()
-        }
-    }
-
-    @InitiatingFlow
-    class TestInitiatingFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<Unit>() {
+    class TestReceiveInitiatingFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -293,14 +274,13 @@ class FlowOperatorTests {
             if(payload == "Fail") {
                 error(payload)
             }
-            val sessions = otherParties.map {
-                val session = initiateFlow(it)
-                session.send(payload)
-                session
+
+            val sessions = mutableMapOf<FlowSession, Class<out Any>>()
+            otherParties.forEach {
+                sessions[initiateFlow(it)] = String::class.java
             }
-            sessions.forEach {
-                it.receive<String>()
-            }
+
+            receiveAllMap(sessions)
         }
     }
 
@@ -319,6 +299,23 @@ class FlowOperatorTests {
                 val session = initiateFlow(it)
                 session.sendAndReceive<String>(payload)
             }
+        }
+    }
+
+    @InitiatingFlow
+    class TestSendStuckInGetFlowInfoFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<FlowInfo>() {
+        init {
+            require(otherParties.isNotEmpty())
+        }
+
+        @Suspendable
+        override fun call(): FlowInfo {
+            val flowInfo = otherParties.map {
+                val session = initiateFlow(it)
+                session.send(payload)
+                session.getCounterpartyFlowInfo()
+            }.toList()
+            return flowInfo.first()
         }
     }
 
