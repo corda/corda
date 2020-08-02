@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -193,6 +194,34 @@ class FlowClientIdTests {
         assertFailsWith<CordaRuntimeException> {
             aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
         }
+    }
+
+    @Test(timeout=300_000)
+    fun `failed flow's exception is available after flow's lifetime on node start if flow was started with a client id`() {
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+            throw IllegalStateException()
+        }
+        val clientId = UUID.randomUUID().toString()
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+
+        assertFailsWith<IllegalStateException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        aliceNode = mockNet.restartNode(aliceNode)
+
+        var flowHandle1: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<CordaRuntimeException> {
+            flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle1!!.resultFuture.getOrThrow()
+        }
+
+        // Assert no new flow has started
+        assertEquals(flowHandle0!!.id, flowHandle1!!.id)
+        assertEquals(1, counter)
     }
 
     @Test(timeout=300_000)

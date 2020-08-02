@@ -738,7 +738,6 @@ class DBCheckpointStorageTests {
         }
     }
 
-    // This test needs modification once CORDA-3681 is implemented to include FAILED flows as well
     @Test(timeout = 300_000)
     fun `'getFinishedFlowsResultsMetadata' fetches flows results metadata for finished flows only`() {
         val (_, checkpoint) = newCheckpoint(1)
@@ -770,7 +769,10 @@ class DBCheckpointStorageTests {
         }.toList()
 
         assertEquals(6, checkpointsInDb)
-        assertEquals(Checkpoint.FlowStatus.COMPLETED, resultsMetadata.single().second.status)
+
+        val finishedStatuses = resultsMetadata.map { it.second.status }
+        assertTrue(Checkpoint.FlowStatus.COMPLETED in finishedStatuses)
+        assertTrue(Checkpoint.FlowStatus.FAILED in finishedStatuses)
     }
 
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)

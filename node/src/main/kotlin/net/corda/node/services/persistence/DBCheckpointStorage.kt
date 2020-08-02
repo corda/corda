@@ -549,13 +549,13 @@ class DBCheckpointStorage(
         }
     }
 
-    // This method needs modification once CORDA-3681 is implemented to include FAILED flows as well
     override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>> {
         val session = currentDBSession()
-        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
+        val jpqlQuery =
+            """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
                 join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
-                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}""".trimIndent()
+                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal} or checkpoint.status = ${FlowStatus.FAILED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)

@@ -192,7 +192,7 @@ internal class SingleThreadedStateMachineManager(
                 if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
                     innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, true)
                 } else {
-                    // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, false)
                 }
             } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
