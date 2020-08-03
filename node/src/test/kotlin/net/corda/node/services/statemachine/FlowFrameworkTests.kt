@@ -814,8 +814,6 @@ class FlowFrameworkTests {
     // When ported to ENT use the existing API there to properly retry the flow
     @Test(timeout=300_000)
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
-        aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
-
         var firstRun = true
         var counter = 0
         val waitUntilHospitalizedTwice = Semaphore(-1)
@@ -836,6 +834,8 @@ class FlowFrameworkTests {
 
         var counterRes = 0
         StaffedFlowHospital.onFlowResuscitated.add { _, _, _ -> ++counterRes }
+
+        aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
 
         waitUntilHospitalizedTwice.acquire()
         assertEquals(2, counter)
@@ -861,8 +861,6 @@ class FlowFrameworkTests {
             throw HospitalizeFlowException("hospitalizing")
         }
 
-        aliceNode.services.startFlow(SuspendingFlow())
-
         var counter = 0
         val waitUntilHospitalized = Semaphore(0)
         StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
@@ -872,6 +870,8 @@ class FlowFrameworkTests {
 
         var counterRes = 0
         StaffedFlowHospital.onFlowResuscitated.add { _, _, _ -> ++counterRes }
+
+        aliceNode.services.startFlow(SuspendingFlow())
 
         waitUntilHospitalized.acquire()
         Thread.sleep(3000) // wait until flow saves overnight observation state in database
