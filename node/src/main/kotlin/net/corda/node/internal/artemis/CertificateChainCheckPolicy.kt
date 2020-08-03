@@ -41,12 +41,13 @@ sealed class CertificateChainCheckPolicy {
 
     object RootMustMatch : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
-            val rootPublicKey = trustStore.getCertificate(X509Utilities.CORDA_ROOT_CA).publicKey
+            val rootAliases = trustStore.aliases().asSequence().filter { it.startsWith(X509Utilities.CORDA_ROOT_CA) }
+            val rootPublicKeys = rootAliases.map { trustStore.getCertificate(it).publicKey }.toList()
             return object : Check {
                 @Suppress("DEPRECATION")    // should use java.security.cert.X509Certificate
                 override fun checkCertificateChain(theirChain: Array<javax.security.cert.X509Certificate>) {
                     val theirRoot = theirChain.last().publicKey
-                    if (rootPublicKey != theirRoot) {
+                    if (theirRoot !in rootPublicKeys) {
                         throw CertificateException("Root certificate mismatch, their root = $theirRoot")
                     }
                 }
