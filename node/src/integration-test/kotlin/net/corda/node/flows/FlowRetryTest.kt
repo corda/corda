@@ -304,10 +304,6 @@ enum class Step { First, BeforeInitiate, AfterInitiate, AfterInitiateSendReceive
 
 data class Visited(val sessionNum: Int, val iterationNum: Int, val step: Step)
 
-class BrokenMap<K, V>(delegate: MutableMap<K, V> = mutableMapOf()) : MutableMap<K, V> by delegate {
-    override fun put(key: K, value: V): V? = throw IllegalStateException("Broken on purpose")
-}
-
 @StartableByRPC
 class RetryFlow() : FlowLogic<String>(), IdempotentFlow {
     companion object {
