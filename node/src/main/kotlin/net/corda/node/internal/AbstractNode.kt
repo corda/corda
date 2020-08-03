@@ -424,7 +424,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = configuration.initKeyStores(cryptoService, log)
+        val trustRoot = configuration.initKeyStores(cryptoService)
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
@@ -456,7 +456,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = configuration.initKeyStores(cryptoService, log)
+        val trustRoot = configuration.initKeyStores(cryptoService)
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {

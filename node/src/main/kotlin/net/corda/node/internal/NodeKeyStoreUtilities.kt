@@ -1,21 +1,20 @@
-@file: Suppress("MatchingDeclarationName")
 package net.corda.node.internal
 
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.bouncycastle.BCCryptoService
-import org.slf4j.Logger
 import java.io.IOException
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 
-internal data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
+private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
 
 
-internal fun NodeConfiguration.initKeyStores(cryptoService: CryptoService, log: Logger): X509Certificate {
+internal fun NodeConfiguration.initKeyStores(cryptoService: CryptoService): X509Certificate {
     if (devMode) {
         configureWithDevSSLCertificate(cryptoService)
         // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
@@ -24,13 +23,13 @@ internal fun NodeConfiguration.initKeyStores(cryptoService: CryptoService, log: 
             cryptoService.resyncKeystore()
         }
     }
-    return validateKeyStores(log)
+    return validateKeyStores()
 }
 
-internal fun NodeConfiguration.validateKeyStores(log: Logger): X509Certificate {
+private fun NodeConfiguration.validateKeyStores(): X509Certificate {
     // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
     val certStores = try {
-        requireNotNull(getCertificateStores(log)) {
+        requireNotNull(getCertificateStores()) {
             "One or more keyStores (identity or TLS) or trustStore not found. " +
                     "Please either copy your existing keys and certificates from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
@@ -63,7 +62,7 @@ internal fun NodeConfiguration.validateKeyStores(log: Logger): X509Certificate {
     return trustRoot
 }
 
-internal fun NodeConfiguration.getCertificateStores(log: Logger): AllCertificateStores? {
+private fun NodeConfiguration.getCertificateStores(): AllCertificateStores? {
     return try {
         // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
         val sslKeyStore = p2pSslOptions.keyStore.get()
@@ -71,7 +70,7 @@ internal fun NodeConfiguration.getCertificateStores(log: Logger): AllCertificate
         val trustStore = p2pSslOptions.trustStore.get()
         AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
     } catch (e: IOException) {
-        log.error("IO exception while trying to validate keystores and truststore", e)
+        loggerFor<NodeConfiguration>().error("IO exception while trying to validate keystores and truststore", e)
         null
     }
 }

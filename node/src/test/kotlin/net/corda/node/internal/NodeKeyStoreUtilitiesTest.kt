@@ -19,7 +19,6 @@ import net.corda.testing.core.ALICE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import org.slf4j.Logger
 import java.io.IOException
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
@@ -30,7 +29,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(signingSupplier.get()).doAnswer { throw IOException() }
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
     }
 
@@ -39,7 +38,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(signingSupplier.get()).doAnswer { throw KeyStoreException() }
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("At least one of the keystores or truststore passwords does not match configuration")
     }
 
@@ -48,7 +47,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(trustStore.contains(CORDA_ROOT_CA)).thenReturn(false)
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("Alias for trustRoot key not found. Please ensure you have an updated trustStore file")
     }
 
@@ -57,7 +56,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(keyStore.contains(CORDA_CLIENT_TLS)).thenReturn(false)
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("Alias for TLS key not found. Please ensure you have an updated TLS keyStore file")
     }
 
@@ -66,7 +65,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(signingStore.contains(CORDA_CLIENT_CA)).thenReturn(false)
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("Alias for Node CA key not found. Please ensure you have an updated identity keyStore file")
     }
 
@@ -76,7 +75,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(signingStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("Client CA certificate must chain to the trusted root")
     }
 
@@ -86,13 +85,13 @@ class NodeKeyStoreUtilitiesTest {
         whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(untrustedRoot))
 
         assertThatThrownBy {
-            config.initKeyStores(cryptoService, log)
+            config.initKeyStores(cryptoService)
         }.hasMessageContaining("TLS certificate must chain to the trusted root")
     }
 
     @Test(timeout = 300_000)
     fun `initializing key store should return valid certificate if certificate is valid`() {
-        val certificate = config.initKeyStores(cryptoService, log)
+        val certificate = config.initKeyStores(cryptoService)
 
         assertThat(certificate).isEqualTo(trustRoot)
     }
@@ -106,7 +105,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(keySupplier.getOptional()).thenReturn(mock())
         whenever(signingSupplier.getOptional()).thenReturn(mock())
 
-        config.initKeyStores(cryptoService, log)
+        config.initKeyStores(cryptoService)
 
         verify(signingSupplier).getOptional()
     }
@@ -121,7 +120,7 @@ class NodeKeyStoreUtilitiesTest {
         whenever(keySupplier.getOptional()).thenReturn(mock())
         whenever(signingSupplier.getOptional()).thenReturn(mock())
 
-        config.initKeyStores(bCryptoService, log)
+        config.initKeyStores(bCryptoService)
 
         verify(bCryptoService).resyncKeystore()
     }
@@ -136,7 +135,6 @@ class NodeKeyStoreUtilitiesTest {
     private val signingSupplier = mock<FileBasedCertificateStoreSupplier>()
     private val keySupplier = mock<FileBasedCertificateStoreSupplier>()
     private val trustRoot = mock<X509Certificate>()
-    private val log = mock<Logger>()
     private val cryptoService = mock<CryptoService>()
 
     init {
