@@ -423,6 +423,7 @@ allprojects {
                 url 'https://repo.gradle.org/gradle/libs-releases'
                 content {
                     includeGroup 'org.gradle'
+                    includeGroup 'com.github.detro'
                 }
             }
             mavenCentral()
