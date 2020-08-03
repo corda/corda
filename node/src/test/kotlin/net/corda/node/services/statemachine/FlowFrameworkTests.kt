@@ -812,7 +812,7 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `hospitalized flow, retains its database exception`() {
         aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
 
@@ -832,7 +832,7 @@ class FlowFrameworkTests {
     }
 
     // When ported to ENT use the existing API there to properly retry the flow
-    @Test
+    @Test(timeout=300_000)
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
         aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
 
@@ -862,7 +862,7 @@ class FlowFrameworkTests {
         assertEquals(0, counterRes)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears database exception on node start`() {
         var checkpointStatusAfterRestart: Checkpoint.FlowStatus? = null
         var dbExceptionAfterRestart: List<DBCheckpointStorage.DBFlowException>? = null

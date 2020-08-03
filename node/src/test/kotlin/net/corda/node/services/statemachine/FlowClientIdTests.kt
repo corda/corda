@@ -539,7 +539,7 @@ class FlowClientIdTests {
         assertEquals(5, result)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `flow that fails does not retain its checkpoint nor its exception in the database if not started with a client id`() {
         assertFailsWith<IllegalStateException> {
             aliceNode.services.startFlow(ExceptionFlow { IllegalStateException("another exception") }).resultFuture.getOrThrow()
