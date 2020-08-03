@@ -813,25 +813,6 @@ class FlowFrameworkTests {
         assertEquals(null, persistedException)
     }
 
-    @Test(timeout=300_000)
-    fun `hospitalized flow, retains its database exception`() {
-        aliceNode.services.startFlow(ExceptionFlow { HospitalizeFlowException("hospitalizing") })
-
-        val waitUntilHospitalized = Semaphore(0)
-        StaffedFlowHospital.onFlowKeptForOvernightObservation.add { _, _ ->
-            waitUntilHospitalized.release()
-        }
-
-        waitUntilHospitalized.acquire()
-        Thread.sleep(3000) // wait until flow saves overnight observation state in database
-
-        aliceNode.services.database.transaction {
-            val checkpointStatus =  findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
-            assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpointStatus)
-            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
-        }
-    }
-
     // When ported to ENT use the existing API there to properly retry the flow
     @Test(timeout=300_000)
     fun `Hospitalized flow, resets to 'RUNNABLE' and clears exception when retried`() {
