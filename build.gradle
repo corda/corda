@@ -409,6 +409,7 @@ allprojects {
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                     includeGroup 'co.paralleluniverse'
                     includeGroup 'org.crashub'
+                    includeGroup 'com.github.bft-smart'
                 }
             }
             maven {
@@ -422,12 +423,6 @@ allprojects {
                 url 'https://repo.gradle.org/gradle/libs-releases'
                 content {
                     includeGroup 'org.gradle'
-                }
-            }
-            maven {
-                url 'https://repository.mulesoft.org/nexus/content/repositories/public'
-                content {
-                    includeGroup 'com.github.bft-smart'
                 }
             }
             mavenCentral()
