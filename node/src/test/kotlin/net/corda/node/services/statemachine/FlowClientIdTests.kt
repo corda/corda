@@ -592,6 +592,32 @@ class FlowClientIdTests {
         }
     }
 
+    @Test(timeout=300_000)
+    fun `subsequent request to failed flow that cannot find a 'DBFlowException' in the database, fails with 'IllegalStateException'`() {
+        ResultFlow.hook = {
+            throw Exception()
+        }
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<Exception> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        // manually remove [DBFlowException] from the database to impersonate missing [DBFlowException]
+        val removed = aliceNode.services.database.transaction {
+            aliceNode.internals.checkpointStorage.removeFlowException(flowHandle0!!.id)
+        }
+        assertTrue(removed)
+
+        val e = assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        }
+
+        assertEquals("Flow's ${flowHandle0!!.id} exception was not found in the database. Something is very wrong.", e.message)
+    }
+
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {
