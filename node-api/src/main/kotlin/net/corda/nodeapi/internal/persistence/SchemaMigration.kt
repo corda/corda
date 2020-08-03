@@ -54,7 +54,6 @@ open class SchemaMigration(
       *                                      when allowing hibernate to create missing schemas in dev or tests.
      */
      fun runMigration(existingCheckpoints: Boolean, schemas: Set<MappedSchema>, forceThrowOnMissingMigration: Boolean) {
-         migrateOlderDatabaseToUseLiquibase(existingCheckpoints, schemas)
          val resourcesAndSourceInfo = prepareResources(schemas, forceThrowOnMissingMigration)
 
          // current version of Liquibase appears to be non-threadsafe
@@ -178,66 +177,6 @@ open class SchemaMigration(
 
         val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
         return Triple(liquibase, unRunChanges.size, !unRunChanges.isEmpty())
-    }
-
-    /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
-    private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean, schemas: Set<MappedSchema>): Boolean {
-        val isExistingDBWithoutLiquibase = dataSource.connection.use {
-
-            val existingDatabase = it.metaData.getTables(null, null, "NODE%", null).next()
-                    // Lower case names for PostgreSQL
-                    || it.metaData.getTables(null, null, "node%", null).next()
-
-            val hasLiquibase = it.metaData.getTables(null, null, "DATABASECHANGELOG%", null).next()
-                    // Lower case names for PostgreSQL
-                    || it.metaData.getTables(null, null, "databasechangelog%", null).next()
-
-            existingDatabase && !hasLiquibase
-        }
-
-        if (isExistingDBWithoutLiquibase && existingCheckpoints)
-            throw CheckpointsException()
-
-        // Schema migrations pre release 4.0
-        val preV4Baseline = mutableListOf<String>()
-        if (isExistingDBWithoutLiquibase) {
-            preV4Baseline.addAll(listOf("migration/common.changelog-init.xml",
-                    "migration/node-info.changelog-init.xml",
-                    "migration/node-info.changelog-v1.xml",
-                    "migration/node-info.changelog-v2.xml",
-                    "migration/node-core.changelog-init.xml",
-                    "migration/node-core.changelog-v3.xml",
-                    "migration/node-core.changelog-v4.xml",
-                    "migration/node-core.changelog-v5.xml",
-                    "migration/node-core.changelog-pkey.xml",
-                    "migration/vault-schema.changelog-init.xml",
-                    "migration/vault-schema.changelog-v3.xml",
-                    "migration/vault-schema.changelog-v4.xml",
-                    "migration/vault-schema.changelog-pkey.xml"))
-
-            if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
-                preV4Baseline.addAll(listOf("migration/node-notary.changelog-init.xml",
-                        "migration/node-notary.changelog-v1.xml"))
-
-            if (schemas.any { schema -> schema.migrationResource == "notary-raft.changelog-master" })
-                preV4Baseline.addAll(listOf("migration/notary-raft.changelog-init.xml",
-                        "migration/notary-raft.changelog-v1.xml"))
-
-            if (schemas.any { schema -> schema.migrationResource == "notary-bft-smart.changelog-master" })
-                preV4Baseline.addAll(listOf("migration/notary-bft-smart.changelog-init.xml",
-                        "migration/notary-bft-smart.changelog-v1.xml"))
-        }
-
-        if (preV4Baseline.isNotEmpty()) {
-            val dynamicInclude = "master.changelog.json" // Virtual file name of the changelog that includes all schemas.
-            checkResourcesInClassPath(preV4Baseline)
-            dataSource.connection.use { connection ->
-                val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
-                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, databaseFactory.getLiquibaseDatabase(JdbcConnection(connection)))
-                liquibase.changeLogSync(Contexts(), LabelExpression())
-            }
-        }
-        return isExistingDBWithoutLiquibase
     }
 
     private fun checkResourcesInClassPath(resources: List<String?>) {
