@@ -280,7 +280,7 @@ class NodeConfigurationImplTest {
 
     @Test(timeout=3_000)
 	fun `compatibilityZoneURL populates NetworkServices`() {
-        val compatibilityZoneURL = URI.create("https://r3.com").toURL()
+        val compatibilityZoneURL = URI.create("https://r3.example.com").toURL()
         val configuration = testConfiguration.copy(
                 devMode = false,
                 compatibilityZoneURL = compatibilityZoneURL)
