@@ -37,11 +37,6 @@ data class CustomCordapp(
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
 ) : TestCordappInternal() {
-    init {
-        require(packages.isNotEmpty() || classes.isNotEmpty() || fixups.isNotEmpty()) {
-            "At least one package or class must be specified"
-        }
-    }
 
     override val jarFile: Path get() = getJarFile(this)
 
@@ -55,7 +50,7 @@ data class CustomCordapp(
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
         val classGraph = ClassGraph()
-        if (packages.isNotEmpty()) {
+        if(packages.isNotEmpty()){
             classGraph.whitelistPaths(*packages.map { it.replace('.', '/') }.toTypedArray())
         }
         if (classes.isNotEmpty()) {
@@ -76,6 +71,10 @@ data class CustomCordapp(
                     jos.addEntry(testEntry("META-INF/services/$whitelistService")) {
                         jos.write(whitelists.names.joinToString(separator = "\r\n").toByteArray())
                     }
+                }
+
+                if (scanResult.allResources.isEmpty()){
+                    throw ClassNotFoundException("Could not create jar file as the given package is not found on the classpath: ${packages.toList()[0]}")
                 }
 
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
@@ -178,8 +177,8 @@ data class CustomCordapp(
                 val jarFile = cordappsDirectory.createDirectories() / filename
                 if (it.fixups.isNotEmpty()) {
                     it.createFixupJar(jarFile)
-                } else {
-                    it.packageAsJar(jarFile)
+                } else if(it.packages.isNotEmpty() || it.classes.isNotEmpty() || it.fixups.isNotEmpty()) {
+                        it.packageAsJar(jarFile)
                 }
                 it.signJar(jarFile)
                 logger.debug { "$it packaged into $jarFile" }

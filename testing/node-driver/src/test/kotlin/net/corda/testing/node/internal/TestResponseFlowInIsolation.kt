@@ -22,7 +22,7 @@ import org.junit.Test
  */
 class TestResponseFlowInIsolation {
 
-    private val network: MockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages("com.template")))
+    private val network: MockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages()))
     private val a = network.createNode()
     private val b = network.createNode()
 

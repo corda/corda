@@ -1,6 +1,7 @@
 package net.corda.tools.shell;
 
 import net.corda.core.crypto.SecureHash;
+import net.corda.core.internal.VisibleForTesting;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.StateMachineTransactionMapping;
 import org.crsh.cli.Argument;
@@ -13,13 +14,14 @@ import org.crsh.text.Decoration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 
 @Named("hashLookup")
 public class HashLookupShellCommand extends InteractiveShellCommand {
     private static Logger logger = LoggerFactory.getLogger(HashLookupShellCommand.class);
-    final private String manualText ="Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
+    private static final String manualText ="Checks if a transaction matching a specified Id hash value is recorded on this node.\n\n" +
             "Both the transaction Id and the hashed value of a transaction Id (as returned by the Notary in case of a double-spend) is a valid input.\n" +
             "This is mainly intended to be used for troubleshooting notarisation issues when a\n" +
             "state is claimed to be already consumed by another transaction.\n\n" +
@@ -29,25 +31,32 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
     @Man(manualText)
 
     public void main(@Usage("A transaction Id or a hexadecimal SHA-256 hash value representing the hashed transaction Id") @Argument(unquote = false) String txIdHash) {
+        CordaRPCOps proxy = ops();
+        try {
+            hashLookup(out, proxy, txIdHash);
+        } catch (IllegalArgumentException ex) {
+            out.println(manualText);
+            out.println(ex.getMessage(), Decoration.bold, Color.red);
+        }
+    }
+
+    @VisibleForTesting
+    protected static void hashLookup(PrintWriter out, CordaRPCOps proxy, String txIdHash) throws IllegalArgumentException {
         logger.info("Executing command \"hashLookup\".");
 
         if (txIdHash == null) {
             out.println(manualText);
-            out.println("Please provide a hexadecimal transaction Id hash value or a transaction Id", Decoration.bold, Color.red);
-            return;
+            throw new IllegalArgumentException("Please provide a hexadecimal transaction Id hash value or a transaction Id");
         }
-
-        CordaRPCOps proxy = ops();
-        List<StateMachineTransactionMapping> mapping = proxy.stateMachineRecordedTransactionMappingSnapshot();
 
         SecureHash txIdHashParsed;
         try {
             txIdHashParsed = SecureHash.parse(txIdHash);
         } catch (IllegalArgumentException e) {
-            out.println("The provided string is not a valid hexadecimal SHA-256 hash value", Decoration.bold, Color.red);
-            return;
+            throw new IllegalArgumentException("The provided string is not a valid hexadecimal SHA-256 hash value");
         }
 
+        List<StateMachineTransactionMapping> mapping = proxy.stateMachineRecordedTransactionMappingSnapshot();
         Optional<SecureHash> match = mapping.stream()
                 .map(StateMachineTransactionMapping::getTransactionId)
                 .filter(
@@ -59,7 +68,7 @@ public class HashLookupShellCommand extends InteractiveShellCommand {
             SecureHash found = match.get();
             out.println("Found a matching transaction with Id: " + found.toString());
         } else {
-            out.println("No matching transaction found", Decoration.bold, Color.red);
+            throw new IllegalArgumentException("No matching transaction found");
         }
     }
 }
