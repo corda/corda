@@ -149,7 +149,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -169,7 +170,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -193,7 +195,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val oldParams = networkMapServer.networkParameters
@@ -211,7 +214,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val oldParams = networkMapServer.networkParameters
