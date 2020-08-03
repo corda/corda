@@ -24,7 +24,7 @@ import java.io.IOException
 import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 
-class AbstractNodeKeystoreCheckTest {
+class NodeKeyStoreUtilitiesTest {
     @Test(timeout = 300_000)
     fun `initializing key store in non-dev mode with no key store`() {
         whenever(signingSupplier.get()).doAnswer { throw IOException() }
