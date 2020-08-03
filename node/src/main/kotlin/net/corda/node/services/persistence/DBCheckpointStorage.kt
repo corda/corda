@@ -467,10 +467,10 @@ class DBCheckpointStorage(
         currentDBSession().update(dbFlowCheckpoint)
         blob?.let { currentDBSession().update(it) }
         dbFlowResult?.let { currentDBSession().save(it) }
+        dbFlowException?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
             setDBFlowMetadataFinishTime(flowId, now)
         }
-        dbFlowException?.let { currentDBSession().save(it) }
     }
 
     override fun markAllPaused() {
