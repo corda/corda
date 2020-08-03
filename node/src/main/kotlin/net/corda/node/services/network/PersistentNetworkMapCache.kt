@@ -38,9 +38,10 @@ import javax.persistence.PersistenceException
 
 /** Database-based network map cache. */
 @ThreadSafe
+@Suppress("TooManyFunctions")
 open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
-                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken(), NotaryUpdateListener {
 
     companion object {
         private val logger = contextLogger()
@@ -53,6 +54,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override val nodeReady: OpenFuture<Void?> = openFuture()
 
+    @Volatile
     private lateinit var notaries: List<NotaryInfo>
 
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
@@ -385,5 +387,9 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
             logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
+    }
+
+    override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+        this.notaries = notaries
     }
 }
