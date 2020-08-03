@@ -24,6 +24,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.util.UUID
@@ -595,12 +596,14 @@ class FlowClientIdTests {
     @Test(timeout=300_000)
     fun `subsequent request to failed flow that cannot find a 'DBFlowException' in the database, fails with 'IllegalStateException'`() {
         ResultFlow.hook = {
-            throw Exception()
+            // just throwing a different exception from the one expected out of startFlowWithClientId second call below ([IllegalStateException])
+            // to be sure [IllegalStateException] gets thrown from [DBFlowException] that is missing
+            throw IllegalArgumentException()
         }
         val clientId = UUID.randomUUID().toString()
 
         var flowHandle0: FlowStateMachineHandle<Int>? = null
-        assertFailsWith<Exception> {
+        assertFailsWith<IllegalArgumentException> {
             flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
             flowHandle0!!.resultFuture.getOrThrow()
         }
