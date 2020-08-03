@@ -159,6 +159,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private lateinit var _trustAnchor: TrustAnchor
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
+    private lateinit var _trustAnchors: Set<TrustAnchor>
+    override val trustAnchors: Set<TrustAnchor> get() = _trustAnchors
+
     private lateinit var ourParty: Party
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
@@ -175,12 +178,13 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     private val nameToParty = createNameToPartyMap(cacheFactory)
 
     fun start(
-            trustRoot: X509Certificate,
+            trustRoots: List<X509Certificate>,
             ourIdentity: PartyAndCertificate,
             pkToIdCache: WritablePublicKeyToOwningIdentityCache
     ) {
-        _trustRoot = trustRoot
+        _trustRoot = ourIdentity.certPath.certificates.last() as X509Certificate
         _trustAnchor = TrustAnchor(trustRoot, null)
+        _trustAnchors = trustRoots.map { TrustAnchor(it, null) }.toSet()
         // Extract Node CA certificate from node identity certificate path
         val certificates = setOf(ourIdentity.certificate, ourIdentity.certPath.certificates[1], trustRoot)
         _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(certificates))
@@ -200,16 +204,16 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(trustAnchor, identity)
+        return verifyAndRegisterIdentity(trustAnchors, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean, isWellKnownIdentity: Boolean) {
-        verifyAndRegisterIdentity(trustAnchor, identity, isNewRandomIdentity, isWellKnownIdentity)
+        verifyAndRegisterIdentity(trustAnchors, identity, isNewRandomIdentity, isWellKnownIdentity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor,
+    private fun verifyAndRegisterIdentity(trustAnchors: Set<TrustAnchor>,
                                           identity: PartyAndCertificate,
                                           isNewRandomIdentity: Boolean = false,
                                           isWellKnownIdentity: Boolean = false
@@ -217,9 +221,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
         try {
-            identity.verify(trustAnchor)
+            identity.verify(trustAnchors)
         } catch (e: CertPathValidatorException) {
-        log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            val roots = trustAnchors.map { it.trustedCert.subjectX500Principal }
+            log.warn("Certificate validation failed for ${identity.name} against trusted roots $roots.")
             log.warn("Certificate path :")
             identityCertChain.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
@@ -232,7 +237,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         if (wellKnownCert != identity.certificate && !isNewRandomIdentity) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
+            verifyAndRegisterIdentity(trustAnchors, PartyAndCertificate(firstPath))
         }
         return registerIdentity(identity, isNewRandomIdentity, isWellKnownIdentity)
     }

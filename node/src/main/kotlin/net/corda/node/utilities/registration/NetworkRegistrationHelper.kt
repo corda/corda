@@ -63,7 +63,7 @@ open class NetworkRegistrationHelper(
     private val certificateStore = config.certificateStore
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
-    protected val rootCert: X509Certificate
+    protected val rootCerts: List<X509Certificate>
     private val notaryServiceConfig: NotaryServiceConfig? = config.notaryServiceConfig
 
     init {
@@ -72,7 +72,8 @@ open class NetworkRegistrationHelper(
                     "Please contact your CZ operator."
         }
         rootTrustStore = X509KeyStore.fromFile(networkRootTrustStorePath, networkRootTrustStorePassword)
-        rootCert = rootTrustStore.getCertificate(CORDA_ROOT_CA)
+        val rootAliases = rootTrustStore.aliases().asSequence().filter { it.startsWith(CORDA_ROOT_CA) }
+        rootCerts = rootAliases.map { rootTrustStore.getCertificate(it) }.toList()
     }
 
     /**
@@ -194,7 +195,7 @@ open class NetworkRegistrationHelper(
             logger.info("Generated Node Identity certificate: $nodeIdentityCert")
 
             val nodeIdentityCertificateChain: List<X509Certificate> = listOf(nodeIdentityCert) + nodeCaCertChain
-            X509Utilities.validateCertificateChain(rootCert, nodeIdentityCertificateChain)
+            X509Utilities.validateCertificateChain(rootCerts, nodeIdentityCertificateChain)
             certStore.setCertPathOnly(nodeIdentityAlias, nodeIdentityCertificateChain)
         }
         logProgress("Node identity private key and certificate chain stored in $nodeIdentityAlias.")
@@ -252,7 +253,7 @@ open class NetworkRegistrationHelper(
         }
 
         // Validate certificate chain returned from the doorman with the root cert obtained via out-of-band process, to prevent MITM attack on doorman server.
-        X509Utilities.validateCertificateChain(rootCert, certificates)
+        X509Utilities.validateCertificateChain(rootCerts, certificates)
         logProgress("Certificate signing request approved, storing private key with the certificate chain.")
     }
 
@@ -449,7 +450,7 @@ class NodeRegistrationHelper(
             logger.info("Generated TLS certificate: $sslCert")
 
             val sslCertificateChain: List<X509Certificate> = listOf(sslCert) + nodeCaCertificateChain
-            X509Utilities.validateCertificateChain(rootCert, sslCertificateChain)
+            X509Utilities.validateCertificateChain(rootCerts, sslCertificateChain)
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, sslCertificateChain, keyStore.entryPassword)
         }
         logProgress("SSL private key and certificate chain stored in ${keyStore.path}.")
@@ -477,8 +478,10 @@ class NodeRegistrationHelper(
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
         val tlsCertCrlIssuer = config.tlsCertCrlIssuer
         tlsCertCrlIssuer ?: return null
-        if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
-            return rootCert
+        rootCerts.forEach {
+            if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, it)) {
+                return it
+            }
         }
         return findMatchingCertificate(tlsCertCrlIssuer, rootTrustStore)
     }

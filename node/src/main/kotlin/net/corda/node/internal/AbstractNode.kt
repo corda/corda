@@ -429,10 +429,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = initKeyStores()
+        val trustRoots = initKeyStores()
         startDatabase()
-        val (identity, notaryIdentity, keyPairs) = obtainIdentities(trustRoot)
-        identityService.start(trustRoot, identity, pkToIdCache = pkToIdCache)
+        val (identity, notaryIdentity, keyPairs) = obtainIdentities(trustRoots)
+        identityService.start(trustRoots, identity, pkToIdCache)
         return database.use {
             it.transaction {
                 val nodeInfoAndSigned = updateNodeInfo(identity, notaryIdentity, keyPairs, publish = false)
@@ -529,7 +529,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = initKeyStores()
+        val trustRoots = initKeyStores()
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -542,9 +542,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         registerCordappFlows()
         services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
         startShell()
-        networkMapClient?.start(trustRoot)
+        networkMapClient?.start(trustRoots)
 
-        val networkParametersReader = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory)
+        val networkParametersReader = NetworkParametersReader(trustRoots, networkMapClient, configuration.baseDirectory)
         val (netParams, signedNetParams) = networkParametersReader.read()
         log.info("Loaded network parameters: $netParams")
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
@@ -558,9 +558,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         schedulerService.closeOnStop()
         val rpcOps = makeRPCOps(cordappLoader, checkpointDumper)
 
-        val (identity, myNotaryIdentity, keyPairs) = obtainIdentities(trustRoot)
+        val (identity, myNotaryIdentity, keyPairs) = obtainIdentities(trustRoots)
 
-        identityService.start(trustRoot, identity, pkToIdCache = pkToIdCache)
+        identityService.start(trustRoots, identity, pkToIdCache)
 
         val nodeInfoAndSigned = database.transaction {
             updateNodeInfo(identity, myNotaryIdentity, keyPairs, publish = true)
@@ -572,7 +572,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val networkParametersHotloader = if (networkMapClient == null) {
             null
         } else {
-            NetworkParametersHotloader(networkMapClient, trustRoot, netParams, networkParametersReader, networkParametersStorage).also {
+            NetworkParametersHotloader(networkMapClient, trustRoots, netParams, networkParametersReader, networkParametersStorage).also {
                 it.addNotaryUpdateListener(networkMapCache)
                 it.addNotaryUpdateListener(identityService)
                 it.addNetworkParametersChangedListeners(services)
@@ -581,7 +581,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         networkMapUpdater.start(
-                trustRoot,
+                trustRoots,
                 signedNetParams.raw.hash,
                 signedNodeInfo,
                 netParams,
@@ -603,7 +603,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (resultingNodeInfo, readyFuture) = database.transaction(recoverableFailureTolerance = 0) {
-            networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
+            networkParametersStorage.setCurrentParameters(signedNetParams, trustRoots)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
             cordappProvider.start()
@@ -1059,8 +1059,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     /**
      * Loads the node's legal identity, notary service identity (if set) and associated keys and aliases.
      */
-    private fun obtainIdentities(trustRoot: X509Certificate): Triple<PartyAndCertificate, PartyAndCertificate?, Set<KeyAndAlias>> {
-        val (identity, identityKeyPairs) = obtainIdentity(trustRoot)
+    private fun obtainIdentities(trustRoots: List<X509Certificate>): Triple<PartyAndCertificate, PartyAndCertificate?, Set<KeyAndAlias>> {
+        val (identity, identityKeyPairs) = obtainIdentity(trustRoots)
         val keyPairs = identityKeyPairs.toMutableSet()
         val myNotaryIdentity = configuration.notary?.let {
             if (it.serviceLegalName != null) {
@@ -1092,7 +1092,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      * If legal identity certificate has been renewed, keystore may contain old entries stored with dummy self-signed certificates.
      * In this case we also return public keys and aliases for old entries, so they can be used by [KeyManagementService] for signing.
      */
-    private fun obtainIdentity(trustRoot: X509Certificate): Pair<PartyAndCertificate, Set<KeyAndAlias>> {
+    private fun obtainIdentity(trustRoots: List<X509Certificate>): Pair<PartyAndCertificate, Set<KeyAndAlias>> {
         val defaultAlias = NODE_IDENTITY_KEY_ALIAS
         val legalName = configuration.myLegalName
         val signingCertificateStore = configuration.signingCertificateStore.get()
@@ -1136,7 +1136,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(certificates.first() == x509Cert) {
             "Certificates from key store do not line up!"
         }
-        check(certificates.last() == trustRoot) { "Node identity certificate must chain to the trusted root." }
+        check(certificates.last() in trustRoots) { "Node identity certificate must chain to the trusted root." }
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
         if (subject != legalName) {
@@ -1144,7 +1144,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
-        X509Utilities.validateCertPath(trustRoot, identity.certPath)
+        X509Utilities.validateCertPath(trustRoots, identity.certPath)
         val keyPairs = setOf(loadIdentityKey(legalIdentityPrivateKeyAlias, "node identity")) +
                 rotatedIdentities.map { loadIdentityKey(it, "previous node identity", rotated = true) }
         return identity to keyPairs

@@ -258,7 +258,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
     private fun verifyIdentities(node: NodeInfo): Boolean {
         for (identity in node.legalIdentitiesAndCerts) {
             try {
-                identity.verify(identityService.trustAnchor)
+                identity.verify(identityService.trustAnchors)
             } catch (e: CertPathValidatorException) {
                 logger.warn("$node has invalid identity:\nError:$e\nIdentity:${identity.certPath}")
                 return false

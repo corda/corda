@@ -45,6 +45,7 @@ class NodeKeyStoreUtilitiesTest {
     @Test(timeout = 300_000)
     fun `initializing key store in non-dev mode without trusted root`() {
         whenever(trustStore.contains(CORDA_ROOT_CA)).thenReturn(false)
+        whenever(trustStore.iterator()).thenReturn(mock())
 
         assertThatThrownBy {
             config.initKeyStores(cryptoService)
@@ -74,7 +75,7 @@ class NodeKeyStoreUtilitiesTest {
     fun `initializing key store should return valid certificate if certificate is valid`() {
         val certificate = config.initKeyStores(cryptoService)
 
-        assertThat(certificate).isEqualTo(trustRoot)
+        assertThat(certificate).isEqualTo(listOf(trustRoot))
     }
 
     @Test(timeout = 300_000)
@@ -134,5 +135,6 @@ class NodeKeyStoreUtilitiesTest {
         whenever(trustStore[CORDA_ROOT_CA]).thenReturn(trustRoot)
         whenever(signingStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(trustRoot))
         whenever(keyStore.query(any<X509KeyStore.() -> List<X509Certificate>>())).thenReturn(mutableListOf(trustRoot))
+        whenever(trustStore.iterator()).thenReturn(listOf(CORDA_ROOT_CA to trustRoot).listIterator())
     }
 }

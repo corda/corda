@@ -40,6 +40,7 @@ class InMemoryIdentityService(
      */
     override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    override val trustAnchors = setOf(trustAnchor)
     private val keyToExternalId = ConcurrentHashMap<String, UUID>()
     private val keyToPartyAndCerts = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val nameToKey = ConcurrentHashMap<CordaX500Name, PublicKey>()
@@ -55,22 +56,23 @@ class InMemoryIdentityService(
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        return verifyAndRegisterIdentity(trustAnchor, identity)
+        return verifyAndRegisterIdentity(trustAnchors, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean, isWellKnownIdentity: Boolean) {
-        verifyAndRegisterIdentity(trustAnchor, identity)
+        verifyAndRegisterIdentity(trustAnchors, identity)
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    private fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate? {
+    private fun verifyAndRegisterIdentity(trustAnchors: Set<TrustAnchor>, identity: PartyAndCertificate): PartyAndCertificate? {
         // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
         try {
-            identity.verify(trustAnchor)
+            identity.verify(trustAnchors)
         } catch (e: CertPathValidatorException) {
-            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
+            val roots = trustAnchors.map { it.trustedCert.subjectX500Principal }
+            log.warn("Certificate validation failed for ${identity.name} against trusted roots $roots.")
             log.warn("Certificate path :")
             identityCertChain.reversed().forEachIndexed { index, certificate ->
                 val space = (0 until index).joinToString("") { "   " }
@@ -83,7 +85,7 @@ class InMemoryIdentityService(
         if (wellKnownCert != identity.certificate) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
+            verifyAndRegisterIdentity(trustAnchors, PartyAndCertificate(firstPath))
         }
         return registerIdentity(identity, false)
     }

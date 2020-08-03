@@ -26,7 +26,7 @@ class NetworkParametersHotloaderTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
     private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
-    private val trustRoot = DEV_ROOT_CA.certificate
+    private val trustRoots = listOf(DEV_ROOT_CA.certificate)
 
     private val originalNetworkParameters = testNetworkParameters()
     private val notary: Party = TestIdentity.fresh("test notary").party
@@ -118,8 +118,8 @@ class NetworkParametersHotloaderTest {
         Mockito.`when`(networkMapClient.getNetworkParameters(newNetworkParameters.serialize().hash)).thenReturn(signedNetworkParameters)
         val networkParametersReader = Mockito.mock(NetworkParametersReader::class.java)
         Mockito.`when`(networkParametersReader.read())
-                .thenReturn(NetworkParametersReader.NetworkParametersAndSigned(signedNetworkParameters, trustRoot))
-        return NetworkParametersHotloader(networkMapClient, trustRoot, originalNetworkParameters, networkParametersReader, networkParametersStorage)
+                .thenReturn(NetworkParametersReader.NetworkParametersAndSigned(signedNetworkParameters, trustRoots))
+        return NetworkParametersHotloader(networkMapClient, trustRoots, originalNetworkParameters, networkParametersReader, networkParametersStorage)
     }
 }
 

@@ -16,7 +16,7 @@ import kotlin.reflect.jvm.javaGetter
  * Currently only hotloading notary changes are supported.
  */
 class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient,
-                                 private val trustRoot: X509Certificate,
+                                 private val trustRoots: List<X509Certificate>,
                                  @Volatile private var networkParameters: NetworkParameters,
                                  private val networkParametersReader: NetworkParametersReader,
                                  private val networkParametersStorage: NetworkParametersStorage) {
@@ -42,7 +42,7 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient,
     fun attemptHotload(newNetworkParameterHash: SecureHash): Boolean {
 
         val newSignedNetParams = networkMapClient.getNetworkParameters(newNetworkParameterHash)
-        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
+        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoots)
 
         if (canHotload(newNetParams)) {
             logger.info("All changed parameters are hotloadable")
@@ -81,7 +81,7 @@ class NetworkParametersHotloader(private val networkMapClient: NetworkMapClient,
 
         networkParameters = newNetworkParameters
         val networkParametersAndSigned = networkParametersReader.read()
-        networkParametersStorage.setCurrentParameters(networkParametersAndSigned.signed, trustRoot)
+        networkParametersStorage.setCurrentParameters(networkParametersAndSigned.signed, trustRoots)
         notifyListenersFor(newNetworkParameters)
         notifyListenersFor(newNetworkParameters.notaries)
     }

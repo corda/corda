@@ -112,7 +112,7 @@ class NetworkMapUpdaterTest {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(listOf(DEV_ROOT_CA.certificate)) }
     }
 
     @After
@@ -131,7 +131,7 @@ class NetworkMapUpdaterTest {
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
 
-        updater!!.start(DEV_ROOT_CA.certificate,
+        updater!!.start(listOf(DEV_ROOT_CA.certificate),
                 server.networkParameters.serialize().hash,
                 ourNodeInfo,
                 networkParameters,
@@ -328,7 +328,7 @@ class NetworkMapUpdaterTest {
         updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         verify(networkParametersStorage, times(1)).saveParameters(any())
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
@@ -346,7 +346,7 @@ class NetworkMapUpdaterTest {
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }

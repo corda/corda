@@ -77,7 +77,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private val fileWatcherSubscription = AtomicReference<Subscription?>()
     private var autoAcceptNetworkParameters: Boolean = true
-    private lateinit var trustRoot: X509Certificate
+    private lateinit var trustRoots: List<X509Certificate>
     @Volatile
     private lateinit var currentParametersHash: SecureHash
     private lateinit var ourNodeInfo: SignedNodeInfo
@@ -100,7 +100,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
     @Suppress("LongParameterList")
-    fun start(trustRoot: X509Certificate,
+    fun start(trustRoots: List<X509Certificate>,
               currentParametersHash: SecureHash,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,
@@ -110,7 +110,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
              ) {
         fileWatcherSubscription.updateAndGet { subscription ->
             require(subscription == null) { "Should not call this method twice" }
-            this.trustRoot = trustRoot
+            this.trustRoots = trustRoots
             this.currentParametersHash = currentParametersHash
             this.ourNodeInfo = ourNodeInfo
             this.ourNodeInfoHash = ourNodeInfo.raw.hash
@@ -317,7 +317,7 @@ The node will shutdown now.""")
             return
         }
         val newSignedNetParams = networkMapClient.getNetworkParameters(update.newParametersHash)
-        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
+        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoots)
         networkParametersStorage.saveParameters(newSignedNetParams)
         logger.info("Downloaded new network parameters: $newNetParams from the update: $update")
         newNetworkParameters = Pair(update, newSignedNetParams)
@@ -344,7 +344,7 @@ The node will shutdown now.""")
         // Add persisting of newest parameters from update.
         val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
-        val newNetParams = signedNewNetParams.verifiedNetworkParametersCert(trustRoot)
+        val newNetParams = signedNewNetParams.verifiedNetworkParametersCert(trustRoots)
         val newParametersHash = signedNewNetParams.raw.hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.

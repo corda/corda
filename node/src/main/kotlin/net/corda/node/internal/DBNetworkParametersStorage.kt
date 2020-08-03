@@ -33,7 +33,7 @@ class DBNetworkParametersStorage(
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?
 ) : NetworkParametersStorage, SingletonSerializeAsToken() {
-    private lateinit var trustRoot: X509Certificate
+    private lateinit var trustRoots: List<X509Certificate>
 
     companion object {
         private val log = contextLogger()
@@ -58,8 +58,8 @@ class DBNetworkParametersStorage(
         }
     }
 
-    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate) {
-        this.trustRoot = trustRoot
+    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: List<X509Certificate>) {
+        this.trustRoots = trustRoots
         saveParameters(currentSignedParameters)
         _currentHash = currentSignedParameters.raw.hash
     }
@@ -85,7 +85,7 @@ class DBNetworkParametersStorage(
 
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }
-        val networkParameters = signedNetworkParameters.verifiedNetworkParametersCert(trustRoot)
+        val networkParameters = signedNetworkParameters.verifiedNetworkParametersCert(trustRoots)
         val hash = signedNetworkParameters.raw.hash
         log.trace { "Parameters to save $networkParameters with hash $hash" }
         database.transaction {
@@ -97,7 +97,7 @@ class DBNetworkParametersStorage(
         return if (networkMapClient != null) {
             try {
                 val signedParams = networkMapClient.getNetworkParameters(parametersHash)
-                val networkParameters = signedParams.verifiedNetworkParametersCert(trustRoot)
+                val networkParameters = signedParams.verifiedNetworkParametersCert(trustRoots)
                 saveParameters(signedParams)
                 networkParameters
             } catch (e: Exception) {

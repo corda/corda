@@ -32,10 +32,10 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     }
 
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
-    private lateinit var trustRoot: X509Certificate
+    private lateinit var trustRoots: List<X509Certificate>
 
-    fun start(trustRoot: X509Certificate) {
-        this.trustRoot = trustRoot
+    fun start(trustRoots: List<X509Certificate>) {
+        this.trustRoots = trustRoots
     }
 
     fun publish(signedNodeInfo: SignedNodeInfo) {
@@ -61,7 +61,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         logger.trace { "Fetching network map update from $url." }
         val connection = url.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
-        val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
+        val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoots)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
         val version = connection.cordaServerVersion
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
@@ -89,7 +89,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
         logger.trace { "Fetching node infos from $url." }
         val verifiedNodeInfo = url.openHttpConnection().responseAs<Pair<SignedNetworkMap, List<SignedNodeInfo>>>()
                 .also {
-                    val verifiedNodeInfoHashes = it.first.verifiedNetworkMapCert(trustRoot).nodeInfoHashes
+                    val verifiedNodeInfoHashes = it.first.verifiedNetworkMapCert(trustRoots).nodeInfoHashes
                     val nodeInfoHashes = it.second.map { signedNodeInfo -> signedNodeInfo.verified().serialize().sha256() }
                     require(
                             verifiedNodeInfoHashes.containsAll(nodeInfoHashes) &&

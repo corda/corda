@@ -29,8 +29,8 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
         storeCurrentParameters()
     }
 
-    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate) {
-        setCurrentParametersUnverified(currentSignedParameters.verifiedNetworkParametersCert(trustRoot))
+    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoots: List<X509Certificate>) {
+        setCurrentParametersUnverified(currentSignedParameters.verifiedNetworkParametersCert(trustRoots))
     }
 
     override fun lookupSigned(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {

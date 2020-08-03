@@ -43,7 +43,7 @@ class NetworkMapClientTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
-                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(listOf(DEV_ROOT_CA.certificate)) }
     }
 
     @After

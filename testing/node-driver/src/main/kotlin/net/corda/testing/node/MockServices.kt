@@ -186,7 +186,7 @@ open class MockServices private constructor(
             // Create a persistent identity service and add all the supplied identities.
             identityService.apply {
                 database = persistence
-                start(DEV_ROOT_CA.certificate, initialIdentity.identity, pkToIdCache = pkToIdCache)
+                start(listOf(DEV_ROOT_CA.certificate), initialIdentity.identity, pkToIdCache)
                 persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
             }
 

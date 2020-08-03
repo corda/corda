@@ -279,7 +279,7 @@ class CordappConstraintsTests {
             printVault(alice, states)
 
             // Claim the package, publish the new network parameters , and restart all nodes.
-            val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, null, notary.baseDirectory).read().networkParameters
+            val parameters = NetworkParametersReader(listOf(DEV_ROOT_CA.certificate), null, notary.baseDirectory).read().networkParameters
 
             val newParams = parameters.copy(
                     packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)

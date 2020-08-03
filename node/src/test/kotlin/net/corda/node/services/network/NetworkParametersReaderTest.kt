@@ -54,7 +54,7 @@ class NetworkParametersReaderTest {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"), VersionInfo(1, "TEST", "TEST", "TEST"))
-        networkMapClient.start(DEV_ROOT_CA.certificate)
+        networkMapClient.start(listOf(DEV_ROOT_CA.certificate))
     }
 
     @After
@@ -69,13 +69,13 @@ class NetworkParametersReaderTest {
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(baseDirectory)
         NetworkParametersCopier(server.networkParameters, update = true).install(baseDirectory) // Parameters update file.
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
+        val parameters = NetworkParametersReader(listOf(DEV_ROOT_CA.certificate), networkMapClient, baseDirectory).read().networkParameters
         assertFalse((baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME).exists())
         assertEquals(server.networkParameters, parameters)
         // Parameters from update should be moved to `network-parameters` file.
         val parametersFromFile = (baseDirectory / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+                .verifiedNetworkParametersCert(listOf(DEV_ROOT_CA.certificate))
         assertEquals(server.networkParameters, parametersFromFile)
     }
 
@@ -85,7 +85,7 @@ class NetworkParametersReaderTest {
         val baseDirectory = fs.getPath("/node").createDirectories()
         val fileParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(fileParameters).install(baseDirectory)
-        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).read().networkParameters
+        val parameters = NetworkParametersReader(listOf(DEV_ROOT_CA.certificate), networkMapClient, baseDirectory).read().networkParameters
         assertThat(parameters).isEqualTo(fileParameters)
     }
 
