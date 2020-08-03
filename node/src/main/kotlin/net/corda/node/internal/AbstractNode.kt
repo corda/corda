@@ -418,18 +418,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
-    private fun initKeyStores(): X509Certificate {
-        if (configuration.devMode) {
-            configuration.configureWithDevSSLCertificate(cryptoService)
-            // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
-            // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
-                cryptoService.resyncKeystore()
-            }
-        }
-        return validateKeyStores()
-    }
-
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
         val quasarInstrumentor = Retransform.getInstrumentor()
 
@@ -441,7 +429,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = initKeyStores()
+        val trustRoot = configuration.initKeyStores(cryptoService, log)
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
@@ -473,7 +461,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = initKeyStores()
+        val trustRoot = configuration.initKeyStores(cryptoService, log)
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -917,56 +905,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
-    private fun getCertificateStores(): AllCertificateStores? {
-        return try {
-            // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
-            val signingCertificateStore = configuration.signingCertificateStore.get()
-            val trustStore = configuration.p2pSslOptions.trustStore.get()
-            AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
-        } catch (e: IOException) {
-            log.error("IO exception while trying to validate keystores and truststore", e)
-            null
-        }
-    }
-
-    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
-
-    private fun validateKeyStores(): X509Certificate {
-        // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
-        val certStores = try {
-            requireNotNull(getCertificateStores()) {
-                "One or more keyStores (identity or TLS) or trustStore not found. " +
-                        "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
-            }
-        } catch (e: KeyStoreException) {
-            throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
-        }
-        // Step 2. Check that trustStore contains the correct key-alias entry.
-        require(CORDA_ROOT_CA in certStores.trustStore) {
-            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
-        }
-        // Step 3. Check that tls keyStore contains the correct key-alias entry.
-        require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
-            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
-        }
-
-        // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
-        require(CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
-            "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
-        }
-
-        // Step 5. Check all cert paths chain to the trusted root.
-        val trustRoot = certStores.trustStore[CORDA_ROOT_CA]
-        val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
-        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
-
-        require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
-        require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
-
-        return trustRoot
-    }
+    internal data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
 
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(message: String) : CordaException(message)
@@ -1418,4 +1357,65 @@ fun clientSslOptionsCompatibleWith(nodeRpcOptions: NodeRpcOptions): ClientRpcSsl
     }
     // Here we're using the node's RPC key store as the RPC client's trust store.
     return ClientRpcSslOptions(trustStorePath = nodeRpcOptions.sslConfig!!.keyStorePath, trustStorePassword = nodeRpcOptions.sslConfig!!.keyStorePassword)
+}
+
+internal fun NodeConfiguration.initKeyStores(cryptoService: CryptoService, log: Logger): X509Certificate {
+    if (devMode) {
+        configureWithDevSSLCertificate(cryptoService)
+        // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
+        // we should re-synchronise BCCryptoService with the updated keystore file.
+        if (cryptoService is BCCryptoService) {
+            cryptoService.resyncKeystore()
+        }
+    }
+    return validateKeyStores(log)
+}
+
+internal fun NodeConfiguration.validateKeyStores(log: Logger): X509Certificate {
+    // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
+    val certStores = try {
+        requireNotNull(getCertificateStores(log)) {
+            "One or more keyStores (identity or TLS) or trustStore not found. " +
+                    "Please either copy your existing keys and certificates from another node, " +
+                    "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
+        }
+    } catch (e: KeyStoreException) {
+        throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
+    }
+    // Step 2. Check that trustStore contains the correct key-alias entry.
+    require(CORDA_ROOT_CA in certStores.trustStore) {
+        "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
+    }
+    // Step 3. Check that tls keyStore contains the correct key-alias entry.
+    require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
+        "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+    }
+
+    // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
+    require(CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
+        "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
+    }
+
+    // Step 5. Check all cert paths chain to the trusted root.
+    val trustRoot = certStores.trustStore[CORDA_ROOT_CA]
+    val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
+    val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
+
+    require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+    require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
+
+    return trustRoot
+}
+
+internal fun NodeConfiguration.getCertificateStores(log: Logger): AbstractNode.AllCertificateStores? {
+    return try {
+        // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
+        val sslKeyStore = p2pSslOptions.keyStore.get()
+        val signingCertificateStore = signingCertificateStore.get()
+        val trustStore = p2pSslOptions.trustStore.get()
+        AbstractNode.AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
+    } catch (e: IOException) {
+        log.error("IO exception while trying to validate keystores and truststore", e)
+        null
+    }
 }
