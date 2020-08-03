@@ -435,7 +435,7 @@ internal class SingleThreadedStateMachineManager(
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
                         checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
                         if (!checkpointStorage.removeFlowException(id)) {
-                            logger.error("Unable to remove database exception for flow $id. Something is very wrong.")
+                            logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
                             return@mapNotNull null
                         }
                     }
