@@ -116,7 +116,7 @@ class FlowIsKilledTest {
     }
 
     @Test(timeout = 300_000)
-    fun `manually handle killed flows using checkForIsNotKilled`() {
+    fun `manually handle killed flows using checkFlowIsNotKilled`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
@@ -135,7 +135,7 @@ class FlowIsKilledTest {
     }
 
     @Test(timeout = 300_000)
-    fun `manually handle killed flows using checkForIsNotKilled with lazy message`() {
+    fun `manually handle killed flows using checkFlowIsNotKilled with lazy message`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {
             val alice = startNode(providedName = ALICE_NAME).getOrThrow()
             alice.rpc.let { rpc ->
