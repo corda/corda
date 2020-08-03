@@ -381,47 +381,14 @@ class DBTransactionStorageTests {
         val signedTransaction =  newTransaction()
 
         // Act
-        val logMessages = collectLogsFrom {
-            database.transaction {
-                val result = transactionStorage.trackTransaction(signedTransaction.id)
-                result.cancel(false)
-            }
+        val warning = database.transaction {
+            val (result, warning) = transactionStorage.trackTransactionInternal(signedTransaction.id)
+            result.cancel(false)
+            warning
         }
 
         // Assert
-        assertThat(logMessages).contains("trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions.")
-    }
-
-    private fun collectLogsFrom(statement: () -> Unit): String {
-        // Create test appender
-        val stringWriter = StringWriter()
-        val appenderName = this::collectLogsFrom.name
-        val appender: Appender = WriterAppender.createAppender(
-                null,
-                null,
-                stringWriter,
-                appenderName,
-                false,
-                true
-        )
-        appender.start()
-
-        // Add test appender
-        val context = LogManager.getContext(false) as LoggerContext
-        val configuration = context.configuration
-        configuration.addAppender(appender)
-        configuration.loggers.values.forEach { it.addAppender(appender, null, null) }
-
-        try {
-            statement()
-        } finally {
-            // Remove test appender
-            configuration.loggers.values.forEach { it.removeAppender(appenderName) }
-            configuration.appenders.remove(appenderName)
-            appender.stop()
-        }
-
-        return stringWriter.toString()
+        assertThat(warning).isEqualTo(DBTransactionStorage.TRANSACTION_ALREADY_IN_PROGRESS_WARNING)
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null, clock: CordaClock = SimpleClock(Clock.systemUTC())) {
