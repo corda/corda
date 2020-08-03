@@ -161,7 +161,8 @@ class JPAUniquenessProvider(
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            notary: Party? /** TODO: implement for batch signing  */
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),
