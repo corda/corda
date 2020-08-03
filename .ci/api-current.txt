@@ -8427,7 +8427,7 @@ public final class net.corda.client.rpc.GracefulReconnect extends java.lang.Obje
   public final kotlin.jvm.functions.Function0<kotlin.Unit> getOnReconnect()
 ##
 public final class net.corda.client.rpc.MaxRpcRetryException extends net.corda.client.rpc.RPCException
-  public <init>(int, Throwable)
+  public <init>(int, reflect.Method, Throwable)
 ##
 public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.core.ClientRelevantError, net.corda.nodeapi.exceptions.RpcSerializableError
   public <init>(String)
