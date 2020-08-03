@@ -785,7 +785,6 @@ class FlowFrameworkTests {
         }
     }
 
-    // TODO: modify the below to test to assert the same but BEFORE suspension after we add -> clearing the exception on 'retryFlowFromSafePoint'
     @Test(timeout=300_000)
     fun `Checkpoint status and error in memory and in DB are not dirtied upon flow retry`() {
         var firstExecution = true
