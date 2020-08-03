@@ -94,7 +94,6 @@ import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.determineUnsafeUsers
 import net.corda.node.services.config.shell.toShellConfig
@@ -149,8 +148,6 @@ import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
@@ -176,11 +173,9 @@ import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
-import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.sql.Savepoint
@@ -904,8 +899,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
-
-    internal data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
 
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(message: String) : CordaException(message)
