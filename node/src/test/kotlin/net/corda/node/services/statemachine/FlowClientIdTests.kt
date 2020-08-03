@@ -18,6 +18,7 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
+import net.corda.core.flows.KilledFlowException
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -233,6 +235,44 @@ class FlowClientIdTests {
         // Assert no new flow has started
         assertEquals(flowHandle0!!.id, flowHandle1!!.id)
         assertEquals(1, counter)
+    }
+
+    @Test(timeout=300_000)
+    fun `killing a flow, removes the flow from the client id mapping`() {
+        var counter = 0
+        val flowIsRunning = Semaphore(0)
+        val waitUntilFlowIsRunning = Semaphore(0)
+        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+            var firstRun = true
+
+            @Suspendable
+            override fun call() {
+                ++counter
+                if (firstRun) {
+                    firstRun = false
+                    waitUntilFlowIsRunning.release()
+                    flowIsRunning.acquire()
+                }
+
+            }
+        }
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            waitUntilFlowIsRunning.acquire()
+            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+            flowIsRunning.release()
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        // a new flow will start since the client id mapping was removed when flow got killed
+        val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle1.resultFuture.getOrThrow()
+
+        assertNotEquals(flowHandle0!!.id, flowHandle1.id)
+        assertEquals(2, counter)
     }
 
     @Test(timeout=300_000)

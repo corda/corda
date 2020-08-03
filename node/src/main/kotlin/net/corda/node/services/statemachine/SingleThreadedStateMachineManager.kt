@@ -835,7 +835,12 @@ internal class SingleThreadedStateMachineManager(
         drainFlowEventQueue(flow)
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
-        flow.fiber.clientId?.let { setClientIdAsFailed(it, flow.fiber.id) }
+        flow.fiber.clientId?.let {
+            if (flow.fiber.isKilled) {
+                clientIdsToFlowIds.remove(it)
+            } else {
+                setClientIdAsFailed(it, flow.fiber.id) }
+            }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
