@@ -418,9 +418,20 @@ allprojects {
                     includeGroupByRegex 'com\\.r3(\\..*)?'
                 }
             }
+            maven {
+                url 'https://repo.gradle.org/gradle/libs-releases'
+                content {
+                    includeGroup 'org.gradle'
+                }
+            }
+            maven {
+                url 'https://repository.mulesoft.org/nexus/content/repositories/public'
+                content {
+                    includeGroup 'com.github.bft-smart'
+                }
+            }
             mavenCentral()
             jcenter()
-            maven { url 'https://repo.gradle.org/gradle/libs-releases' }
         }
     }
 
