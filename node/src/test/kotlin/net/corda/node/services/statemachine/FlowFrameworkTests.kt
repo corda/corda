@@ -30,6 +30,7 @@ import net.corda.core.internal.declaredField
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.queryBy
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -775,11 +776,13 @@ class FlowFrameworkTests {
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
 
             // assert all fields of DBFlowException
-            val persistedException = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
-            assertEquals(HospitalizeFlowException::class.java.name, persistedException!!.type)
-            assertEquals("Overnight observation", persistedException.message)
-            // TODO: this needs change once we save the exception blob
-            assertEquals(null, persistedException.value)
+            val exceptionDetails = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowId!!)!!.exceptionDetails
+            assertEquals(HospitalizeFlowException::class.java.name, exceptionDetails!!.type)
+            assertEquals("Overnight observation", exceptionDetails.message)
+            val deserializedException = exceptionDetails.value?.let { SerializedBytes<Any>(it) }?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+            assertNotNull(deserializedException)
+            val hospitalizeFlowException = deserializedException as HospitalizeFlowException
+            assertEquals("Overnight observation", hospitalizeFlowException.message)
         }
     }
 
