@@ -694,14 +694,13 @@ class FlowFrameworkTests {
                 futureFiber.complete(flowFiber)
             }
         }
-        // TODO: make this test more strict => assert the below before checkpoint (after we add -> clearing the exception on 'StateMachineManager.start')
         SuspendingFlow.hookAfterCheckpoint = {
             dbCheckpointStatusAfterSuspension = aliceNode.internals.checkpointStorage.getCheckpointsToRun().toList().single()
                     .second.status
         }
 
         assertFailsWith<TimeoutException> {
-            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(10.seconds) // wait till flow gets hospitalized
         }
         // flow is in hospital
         assertTrue(flowState is FlowState.Unstarted)
@@ -716,7 +715,7 @@ class FlowFrameworkTests {
         aliceNode = mockNet.restartNode(aliceNode)
         futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, before and after suspension
-        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatusBeforeSuspension)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatusBeforeSuspension)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatusBeforeSuspension)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatusAfterSuspension)
     }
@@ -744,7 +743,7 @@ class FlowFrameworkTests {
         }
 
         assertFailsWith<TimeoutException> {
-            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(30.seconds) // wait till flow gets hospitalized
+            aliceNode.services.startFlow(SuspendingFlow()).resultFuture.getOrThrow(10.seconds) // wait till flow gets hospitalized
         }
         // flow is in hospital
         assertTrue(flowState is FlowState.Started)
@@ -757,7 +756,7 @@ class FlowFrameworkTests {
         aliceNode = mockNet.restartNode(aliceNode)
         futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, after suspension
-        assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, dbCheckpointStatus)
+        assertEquals(Checkpoint.FlowStatus.RUNNABLE, dbCheckpointStatus)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, inMemoryCheckpointStatus)
     }
 
