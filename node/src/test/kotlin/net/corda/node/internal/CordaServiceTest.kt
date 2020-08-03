@@ -6,6 +6,8 @@ import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.packageName
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -16,12 +18,20 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.cordapp.DummyRPCFlow
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.makeTestIdentityService
+import org.assertj.core.api.Assertions
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -100,6 +110,22 @@ class CordaServiceTest {
         nodeA.services.cordaService(EntityManagerService::class.java)
     }
 
+    @Test(timeout=300_000)
+    fun `MockServices when initialized with package name not on classpath throws ClassNotFoundException`() {
+        val cordappPackages = listOf(
+                "com.r3.corda.sdk.tokens.money",
+                "net.corda.finance.contracts",
+                CashSchemaV1::class.packageName,
+                DummyLinearStateSchemaV1::class.packageName)
+        val bankOfCorda = TestIdentity(BOC_NAME)
+        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+        val identityService = makeTestIdentityService(dummyNotary.identity)
+
+        Assertions.assertThatThrownBy { MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, bankOfCorda.keyPair) }
+                .isInstanceOf(ClassNotFoundException::class.java).hasMessage("Could not create jar file as the given package is not found on the classpath: com.r3.corda.sdk.tokens.money")
+    }
+    
     @StartableByService
     class DummyServiceFlow : FlowLogic<InvocationContext>() {
         companion object {

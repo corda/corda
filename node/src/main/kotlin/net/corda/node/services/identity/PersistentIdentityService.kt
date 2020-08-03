@@ -12,6 +12,7 @@ import net.corda.core.internal.CertRole
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.hash
 import net.corda.core.internal.toSet
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -19,6 +20,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.network.NotaryUpdateListener
 import net.corda.node.services.persistence.PublicKeyHashToExternalId
 import net.corda.node.services.persistence.WritablePublicKeyToOwningIdentityCache
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -53,7 +55,8 @@ import kotlin.streams.toList
  * cached for efficient lookup.
  */
 @ThreadSafe
-class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal {
+@Suppress("TooManyFunctions")
+class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal, NotaryUpdateListener {
 
     companion object {
         private val log = contextLogger()
@@ -197,7 +200,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override val trustAnchor: TrustAnchor get() = _trustAnchor
 
     /** Stores notary identities obtained from the network parameters, for which we don't need to perform a database lookup. */
-    private val notaryIdentityCache = HashSet<Party>()
+    @Volatile
+    private var notaryIdentityCache = HashSet<Party>()
 
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
@@ -452,5 +456,9 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         } else {
             keys
         }
+    }
+
+    override fun onNewNotaryList(notaries: List<NotaryInfo>) {
+        notaryIdentityCache = HashSet(notaries.map { it.identity })
     }
 }
