@@ -197,7 +197,7 @@ class ArtemisMessagingTest {
     }
 
     private fun startNodeMessagingClient(maxMessageSize: Int = MAX_MESSAGE_SIZE) {
-        messagingClient!!.start(identity.public, null, maxMessageSize)
+        messagingClient!!.start(identity.public, listOf(), maxMessageSize)
     }
 
     private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE, clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {

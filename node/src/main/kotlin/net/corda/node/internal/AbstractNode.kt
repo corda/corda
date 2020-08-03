@@ -590,7 +590,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 networkParametersHotloader)
 
         try {
-            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, keyPairs.filter { it.rotated }.map { it.key }, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
             stop()
@@ -1053,6 +1053,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected abstract fun startMessagingService(rpcOps: RPCOps,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
+                                                 rotatedIdentities: List<PublicKey>,
                                                  networkParameters: NetworkParameters)
 
     /**
@@ -1145,7 +1146,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
         val keyPairs = setOf(loadIdentityKey(legalIdentityPrivateKeyAlias, "node identity")) +
-                rotatedIdentities.map { loadIdentityKey(it, "previous node identity") }
+                rotatedIdentities.map { loadIdentityKey(it, "previous node identity", rotated = true) }
         return identity to keyPairs
     }
 
@@ -1225,7 +1226,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         val identity = PartyAndCertificate(X509Utilities.buildCertPath(certificates))
         val keyPairs = setOf(loadIdentityKey(privateKeyAlias, "notary service identity", notary = true)) +
-                rotatedIdentities.map { loadIdentityKey(it, "previous notary service identity", notary = true) }
+                rotatedIdentities.map { loadIdentityKey(it, "previous notary service identity", rotated = true, notary = true) }
         return identity to keyPairs
     }
 
@@ -1234,15 +1235,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
      */
     private val X509Certificate.rotatedIdentity: Boolean get() = (extendedKeyUsage == null || extendedKeyUsage.size == 0)
 
-    private data class KeyAndAlias(val key: PublicKey, val alias: String, val notary: Boolean)
+    private data class KeyAndAlias(val key: PublicKey, val alias: String, val rotated: Boolean, val notary: Boolean)
 
-    private fun loadIdentityKey(alias: String, description: String, notary: Boolean = false): KeyAndAlias {
+    private fun loadIdentityKey(alias: String, description: String, rotated: Boolean = false, notary: Boolean = false): KeyAndAlias {
         if (!cryptoService.containsKey(alias)) {
             throw IllegalStateException("Key alias $alias for $description was not found in CryptoService")
         }
         val key = cryptoService.getPublicKey(alias)!!
         log.info("Loaded $description key: ${key.toStringShort()}, alias: $alias")
-        return KeyAndAlias(key, alias, notary)
+        return KeyAndAlias(key, alias, rotated, notary)
     }
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
