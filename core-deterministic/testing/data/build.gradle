@@ -25,7 +25,10 @@ tasks.named('jar', Jar) {
     enabled = false
 }
 
-def test = tasks.named('test', Test) {
+test {
+    ext {
+        ignoreForDistribution = true
+    }
     filter {
         // Running this class is the whole point, so include it explicitly.
         includeTestsMatching "net.corda.deterministic.data.GenerateData"
@@ -34,9 +37,8 @@ def test = tasks.named('test', Test) {
     // note: required by Gradle Build Cache.
     outputs.upToDateWhen { false }
 }
+assemble.finalizedBy test
 
-def testDataJar = file("$buildDir/test-data.jar")
 artifacts {
-    archives file: testDataJar, type: 'jar', builtBy: test
-    testData file: testDataJar, type: 'jar', builtBy: test
+    testData file: file("$buildDir/test-data.jar"), type: 'jar', builtBy: test
 }
