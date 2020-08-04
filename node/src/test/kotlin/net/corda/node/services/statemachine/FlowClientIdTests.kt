@@ -62,6 +62,8 @@ class FlowClientIdTests {
         SingleThreadedStateMachineManager.onClientIDNotFound = null
         SingleThreadedStateMachineManager.onCallingStartFlowInternal = null
         SingleThreadedStateMachineManager.onStartFlowInternalThrewAndAboutToRemove = null
+
+        StaffedFlowHospital.onFlowErrorPropagated.clear()
     }
 
     @Test(timeout=300_000)
