@@ -29,7 +29,7 @@ import kotlin.test.fail
 
 class SSHServerTest {
     @Test(timeout=300_000)
-	fun `ssh server does not start be default`() {
+	fun `ssh server does not start by default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = emptyList())) {

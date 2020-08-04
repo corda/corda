@@ -289,19 +289,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = makeFlowLogicRefFactoryImpl()
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
-    val networkMapUpdater = NetworkMapUpdater(
-            networkMapCache,
-            NodeInfoWatcher(
-                    configuration.baseDirectory,
-                    @Suppress("LeakingThis")
-                    rxIoScheduler,
-                    Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)
-            ),
-            networkMapClient,
-            configuration.baseDirectory,
-            configuration.extraNetworkMapKeys,
-            networkParametersStorage
-    ).closeOnStop()
+    val networkMapUpdater = makeNetworkMapUpdater()
+
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(
         numberOfWorkers = transactionVerifierWorkerCount,
@@ -336,16 +325,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
     val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
-    private val schedulerService = NodeSchedulerService(
-            platformClock,
-            database,
-            flowStarter,
-            servicesForResolution,
-            flowLogicRefFactory,
-            nodeProperties,
-            configuration.drainingModePollPeriod,
-            unfinishedSchedules = busyNodeLatch
-    ).tokenize().closeOnStop()
+    private val schedulerService = makeNodeSchedulerService()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
@@ -748,6 +728,31 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // Extracted into a function to allow overriding in subclasses.
     protected open fun makeFlowLogicRefFactoryImpl() = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
 
+    protected open fun makeNetworkMapUpdater() = NetworkMapUpdater(
+            networkMapCache,
+            NodeInfoWatcher(
+                    configuration.baseDirectory,
+                    @Suppress("LeakingThis")
+                    rxIoScheduler,
+                    Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)
+            ),
+            networkMapClient,
+            configuration.baseDirectory,
+            configuration.extraNetworkMapKeys,
+            networkParametersStorage
+    ).closeOnStop()
+
+    protected open fun makeNodeSchedulerService() = NodeSchedulerService(
+            platformClock,
+            database,
+            flowStarter,
+            servicesForResolution,
+            flowLogicRefFactory,
+            nodeProperties,
+            configuration.drainingModePollPeriod,
+    unfinishedSchedules = busyNodeLatch
+    ).tokenize().closeOnStop()
+
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
         notaryLoader?.builtInNotary?.let { notaryImpl ->
@@ -792,7 +797,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         ).tokenize()
     }
 
-    private fun createExternalOperationExecutor(numberOfThreads: Int): ExecutorService {
+    protected open fun createExternalOperationExecutor(numberOfThreads: Int): ExecutorService {
         when (numberOfThreads) {
             1 -> log.info("Flow external operation executor has $numberOfThreads thread")
             else -> log.info("Flow external operation executor has a max of $numberOfThreads threads")
@@ -974,10 +979,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
+        startHikariPool()
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
+
+    protected open fun startHikariPool() = database.startHikariPool(configuration.dataSourceProperties,
+            configuration.database,
+            schemaService.internalSchemas(),
+            metricRegistry, cordappLoader,
+            configuration.baseDirectory,
+            configuration.myLegalName)
 
     /** Loads and starts a notary service if it is configured. */
     private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
@@ -1398,7 +1410,9 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
                     "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
-            ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
+            ex is OutstandingDatabaseChangesException -> {
+                throw (DatabaseIncompatibleException(ex.message))
+            }
             else -> {
                 val msg = ex.message ?: ex::class.java.canonicalName
                 throw CouldNotCreateDataSourceException(
