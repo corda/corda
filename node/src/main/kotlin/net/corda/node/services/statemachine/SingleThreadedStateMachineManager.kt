@@ -936,17 +936,22 @@ internal class SingleThreadedStateMachineManager(
         )
 
     override fun removeClientId(clientId: String): Boolean {
-        var removed = false
+        var removedFlowId: StateMachineRunId? = null
         innerState.withLock {
             clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
                 if (existingStatus != null && existingStatus is FlowWithClientIdStatus.Removed) {
-                    removed = true
+                    removedFlowId = existingStatus.flowId
                     null
                 } else { // don't remove
                     existingStatus
                 }
             }
         }
-        return removed
+
+        removedFlowId?.let {
+            database.transaction { checkpointStorage.removeCheckpoint(it) }
+            return true
+        }
+        return false
     }
 }

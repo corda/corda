@@ -482,6 +482,8 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
+    // We cant have a result and an exception for the same checkpoint. The below method should be changed to get a [succeeded: Boolean] parameter
+    // so that it only deletes a result or an exception. That way we ll save an extra delete statement everytime we remove a checkpoint.
     @Suppress("MagicNumber")
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         var deletedRows = 0

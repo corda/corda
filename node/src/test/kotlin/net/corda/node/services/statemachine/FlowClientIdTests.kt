@@ -295,6 +295,55 @@ class FlowClientIdTests {
     }
 
     @Test(timeout=300_000)
+    fun `removing a client id result clears resources properly`() {
+        val clientId = UUID.randomUUID().toString()
+        aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        // assert database status before remove
+        aliceNode.services.database.transaction {
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+
+        aliceNode.smm.removeClientId(clientId)
+
+        // assert database status after remove
+        aliceNode.services.database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `removing a client id exception clears resources properly`() {
+        val clientId = UUID.randomUUID().toString()
+        ResultFlow.hook = { throw IllegalStateException() }
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(Unit)).resultFuture.getOrThrow()
+        }
+        // assert database status before remove
+        aliceNode.services.database.transaction {
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+
+        aliceNode.smm.removeClientId(clientId)
+
+        // assert database status after remove
+        aliceNode.services.database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+    }
+
+    @Test(timeout=300_000)
     fun `flow's client id mapping can only get removed once the flow gets removed`() {
         val clientId = UUID.randomUUID().toString()
         var tries = 0
