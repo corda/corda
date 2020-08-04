@@ -249,24 +249,25 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList()
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            assertDownloadedNetworkParameters(aliceNode)
-            aliceNode.onlySees(aliceNode.nodeInfo)
+            startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
+                assertDownloadedNetworkParameters(aliceNode)
+                aliceNode.onlySees(aliceNode.nodeInfo)
 
-            val bobNode = startNode(providedName = BOB_NAME, devMode = false).getOrThrow()
+                // Wait for network map client to poll for the next update.
+                Thread.sleep(cacheTimeout.toMillis() * 2)
 
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(cacheTimeout.toMillis() * 2)
+                startNode(providedName = BOB_NAME, devMode = false).getOrThrow().use { bobNode ->
+                    bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+                    aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
 
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+                    networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
-            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+                    // Wait for network map client to poll for the next update.
+                    Thread.sleep(cacheTimeout.toMillis() * 2)
 
-            // Wait for network map client to poll for the next update.
-            Thread.sleep(cacheTimeout.toMillis() * 2)
-
-            bobNode.onlySees(bobNode.nodeInfo)
+                    bobNode.onlySees(bobNode.nodeInfo)
+                }
+            }
         }
     }
 
@@ -278,24 +279,25 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 notarySpecs = emptyList(),
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
-            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-
-            var maxRemoveRetries = 5
-
-            // Try to remove multiple times in case the network map republishes just in between the removal and the check.
-            while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
+            startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
+                val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash
+                assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
                 networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-                if (maxRemoveRetries-- == 0) {
-                    throw AssertionError("Could not remove Node info.")
-                }
-            }
 
-            // Wait until the node info is republished.
-            Thread.sleep(2000)
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
+                var maxRemoveRetries = 5
+
+                // Try to remove multiple times in case the network map republishes just in between the removal and the check.
+                while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
+                    networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+                    if (maxRemoveRetries-- == 0) {
+                        throw AssertionError("Could not remove Node info.")
+                    }
+                }
+
+                // Wait until the node info is republished.
+                Thread.sleep(2000)
+                assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
+            }
         }
     }
 
