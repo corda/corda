@@ -189,8 +189,8 @@ class FlowReloadAfterCheckpointTest {
 
     @Test(timeout = 300_000)
     fun `timed flow will reload from initial checkpoint after calling a suspending function when reloadCheckpointAfterSuspend is true`() {
-        var reloadCount = 0
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
+        val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { runId -> reloads.add(runId) }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val alice = startNode(
@@ -199,14 +199,14 @@ class FlowReloadAfterCheckpointTest {
             ).getOrThrow()
 
             alice.rpc.startFlow(::MyTimedFlow).returnValue.getOrThrow()
-            assertEquals(5, reloadCount)
+            assertEquals(5, reloads.size)
         }
     }
 
     @Test(timeout = 300_000)
     fun `flow will correctly retry after an error when reloadCheckpointAfterSuspend is true`() {
-        var reloadCount = 0
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ -> reloadCount += 1 }
+        val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { runId -> reloads.add(runId) }
         var timesDischarged = 0
         StaffedFlowHospital.onFlowDischarged.add { _, _ -> timesDischarged += 1 }
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
@@ -217,18 +217,18 @@ class FlowReloadAfterCheckpointTest {
             ).getOrThrow()
 
             alice.rpc.startFlow(::TransientConnectionFailureFlow).returnValue.getOrThrow()
-            assertEquals(5, reloadCount)
+            assertEquals(5, reloads.size)
             assertEquals(3, timesDischarged)
         }
     }
 
     @Test(timeout = 300_000)
     fun `flow continues reloading from checkpoints after node restart when reloadCheckpointAfterSuspend is true`() {
-        var reloadCount = 0
+        val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
         var reloadsExpected = CountDownLatch(2)
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ ->
+            reloads.add(runId)
             reloadsExpected.countDown()
-            reloadCount++
         }
         driver(
             DriverParameters(
@@ -256,7 +256,7 @@ class FlowReloadAfterCheckpointTest {
             ).getOrThrow()
 
             assertTrue { reloadsExpected.await(20, TimeUnit.SECONDS) }
-            assertEquals(5, reloadCount)
+            assertEquals(2, reloads.size)
         }
     }
 
@@ -265,10 +265,10 @@ class FlowReloadAfterCheckpointTest {
         // restarts completely from the beginning and forgets the in-memory reload count therefore
         // it reloads an extra 2 times for checkpoints it had already reloaded before the node shutdown
         val reloadsExpected = CountDownLatch(7)
-        var reloadCount = 0
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ ->
+        val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { runId ->
+            reloads.add(runId)
             reloadsExpected.countDown()
-            reloadCount++
         }
         driver(
             DriverParameters(
@@ -297,7 +297,7 @@ class FlowReloadAfterCheckpointTest {
             // restarts completely from the beginning and forgets the in-memory reload count therefore
             // it reloads an extra 2 times for checkpoints it had already reloaded before the node shutdown
             assertTrue { reloadsExpected.await(20, TimeUnit.SECONDS) }
-            assertEquals(7, reloadCount)
+            assertEquals(7, reloads.size)
         }
     }
 
