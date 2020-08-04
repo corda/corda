@@ -160,7 +160,7 @@ class DBCheckpointStorage(
         var checkpoint: ByteArray = EMPTY_BYTE_ARRAY,
 
         @Type(type = "corda-blob")
-        @Column(name = "flow_state")
+        @Column(name = "flow_state", nullable = true)
         var flowStack: ByteArray?,
 
         @Type(type = "corda-wrapper-binary")
