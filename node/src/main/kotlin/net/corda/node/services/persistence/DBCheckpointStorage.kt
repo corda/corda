@@ -442,14 +442,20 @@ class DBCheckpointStorage(
             null
         }
 
-        val exceptionDetails = updateDBFlowException(flowId, checkpoint, now)
+        val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            val errored = checkpoint.errorState as? ErrorState.Errored
+            errored?.let { createDBFlowException(flowId, it, now) }
+                    ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
+        } else {
+            null
+        }
 
         // Updates to children entities ([DBFlowCheckpointBlob], [DBFlowResult], [DBFlowException], [DBFlowMetadata]) are not cascaded to children tables.
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
             result = dbFlowResult,
-            exceptionDetails = exceptionDetails,
+            exceptionDetails = dbFlowException,
             flowMetadata = dummyDBFlowMetadata, // [DBFlowMetadata] will only update its 'finish_time' when a checkpoint finishes
             status = checkpoint.status,
             compatible = checkpoint.compatible,
@@ -461,6 +467,7 @@ class DBCheckpointStorage(
         currentDBSession().update(dbFlowCheckpoint)
         blob?.let { currentDBSession().update(it) }
         dbFlowResult?.let { currentDBSession().save(it) }
+        dbFlowException?.let { currentDBSession().save(it) }
         if (checkpoint.isFinished()) {
             setDBFlowMetadataFinishTime(flowId, now)
         }
@@ -475,16 +482,15 @@ class DBCheckpointStorage(
         query.executeUpdate()
     }
 
-    // DBFlowResult and DBFlowException to be integrated with rest of schema
     @Suppress("MagicNumber")
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         var deletedRows = 0
         val flowId = id.uuid.toString()
         deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
-//        exceptionId?.let { deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, it.toString()) }
         return deletedRows >= 2
     }
 
@@ -527,6 +533,10 @@ class DBCheckpointStorage(
         return currentDBSession().find(DBFlowResult::class.java, id.uuid.toString())
     }
 
+    private fun getDBFlowException(id: StateMachineRunId): DBFlowException? {
+        return currentDBSession().find(DBFlowException::class.java, id.uuid.toString())
+    }
+
     override fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>> {
         val session = currentDBSession()
         val jpqlQuery = """select new ${DBPausedFields::class.java.name}(checkpoint.id, blob.checkpoint, checkpoint.status,
@@ -539,13 +549,13 @@ class DBCheckpointStorage(
         }
     }
 
-    // This method needs modification once CORDA-3681 is implemented to include FAILED flows as well
     override fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>> {
         val session = currentDBSession()
-        val jpqlQuery = """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
+        val jpqlQuery =
+            """select new ${DBFlowResultMetadataFields::class.java.name}(checkpoint.id, checkpoint.status, metadata.userSuppliedIdentifier) 
                 from ${DBFlowCheckpoint::class.java.name} checkpoint 
                 join ${DBFlowMetadata::class.java.name} metadata on metadata.id = checkpoint.flowMetadata  
-                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal}""".trimIndent()
+                where checkpoint.status = ${FlowStatus.COMPLETED.ordinal} or checkpoint.status = ${FlowStatus.FAILED.ordinal}""".trimIndent()
         val query = session.createQuery(jpqlQuery, DBFlowResultMetadataFields::class.java)
         return query.resultList.stream().map {
             StateMachineRunId(UUID.fromString(it.id)) to FlowResultMetadata(it.status, it.clientId)
@@ -559,6 +569,20 @@ class DBCheckpointStorage(
         }
         val serializedFlowResult = dbFlowResult?.value?.let { SerializedBytes<Any>(it) }
         return serializedFlowResult?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
+    override fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean): Any? {
+        val dbFlowException = getDBFlowException(id)
+        if (throwIfMissing && dbFlowException == null) {
+            throw IllegalStateException("Flow's $id exception was not found in the database. Something is very wrong.")
+        }
+        val serializedFlowException = dbFlowException?.value?.let { SerializedBytes<Any>(it) }
+        return serializedFlowException?.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)
+    }
+
+    override fun removeFlowException(id: StateMachineRunId): Boolean {
+        val flowId = id.uuid.toString()
+        return deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId) == 1
     }
 
     override fun updateStatus(runId: StateMachineRunId, flowStatus: FlowStatus) {
@@ -610,37 +634,6 @@ class DBCheckpointStorage(
         )
     }
 
-    /**
-     * Creates, updates or deletes the error related to the current flow/checkpoint.
-     *
-     * This is needed because updates are not cascading via Hibernate, therefore operations must be handled manually.
-     *
-     * A [DBFlowException] is created if [DBFlowCheckpoint.exceptionDetails] does not exist and the [Checkpoint] has an error attached to it.
-     * The existing [DBFlowException] is updated if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has an error.
-     * The existing [DBFlowException] is deleted if [DBFlowCheckpoint.exceptionDetails] exists and the [Checkpoint] has no error.
-     * Nothing happens if both [DBFlowCheckpoint] and [Checkpoint] are related to no errors.
-     */
-    // DBFlowException to be integrated with rest of schema
-    // Add a flag notifying if an exception is already saved in the database for below logic (are we going to do this after all?)
-    private fun updateDBFlowException(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowException? {
-        val exceptionDetails = (checkpoint.errorState as? ErrorState.Errored)?.let { createDBFlowException(flowId, it, now) }
-//        if (checkpoint.dbExoSkeleton.dbFlowExceptionId != null) {
-//            if (exceptionDetails != null) {
-//                exceptionDetails.flow_id = checkpoint.dbExoSkeleton.dbFlowExceptionId!!
-//                currentDBSession().update(exceptionDetails)
-//            } else {
-//                val session = currentDBSession()
-//                val entity = session.get(DBFlowException::class.java, checkpoint.dbExoSkeleton.dbFlowExceptionId)
-//                session.delete(entity)
-//                return null
-//            }
-//        } else if (exceptionDetails != null) {
-//            currentDBSession().save(exceptionDetails)
-//            checkpoint.dbExoSkeleton.dbFlowExceptionId = exceptionDetails.flow_id
-//        }
-        return exceptionDetails
-    }
-
     private fun createDBFlowException(flowId: String, errorState: ErrorState.Errored, now: Instant): DBFlowException {
         return errorState.errors.last().exception.let {
             DBFlowException(
@@ -648,7 +641,7 @@ class DBCheckpointStorage(
                 type = it::class.java.name.truncate(MAX_EXC_TYPE_LENGTH, true),
                 message = it.message?.truncate(MAX_EXC_MSG_LENGTH, false),
                 stackTrace = it.stackTraceToString(),
-                value = null, // TODO to be populated upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+                value = it.storageSerialize().bytes,
                 persistedInstant = now
             )
         }

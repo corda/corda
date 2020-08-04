@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -15,13 +16,15 @@ import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.startFlowWithClientId
+import net.corda.core.flows.KilledFlowException
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
+import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import java.sql.SQLTransientConnectionException
 import java.util.UUID
@@ -29,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -58,6 +62,8 @@ class FlowClientIdTests {
         SingleThreadedStateMachineManager.onClientIDNotFound = null
         SingleThreadedStateMachineManager.onCallingStartFlowInternal = null
         SingleThreadedStateMachineManager.onStartFlowInternalThrewAndAboutToRemove = null
+
+        StaffedFlowHospital.onFlowErrorPropagated.clear()
     }
 
     @Test(timeout=300_000)
@@ -180,19 +186,96 @@ class FlowClientIdTests {
         Assert.assertEquals(result0, result1)
     }
 
-    @Ignore // this is to be unignored upon implementing CORDA-3681
     @Test(timeout=300_000)
-    fun `flow's exception is available after flow's lifetime if flow is started with a client id`() {
-        ResultFlow.hook = { throw IllegalStateException() }
+    fun `failing flow's exception is available after flow's lifetime if flow is started with a client id`() {
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+            throw IllegalStateException()
+        }
         val clientId = UUID.randomUUID().toString()
 
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
         assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
         }
 
-        assertFailsWith<IllegalStateException> {
-            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        var flowHandle1: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<CordaRuntimeException> {
+            flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle1!!.resultFuture.getOrThrow()
         }
+
+        // Assert no new flow has started
+        assertEquals(flowHandle0!!.id, flowHandle1!!.id)
+        assertEquals(1, counter)
+    }
+
+    @Test(timeout=300_000)
+    fun `failed flow's exception is available after flow's lifetime on node start if flow was started with a client id`() {
+        var counter = 0
+        ResultFlow.hook = {
+            counter++
+            throw IllegalStateException()
+        }
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<IllegalStateException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        aliceNode = mockNet.restartNode(aliceNode)
+
+        var flowHandle1: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<CordaRuntimeException> {
+            flowHandle1 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle1!!.resultFuture.getOrThrow()
+        }
+
+        // Assert no new flow has started
+        assertEquals(flowHandle0!!.id, flowHandle1!!.id)
+        assertEquals(1, counter)
+    }
+
+    @Test(timeout=300_000)
+    fun `killing a flow, removes the flow from the client id mapping`() {
+        var counter = 0
+        val flowIsRunning = Semaphore(0)
+        val waitUntilFlowIsRunning = Semaphore(0)
+        ResultFlow.suspendableHook = object : FlowLogic<Unit>() {
+            var firstRun = true
+
+            @Suspendable
+            override fun call() {
+                ++counter
+                if (firstRun) {
+                    firstRun = false
+                    waitUntilFlowIsRunning.release()
+                    flowIsRunning.acquire()
+                }
+
+            }
+        }
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<KilledFlowException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            waitUntilFlowIsRunning.acquire()
+            aliceNode.internals.smm.killFlow(flowHandle0!!.id)
+            flowIsRunning.release()
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        // a new flow will start since the client id mapping was removed when flow got killed
+        val flowHandle1: FlowStateMachineHandle<Int> = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle1.resultFuture.getOrThrow()
+
+        assertNotEquals(flowHandle0!!.id, flowHandle1.id)
+        assertEquals(2, counter)
     }
 
     @Test(timeout=300_000)
@@ -326,6 +409,7 @@ class FlowClientIdTests {
         Assert.assertEquals(5, flowHandle1.resultFuture.getOrThrow(20.seconds))
     }
 
+    // the below test has to be made available only in ENT
 //    @Test(timeout=300_000)
 //    fun `on node restart -paused- flows with client id are hook-able`() {
 //        val clientId = UUID.randomUUID().toString()
@@ -424,6 +508,7 @@ class FlowClientIdTests {
         assertEquals(1, counter)
     }
 
+    // the below test has to be made available only in ENT
 //    @Test(timeout=300_000)
 //    fun `On 'startFlowInternal' throwing, subsequent request with same client hits the time window in which the previous request was about to remove the client id mapping`() {
 //        val clientId = UUID.randomUUID().toString()
@@ -461,7 +546,6 @@ class FlowClientIdTests {
 //        assertEquals(0, counter)
 //    }
 
-    // This test needs modification once CORDA-3681 is implemented to check that 'node_flow_exceptions' gets a row
     @Test(timeout=300_000)
     fun `if flow fails to serialize its result then the result gets converted to an exception result`() {
         val clientId = UUID.randomUUID().toString()
@@ -474,8 +558,7 @@ class FlowClientIdTests {
             val checkpointStatus = findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().single().status
             assertEquals(Checkpoint.FlowStatus.FAILED, checkpointStatus)
             assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowResult>().size)
-            // uncomment the below line once CORDA-3681 is implemented
-            //assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(1, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
         }
 
         assertFailsWith<CordaRuntimeException> {
@@ -497,6 +580,49 @@ class FlowClientIdTests {
         val result = aliceNode.services.startFlowWithClientId(clientId, UnSerializableResultFlow()).resultFuture.getOrThrow()
         assertEquals(5, result)
     }
+
+    @Test(timeout=300_000)
+    fun `flow that fails does not retain its checkpoint nor its exception in the database if not started with a client id`() {
+        assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlow(ExceptionFlow { IllegalStateException("another exception") }).resultFuture.getOrThrow()
+        }
+
+        aliceNode.services.database.transaction {
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpoint>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowCheckpointBlob>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowException>().size)
+            assertEquals(0, findRecordsFromDatabase<DBCheckpointStorage.DBFlowMetadata>().size)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `subsequent request to failed flow that cannot find a 'DBFlowException' in the database, fails with 'IllegalStateException'`() {
+        ResultFlow.hook = {
+            // just throwing a different exception from the one expected out of startFlowWithClientId second call below ([IllegalStateException])
+            // to be sure [IllegalStateException] gets thrown from [DBFlowException] that is missing
+            throw IllegalArgumentException()
+        }
+        val clientId = UUID.randomUUID().toString()
+
+        var flowHandle0: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<IllegalArgumentException> {
+            flowHandle0 = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle0!!.resultFuture.getOrThrow()
+        }
+
+        // manually remove [DBFlowException] from the database to impersonate missing [DBFlowException]
+        val removed = aliceNode.services.database.transaction {
+            aliceNode.internals.checkpointStorage.removeFlowException(flowHandle0!!.id)
+        }
+        assertTrue(removed)
+
+        val e = assertFailsWith<IllegalStateException> {
+            aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5)).resultFuture.getOrThrow()
+        }
+
+        assertEquals("Flow's ${flowHandle0!!.id} exception was not found in the database. Something is very wrong.", e.message)
+    }
+
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {

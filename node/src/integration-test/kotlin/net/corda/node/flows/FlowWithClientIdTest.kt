@@ -1,6 +1,7 @@
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.OpenFuture
@@ -76,6 +77,34 @@ class FlowWithClientIdTest {
             assertTrue(errorMessage!!.contains("Unable to create an object serializer for type class ${UnserializableResultFlow.UNSERIALIZABLE_OBJECT::class.java.name}"))
         }
     }
+
+    @Test(timeout=300_000)
+    fun `If flow has an unserializable exception result then it gets converted into a 'CordaRuntimeException'`() {
+        ResultFlow.hook = {
+            throw UnserializableException()
+        }
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val node = startNode().getOrThrow()
+
+            // the below exception is the one populating the flows future. It will get serialized on node jvm, sent over to client and
+            // deserialized on client's.
+            val e0 = assertFailsWith<CordaRuntimeException> {
+                node.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow()
+            }
+
+            // the below exception is getting fetched from the database first, and deserialized on node's jvm,
+            // then serialized on node jvm, sent over to client and deserialized on client's.
+            val e1 = assertFailsWith<CordaRuntimeException> {
+                node.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5).returnValue.getOrThrow()
+            }
+
+            assertTrue(e0 !is UnserializableException)
+            assertTrue(e1 !is UnserializableException)
+            assertEquals(UnserializableException::class.java.name, e0.originalExceptionClassName)
+            assertEquals(UnserializableException::class.java.name, e1.originalExceptionClassName)
+        }
+    }
 }
 
 @StartableByRPC
@@ -104,3 +133,7 @@ internal class UnserializableResultFlow: FlowLogic<OpenFuture<Observable<Unit>>>
         return UNSERIALIZABLE_OBJECT
     }
 }
+
+internal class UnserializableException(
+    val unserializableObject: BrokenMap<Unit, Unit> = BrokenMap()
+): CordaRuntimeException("123")

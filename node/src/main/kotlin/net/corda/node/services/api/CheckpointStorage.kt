@@ -75,5 +75,13 @@ interface CheckpointStorage {
      */
     fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
 
+    /**
+     * Load a flow exception from the store. If [throwIfMissing] is true then it throws an [IllegalStateException]
+     * if the flow exception is missing in the database.
+     */
+    fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
+
+    fun removeFlowException(id: StateMachineRunId): Boolean
+
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }

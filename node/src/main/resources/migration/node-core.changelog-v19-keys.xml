@@ -21,6 +21,9 @@
         <createIndex indexName="node_flow_results_idx" tableName="node_flow_results" clustered="false" unique="true">
             <column name="flow_id"/>
         </createIndex>
+        <createIndex indexName="node_flow_exceptions_idx" tableName="node_flow_exceptions" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
         <createIndex indexName="node_flow_metadata_idx" tableName="node_flow_metadata" clustered="false" unique="true">
             <column name="flow_id"/>
         </createIndex>

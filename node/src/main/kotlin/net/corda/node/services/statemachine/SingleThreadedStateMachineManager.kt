@@ -5,7 +5,6 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.instrument.JavaAgent
 import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowException
@@ -192,7 +191,7 @@ internal class SingleThreadedStateMachineManager(
                 if (finishedFlowResult.status == Checkpoint.FlowStatus.COMPLETED) {
                     innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, true)
                 } else {
-                    // - FAILED flows need to be fetched upon implementing https://r3-cev.atlassian.net/browse/CORDA-3681
+                    innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Removed(id, false)
                 }
             } ?: logger.error("Found finished flow $id without a client id. Something is very wrong and this flow will be ignored.")
         }
@@ -431,7 +430,15 @@ internal class SingleThreadedStateMachineManager(
             it.mapNotNull { (id, serializedCheckpoint) ->
                 // If a flow is added before start() then don't attempt to restore it
                 innerState.withLock { if (id in flows) return@mapNotNull null }
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
+                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
+                        if (!checkpointStorage.removeFlowException(id)) {
+                            logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
+                            return@mapNotNull null
+                        }
+                    }
+                } ?: return@mapNotNull null
                 flowCreator.createFlowFromCheckpoint(id, checkpoint)
             }.toList()
         }
@@ -466,13 +473,24 @@ internal class SingleThreadedStateMachineManager(
         val flow = if (currentState.isAnyCheckpointPersisted) {
             // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
             // we mirror exactly what happens when restarting the node.
-            val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
-            if (serializedCheckpoint == null) {
-                logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
-                return
-            }
+            val checkpoint = database.transaction {
+                val serializedCheckpoint = checkpointStorage.getCheckpoint(flowId)
+                if (serializedCheckpoint == null) {
+                    logger.error("Unable to find database checkpoint for flow $flowId. Something is very wrong. The flow will not retry.")
+                    return@transaction null
+                }
 
-            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
+                tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
+                    if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                        if (!checkpointStorage.removeFlowException(flowId)) {
+                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not retry.")
+                            return@transaction null
+                        }
+                    }
+                } ?: return@transaction null
+            } ?: return
+
             // Resurrect flow
             flowCreator.createFlowFromCheckpoint(flowId, checkpoint, reloadCheckpointAfterSuspendCount = currentState.reloadCheckpointAfterSuspendCount)
                     ?: return
@@ -817,7 +835,12 @@ internal class SingleThreadedStateMachineManager(
         drainFlowEventQueue(flow)
         // Complete the started future, needed when the flow fails during flow init (before completing an [UnstartedFlowTransition])
         startedFutures.remove(flow.fiber.id)?.set(Unit)
-        flow.fiber.clientId?.let { setClientIdAsFailed(it, flow.fiber.id) }
+        flow.fiber.clientId?.let {
+            if (flow.fiber.isKilled) {
+                clientIdsToFlowIds.remove(it)
+            } else {
+                setClientIdAsFailed(it, flow.fiber.id) }
+            }
         val flowError = removalReason.flowErrors[0] // TODO what to do with several?
         val exception = flowError.exception
         (exception as? FlowException)?.originalErrorId = flowError.errorId
@@ -882,14 +905,13 @@ internal class SingleThreadedStateMachineManager(
         is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
         is FlowWithClientIdStatus.Removed -> {
             val flowId = existingStatus.flowId
-
             val resultFuture = if (existingStatus.succeeded) {
                 val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
                 doneFuture(flowResult)
             } else {
-                // this block will be implemented upon implementing CORDA-3681 - for now just return a dummy exception
-                val flowException = CordaRuntimeException("dummy")
-                openFuture<Any?>().apply { setException(flowException) }
+                val flowException =
+                    database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing = true) }
+                openFuture<Any?>().apply { setException(flowException as Throwable) }
             }
 
             doneClientIdFuture(flowId, resultFuture, clientId)
