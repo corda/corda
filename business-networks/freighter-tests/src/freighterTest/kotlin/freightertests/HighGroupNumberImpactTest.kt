@@ -22,6 +22,11 @@ import kotlin.system.measureTimeMillis
 @AzureTest
 class HighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest() {
 
+    private companion object {
+        const val numberOfParticipants = 10
+        const val cutOffTime: Long = 300000
+    }
+
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(AddingASingleMemberToNetworkAndGroupTest::class.java.name)
     }
@@ -29,32 +34,18 @@ class HighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest() {
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
     @Test
-    fun testWith10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario20Participants() {
-        val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario30Participants() {
-        val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario40Participants() {
-        val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 300000)
+    fun testScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
 }
 
 @DockerTest
-class DockerHighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest(){
+class DockerHighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest() {
+
+    private companion object {
+        const val numberOfParticipants = 2
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
@@ -63,11 +54,9 @@ class DockerHighGroupNumberImpactTest : AbstractHighGroupNumberImpactTest(){
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testScenario10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 300000)
+    fun testScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
 abstract class AbstractHighGroupNumberImpactTest : BaseBNFreighterTest() {
@@ -85,18 +74,12 @@ abstract class AbstractHighGroupNumberImpactTest : BaseBNFreighterTest() {
 
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
-        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
-        groupMembers.add(0, bnoMembershipState.linearId)
-        addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
 
         val groupIndex = AtomicInteger(0)
 
         listOfGroupMembers.map {
-            val subsetGroupName = "subGroup-${groupIndex.incrementAndGet()}"
-            val subGroupId = UniqueIdentifier()
-            val smallGroup = mutableListOf(bnoMembershipState.linearId, (nodeToMembershipIds[it] ?: error("")).linearId)
-            createGroup(bnoNode, bnoMembershipState, subGroupId, subsetGroupName)
-            addMembersToAGroup(bnoNode, subGroupId, subsetGroupName, smallGroup)
+            val smallGroup = listOf((nodeToMembershipIds[it] ?: error("Could Not Find given Node")))
+            createSubGroup(smallGroup, groupIndex, bnoMembershipState, bnoNode)
         }
 
         val nodeToSuspend = listOfGroupMembers.last()
@@ -111,6 +94,6 @@ abstract class AbstractHighGroupNumberImpactTest : BaseBNFreighterTest() {
         val vaultRegistryTime = measureTimeMillis { waitForStatusUpdate(listOf(nodeToSuspend), suspendedStatusCriteria) }
 
         return mapOf("Time Taken To Suspend A Single Node" to suspensionTime,
-                "Time taken to register in Vault" to vaultRegistryTime )
+                "Time taken to register in Vault" to vaultRegistryTime)
     }
 }

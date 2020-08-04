@@ -21,51 +21,31 @@ import kotlin.system.measureTimeMillis
 @AzureTest
 class AzureNetworkMembershipActivationTest : AbstractNetworkMembershipActivationTest() {
 
-    override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
-
-    companion object {
-        val logger: ExtendedLogger = LogManager.getContext().getLogger(AzureNetworkMembershipActivationTest::class.java.name)
+    private companion object {
+        const val numberOfParticipants = 20
+        const val cutOffTime: Long = 300000
     }
 
+    override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
+
     override fun getLogger(): ExtendedLogger {
-        return logger
+        return LogManager.getContext().getLogger(AzureNetworkMembershipActivationTest::class.java.name)
     }
 
     @Test
     fun testMembershipActivationWithParticipants() {
-        val numberOfParticipants = 5
-        runBenchmark(numberOfParticipants, 15000)
+
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
-    @Test
-    fun testMembershipActivationWith10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 120000)
-    }
-
-    @Test
-    fun testMembershipActivationWith20Participants() {
-        val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 120000)
-    }
-
-    @Test
-    fun testMembershipActivationWith30Participants() {
-        val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-
-    @Test
-    fun testMembershipActivationWith40Participants() {
-        val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 500000)
-    }
-
 }
 
 @DockerTest
-class DockerNetworkMembershipActivationTest : AbstractNetworkMembershipActivationTest(){
+class DockerNetworkMembershipActivationTest : AbstractNetworkMembershipActivationTest() {
+
+    private companion object {
+        const val numberOfParticipants = 2
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
@@ -74,11 +54,9 @@ class DockerNetworkMembershipActivationTest : AbstractNetworkMembershipActivatio
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testActivation2Participants() {
-        val numberOfParticipants = 2
-        runBenchmark(numberOfParticipants, 300000)
+    fun testActivation() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
 abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
@@ -91,7 +69,7 @@ abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
         val defaultGroupID = UniqueIdentifier()
         val defaultGroupName = "InitialGroup"
 
-        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID,defaultGroupName)
+        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID, defaultGroupName)
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
 
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
@@ -103,8 +81,7 @@ abstract class AbstractNetworkMembershipActivationTest : BaseBNFreighterTest() {
 
         val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
         groupMembers.add(0, bnoMembershipState.linearId)
-        val timeItTookToOnboardToGroup = measureTimeMillis {addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)}
-
+        val timeItTookToOnboardToGroup = measureTimeMillis { addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers) }
 
         val subsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size / 2).first()
 

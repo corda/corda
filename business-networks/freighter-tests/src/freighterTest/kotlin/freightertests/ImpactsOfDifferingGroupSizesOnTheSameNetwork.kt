@@ -20,7 +20,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
 @AzureTest
-class ImpactsOfDifferingGroupSizesOnTheSameNetwork: AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork() {
+class ImpactsOfDifferingGroupSizesOnTheSameNetwork : AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork() {
+
+    private companion object {
+        const val numberOfParticipants = 15
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(ImpactsOfDifferingGroupSizesOnTheSameNetwork::class.java.name)
@@ -30,19 +35,17 @@ class ImpactsOfDifferingGroupSizesOnTheSameNetwork: AbstractImpactsOfDifferingGr
 
     @Test
     fun testScenario15Participants() {
-        val numberOfParticipants = 15
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario30Participants() {
-        val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 300000)
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
 }
 
 @DockerTest
-class DockerImpactsOfDifferingGroupSizesOnTheSameNetwork : AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork(){
+class DockerImpactsOfDifferingGroupSizesOnTheSameNetwork : AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork() {
+
+    private companion object {
+        const val numberOfParticipants = 3
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerImpactsOfDifferingGroupSizesOnTheSameNetwork::class.java.name)
@@ -52,14 +55,15 @@ class DockerImpactsOfDifferingGroupSizesOnTheSameNetwork : AbstractImpactsOfDiff
 
     @Test
     fun testScenario3Participants() {
-        val numberOfParticipants = 3
-        runBenchmark(numberOfParticipants, 300000)
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
+abstract class AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork : BaseBNFreighterTest() {
 
-abstract class AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork:BaseBNFreighterTest() {
+    private companion object {
+        const val numberToDivideGroupSizeBy = 3
+    }
 
     override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long> {
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
@@ -69,20 +73,16 @@ abstract class AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork:BaseBNFreigh
         val defaultGroupID = UniqueIdentifier()
         val defaultGroupName = "InitialGroup"
 
-        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID,defaultGroupName)
+        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID, defaultGroupName)
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
 
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
 
-        val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
-        groupMembers.add(0, bnoMembershipState.linearId)
-        addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
-
-        val subsetGroupMembers = nodeToMembershipIds.values.chunked(nodeToMembershipIds.size / 3) as MutableList
+        val subsetGroupMembers = nodeToMembershipIds.values.chunked(nodeToMembershipIds.size / numberToDivideGroupSizeBy) as MutableList
         val smallGroup = subsetGroupMembers.first()
         subsetGroupMembers.removeAt(0)
-        val largeGroup =  subsetGroupMembers.flatten()
+        val largeGroup = subsetGroupMembers.flatten()
 
         getLogger().info("Small Group Size Set to ${smallGroup.size}")
         getLogger().info("Large Group Size Set to ${largeGroup.size}")
@@ -113,6 +113,6 @@ abstract class AbstractImpactsOfDifferingGroupSizesOnTheSameNetwork:BaseBNFreigh
                 "Time taken for Small Group Suspension to Register in Vault" to smallGroupRegistryTime,
                 "Time take for Large Group to Run Suspend Flow" to bigGroupSuspendTimeFlow,
                 "Time taken for Large Group Suspension to Register in Vault" to bigGroupRegistryTime
-                )
+        )
     }
 }

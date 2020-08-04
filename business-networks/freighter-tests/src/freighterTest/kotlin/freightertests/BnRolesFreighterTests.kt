@@ -8,10 +8,8 @@ import freighter.machine.DockerMachineProvider
 import freighter.testing.AzureTest
 import freighter.testing.DockerTest
 import net.corda.bn.flows.AssignBNORoleFlow
-import net.corda.bn.flows.AssignMemberRoleFlow
 import net.corda.bn.flows.RevokeMembershipFlow
 import net.corda.bn.flows.SuspendMembershipFlow
-import net.corda.bn.states.BNORole
 import net.corda.bn.states.MembershipState
 import net.corda.bn.states.MembershipStatus
 import net.corda.core.contracts.UniqueIdentifier
@@ -26,6 +24,11 @@ import kotlin.system.measureTimeMillis
 @AzureTest
 class BnRolesFreighterTests : AbstractBnRolesFreighterTests() {
 
+    private companion object {
+        const val numberOfParticipants = 10
+        const val cutOffTime: Long = 300000
+    }
+
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
     override fun getLogger(): ExtendedLogger {
@@ -33,26 +36,18 @@ class BnRolesFreighterTests : AbstractBnRolesFreighterTests() {
     }
 
     @Test
-    fun testAllMembersAreBNOWith10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testAllMembersAreBNOWith20Participants() {
-        val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 15000)
-    }
-
-    @Test
-    fun testAllMembersAreBNOWith40Participants() {
-        val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 20000)
+    fun runScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
 }
 
 @DockerTest
 class DockerBnRolesFreighterTests : AbstractBnRolesFreighterTests() {
+
+    private companion object {
+        const val numberOfParticipants = 2
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
@@ -61,9 +56,8 @@ class DockerBnRolesFreighterTests : AbstractBnRolesFreighterTests() {
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testScenario2Participants() {
-        val numberOfParticipants = 2
-        runBenchmark(numberOfParticipants, 300000)
+    fun testScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
 }
 
@@ -90,24 +84,18 @@ abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
 
         getLogger().info("Beginning to Assign BNO Roles")
 
-        nodeToMembershipIds.forEach { nodeTOMembershipId ->
-            groupMembers.remove(nodeTOMembershipId.value.linearId)
-            groupMembers.add(0,nodeTOMembershipId.value.linearId)
-            addMembersToAGroup(bnoNode, newGroupId, newGroupName, groupMembers)
-
-            bnoNode.rpc {
-                getLogger().info("Assigning ${nodeTOMembershipId.value.identity} bno role")
-                startFlow(::AssignBNORoleFlow, nodeTOMembershipId.value.linearId, null).returnValue.getOrThrow()
-            }
-            while (!checkBnoRoleInVault(nodeTOMembershipId)) {
-                getLogger().info("Waiting for BNO Role To Propagate To Vault")
+        val timeTakenToAssignBnoRole = measureTimeMillis {
+            nodeToMembershipIds.map { nodeTOMembershipId ->
+                addMembersToAGroup(bnoNode, newGroupId, newGroupName, groupMembers)
+                bnoNode.rpc {
+                    getLogger().info("Assigning ${nodeTOMembershipId.value.identity} bno role")
+                    startFlow(::AssignBNORoleFlow, nodeTOMembershipId.value.linearId, null).returnValue.getOrThrow()
+                }
             }
         }
 
         getLogger().info("Finished Assigning Roles")
 
-        val membershipCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.ACTIVE))
-        val membershipActiveTime = measureTimeMillis { waitForStatusUpdate(listOfGroupMembers, membershipCriteria) }
         val firstSubsetGroupMembers = nodeToMembershipIds.keys.chunked(nodeToMembershipIds.size / 2).first()
 
         getLogger().info("Beginning to Suspend")
@@ -116,8 +104,8 @@ abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
             firstSubsetGroupMembers.map {
                 bnoNode.rpc {
                     getLogger().info("${it.nodeMachine.identity()} membership will be suspended.")
-                    startFlow(::AssignMemberRoleFlow, nodeToMembershipIds[it]!!.linearId, null).returnValue.getOrThrow()
-                    startFlow(::SuspendMembershipFlow, nodeToMembershipIds[it]!!.linearId, null).returnValue.getOrThrow()
+                    startFlow(::SuspendMembershipFlow, (nodeToMembershipIds[it]
+                            ?: error("Could Not Find MembershipState for Node")).linearId, null).returnValue.getOrThrow()
                 }
             }
         }
@@ -125,14 +113,16 @@ abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
         val suspendedStatusCriteria = getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))
         val membershipSuspendTime = measureTimeMillis { waitForStatusUpdate(firstSubsetGroupMembers, suspendedStatusCriteria) }
 
-        val benchmarkResults = mutableMapOf("Membership Activation" to membershipActiveTime,
+        val benchmarkResults = mutableMapOf(
+                "Time Taken To Assign BNO Roles" to timeTakenToAssignBnoRole,
                 "Membership Update Time" to membershipUpdateTime,
                 "Time Taken To Register Suspension in All Vaults" to membershipSuspendTime)
 
         val membershipRevocationTime = measureTimeMillis {
             for (node in firstSubsetGroupMembers) {
                 bnoNode.rpc {
-                    startFlow(::RevokeMembershipFlow, nodeToMembershipIds[node]!!.linearId, null).returnValue.getOrThrow()
+                    startFlow(::RevokeMembershipFlow, (nodeToMembershipIds[node]
+                            ?: error("Could Not Find MembershipState for Node")).linearId, null).returnValue.getOrThrow()
                 }
             }
         }
@@ -143,17 +133,10 @@ abstract class AbstractBnRolesFreighterTests : BaseBNFreighterTest() {
         benchmarkResults["Time Taken Revoke Membership of half"] = membershipRevocationTime
         benchmarkResults["Time Taken for Vault Update To Reflect Revocation in remaining members' Vaults"] = vaultUpdateTimeAfterDeletion
 
-
         bnoNode.nodeMachine.stopNode()
         listOfGroupMembers.map { it.stopNode() }
 
         return benchmarkResults
-    }
-
-    private fun checkBnoRoleInVault(nodeTOMembershipId: Map.Entry<SingleNodeDeployed, MembershipState>): Boolean {
-        return nodeTOMembershipId.key.rpc {
-            vaultQuery(MembershipState::class.java).states.map { it.state.data }
-        }.first().roles.contains(BNORole())
     }
 }
 

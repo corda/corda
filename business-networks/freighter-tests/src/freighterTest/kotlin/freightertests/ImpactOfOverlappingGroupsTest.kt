@@ -20,41 +20,32 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
 @AzureTest
-class ImpactOfOverlappingGroupsTest:AbstractImpactOfOverlappingGroupsTest() {
+class ImpactOfOverlappingGroupsTest : AbstractImpactOfOverlappingGroupsTest() {
+
+    private companion object {
+        const val numberOfParticipants = 20
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(ImpactOfOverlappingGroupsTest::class.java.name)
     }
+
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
     @Test
-    fun testWith10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 300000)
+    fun testScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
-    @Test
-    fun testScenario20Participants() {
-        val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario30Participants() {
-        val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testScenario40Participants() {
-        val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
 }
 
 @DockerTest
-class DockerImpactOfOverlappingGroupsTest : AbstractImpactOfOverlappingGroupsTest(){
+class DockerImpactOfOverlappingGroupsTest : AbstractImpactOfOverlappingGroupsTest() {
+
+    private companion object {
+        const val numberOfParticipants = 5
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerImpactOfOverlappingGroupsTest::class.java.name)
@@ -63,16 +54,14 @@ class DockerImpactOfOverlappingGroupsTest : AbstractImpactOfOverlappingGroupsTes
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testScenario2Participants() {
-        val numberOfParticipants = 5
-        runBenchmark(numberOfParticipants, 300000)
+    fun testScenario() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
 abstract class AbstractImpactOfOverlappingGroupsTest : BaseBNFreighterTest() {
 
-    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long>{
+    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long> {
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
@@ -86,7 +75,6 @@ abstract class AbstractImpactOfOverlappingGroupsTest : BaseBNFreighterTest() {
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
-        setupDefaultGroup(nodeToMembershipIds, bnoMembershipState, bnoNode, defaultGroupID, defaultGroupName)
 
         val subsetGroupMembersKeys = nodeToMembershipIds.values.chunked(nodeToMembershipIds.size / 5)
 
@@ -111,5 +99,4 @@ abstract class AbstractImpactOfOverlappingGroupsTest : BaseBNFreighterTest() {
 
         return mapOf("Time taken to run suspend flow on node for overlapping group" to membershipSuspendTimeFlow, "Time take for this to register in vault" to membershipSuspendTimeInVault)
     }
-
 }

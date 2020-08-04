@@ -22,40 +22,28 @@ import kotlin.system.measureTimeMillis
 @AzureTest
 class AddingASingleMemberToNetworkAndGroupTest : AbstractAddingASingleMemberToNetworkAndGroupTest() {
 
+    private companion object {
+        const val numberOfParticipants = 10
+        const val cutOffTime: Long = 300000
+    }
+
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(AddingASingleMemberToNetworkAndGroupTest::class.java.name)
     }
 
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
-
     @Test
     fun testMembershipSlowActivationWith10Participants() {
-        val numberOfParticipants = 10
-        runBenchmark(numberOfParticipants, 300000)
-    }
-
-    @Test
-    fun testMembershipSlowActivationWith20Participants() {
-        val numberOfParticipants = 20
-        runBenchmark(numberOfParticipants, 800000)
-    }
-
-    @Test
-    fun testMembershipSlowActivationWith30Participants() {
-        val numberOfParticipants = 30
-        runBenchmark(numberOfParticipants, 3000000)
-    }
-
-    @Test
-    fun testMembershipSlowActivationWith40Participants() {
-        val numberOfParticipants = 40
-        runBenchmark(numberOfParticipants, 7279540)
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
 }
 
 @DockerTest
-class DockerAddingASingleMemberToNetworkAndGroupTest : AbstractAddingASingleMemberToNetworkAndGroupTest(){
+class DockerAddingASingleMemberToNetworkAndGroupTest : AbstractAddingASingleMemberToNetworkAndGroupTest() {
+
+    private val numberOfParticipants = 2
+    private val cutOffTime: Long = 300000
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerAddingASingleMemberToNetworkAndGroupTest::class.java.name)
@@ -63,13 +51,10 @@ class DockerAddingASingleMemberToNetworkAndGroupTest : AbstractAddingASingleMemb
 
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
-
     @Test
     fun testMembershipSlowActivationWith2Participants() {
-        val numberOfParticipants = 2
-        runBenchmark(numberOfParticipants, 300000)
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
 abstract class AbstractAddingASingleMemberToNetworkAndGroupTest : BaseBNFreighterTest() {
@@ -88,13 +73,13 @@ abstract class AbstractAddingASingleMemberToNetworkAndGroupTest : BaseBNFreighte
         val listOfPrivateGroupMember = mutableListOf(bnoMembershipState.linearId)
 
         val slowGroupAddBenchmark = measureTimeMillis {
-            nodeToMembershipIds.map {
+            nodeToMembershipIds.values.map {
                 bnoNode.rpc {
                     startFlow(::ActivateMembershipFlow,
-                            it.value.linearId,
+                            it.linearId,
                             null).returnValue.getOrThrow()
                 }
-                listOfPrivateGroupMember.add(it.value.linearId)
+                listOfPrivateGroupMember.add(it.linearId)
                 bnoNode.rpc {
                     startFlow(::ModifyGroupFlow,
                             defaultGroupID,

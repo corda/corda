@@ -19,7 +19,12 @@ import utility.getOrThrow
 import kotlin.system.measureTimeMillis
 
 @AzureTest
-class ImpactOfSingleMemberOnExistingNetworkTest: AbstractImpactOfSingleMemberOnExistingNetworkTest() {
+class ImpactOfSingleMemberOnExistingNetworkTest : AbstractImpactOfSingleMemberOnExistingNetworkTest() {
+
+    private companion object {
+        const val numberOfParticipants = 20
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(ImpactOfSingleMemberOnExistingNetworkTest::class.java.name)
@@ -28,33 +33,18 @@ class ImpactOfSingleMemberOnExistingNetworkTest: AbstractImpactOfSingleMemberOnE
     override val machineProvider: DeploymentMachineProvider = AzureMachineProvider()
 
     @Test
-    fun testOfAddingASingleNodeTOAnExistingNetworkOf10Nodes(){
-        val participants = 10
-        runBenchmark(participants,300000)
+    fun testOfAddingASingleNodeTOAnExistingNetwork() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
-    @Test
-    fun testOfAddingASingleNodeTOAnExistingNetworkOf20Nodes(){
-        val participants = 20
-        runBenchmark(participants,300000)
-    }
-
-    @Test
-    fun testOfAddingASingleNodeTOAnExistingNetworkOf30Nodes(){
-        val participants = 30
-        runBenchmark(participants,300000)
-    }
-
-    @Test
-    fun testOfAddingASingleNodeTOAnExistingNetworkOf40Nodes(){
-        val participants = 40
-        runBenchmark(participants,300000)
-    }
-
 }
 
 @DockerTest
-class DockerImpactOfSingleMemberOnExistingNetworkTest : AbstractImpactOfSingleMemberOnExistingNetworkTest(){
+class DockerImpactOfSingleMemberOnExistingNetworkTest : AbstractImpactOfSingleMemberOnExistingNetworkTest() {
+
+    private companion object {
+        const val numberOfParticipants = 5
+        const val cutOffTime: Long = 300000
+    }
 
     override fun getLogger(): ExtendedLogger {
         return LogManager.getContext().getLogger(DockerNetworkMembershipActivationTest::class.java.name)
@@ -63,17 +53,14 @@ class DockerImpactOfSingleMemberOnExistingNetworkTest : AbstractImpactOfSingleMe
     override val machineProvider: DeploymentMachineProvider = DockerMachineProvider()
 
     @Test
-    fun testScenario2Participants() {
-        val numberOfParticipants = 2
-        runBenchmark(numberOfParticipants, 300000)
+    fun testOfAddingASingleNodeTOAnExisting() {
+        runBenchmark(numberOfParticipants, cutOffTime)
     }
-
 }
 
+abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest : BaseBNFreighterTest() {
 
-abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighterTest(){
-
-    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long>{
+    override fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long> {
         val nodeGenerator = createDeploymentGenerator(deploymentContext)
         val bnoNode = nodeGenerator().getOrThrow()
 
@@ -83,18 +70,18 @@ abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighter
 
         getLogger().info("Setting up Business Network")
 
-        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID,defaultGroupName)
+        val bnoMembershipState: MembershipState = createBusinessNetwork(bnoNode, networkID, defaultGroupID, defaultGroupName)
         val listOfGroupMembers = buildGroupMembershipNodes(numberOfParticipants, nodeGenerator)
         val nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState> = requestNetworkMembership(listOfGroupMembers, bnoNode, bnoMembershipState)
         activateNetworkMembership(nodeToMembershipIds, bnoNode)
-        val groupMembers = setupDefaultGroup(nodeToMembershipIds, bnoMembershipState, bnoNode, defaultGroupID, defaultGroupName)
+        val groupMembers = setupDefaultGroup(nodeToMembershipIds, bnoMembershipState, bnoNode, defaultGroupID, defaultGroupName) as MutableList
 
         getLogger().info("Adding New Single Node")
         val newNode = nodeGenerator().getOrThrow()
-        val newNodeToMembershipState = requestNetworkMembership(listOf(newNode), bnoNode,bnoMembershipState)
-        val newNodeMemberState =  newNodeToMembershipState[newNode] ?: error("Node Not Found")
+        val newNodeToMembershipState = requestNetworkMembership(listOf(newNode), bnoNode, bnoMembershipState)
+        val newNodeMemberState = newNodeToMembershipState[newNode] ?: error("Node Not Found")
 
-        val membershipActivation = measureTimeMillis {activateNetworkMembership(newNodeToMembershipState, bnoNode)}
+        val membershipActivation = measureTimeMillis { activateNetworkMembership(newNodeToMembershipState, bnoNode) }
         val groupAdditionTime = measureTimeMillis {
             groupMembers.add(newNodeMemberState.linearId)
             addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
@@ -108,15 +95,10 @@ abstract class AbstractImpactOfSingleMemberOnExistingNetworkTest:BaseBNFreighter
 
         val membershipSuspendInVaultTime = measureTimeMillis { waitForStatusUpdate(listOf(newNode), getMembershipStatusQueryCriteria(listOf(MembershipStatus.SUSPENDED))) }
 
-
-
-
         return mapOf("Membership Activation Time" to membershipActivation,
                 "Group Addition Time" to groupAdditionTime,
                 "Time taken to Run Suspend Membership Flow" to suspensionTime,
                 "Time take to Register Suspension In Vault" to membershipSuspendInVaultTime
-                )
-
-
+        )
     }
 }

@@ -39,10 +39,9 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
     abstract fun getLogger(): ExtendedLogger
     abstract fun runScenario(numberOfParticipants: Int, deploymentContext: DeploymentContext): Map<String, Long>
 
-
-    fun runBenchmark(numberOfParticipants: Int,cutOffTime:Long){
+    fun runBenchmark(numberOfParticipants: Int, cutOffTime: Long) {
         val deploymentContext = DeploymentContext(machineProvider, nms, artifactoryUsername, artifactoryPassword)
-        val benchmark = runScenario( numberOfParticipants,deploymentContext)
+        val benchmark = runScenario(numberOfParticipants, deploymentContext)
 
         benchmark.map {
             getLogger().info("${it.key} BenchMark ${it.value}")
@@ -62,29 +61,32 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
                 val actual = currentNode.rpc {
                     vaultQuery(GroupState::class.java).states.map { it.state.data }
                 }
-
-                for (groupState in actual) {
-                    if (groupState.linearId == groupLinearId && groupState.participants.size == expectedGroupSize) {
-                        getLogger().info("${currentNode.name} has correct group size")
-                        itr.remove()
-                    } else if (groupState.linearId == groupLinearId) {
-                        getLogger().info(currentNode.name + "still waiting on full group up")
-                        getLogger().info("Group members: ${groupState.participants.size} out of $expectedGroupSize")
-                    }
-                }
-                if (actual.isEmpty() || actual.first().linearId != groupLinearId) {
-                    getLogger().error("${currentNode.name} does not have the expected group state in vault")
-                }
+                checkGroupStatesFromVault(actual, groupLinearId, expectedGroupSize, currentNode, itr)
             }
         }
     }
 
-    fun addMembersToAGroup(bnoNode: SingleNodeDeployed, newGroupId: UniqueIdentifier, newGroupName: String, groupMembers: MutableList<UniqueIdentifier>) {
+    private fun checkGroupStatesFromVault(actual: List<GroupState>, groupLinearId: UniqueIdentifier, expectedGroupSize: Int, currentNode: SingleNodeDeployed, itr: MutableIterator<SingleNodeDeployed>) {
+        for (groupState in actual) {
+            if (groupState.linearId == groupLinearId && groupState.participants.size == expectedGroupSize) {
+                getLogger().info("${currentNode.name} has correct group size")
+                itr.remove()
+            } else if (groupState.linearId == groupLinearId) {
+                getLogger().info(currentNode.name + "still waiting on full group up")
+                getLogger().info("Group members: ${groupState.participants.size} out of $expectedGroupSize")
+            }
+        }
+        if (actual.isEmpty() || actual.first().linearId != groupLinearId) {
+            getLogger().info("${currentNode.name} does not have the expected group state in vault")
+        }
+    }
+
+    fun addMembersToAGroup(bnoNode: SingleNodeDeployed, newGroupId: UniqueIdentifier, newGroupName: String, groupMembers: List<UniqueIdentifier>) {
         bnoNode.rpc {
             startFlow(::ModifyGroupFlow,
                     newGroupId,
                     newGroupName,
-                    groupMembers.toMutableSet(),
+                    groupMembers.toSet(),
                     null).returnValue.getOrThrow()
         }
     }
@@ -94,7 +96,7 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
             bnoNode.rpc {
                 startFlow(::ActivateMembershipFlow,
                         it.value.linearId,
-                        null)
+                        null).returnValue.getOrThrow()
             }
         }
     }
@@ -113,26 +115,33 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
                 })
     }
 
-    fun createGroup(bnoNode: SingleNodeDeployed, membershipState: MembershipState, newGroupId: UniqueIdentifier, newGroupName: String): GroupState {
+    private fun createGroup(bnoNode: SingleNodeDeployed, membershipState: MembershipState, newGroupId: UniqueIdentifier, newGroupName: String, groupMembers: Set<UniqueIdentifier> = setOf()): GroupState {
         return bnoNode.rpc {
             startFlow(::CreateGroupFlow,
                     membershipState.networkId,
                     newGroupId,
                     newGroupName,
-                    setOf(membershipState.linearId),
+                    groupMembers,
                     null
             ).returnValue.getOrThrow()
         }.tx.outputStates.single() as GroupState
     }
 
-    fun createSubGroup(listOfMemberStates: List<MembershipState>, groupIndex: AtomicInteger, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed) {
+    fun createSubGroup(listOfMemberStates: List<MembershipState>, groupIndex: AtomicInteger, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed): GroupState {
         val subGroupMembers = listOfMemberStates.map { it.linearId } as MutableList
         val subsetGroupName = "subGroup-${groupIndex.incrementAndGet()}"
         val subGroupId = UniqueIdentifier()
         subGroupMembers.add(0, bnoMembershipState.linearId)
 
-        createGroup(bnoNode, bnoMembershipState, subGroupId, subsetGroupName)
-        addMembersToAGroup(bnoNode, subGroupId, subsetGroupName, subGroupMembers)
+        return bnoNode.rpc {
+            startFlow(::CreateGroupFlow,
+                    bnoMembershipState.networkId,
+                    subGroupId,
+                    subsetGroupName,
+                    subGroupMembers.toSet(),
+                    null
+            ).returnValue.getOrThrow()
+        }.tx.outputStates.single() as GroupState
     }
 
     fun getMembershipStatusQueryCriteria(listOfMemberShipStatus: List<MembershipStatus>): QueryCriteria {
@@ -175,7 +184,7 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
         }.map { it.getOrThrow() }
     }
 
-    fun setupDefaultGroup(nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState>, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed, defaultGroupID: UniqueIdentifier, defaultGroupName: String): MutableList<UniqueIdentifier> {
+    fun setupDefaultGroup(nodeToMembershipIds: Map<SingleNodeDeployed, MembershipState>, bnoMembershipState: MembershipState, bnoNode: SingleNodeDeployed, defaultGroupID: UniqueIdentifier, defaultGroupName: String): List<UniqueIdentifier> {
         val groupMembers = nodeToMembershipIds.values.map { it.linearId } as MutableList
         groupMembers.add(0, bnoMembershipState.linearId)
         addMembersToAGroup(bnoNode, defaultGroupID, defaultGroupName, groupMembers)
