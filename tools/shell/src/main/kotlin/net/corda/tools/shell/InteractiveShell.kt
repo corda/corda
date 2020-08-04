@@ -566,6 +566,11 @@ object InteractiveShell {
     }
 
     @JvmStatic
+    fun runDebugCheckpoints(rpcOps: FlowManagerRPCOps) {
+        rpcOps.debugCheckpoints()
+    }
+
+    @JvmStatic
     fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
                          inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
