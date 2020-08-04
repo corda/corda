@@ -97,7 +97,7 @@ class RetryFlowMockTest {
     }
 
     @Test(timeout=300_000)
-	fun `Restart does not set senderUUID`() {
+	fun `Restart does not set senderUUID and early end session message does not hang receiving flow`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {

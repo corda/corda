@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.instanceOf;
  */
 public class TestResponseFlowInIsolationInJava {
 
-    private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages("com.template")));
+    private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages()));
     private final StartedMockNode a = network.createNode();
     private final StartedMockNode b = network.createNode();
 
