@@ -95,7 +95,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    private companion object {
+    internal companion object {
+        const val TRANSACTION_ALREADY_IN_PROGRESS_WARNING = "trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions."
+
         // Rough estimate for the average of a public key and the transaction metadata - hard to get exact figures here,
         // as public keys can vary in size a lot, and if someone else is holding a reference to the key, it won't add
         // to the memory pressure at all here.
@@ -111,7 +113,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
             }
         }
 
-        fun createTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
+        private fun createTransactionsMap(cacheFactory: NamedCacheFactory, clock: CordaClock)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
                     cacheFactory = cacheFactory,
@@ -221,12 +223,22 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     }
 
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+        val (transaction, warning) = trackTransactionInternal(id)
+        warning?.also { log.warn(it) }
+        return transaction
+    }
 
-        if (contextTransactionOrNull != null) {
-            log.warn("trackTransaction is called with an already existing, open DB transaction. As a result, there might be transactions missing from the returned data feed, because of race conditions.")
+    /**
+     * @return a pair of the signed transaction, and a string containing any warning.
+     */
+    internal fun trackTransactionInternal(id: SecureHash): Pair<CordaFuture<SignedTransaction>, String?> {
+        val warning: String? = if (contextTransactionOrNull != null) {
+            TRANSACTION_ALREADY_IN_PROGRESS_WARNING
+        } else {
+            null
         }
 
-        return trackTransactionWithNoWarning(id)
+        return Pair(trackTransactionWithNoWarning(id), warning)
     }
 
     override fun trackTransactionWithNoWarning(id: SecureHash): CordaFuture<SignedTransaction> {
