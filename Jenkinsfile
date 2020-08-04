@@ -33,7 +33,8 @@ pipeline {
                             "-Ddocker.push.password=\"\${DOCKER_PUSH_PWD}\" " +
                             "-Ddocker.work.dir=\"/tmp/\${EXECUTOR_NUMBER}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\" " +
-                            "-Ddocker.container.env.parameter.CORDA_USE_CACHE=\"${CORDA_USE_CACHE}\" " +
+                            "-Ddocker.container.env.parameter.CORDA_USE_CACHE=\"\${CORDA_USE_CACHE}\" " +
+                            "-Ddocker.container.env.parameter.JENKINS_JOB_URL=\"\${JOB_URL}\" " +
                             "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_USERNAME=\"\${ARTIFACTORY_CREDENTIALS_USR}\" " +
                             "-Ddocker.container.env.parameter.CORDA_ARTIFACTORY_PASSWORD=\"\${ARTIFACTORY_CREDENTIALS_PSW}\" " +
                             "-Ddocker.build.tag=\"\${DOCKER_TAG_TO_USE}\"" +
