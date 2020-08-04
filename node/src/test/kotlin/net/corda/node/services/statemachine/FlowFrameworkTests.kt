@@ -879,6 +879,7 @@ class FlowFrameworkTests {
 
 
         waitUntilHospitalized.acquire()
+        Thread.sleep(3000) // wait until flow saves overnight observation state in database
         assertEquals(2, counter)
         assertEquals(0, counterRes)
         assertEquals(Checkpoint.FlowStatus.RUNNABLE, checkpointStatusAfterRestart)
