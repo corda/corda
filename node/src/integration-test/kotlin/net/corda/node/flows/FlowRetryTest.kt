@@ -161,7 +161,7 @@ class FlowRetryTest {
     }
 
     @Test(timeout = 300_000)
-    fun `General external exceptions are not retried and propagate`() {
+    fun `general external exceptions are not retried and propagate`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = cordapps)) {
 
             val (nodeAHandle, nodeBHandle) = listOf(ALICE_NAME, BOB_NAME)
@@ -176,10 +176,7 @@ class FlowRetryTest {
                 ).returnValue.getOrThrow()
             }
             assertEquals(0, GeneralExternalFailureFlow.retryCount)
-            assertEquals(
-                1,
-                nodeAHandle.rpc.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.FAILED).returnValue.get()
-            )
+            assertEquals(0, nodeAHandle.rpc.startFlow(::GetCheckpointNumberOfStatusFlow, Checkpoint.FlowStatus.FAILED).returnValue.get())
         }
     }
 
