@@ -685,6 +685,7 @@ class FlowFrameworkTests {
             flowState = flowFiber!!.transientState.checkpoint.flowState
 
             if (firstExecution) {
+                firstExecution = false
                 throw HospitalizeFlowException()
             } else {
                 dbCheckpointStatusBeforeSuspension = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
@@ -711,7 +712,6 @@ class FlowFrameworkTests {
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
         }
         // restart Node - flow will be loaded from checkpoint
-        firstExecution = false
         aliceNode = mockNet.restartNode(aliceNode)
         futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, before and after suspension
@@ -733,6 +733,7 @@ class FlowFrameworkTests {
             flowState = flowFiber!!.transientState.checkpoint.flowState
 
             if (firstExecution) {
+                firstExecution = false
                 throw HospitalizeFlowException()
             } else {
                 dbCheckpointStatus = aliceNode.internals.checkpointStorage.getCheckpoints().toList().single().second.status
@@ -752,7 +753,6 @@ class FlowFrameworkTests {
             assertEquals(Checkpoint.FlowStatus.HOSPITALIZED, checkpoint.status)
         }
         // restart Node - flow will be loaded from checkpoint
-        firstExecution = false
         aliceNode = mockNet.restartNode(aliceNode)
         futureFiber.get().resultFuture.getOrThrow() // wait until the flow has completed
         // checkpoint states ,after flow retried, after suspension
