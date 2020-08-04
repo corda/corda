@@ -329,7 +329,7 @@ internal class SingleThreadedStateMachineManager(
                 // The checkpoint and soft locks are removed here instead of relying on the processing of the next event after setting
                 // the killed flag. This is to ensure a flow can be removed from the database, even if it is stuck in a infinite loop.
                 database.transaction {
-                    checkpointStorage.removeCheckpoint(id)
+                    checkpointStorage.removeCheckpoint(id, mayBeFinished = true)
                     serviceHub.vaultService.softLockRelease(id.uuid)
                 }
                 // the same code is NOT done in remove flow when an error occurs
@@ -342,7 +342,7 @@ internal class SingleThreadedStateMachineManager(
                 true
             } else {
                 // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                database.transaction { checkpointStorage.removeCheckpoint(id) }
+                database.transaction { checkpointStorage.removeCheckpoint(id, mayBeFinished = true) }
             }
         }
         return if (killFlowResult) {
@@ -949,7 +949,7 @@ internal class SingleThreadedStateMachineManager(
         }
 
         removedFlowId?.let {
-            database.transaction { checkpointStorage.removeCheckpoint(it) }
+            database.transaction { checkpointStorage.removeCheckpoint(it, mayBeFinished = true) }
             return true
         }
         return false
