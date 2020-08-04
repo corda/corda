@@ -157,8 +157,9 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     epoch = 3,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue())).addNotary(notary)
 
-            val alice = startNodeAndRunFlagDay(paramsWithNewNotary)
-            eventually { assertEquals(paramsWithNewNotary, alice.rpc.networkParameters) }
+            startNodeAndRunFlagDay(paramsWithNewNotary).use { alice ->
+                eventually { assertEquals(paramsWithNewNotary, alice.rpc.networkParameters) }
+            }
 
         }
     }
@@ -200,8 +201,9 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     epoch = 3,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
                     maxMessageSize = oldParams.maxMessageSize + 1)
-            val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSize)
-            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+            startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSize).use { alice ->
+                eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+            }
         }
     }
 
@@ -219,8 +221,9 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                     epoch = 3,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
                     maxMessageSize = oldParams.maxMessageSize + 1).addNotary(notary)
-            val alice = startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSizeAndNotary)
-            eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+            startNodeAndRunFlagDay(paramsWithUpdatedMaxMessageSizeAndNotary).use { alice ->
+                eventually { assertThatThrownBy { alice.rpc.networkParameters }.hasMessageContaining("Connection failure detected") }
+            }
         }
     }
 
