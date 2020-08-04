@@ -56,12 +56,6 @@ open class SharedNodeCmdLineOptions {
     )
     var allowHibernateToManangeAppSchema: Boolean = false
 
-    @Option(
-            names = ["--pause-all-flows"],
-            description = ["Do not run any flows on startup. Sets all flows to paused, which can be unpaused via RPC."]
-    )
-    var safeMode: Boolean = false
-
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)
