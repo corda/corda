@@ -1410,9 +1410,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException(
                     "Could not find the database driver class. Please add it to the 'drivers' folder.",
                     NodeDatabaseErrors.MISSING_DRIVER)
-            ex is OutstandingDatabaseChangesException -> {
-                throw (DatabaseIncompatibleException(ex.message))
-            }
+            ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             else -> {
                 val msg = ex.message ?: ex::class.java.canonicalName
                 throw CouldNotCreateDataSourceException(
