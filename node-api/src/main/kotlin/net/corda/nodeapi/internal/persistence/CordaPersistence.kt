@@ -57,7 +57,7 @@ enum class TransactionIsolationLevel {
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
 
     companion object{
-        val default = REPEATABLE_READ
+        val default = READ_COMMITTED
     }
 }
 
