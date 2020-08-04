@@ -172,16 +172,30 @@ buildscript {
                 }
             }
         } else {
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies-dev"
+                content {
+                    includeGroupByRegex 'net\\.corda(\\..*)?'
+                    includeGroupByRegex 'com\\.r3(\\..*)?'
+                }
+                mavenContent {
+                    snapshotsOnly()
+                }
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeGroupByRegex 'net\\.corda(\\..*)?'
+                    includeGroupByRegex 'com\\.r3(\\..*)?'
+                }
+            }
             mavenCentral()
             jcenter()
             maven {
                 url 'https://kotlin.bintray.com/kotlinx'
-            }
-            maven {
-                url "${artifactory_contextUrl}/corda-dependencies-dev"
-            }
-            maven {
-                url "${artifactory_contextUrl}/corda-releases"
+                content {
+                    includeGroup 'org.jetbrains.kotlin'
+                }
             }
         }
     }
@@ -205,7 +219,6 @@ buildscript {
         // See https://github.com/corda/gradle-capsule-plugin
         classpath "us.kirchmeier:gradle-capsule-plugin:1.0.4_r3"
         classpath group: "com.r3.testing", name: "gradle-distributed-testing-plugin", version: "1.2-LOCAL-K8S-SHARED-CACHE-SNAPSHOT", changing: true
-        classpath group: "com.r3.dependx", name: "gradle-dependx", version: "0.1.13", changing: true
         classpath "com.bmuschko:gradle-docker-plugin:5.0.0"
         classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.8"
     }
@@ -223,7 +236,6 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: "com.bmuschko.docker-remote-api"
-apply plugin: "com.r3.dependx.dependxies"
 
 
 // If the command line project option -PversionFromGit is added to the gradle invocation, we'll resolve 
@@ -390,11 +402,32 @@ allprojects {
                 }
             }
         } else {
+            maven {
+                url "${artifactory_contextUrl}/corda-dependencies"
+                content {
+                    includeGroupByRegex 'net\\.corda(\\..*)?'
+                    includeGroupByRegex 'com\\.r3(\\..*)?'
+                    includeGroup 'co.paralleluniverse'
+                    includeGroup 'org.crashub'
+                    includeGroup 'com.github.bft-smart'
+                }
+            }
+            maven {
+                url "${artifactory_contextUrl}/corda-dev"
+                content {
+                    includeGroupByRegex 'net\\.corda(\\..*)?'
+                    includeGroupByRegex 'com\\.r3(\\..*)?'
+                }
+            }
+            maven {
+                url 'https://repo.gradle.org/gradle/libs-releases'
+                content {
+                    includeGroup 'org.gradle'
+                    includeGroup 'com.github.detro'
+                }
+            }
             mavenCentral()
             jcenter()
-            maven { url "${artifactory_contextUrl}/corda-dependencies" }
-            maven { url 'https://repo.gradle.org/gradle/libs-releases' }
-            maven { url "${artifactory_contextUrl}/corda-dev" }
         }
     }
 
@@ -655,11 +688,6 @@ artifactory {
     }
 }
 
-dependxiesModule {
-    mode = "monitor"
-    skipTasks = "test,integrationTest,smokeTest,slowIntegrationTest"
-}
-
 tasks.register('generateApi', net.corda.plugins.apiscanner.GenerateApi) {
     baseName = "api-corda"
 }
@@ -722,7 +750,6 @@ ext.largeScaleSet  = [
 ]
 
 task allParallelIntegrationTest(type: ParallelTestGroup) {
-    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "integrationTest"
     numberOfShards generalPurpose.numberOfShards
@@ -733,7 +760,6 @@ task allParallelIntegrationTest(type: ParallelTestGroup) {
     distribute DistributeTestsBy.METHOD
 }
 task allParallelUnitTest(type: ParallelTestGroup) {
-    dependsOn dependxiesModule
     podLogLevel PodLogLevel.INFO
     testGroups "test"
     numberOfShards generalPurpose.numberOfShards
@@ -744,7 +770,6 @@ task allParallelUnitTest(type: ParallelTestGroup) {
     distribute DistributeTestsBy.CLASS
 }
 task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
-    dependsOn dependxiesModule
     testGroups "test", "integrationTest"
     numberOfShards generalPurpose.numberOfShards
     streamOutput generalPurpose.streamOutput
@@ -755,7 +780,6 @@ task allParallelUnitAndIntegrationTest(type: ParallelTestGroup) {
 }
 task parallelRegressionTest(type: ParallelTestGroup) {
     testGroups "test", "integrationTest", "smokeTest"
-    dependsOn dependxiesModule
     numberOfShards generalPurpose.numberOfShards
     streamOutput generalPurpose.streamOutput
     coresPerFork generalPurpose.coresPerFork
@@ -765,7 +789,6 @@ task parallelRegressionTest(type: ParallelTestGroup) {
 }
 task allParallelSmokeTest(type: ParallelTestGroup) {
     testGroups "smokeTest"
-    dependsOn dependxiesModule
     numberOfShards generalPurpose.numberOfShards
     streamOutput generalPurpose.streamOutput
     coresPerFork generalPurpose.coresPerFork
@@ -775,7 +798,6 @@ task allParallelSmokeTest(type: ParallelTestGroup) {
 }
 task allParallelSlowIntegrationTest(type: ParallelTestGroup) {
     testGroups "slowIntegrationTest"
-    dependsOn dependxiesModule
     numberOfShards generalPurpose.numberOfShards
     streamOutput generalPurpose.streamOutput
     coresPerFork generalPurpose.coresPerFork
