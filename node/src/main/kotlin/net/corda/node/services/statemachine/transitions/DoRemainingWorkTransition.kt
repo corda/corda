@@ -32,6 +32,7 @@ class DoRemainingWorkTransition(
             is FlowState.Started -> StartedFlowTransition(context, startingState, flowState).transition()
             is FlowState.Completed -> throw IllegalStateException("Cannot transition a state with completed flow state.")
             is FlowState.Paused -> throw IllegalStateException("Cannot transition a state with paused flow state.")
+            null -> throw IllegalStateException("Cannot transition a state with null flow state.")
         }
     }
 

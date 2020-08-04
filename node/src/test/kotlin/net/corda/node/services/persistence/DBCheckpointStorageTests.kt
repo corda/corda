@@ -88,7 +88,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         database.transaction {
             assertEquals(serializedFlowState, checkpointStorage.checkpoints().single().serializedFlowState)
@@ -115,7 +115,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val logic: FlowLogic<*> = object : FlowLogic<String>() {
             override fun call(): String {
@@ -148,7 +148,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
 
         val completedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
@@ -168,7 +168,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
 
         val pausedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
@@ -189,7 +189,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val updatedCheckpoint = checkpoint.addError(exception)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
@@ -228,7 +228,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val updatedCheckpoint = checkpoint.copy(result = "The result", status = Checkpoint.FlowStatus.COMPLETED)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
@@ -269,8 +269,8 @@ class DBCheckpointStorageTests {
         val (id2, checkpoint2) = newCheckpoint()
         val serializedFlowState2 = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
-            checkpointStorage.addCheckpoint(id2, checkpoint2, serializedFlowState2, checkpoint2.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id2, checkpoint2, serializedFlowState2!!, checkpoint2.serializeCheckpointState())
             checkpointStorage.removeCheckpoint(id)
         }
         database.transaction {
@@ -294,12 +294,12 @@ class DBCheckpointStorageTests {
         val serializedFirstFlowState = firstCheckpoint.serializeFlowState()
 
         database.transaction {
-            checkpointStorage.addCheckpoint(id, firstCheckpoint, serializedFirstFlowState, firstCheckpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, firstCheckpoint, serializedFirstFlowState!!, firstCheckpoint.serializeCheckpointState())
         }
         val (id2, secondCheckpoint) = newCheckpoint()
         val serializedSecondFlowState = secondCheckpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id2, secondCheckpoint, serializedSecondFlowState, secondCheckpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id2, secondCheckpoint, serializedSecondFlowState!!, secondCheckpoint.serializeCheckpointState())
         }
         database.transaction {
             checkpointStorage.removeCheckpoint(id)
@@ -324,7 +324,7 @@ class DBCheckpointStorageTests {
         val (id, originalCheckpoint) = newCheckpoint()
         val serializedOriginalFlowState = originalCheckpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, originalCheckpoint, serializedOriginalFlowState, originalCheckpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, originalCheckpoint, serializedOriginalFlowState!!, originalCheckpoint.serializeCheckpointState())
         }
         newCheckpointStorage()
         val reconstructedCheckpoint = database.transaction {
@@ -348,7 +348,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         database.transaction {
             session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
@@ -362,7 +362,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val metadata = database.transaction {
             session.get(DBCheckpointStorage.DBFlowMetadata::class.java, id.uuid.toString()).also {
@@ -389,7 +389,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)
             val serializedFlowState = checkpoint.serializeFlowState()
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
 
         database.transaction {
@@ -399,7 +399,7 @@ class DBCheckpointStorageTests {
         database.transaction {
             val (id1, checkpoint1) = newCheckpoint(2)
             val serializedFlowState1 = checkpoint1.serializeFlowState()
-            checkpointStorage.addCheckpoint(id1, checkpoint1, serializedFlowState1, checkpoint1.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id1, checkpoint1, serializedFlowState1!!, checkpoint1.serializeCheckpointState())
         }
 
         assertThatThrownBy {
@@ -416,7 +416,7 @@ class DBCheckpointStorageTests {
         val serializedFlowState =
             checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val updatedCheckpoint = checkpoint.copy(result = result, status = Checkpoint.FlowStatus.COMPLETED)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
@@ -439,7 +439,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         val updatedCheckpoint = checkpoint.addError(exception)
         val updatedSerializedFlowState = updatedCheckpoint.serializeFlowState()
@@ -464,14 +464,14 @@ class DBCheckpointStorageTests {
     fun `Checkpoint can be updated with flow io request information`() {
         val (id, checkpoint) = newCheckpoint(1)
         database.transaction {
-            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            val serializedFlowState = checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
             assertNull(checkpointFromStorage!!.flowIoRequest)
         }
         database.transaction {
             val newCheckpoint = checkpoint.copy(flowIoRequest = FlowIORequest.Sleep::class.java.simpleName)
-            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
+            val serializedFlowState = newCheckpoint.flowState!!.checkpointSerialize(
                 context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState, newCheckpoint.serializeCheckpointState())
@@ -489,7 +489,7 @@ class DBCheckpointStorageTests {
         val maxProgressStepLength = 256
         val (id, checkpoint) = newCheckpoint(1)
         database.transaction {
-            val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+            val serializedFlowState = checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
             val checkpointFromStorage = checkpointStorage.getCheckpoint(id)
             assertNull(checkpointFromStorage!!.progressStep)
@@ -500,7 +500,7 @@ class DBCheckpointStorageTests {
         """.trimIndent()
         database.transaction {
             val newCheckpoint = checkpoint.copy(progressStep = longString)
-            val serializedFlowState = newCheckpoint.flowState.checkpointSerialize(
+            val serializedFlowState = newCheckpoint.flowState!!.checkpointSerialize(
                 context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT
             )
             checkpointStorage.updateCheckpoint(id, newCheckpoint, serializedFlowState, newCheckpoint.serializeCheckpointState())
@@ -526,7 +526,7 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             val serializedFlowState =
-                checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+                checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), runnable, serializedFlowState, runnable.serializeCheckpointState())
             checkpointStorage.addCheckpoint(StateMachineRunId.createRandom(), hospitalized, serializedFlowState, hospitalized.serializeCheckpointState())
@@ -568,7 +568,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         database.transaction {
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(smallerStackTraceException), serializedFlowState, checkpoint.serializeCheckpointState())
@@ -609,7 +609,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         database.transaction {
             checkpointStorage.updateCheckpoint(id, checkpoint.addError(biggerStackTraceException), serializedFlowState, checkpoint.serializeCheckpointState())
@@ -638,7 +638,7 @@ class DBCheckpointStorageTests {
         val serializedFlowState = checkpoint.serializeFlowState()
         val pausedCheckpoint = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
         database.transaction {
-            checkpointStorage.addCheckpoint(id, pausedCheckpoint, serializedFlowState, pausedCheckpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, pausedCheckpoint, serializedFlowState!!, pausedCheckpoint.serializeCheckpointState())
         }
 
         database.transaction {
@@ -672,7 +672,7 @@ class DBCheckpointStorageTests {
         val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
         database.transaction {
             val serializedFlowState =
-                    checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+                    checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
             checkpointStorage.addCheckpoint(runnable.id, runnable.checkpoint, serializedFlowState, runnable.checkpoint.serializeCheckpointState())
             checkpointStorage.addCheckpoint(hospitalized.id, hospitalized.checkpoint, serializedFlowState, hospitalized.checkpoint.serializeCheckpointState())
@@ -701,7 +701,7 @@ class DBCheckpointStorageTests {
     @Test(timeout = 300_000)
     fun `'updateCheckpoint' setting 'DBFlowCheckpoint_blob' to null whenever flow fails or gets hospitalized doesn't break ORM relationship`() {
         val (id, checkpoint) = newCheckpoint()
-        val serializedFlowState = checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+        val serializedFlowState = checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
         database.transaction {
             checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
@@ -723,7 +723,7 @@ class DBCheckpointStorageTests {
         val (id, checkpoint) = newCheckpoint()
         val serializedFlowState = checkpoint.serializeFlowState()
         database.transaction {
-            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState!!, checkpoint.serializeCheckpointState())
         }
         database.transaction {
             checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.HOSPITALIZED)
@@ -748,7 +748,7 @@ class DBCheckpointStorageTests {
 
         database.transaction {
             val serializedFlowState =
-                checkpoint.flowState.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+                checkpoint.flowState!!.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
 
             checkpointStorage.addCheckpoint(runnable.id, runnable.checkpoint, serializedFlowState, runnable.checkpoint.serializeCheckpointState())
             checkpointStorage.addCheckpoint(hospitalized.id, hospitalized.checkpoint, serializedFlowState, hospitalized.checkpoint.serializeCheckpointState())
@@ -814,8 +814,8 @@ class DBCheckpointStorageTests {
         return id to checkpoint
     }
 
-    private fun Checkpoint.serializeFlowState(): SerializedBytes<FlowState> {
-        return flowState.checkpointSerialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
+    private fun Checkpoint.serializeFlowState(): SerializedBytes<FlowState>? {
+        return flowState?.checkpointSerialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
     private fun Checkpoint.serializeCheckpointState(): SerializedBytes<CheckpointState> {

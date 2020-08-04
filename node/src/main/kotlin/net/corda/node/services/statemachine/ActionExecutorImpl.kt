@@ -83,6 +83,7 @@ internal class ActionExecutorImpl(
         val checkpoint = action.checkpoint
         val flowState = checkpoint.flowState
         val serializedFlowState = when(flowState) {
+            null -> null
             FlowState.Completed -> null
             // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the flowState as it will not get saved in the DB
             else -> flowState.checkpointSerialize(checkpointSerializationContext)
