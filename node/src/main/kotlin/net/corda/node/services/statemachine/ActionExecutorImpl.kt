@@ -151,7 +151,7 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRemoveCheckpoint(action: Action.RemoveCheckpoint) {
-        checkpointStorage.removeCheckpoint(action.id, action.mayBeFinished)
+        checkpointStorage.removeCheckpoint(action.id, action.mayHavePersistentResults)
     }
 
     @Suspendable
