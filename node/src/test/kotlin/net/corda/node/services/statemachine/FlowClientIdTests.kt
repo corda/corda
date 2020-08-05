@@ -672,6 +672,34 @@ class FlowClientIdTests {
         assertEquals("Flow's ${flowHandle0!!.id} exception was not found in the database. Something is very wrong.", e.message)
     }
 
+    @Test
+    fun `completed flow started with a client id nulls its flow state in database after its lifetime`() {
+        val clientId = UUID.randomUUID().toString()
+        val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+        flowHandle.resultFuture.getOrThrow()
+
+        aliceNode.services.database.transaction {
+            val dbFlowCheckpoint = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowHandle.id)
+            assertNull(dbFlowCheckpoint!!.blob!!.flowStack)
+        }
+    }
+
+    @Test
+    fun `failed flow started with a client id nulls its flow state in database after its lifetime`() {
+        val clientId = UUID.randomUUID().toString()
+        ResultFlow.hook = { throw IllegalStateException() }
+
+        var flowHandle: FlowStateMachineHandle<Int>? = null
+        assertFailsWith<IllegalStateException> {
+            flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
+            flowHandle!!.resultFuture.getOrThrow()
+        }
+
+        aliceNode.services.database.transaction {
+            val dbFlowCheckpoint = aliceNode.internals.checkpointStorage.getDBCheckpoint(flowHandle!!.id)
+            assertNull(dbFlowCheckpoint!!.blob!!.flowStack)
+        }
+    }
 }
 
 internal class ResultFlow<A>(private val result: A): FlowLogic<A>() {

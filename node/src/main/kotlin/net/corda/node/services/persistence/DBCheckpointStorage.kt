@@ -419,8 +419,15 @@ class DBCheckpointStorage(
         val now = clock.instant()
         val flowId = id.uuid.toString()
 
-        // Do not update in DB [Checkpoint.checkpointState] or [Checkpoint.flowState] if flow failed or got hospitalized
-        val blob = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+        val blob = if (checkpoint.status == FlowStatus.HOSPITALIZED) {
+            // Do not update 'checkpointState' or 'flowState' if flow hospitalized
+            null
+        } else if (checkpoint.status == FlowStatus.FAILED) {
+            // We need to update only the 'flowState' to null, and we don't want to update the checkpoint state
+            // because we want to retain the last clean checkpoint state, therefore just use a query for that update.
+            val sqlQuery = "Update ${NODE_DATABASE_PREFIX}checkpoint_blobs set flow_state = null where flow_id = '$flowId'"
+            val query = currentDBSession().createNativeQuery(sqlQuery)
+            query.executeUpdate()
             null
         } else {
             checkpointPerformanceRecorder.record(serializedCheckpointState, serializedFlowState)
