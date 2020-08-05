@@ -28,8 +28,8 @@ class Corda3824
     /**
      * Step 1
      */
-    @BelongsToContract(TemplateContract::class)
-    data class TemplateState(val cordappVersion: Int, val data: String, val x : Int?, override val participants: List<AbstractParty> = listOf()) : ContractState
+//    @BelongsToContract(TemplateContract::class)
+//    data class TemplateState(val cordappVersion: Int, val data: String, val x : Int?, override val participants: List<AbstractParty> = listOf()) : ContractState
 
     /**
      * Step 2
@@ -44,11 +44,11 @@ class Corda3824
     /**
      * Step 3
      */
-//    @BelongsToContract(TemplateContract::class)
-//    data class TemplateState(val cordappVersion: Int, val data: String, val y : String?, override val participants: List<AbstractParty> = listOf()) : ContractState {
-//        @DeprecatedConstructorForDeserialization(1)
-//        constructor(cordappVersion: Int, data : String, x : Int?, participants: List<AbstractParty>) : this(cordappVersion, data, x?.toString(), participants)
-//    }
+    @BelongsToContract(TemplateContract::class)
+    data class TemplateState(val cordappVersion: Int, val data: String, val y : String?, override val participants: List<AbstractParty> = listOf()) : ContractState {
+        @DeprecatedConstructorForDeserialization(1)
+        constructor(cordappVersion: Int, data : String, x : Int?, participants: List<AbstractParty>) : this(cordappVersion, data, x?.toString(), participants)
+    }
 
     @Test(timeout=300_000)
     fun `Step 1 to Step 3`() {
@@ -65,8 +65,8 @@ class Corda3824
 
         Assertions.assertThat(deserializedException.cordappVersion).isEqualTo(cordappVersionTestValue)
         Assertions.assertThat(deserializedException.data).isEqualTo(dataTestValue)
-        Assertions.assertThat(deserializedException.x).isEqualTo(xTestValue)
-//        Assertions.assertThat(deserializedException.y).isEqualTo(xTestValue)
+//        Assertions.assertThat(deserializedException.x).isEqualTo(xTestValue)
+        Assertions.assertThat(deserializedException.y).isEqualTo(xTestValue)
         Assertions.assertThat(deserializedException).isInstanceOf(TemplateState::class.java)
     }
 
