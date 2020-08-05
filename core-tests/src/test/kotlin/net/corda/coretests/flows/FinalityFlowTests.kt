@@ -96,5 +96,5 @@ class FinalityFlowTests : WithFinality {
     }
 
     /** "Old" CorDapp which will force its node to keep its FinalityHandler enabled */
-    private fun tokenOldCordapp() = cordappWithPackages("com.template").copy(targetPlatformVersion = 3)
+    private fun tokenOldCordapp() = cordappWithPackages().copy(targetPlatformVersion = 3)
 }
