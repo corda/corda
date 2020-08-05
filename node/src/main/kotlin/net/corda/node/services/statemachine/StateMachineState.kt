@@ -349,7 +349,7 @@ sealed class FlowState {
     object Paused: FlowState()
 
     /**
-     * The flow has completed. It does not have a running fiber that needs to be serialized and checkpointed.
+     * The flow has finished. It does not have a running fiber that needs to be serialized and checkpointed.
      */
     object Finished : FlowState()
 
