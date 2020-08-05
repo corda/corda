@@ -248,7 +248,7 @@ class TopLevelTransition(
                             actions.add(
                                 Action.PersistCheckpoint(
                                     context.id,
-                                    currentState.checkpoint.copy(flowState = null),
+                                    currentState.checkpoint.copy(flowState = FlowState.Completed),
                                     isCheckpointUpdate = currentState.isAnyCheckpointPersisted
                                 )
                             )
