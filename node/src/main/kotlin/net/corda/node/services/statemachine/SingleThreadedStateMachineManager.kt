@@ -949,8 +949,7 @@ internal class SingleThreadedStateMachineManager(
         }
 
         removedFlowId?.let {
-            database.transaction { checkpointStorage.removeCheckpoint(it, mayBeFinished = true) }
-            return true
+            return database.transaction { checkpointStorage.removeCheckpoint(it, mayBeFinished = true) }
         }
         return false
     }
