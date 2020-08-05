@@ -94,7 +94,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
             val nextParams = networkMapServer.networkParameters.copy(
@@ -148,7 +149,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -169,7 +171,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val notary: Party = TestIdentity.fresh("test notary").party
@@ -193,7 +196,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val oldParams = networkMapServer.networkParameters
@@ -212,7 +216,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
 
             val oldParams = networkMapServer.networkParameters
@@ -247,7 +252,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
+                notarySpecs = emptyList(),
+                allowHibernateToManageAppSchema = false
         ) {
             startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
                 assertDownloadedNetworkParameters(aliceNode)
@@ -277,7 +283,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList(),
-                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
+                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString()),
+                allowHibernateToManageAppSchema = false
         ) {
             startNode(providedName = ALICE_NAME, devMode = false).getOrThrow().use { aliceNode ->
                 val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash

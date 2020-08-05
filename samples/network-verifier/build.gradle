@@ -36,6 +36,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         }
         cordapp project(':samples:network-verifier:contracts')
         cordapp project(':samples:network-verifier:workflows')
+        runSchemaMigration = true
     }
     node {
         name "O=Notary Node,L=Zurich,C=CH"

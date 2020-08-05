@@ -76,10 +76,18 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
     private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
+    private val runMigrationScriptsCli by lazy { RunMigrationScriptsCli(startup) }
+    private val synchroniseAppSchemasCli by lazy { SynchroniseSchemasCli(startup) }
 
     override fun initLogging(): Boolean = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
+    override fun additionalSubCommands() = setOf(networkCacheCli,
+            justGenerateNodeInfoCli,
+            justGenerateRpcSslCertsCli,
+            initialRegistrationCli,
+            validateConfigurationCli,
+            runMigrationScriptsCli,
+            synchroniseAppSchemasCli)
 
     override fun call(): Int {
         if (!validateBaseDirectory()) {
@@ -201,7 +209,7 @@ open class NodeStartup : NodeStartupLogging {
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo, allowHibernateToManageAppSchema = cmdLineOptions.allowHibernateToManageAppSchema)
 
     fun startNode(node: Node, startTime: Long) {
         if (node.configuration.devMode) {

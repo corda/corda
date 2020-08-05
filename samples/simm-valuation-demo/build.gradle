@@ -91,6 +91,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp project(':samples:simm-valuation-demo:contracts-states')
         cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+        runSchemaMigration = true
     }
     node {
         name "O=Notary Node,L=Zurich,C=CH"
