@@ -24,6 +24,11 @@ interface CheckpointStorage {
                          serializedCheckpointState: SerializedBytes<CheckpointState>)
 
     /**
+     * Update an existing checkpoints status ([Checkpoint.status]).
+     */
+    fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
+
+    /**
      * Update all persisted checkpoints with status [Checkpoint.FlowStatus.RUNNABLE] or [Checkpoint.FlowStatus.HOSPITALIZED],
      * changing the status to [Checkpoint.FlowStatus.PAUSED].
      */
@@ -65,6 +70,4 @@ interface CheckpointStorage {
      * This method does not fetch [Checkpoint.Serialized.serializedFlowState] to save memory.
      */
     fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
-
-    fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 }

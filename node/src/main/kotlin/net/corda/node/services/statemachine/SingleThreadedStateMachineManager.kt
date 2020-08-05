@@ -98,7 +98,7 @@ internal class SingleThreadedStateMachineManager(
     private val flowTimeoutScheduler = FlowTimeoutScheduler(innerState, scheduledFutureExecutor, serviceHub)
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
-    private var checkpointSerializationContext: CheckpointSerializationContext? = null
+    private lateinit var checkpointSerializationContext: CheckpointSerializationContext
     private lateinit var flowCreator: FlowCreator
 
     override val flowHospital: StaffedFlowHospital = makeFlowHospital()
@@ -404,6 +404,13 @@ internal class SingleThreadedStateMachineManager(
             return
         }
         val flow = if (currentState.isAnyCheckpointPersisted) {
+
+            if (currentState.checkpoint.status == Checkpoint.FlowStatus.HOSPITALIZED) {
+                database.transaction {
+                    checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                }
+            }
+
             // We intentionally grab the checkpoint from storage rather than relying on the one referenced by currentState. This is so that
             // we mirror exactly what happens when restarting the node.
             val serializedCheckpoint = database.transaction { checkpointStorage.getCheckpoint(flowId) }
@@ -652,7 +659,7 @@ internal class SingleThreadedStateMachineManager(
 
     private fun tryDeserializeCheckpoint(serializedCheckpoint: Checkpoint.Serialized, flowId: StateMachineRunId): Checkpoint? {
         return try {
-            serializedCheckpoint.deserialize(checkpointSerializationContext!!)
+            serializedCheckpoint.deserialize(checkpointSerializationContext)
         } catch (e: Exception) {
             if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
                 logger.error(
