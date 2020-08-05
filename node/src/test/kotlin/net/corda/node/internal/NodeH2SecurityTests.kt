@@ -16,7 +16,6 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.assertj.core.api.Assertions.assertThat
 import org.h2.tools.Server
 import org.junit.Test
