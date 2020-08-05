@@ -226,7 +226,7 @@ class FlowReloadAfterCheckpointTest {
     fun `flow continues reloading from checkpoints after node restart when reloadCheckpointAfterSuspend is true`() {
         val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
         var reloadsExpected = CountDownLatch(2)
-        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { _ ->
+        FlowStateMachineImpl.onReloadFlowFromCheckpoint = { runId ->
             reloads.add(runId)
             reloadsExpected.countDown()
         }
