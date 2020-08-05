@@ -157,7 +157,7 @@ class DBCheckpointStorageTests {
         }
         database.transaction {
             assertEquals(
-                completedCheckpoint.copy(flowState = FlowState.Completed),
+                completedCheckpoint.copy(flowState = FlowState.Finished),
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }

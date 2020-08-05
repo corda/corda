@@ -767,7 +767,7 @@ internal class SingleThreadedStateMachineManager(
             is FlowState.Started -> {
                 Fiber.unparkDeserialized(flow.fiber, scheduler)
             }
-            is FlowState.Completed -> throw IllegalStateException("Cannot start (or resume) a completed flow.")
+            is FlowState.Finished -> throw IllegalStateException("Cannot start (or resume) a finished flow.")
         }
     }
 
