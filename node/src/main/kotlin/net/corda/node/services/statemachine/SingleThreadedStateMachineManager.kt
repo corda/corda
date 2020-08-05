@@ -938,8 +938,8 @@ internal class SingleThreadedStateMachineManager(
     override fun removeClientId(clientId: String): Boolean {
         var removedFlowId: StateMachineRunId? = null
         innerState.withLock {
-            clientIdsToFlowIds.compute(clientId) { _, existingStatus ->
-                if (existingStatus != null && existingStatus is FlowWithClientIdStatus.Removed) {
+            clientIdsToFlowIds.computeIfPresent(clientId) { _, existingStatus ->
+                if (existingStatus is FlowWithClientIdStatus.Removed) {
                     removedFlowId = existingStatus.flowId
                     null
                 } else { // don't remove
