@@ -67,6 +67,8 @@ internal class ActionExecutorImpl(
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
             is Action.ScheduleFlowTimeout -> scheduleFlowTimeout(action)
             is Action.CancelFlowTimeout -> cancelFlowTimeout(action)
+            is Action.MoveFlowToPaused -> executeMoveFlowToPaused(action)
+            is Action.UpdateFlowStatus -> executeUpdateFlowStatus(action)
         }
     }
     private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
@@ -99,6 +101,11 @@ internal class ActionExecutorImpl(
         }
     }
 
+    @Suspendable
+    private fun executeUpdateFlowStatus(action: Action.UpdateFlowStatus) {
+        checkpointStorage.updateStatus(action.id, action.status)
+    }
+    
     @Suspendable
     private fun executePersistDeduplicationIds(action: Action.PersistDeduplicationFacts) {
         for (handle in action.deduplicationHandlers) {
@@ -189,6 +196,11 @@ internal class ActionExecutorImpl(
     @Suspendable
     private fun executeRemoveFlow(action: Action.RemoveFlow) {
         stateMachineManager.removeFlow(action.flowId, action.removalReason, action.lastState)
+    }
+
+    @Suspendable
+    private fun executeMoveFlowToPaused(action: Action.MoveFlowToPaused) {
+        stateMachineManager.moveFlowToPaused(action.currentState)
     }
 
     @Suspendable
