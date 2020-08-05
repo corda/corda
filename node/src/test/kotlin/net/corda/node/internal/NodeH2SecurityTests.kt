@@ -37,9 +37,10 @@ class NodeH2SecurityTests {
         hikaryProperties.setProperty("dataSource.password", "")
         whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080))
 
-        assertFailsWith(CouldNotCreateDataSourceException::class) {
+        val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
         }
+        assertThat(exception.message).contains("Database password is required for H2 server listening on ")
     }
 
     @Test(timeout=300_000)
@@ -49,9 +50,10 @@ class NodeH2SecurityTests {
         hikaryProperties.setProperty("dataSource.password", "")
         whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080))
 
-        assertFailsWith(CouldNotCreateDataSourceException::class) {
+        val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
         }
+        assertThat(exception.message).contains("Database password is required for H2 server listening on")
     }
 
     @Test(timeout=300_000)
@@ -61,9 +63,10 @@ class NodeH2SecurityTests {
         hikaryProperties.setProperty("dataSource.password", " ")
         whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080))
 
-        assertFailsWith(CouldNotCreateDataSourceException::class) {
+        val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
         }
+        assertThat(exception.message).contains("Database password is required for H2 server listening on")
     }
 
     @Test(timeout=300_000)
@@ -73,9 +76,11 @@ class NodeH2SecurityTests {
         hikaryProperties.setProperty("dataSource.password", " ")
         whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080))
 
-        assertFailsWith(CouldNotCreateDataSourceException::class) {
+        val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
         }
+
+        assertThat(exception.message).contains("Database password is required for H2 server listening on")
     }
 
     @Test(timeout=300_000)
