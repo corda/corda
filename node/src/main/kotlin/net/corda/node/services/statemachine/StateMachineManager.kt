@@ -7,6 +7,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandleWithClientId
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
@@ -102,14 +103,12 @@ interface StateMachineManager {
     /**
      * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
      *
-     * There are 3 outcomes that occur when calling this function:
+     * If there is a flow matching the [clientId] then its result or exception is returned.
      *
-     * - The flow is still executing, then this function reattaches to it and awaits its its result or exception.
-     * - The flow has finished, then the result or exception will be returned and can be accessed instantly.
-     * - There is no flow matching the [clientId], then [null] is returned directly (not a future/[FlowStateMachineHandle]).
+     * When there is no flow matching the [clientId] then [null] is returned directly (not a future/[FlowHandleWithClientId]).
      *
      * Calling [reattachFlowWithClientId] after [removeClientId] with the same [clientId] will cause the function to return [null] as
-     * the result/exception of the flow will no longer available.
+     * the result/exception of the flow will no longer be available.
      *
      * @param clientId The client id relating to an existing flow
      */

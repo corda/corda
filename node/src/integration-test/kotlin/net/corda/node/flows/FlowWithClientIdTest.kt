@@ -108,7 +108,7 @@ class FlowWithClientIdTest {
     }
 
     @Test(timeout=300_000)
-    fun `reattachFlowWithClientId can retrieve existing flow future`() {
+    fun `reattachFlowWithClientId can retrieve results from existing flow future`() {
         val clientId = UUID.randomUUID().toString()
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode().getOrThrow()
