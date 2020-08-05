@@ -446,7 +446,7 @@ class DBCheckpointStorageTests {
         database.transaction { checkpointStorage.updateCheckpoint(id, updatedCheckpoint, updatedSerializedFlowState, updatedCheckpoint.serializeCheckpointState()) }
         database.transaction {
             // Checkpoint always returns clean error state when retrieved via [getCheckpoint]
-            assertTrue(checkpointStorage.getCheckpoint(id)!!.errorState is ErrorState.Clean)
+            assertTrue(checkpointStorage.getCheckpoint(id)!!.deserialize().errorState is ErrorState.Clean)
             val exceptionDetails = session.get(DBCheckpointStorage.DBFlowCheckpoint::class.java, id.uuid.toString()).exceptionDetails
             assertNotNull(exceptionDetails)
             assertEquals(exception::class.java.name, exceptionDetails!!.type)
