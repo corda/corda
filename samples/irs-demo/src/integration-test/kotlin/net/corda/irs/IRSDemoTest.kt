@@ -39,6 +39,7 @@ import org.junit.Test
 import rx.Observable
 import java.time.Duration
 import java.time.LocalDate
+import org.junit.Ignore
 
 @Ignore
 class IRSDemoTest {
