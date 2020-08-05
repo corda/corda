@@ -32,9 +32,12 @@ interface CheckpointStorage {
 
     /**
      * Remove existing checkpoint from the store.
+     *
+     * [mayHavePersistentResults] is used for optimization. If set to [false] it will not attempt to delete the database result or the database exception.
+     * Please note that if there is a doubt on whether a flow could be finished or not [mayHavePersistentResults] should be set to [true].
      * @return whether the id matched a checkpoint that was removed.
      */
-    fun removeCheckpoint(id: StateMachineRunId): Boolean
+    fun removeCheckpoint(id: StateMachineRunId, mayHavePersistentResults: Boolean = true): Boolean
 
     /**
      * Load an existing checkpoint from the store.

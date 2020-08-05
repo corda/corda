@@ -483,14 +483,16 @@ class DBCheckpointStorage(
     }
 
     @Suppress("MagicNumber")
-    override fun removeCheckpoint(id: StateMachineRunId): Boolean {
+    override fun removeCheckpoint(id: StateMachineRunId, mayHavePersistentResults: Boolean): Boolean {
         var deletedRows = 0
         val flowId = id.uuid.toString()
-        deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
-        deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId)
-        deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
-        deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
         deletedRows += deleteRow(DBFlowCheckpoint::class.java, DBFlowCheckpoint::flowId.name, flowId)
+        deletedRows += deleteRow(DBFlowCheckpointBlob::class.java, DBFlowCheckpointBlob::flowId.name, flowId)
+        if (mayHavePersistentResults) {
+            deletedRows += deleteRow(DBFlowResult::class.java, DBFlowResult::flow_id.name, flowId)
+            deletedRows += deleteRow(DBFlowException::class.java, DBFlowException::flow_id.name, flowId)
+        }
+        deletedRows += deleteRow(DBFlowMetadata::class.java, DBFlowMetadata::flowId.name, flowId)
         return deletedRows >= 2
     }
 

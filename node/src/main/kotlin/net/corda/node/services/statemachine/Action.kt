@@ -58,9 +58,11 @@ sealed class Action {
     data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()
 
     /**
-     * Remove the checkpoint corresponding to [id].
+     * Remove the checkpoint corresponding to [id]. [mayHavePersistentResults] denotes that at the time of injecting a [RemoveCheckpoint]
+     * the flow could have persisted its database result or exception.
+     * For more information see [CheckpointStorage.removeCheckpoint].
      */
-    data class RemoveCheckpoint(val id: StateMachineRunId) : Action()
+    data class RemoveCheckpoint(val id: StateMachineRunId, val mayHavePersistentResults: Boolean = false) : Action()
 
     /**
      * Persist the deduplication facts of [deduplicationHandlers].
