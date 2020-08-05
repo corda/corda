@@ -81,7 +81,7 @@ data class StateMachineState(
  */
 data class Checkpoint(
         val checkpointState: CheckpointState,
-        val flowState: FlowState?,
+        val flowState: FlowState,
         val errorState: ErrorState,
         val result: Any? = null,
         val status: FlowStatus = FlowStatus.RUNNABLE,
