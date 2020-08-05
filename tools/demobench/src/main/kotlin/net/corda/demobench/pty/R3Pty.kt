@@ -63,6 +63,11 @@ class R3Pty(val name: CordaX500Name, settings: SettingsProvider, dimension: Dime
         terminal.createTerminalSession(connector).apply { start() }
     }
 
+    fun runSetupProcess(args: Array<String>, envs: Map<String, String>, workingDir: String?): Int {
+        val process = PtyProcess.exec(args, envs, workingDir)
+        return process.waitFor()
+    }
+
     @Suppress("unused")
     @Throws(InterruptedException::class)
     fun waitFor(): Int = terminal.ttyConnector?.waitFor() ?: -1

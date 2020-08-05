@@ -1,11 +1,17 @@
 package net.corda.demobench.model
 
 import javafx.application.Application.Parameters
+import javafx.application.Platform
 import javafx.beans.binding.IntegerExpression
 import javafx.beans.property.SimpleBooleanProperty
+import javafx.scene.control.Alert
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.writeText
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -52,6 +58,7 @@ class NodeController(
     }
 
     val djvmEnabled = SimpleBooleanProperty(djvmEnabled)
+    val allowHibernateToManageAppSchema = SimpleBooleanProperty(false)
 
     private val jvm by inject<JVMConfig>()
     private val cordappController by inject<CordappController>()
@@ -60,6 +67,8 @@ class NodeController(
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
     private val command = jvm.commandFor(cordaPath).toTypedArray()
+
+    private val schemaSetupArgs = arrayOf("run-migration-scripts", "--core-schemas", "--app-schemas")
 
     private val nodes = LinkedHashMap<String, NodeConfigWrapper>()
     private var notaryIdentity: Party? = null
@@ -155,6 +164,23 @@ class NodeController(
                 jvm.setCapsuleCacheDir(this)
             }
             (networkParametersCopier ?: makeNetworkParametersCopier(config)).install(config.nodeDir)
+            @Suppress("SpreadOperator")
+            val schemaSetupCommand = jvm.commandFor(cordaPath, *schemaSetupArgs).let {
+                if (allowHibernateToManageAppSchema.value) {
+                    it + "--allow-hibernate-to-manage-app-schema"
+                } else {
+                    it
+                }
+            }.toTypedArray()
+            if (pty.runSetupProcess(schemaSetupCommand, cordaEnv, config.nodeDir.toString()) != 0) {
+                Platform.runLater {
+                    Alert(
+                            Alert.AlertType.ERROR,
+                            "Failed to set up database schema for node [${config.nodeConfig.myLegalName}]\n" +
+                                    "Please check logfiles!").showAndWait()
+                }
+                return false
+            }
             pty.run(command, cordaEnv, config.nodeDir.toString())
             log.info("Launched node: ${config.nodeConfig.myLegalName}")
             return true

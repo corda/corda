@@ -1,7 +1,11 @@
 package net.corda.testing.internal
 
 import net.corda.core.context.AuthServiceId
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SecureHash
@@ -19,6 +23,8 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.coretesting.internal.asTestContextEnv
 import net.corda.coretesting.internal.createTestSerializationEnv
+import net.corda.coretesting.internal.stubs.CertificateStoreStubs
+import net.corda.node.internal.checkOrUpdate
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool
@@ -32,19 +38,17 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.coretesting.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.ServerSocket
-import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -163,16 +167,30 @@ fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List
 /**
  * Convenience method for configuring a database for some tests.
  */
+@Suppress("LongParameterList")
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas,
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
-                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas, ourName = ourName)
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name,
+                      runMigrationScripts: Boolean = true,
+                      allowHibernateToManageAppSchema: Boolean = true): CordaPersistence {
+    val persistence = createCordaPersistence(
+            databaseConfig,
+            wellKnownPartyFromX500Name,
+            wellKnownPartyFromAnonymous,
+            schemaService,
+            hikariProperties,
+            cacheFactory,
+            null,
+            allowHibernateToManageAppSchema)
+    persistence.startHikariPool(hikariProperties) { dataSource, haveCheckpoints ->
+        SchemaMigration(dataSource, null, null, ourName)
+                .checkOrUpdate(internalSchemas, runMigrationScripts, haveCheckpoints, false)
+    }
     return persistence
 }
 

@@ -14,6 +14,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.node.internal.ConfigurationException
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
@@ -44,7 +45,6 @@ import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
@@ -267,16 +267,32 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<SSHDConfiguration> = attempt<SSHDConfiguration, IllegalArgumentException> { SSHDConfiguration(configuration.withOptions(options)[port]) }
 }
 
+enum class SchemaInitializationType{
+    NONE,
+    VALIDATE,
+    UPDATE
+}
+
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
-    private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
-    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
-    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
+    private val initialiseSchema by boolean().optional()
+    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional()
+    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional()
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config, options: Configuration.Options): Valid<DatabaseConfig> {
+        if (initialiseSchema.isSpecifiedBy(configuration)){
+            throw ConfigurationException("Unsupported configuration database/initialiseSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+        }
+        if (initialiseAppSchema.isSpecifiedBy(configuration)){
+            throw ConfigurationException("Unsupported configuration database/initialiseAppSchema - this option has been removed, please use the run-migration-scripts sub-command or the database management tool to modify schemas")
+        }
+        if (transactionIsolationLevel.isSpecifiedBy(configuration)){
+            throw ConfigurationException("Unsupported configuration database/transactionIsolationLevel - this option has been removed and cannot be changed")
+        }
         val config = configuration.withOptions(options)
-        return valid(DatabaseConfig(config[initialiseSchema], config[initialiseAppSchema], config[transactionIsolationLevel], config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
+
+        return valid(DatabaseConfig(config[exportHibernateJMXStatistics], config[mappedSchemaCacheSize]))
     }
 }
 

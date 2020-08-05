@@ -44,6 +44,7 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         extraConfig = [h2Settings: [address: "localhost:0"]]
         cordapp project(':samples:notary-demo:contracts')
         cordapp project(':samples:notary-demo:workflows')
+        runSchemaMigration = true
     }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"

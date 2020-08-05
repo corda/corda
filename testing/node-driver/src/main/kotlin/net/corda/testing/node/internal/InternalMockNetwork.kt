@@ -279,14 +279,19 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         }
     }
 
-    open class MockNode(args: MockNodeArgs, private val mockFlowManager: MockNodeFlowManager = args.flowManager) : AbstractNode<TestStartedNode>(
+    open class MockNode(
+            args: MockNodeArgs,
+            private val mockFlowManager: MockNodeFlowManager = args.flowManager,
+            allowAppSchemaUpgradeWithCheckpoints: Boolean = false) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             DefaultNamedCacheFactory(),
             args.version,
             mockFlowManager,
             args.network.getServerThread(args.id),
-            args.network.busyLatch
+            args.network.busyLatch,
+            allowHibernateToManageAppSchema = true,
+            allowAppSchemaUpgradeWithCheckpoints = allowAppSchemaUpgradeWithCheckpoints
     ) {
         companion object {
             private val staticLog = contextLogger()
@@ -316,6 +321,8 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
                 return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
         }
+
+        override val runMigrationScripts: Boolean = true
 
         val mockNet = args.network
         val id = args.id
