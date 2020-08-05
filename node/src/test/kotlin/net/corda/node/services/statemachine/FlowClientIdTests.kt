@@ -672,7 +672,7 @@ class FlowClientIdTests {
         assertEquals("Flow's ${flowHandle0!!.id} exception was not found in the database. Something is very wrong.", e.message)
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `completed flow started with a client id nulls its flow state in database after its lifetime`() {
         val clientId = UUID.randomUUID().toString()
         val flowHandle = aliceNode.services.startFlowWithClientId(clientId, ResultFlow(5))
@@ -684,7 +684,7 @@ class FlowClientIdTests {
         }
     }
 
-    @Test
+    @Test(timeout=300_000)
     fun `failed flow started with a client id nulls its flow state in database after its lifetime`() {
         val clientId = UUID.randomUUID().toString()
         ResultFlow.hook = { throw IllegalStateException() }
