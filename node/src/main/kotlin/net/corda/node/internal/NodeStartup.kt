@@ -209,7 +209,7 @@ open class NodeStartup : NodeStartupLogging {
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo, allowHibernateToManageAppSchema = cmdLineOptions.allowHibernateToManangeAppSchema)
+    open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo, allowHibernateToManageAppSchema = cmdLineOptions.allowHibernateToManageAppSchema)
 
     fun startNode(node: Node, startTime: Long) {
         if (node.configuration.devMode) {

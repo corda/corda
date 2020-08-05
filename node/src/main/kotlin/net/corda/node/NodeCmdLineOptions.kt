@@ -54,7 +54,7 @@ open class SharedNodeCmdLineOptions {
                 "Use this for rapid app development or for compatibility with pre-4.6 CorDapps.",
                 "Only available in dev mode."]
     )
-    var allowHibernateToManangeAppSchema: Boolean = false
+    var allowHibernateToManageAppSchema: Boolean = false
 
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
         val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
