@@ -42,7 +42,7 @@ enum class WaitingSource {
     GET_FLOW_INFO,
     SLEEP,
     WAIT_FOR_SESSIONS_CONFIRMATIONS,
-    ASYNC_OPERATION
+    EXTERNAL_OPERATION
 }
 
 /**
@@ -185,7 +185,7 @@ class FlowOperator(private val smm: StateMachineManager, private val clock: Cloc
     private fun FlowStateMachineImpl<*>.executeAsyncOperationInfo(parties: List<Party>, request: FlowIORequest.ExecuteAsyncOperation<*>): WaitingFlowInfo? {
         return if (parties.isEmpty()) {
             flowInfoOf(
-                    WaitingSource.ASYNC_OPERATION,
+                    WaitingSource.EXTERNAL_OPERATION,
                     listOf(),
                     request.operation.externalOperationImplName
             )

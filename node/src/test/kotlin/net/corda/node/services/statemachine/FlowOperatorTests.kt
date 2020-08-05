@@ -9,11 +9,15 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
+import net.corda.node.services.messaging.Message
 import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
@@ -289,7 +293,7 @@ class FlowOperatorTests {
     }
 
     @Test(timeout=300_000)
-    fun `should return all flows which are waiting for sending and receiving from other party`() {
+    fun `should return all flows which are waiting for sending and receiving from other party when stuck in remote party`() {
         val start = aliceNode.services.startFlow(TestSendAndReceiveInitiatingFlow("Hello", listOf(eugeneParty)))
 
         val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
@@ -307,6 +311,29 @@ class FlowOperatorTests {
     }
 
     @Test(timeout=300_000)
+    fun `should return all flows which are waiting for sending and receiving from other party when stuck in sending`() {
+        val future = CompletableFuture<Unit>()
+        aliceNode.setMessagingServiceSpy(BlockingMessageSpy("PauseSend", future))
+
+        val start = aliceNode.services.startFlow(TestSendAndReceiveInitiatingFlow("PauseSend", listOf(eugeneParty)))
+
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        Thread.sleep(500) // let time to settle all flow states properly
+
+        val result1 = cut.getFlowsCurrentlyWaitingForParties(listOf(aliceParty, bobParty, carolParty, daveParty, eugeneParty))
+
+        future.complete(Unit)
+
+        assertEquals(1, result1.size)
+        assertEquals(start.id, result1.first().id)
+        assertNull(result1.first().externalOperationImplName)
+        assertEquals(WaitingSource.SEND_AND_RECEIVE, result1.first().source)
+        assertEquals(1, result1.first().waitingForParties.size)
+        assertEquals(eugeneX500Name, result1.first().waitingForParties.first().party.name)
+    }
+
+    @Test(timeout=300_000)
     fun `should return all flows which are waiting for async external operations`() {
         val future = CompletableFuture<String>()
         val start = aliceNode.services.startFlow(TestExternalAsyncOperationInitiatingFlow(future))
@@ -317,10 +344,12 @@ class FlowOperatorTests {
 
         val result1 = cut.getFlowsCurrentlyWaitingForParties(listOf()) // the list must be empty to get any external operation
 
+        future.complete("Hello")
+
         assertEquals(1, result1.size)
         assertEquals(start.id, result1.first().id)
         assertEquals(TestExternalAsyncOperationInitiatingFlow.ExternalOperation::class.java.canonicalName, result1.first().externalOperationImplName)
-        assertEquals(WaitingSource.ASYNC_OPERATION, result1.first().source)
+        assertEquals(WaitingSource.EXTERNAL_OPERATION, result1.first().source)
         assertEquals(0, result1.first().waitingForParties.size)
     }
 
@@ -335,10 +364,12 @@ class FlowOperatorTests {
 
         val result1 = cut.getFlowsCurrentlyWaitingForParties(listOf()) // the list must be empty to get any external operation
 
+        future.complete("Hello")
+
         assertEquals(1, result1.size)
         assertEquals(start.id, result1.first().id)
         assertEquals(TestExternalOperationInitiatingFlow.ExternalOperation::class.java.canonicalName, result1.first().externalOperationImplName)
-        assertEquals(WaitingSource.ASYNC_OPERATION, result1.first().source)
+        assertEquals(WaitingSource.EXTERNAL_OPERATION, result1.first().source)
         assertEquals(0, result1.first().waitingForParties.size)
     }
 
@@ -357,6 +388,29 @@ class FlowOperatorTests {
         assertNull(result1.first().externalOperationImplName)
         assertEquals(WaitingSource.SLEEP, result1.first().source)
         assertEquals(0, result1.first().waitingForParties.size)
+    }
+
+    @Test(timeout=300_000)
+    fun `should return all flows which are waiting for sending from other party`() {
+        val future = CompletableFuture<Unit>()
+        aliceNode.setMessagingServiceSpy(BlockingMessageSpy("PauseSend", future))
+
+        val start = aliceNode.services.startFlow(TestSendInitiatingFlow("PauseSend", listOf(eugeneParty)))
+
+        val cut = FlowOperator(aliceNode.smm, aliceNode.services.clock)
+
+        Thread.sleep(500) // let time to settle all flow states properly
+
+        val result1 = cut.getFlowsCurrentlyWaitingForParties(listOf(aliceParty, bobParty, carolParty, daveParty, eugeneParty))
+
+        future.complete(Unit)
+
+        assertEquals(1, result1.size)
+        assertEquals(start.id, result1.first().id)
+        assertNull(result1.first().externalOperationImplName)
+        assertEquals(WaitingSource.SEND, result1.first().source)
+        assertEquals(1, result1.first().waitingForParties.size)
+        assertEquals(eugeneX500Name, result1.first().waitingForParties.first().party.name)
     }
 
     @InitiatingFlow
@@ -450,6 +504,23 @@ class FlowOperatorTests {
         }
     }
 
+    @InitiatingFlow
+    class TestSendInitiatingFlow(private val payload: String, private val otherParties: List<Party>) : FlowLogic<Unit>() {
+        init {
+            require(otherParties.isNotEmpty())
+        }
+
+        @Suspendable
+        override fun call() {
+            if(payload == "Fail") {
+                error(payload)
+            }
+            otherParties.forEach {
+                initiateFlow(it).send(payload)
+            }
+        }
+    }
+
     class TestAcceptingFlow(private val payload: Any, private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -458,6 +529,24 @@ class FlowOperatorTests {
             }
 
             otherPartySession.send(payload)
+        }
+    }
+
+    class BlockingMessageSpy(
+            private val expectedPayload: String,
+            private val future: CompletableFuture<Unit>
+    ) : MessagingServiceSpy() {
+        @Suppress("TooGenericExceptionCaught")
+        override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
+            try {
+                val sessionMessage = message.data.bytes.deserialize<InitialSessionMessage>()
+                if (sessionMessage.firstPayload?.deserialize<String>() == expectedPayload) {
+                    future.get()
+                }
+            } catch (e: Throwable) {
+                // Intentional
+            }
+            messagingService.send(message, target)
         }
     }
 }
