@@ -94,7 +94,7 @@ class ConfigHelperTests {
 
 
         val config = ConfigHelper.loadConfig(baseDirectory, configFile.toPath())
-        val warning = logMessage.getOrThrow(Duration.ofSeconds(30))
+        val warning = logMessage.getOrThrow(Duration.ofMinutes(3))
         assertThat(warning, containsSubstring("(property or environment variable) cannot be mapped to an existing Corda"))
         assertFalse(config.hasPath("corda_bad_key"))
 
