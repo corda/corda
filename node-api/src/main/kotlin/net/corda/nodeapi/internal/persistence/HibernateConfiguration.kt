@@ -76,7 +76,7 @@ class HibernateConfiguration(
 
     // NOTE: workaround suggested to overcome deprecation of StatisticsService (since Hibernate v4.0)
     // https://stackoverflow.com/questions/23606092/hibernate-upgrade-statisticsservice
-    fun initStatistics(sessionFactory: SessionFactory) {
+    private fun initStatistics(sessionFactory: SessionFactory) {
         val statsName = ObjectName("org.hibernate:type=statistics")
         val mbeanServer = ManagementFactory.getPlatformMBeanServer()
 
