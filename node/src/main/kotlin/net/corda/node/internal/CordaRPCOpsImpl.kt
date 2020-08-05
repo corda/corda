@@ -172,6 +172,12 @@ internal class CordaRPCOpsImpl(
 
     override fun killFlow(id: StateMachineRunId): Boolean = smm.killFlow(id)
 
+    override fun <T> reattachFlowWithClientId(clientId: String): FlowHandleWithClientId<T>? {
+        return smm.reattachFlowWithClientId<T>(clientId)?.run {
+            FlowHandleWithClientIdImpl(id = id, returnValue = resultFuture, clientId = clientId)
+        }
+    }
+
     override fun removeClientId(clientId: String): Boolean = smm.removeClientId(clientId)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
@@ -255,9 +261,14 @@ internal class CordaRPCOpsImpl(
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }
 
-    override fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T> {
-        val stateMachine = startFlow(logicType, context().withClientId(clientId), args)
-        return FlowHandleWithClientIdImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture, clientId = stateMachine.clientId!!)
+    override fun <T> startFlowDynamicWithClientId(
+        clientId: String,
+        logicType: Class<out FlowLogic<T>>,
+        vararg args: Any?
+    ): FlowHandleWithClientId<T> {
+        return startFlow(logicType, context().withClientId(clientId), args).run {
+            FlowHandleWithClientIdImpl(id = id, returnValue = resultFuture, clientId = clientId)
+        }
     }
 
     @Suppress("SpreadOperator")

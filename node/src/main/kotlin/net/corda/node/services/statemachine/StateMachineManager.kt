@@ -100,6 +100,22 @@ interface StateMachineManager {
     fun snapshot(): Set<FlowStateMachineImpl<*>>
 
     /**
+     * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
+     *
+     * There are 3 outcomes that occur when calling this function:
+     *
+     * - The flow is still executing, then this function reattaches to it and awaits its its result or exception.
+     * - The flow has finished, then the result or exception will be returned and can be accessed instantly.
+     * - There is no flow matching the [clientId], then [null] is returned directly (not a future/[FlowStateMachineHandle]).
+     *
+     * Calling [reattachFlowWithClientId] after [removeClientId] with the same [clientId] will cause the function to return [null] as
+     * the result/exception of the flow will no longer available.
+     *
+     * @param clientId The client id relating to an existing flow
+     */
+    fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>?
+
+    /**
      * Removes a flow's [clientId] to result/ exception mapping.
      *
      * @return whether the mapping was removed.

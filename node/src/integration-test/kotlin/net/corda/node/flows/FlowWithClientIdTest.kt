@@ -3,15 +3,16 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.ResultSerializationException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlowWithClientId
-import net.corda.core.flows.ResultSerializationException
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import org.assertj.core.api.Assertions
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
@@ -103,6 +104,40 @@ class FlowWithClientIdTest {
             assertTrue(e1 !is UnserializableException)
             assertEquals(UnserializableException::class.java.name, e0.originalExceptionClassName)
             assertEquals(UnserializableException::class.java.name, e1.originalExceptionClassName)
+        }
+    }
+
+    @Test(timeout=300_000)
+    fun `reattachFlowWithClientId can retrieve existing flow future`() {
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+            val reattachedFlowHandle = nodeA.rpc.reattachFlowWithClientId<Int>(clientId)
+            assertEquals(5, flowHandle.returnValue.getOrThrow(20.seconds))
+            assertEquals(clientId, flowHandle.clientId)
+            assertEquals(flowHandle.id, reattachedFlowHandle?.id)
+            assertEquals(flowHandle.returnValue.get(), reattachedFlowHandle?.returnValue?.get())
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `reattachFlowWithClientId can retrieve exception from existing flow future`() {
+        ResultFlow.hook = { throw IllegalStateException("Bla bla bla") }
+        val clientId = UUID.randomUUID().toString()
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
+            val nodeA = startNode().getOrThrow()
+            val flowHandle = nodeA.rpc.startFlowWithClientId(clientId, ::ResultFlow, 5)
+            val reattachedFlowHandle = nodeA.rpc.reattachFlowWithClientId<Int>(clientId)
+
+            // [CordaRunTimeException] returned because [IllegalStateException] is not serializable
+            Assertions.assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+                flowHandle.returnValue.getOrThrow(20.seconds)
+            }.withMessage("java.lang.IllegalStateException: Bla bla bla")
+
+            Assertions.assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+                reattachedFlowHandle?.returnValue?.getOrThrow()
+            }.withMessage("java.lang.IllegalStateException: Bla bla bla")
         }
     }
 }

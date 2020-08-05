@@ -292,7 +292,7 @@ internal class SingleThreadedStateMachineManager(
 
             // Flow -started with client id- already exists, return the existing's flow future and don't start a new flow.
             existingStatus?.let {
-                val existingFuture = activeOrRemovedClientIdFuture(it, clientId)
+                val existingFuture = activeOrRemovedClientIdFuture(it, clientId, throwIfMissing = true)
                 return@startFlow uncheckedCast(existingFuture)
             }
             onClientIDNotFound?.invoke()
@@ -901,20 +901,26 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun activeOrRemovedClientIdFuture(existingStatus: FlowWithClientIdStatus, clientId: String) = when (existingStatus) {
-        is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
-        is FlowWithClientIdStatus.Removed -> {
-            val flowId = existingStatus.flowId
-            val resultFuture = if (existingStatus.succeeded) {
-                val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
-                doneFuture(flowResult)
-            } else {
-                val flowException =
-                    database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing = true) }
-                openFuture<Any?>().apply { setException(flowException as Throwable) }
-            }
+    private fun activeOrRemovedClientIdFuture(
+        existingStatus: FlowWithClientIdStatus,
+        clientId: String,
+        throwIfMissing: Boolean
+    ): CordaFuture<out FlowStateMachineHandle<out Any?>> {
+        return when (existingStatus) {
+            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+            is FlowWithClientIdStatus.Removed -> {
+                val flowId = existingStatus.flowId
+                val resultFuture = if (existingStatus.succeeded) {
+                    val flowResult = database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing) }
+                    doneFuture(flowResult)
+                } else {
+                    val flowException =
+                        database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing) }
+                    openFuture<Any?>().apply { setException(flowException as Throwable) }
+                }
 
-            doneClientIdFuture(flowId, resultFuture, clientId)
+                doneClientIdFuture(flowId, resultFuture, clientId)
+            }
         }
     }
 
@@ -926,7 +932,7 @@ internal class SingleThreadedStateMachineManager(
         id: StateMachineRunId,
         resultFuture: CordaFuture<Any?>,
         clientId: String
-    ): CordaFuture<FlowStateMachineHandle<Any?>> =
+    ): CordaFuture<FlowStateMachineHandle<out Any?>> =
         doneFuture(object : FlowStateMachineHandle<Any?> {
             override val logic: Nothing? = null
             override val id: StateMachineRunId = id
@@ -934,6 +940,15 @@ internal class SingleThreadedStateMachineManager(
             override val clientId: String? = clientId
         }
         )
+
+    override fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>? {
+        return innerState.withLock {
+            clientIdsToFlowIds[clientId]?.let {
+                val existingFuture = activeOrRemovedClientIdFuture(it, clientId, throwIfMissing = false)
+                uncheckedCast(existingFuture.get())
+            }
+        }
+    }
 
     override fun removeClientId(clientId: String): Boolean {
         var removedFlowId: StateMachineRunId? = null
