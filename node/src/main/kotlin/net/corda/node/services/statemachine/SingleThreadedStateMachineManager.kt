@@ -942,7 +942,7 @@ internal class SingleThreadedStateMachineManager(
                 if (existingStatus is FlowWithClientIdStatus.Removed) {
                     removedFlowId = existingStatus.flowId
                     null
-                } else { // don't remove
+                } else {
                     existingStatus
                 }
             }
