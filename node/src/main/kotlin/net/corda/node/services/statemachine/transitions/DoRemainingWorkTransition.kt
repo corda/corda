@@ -25,6 +25,7 @@ class DoRemainingWorkTransition(
     }
 
     // If the flow is clean check the FlowState
+    @Suppress("ThrowsCount")
     private fun cleanTransition(): TransitionResult {
         val flowState = startingState.checkpoint.flowState
         return when (flowState) {
