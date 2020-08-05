@@ -225,10 +225,12 @@ class FlowReloadAfterCheckpointTest {
     @Test(timeout = 300_000)
     fun `flow continues reloading from checkpoints after node restart when reloadCheckpointAfterSuspend is true`() {
         val reloads = ConcurrentLinkedQueue<StateMachineRunId>()
-        var reloadsExpected = CountDownLatch(2)
+        val firstLatch = CountDownLatch(2)
+        val secondLatch = CountDownLatch(5)
         FlowStateMachineImpl.onReloadFlowFromCheckpoint = { runId ->
             reloads.add(runId)
-            reloadsExpected.countDown()
+            firstLatch.countDown()
+            secondLatch.countDown()
         }
         driver(
             DriverParameters(
@@ -245,18 +247,18 @@ class FlowReloadAfterCheckpointTest {
             ).getOrThrow()
 
             alice.rpc.startFlow(::MyHospitalizingFlow)
-            assertTrue { reloadsExpected.await(10, TimeUnit.SECONDS) }
+            assertTrue { firstLatch.await(10, TimeUnit.SECONDS) }
             alice.stop()
+            assertEquals(2, reloads.size)
 
             // Set up a new latch
-            reloadsExpected = CountDownLatch(3)
             startNode(
                 providedName = ALICE_NAME,
                 customOverrides = mapOf(NodeConfiguration::reloadCheckpointAfterSuspend.name to true)
             ).getOrThrow()
 
-            assertTrue { reloadsExpected.await(20, TimeUnit.SECONDS) }
-            assertEquals(2, reloads.size)
+            assertTrue { secondLatch.await(20, TimeUnit.SECONDS) }
+            assertEquals(5, reloads.size)
         }
     }
 
