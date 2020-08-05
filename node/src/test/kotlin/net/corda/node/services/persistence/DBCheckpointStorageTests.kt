@@ -890,6 +890,24 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `update only compatible`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.updateCompatible(id, !checkpoint.compatible)
+        }
+        database.transaction {
+            assertEquals(
+                checkpoint.copy(compatible = !checkpoint.compatible),
+                checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
     data class IdAndCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint)
 
     private fun changeStatus(oldCheckpoint: Checkpoint, status: Checkpoint.FlowStatus): IdAndCheckpoint {

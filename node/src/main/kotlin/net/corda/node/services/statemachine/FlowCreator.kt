@@ -28,7 +28,12 @@ import java.security.SecureRandom
 
 class Flow<A>(val fiber: FlowStateMachineImpl<A>, val resultFuture: OpenFuture<Any?>)
 
-class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint, val resultFuture: OpenFuture<Any?> = openFuture()) {
+data class NonResidentFlow(
+    val runId: StateMachineRunId,
+    var checkpoint: Checkpoint,
+    val resultFuture: OpenFuture<Any?> = openFuture(),
+    val resumable: Boolean = true
+) {
     val events = mutableListOf<ExternalEvent>()
 
     fun addExternalEvent(message: ExternalEvent) {
@@ -72,10 +77,20 @@ class FlowCreator(
         runId: StateMachineRunId,
         oldCheckpoint: Checkpoint,
         reloadCheckpointAfterSuspendCount: Int? = null,
-        resultFuture: OpenFuture<Any?> = openFuture()
+        resultFuture: OpenFuture<Any?> = openFuture(),
+        firstRestore: Boolean = true
     ): Flow<*>? {
-        val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-        val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
+        val fiber = oldCheckpoint.getFiberFromCheckpoint(runId, firstRestore)
+        var checkpoint = oldCheckpoint
+        if (fiber == null) {
+            updateCompatibleInDb(runId, false)
+            return null
+        } else if (!oldCheckpoint.compatible) {
+            updateCompatibleInDb(runId, true)
+            checkpoint = checkpoint.copy(compatible = true)
+        }
+        checkpoint = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
+
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
         val state = createStateMachineState(
@@ -88,6 +103,12 @@ class FlowCreator(
         fiber.transientValues = createTransientValues(runId, resultFuture)
         fiber.transientState = state
         return Flow(fiber, resultFuture)
+    }
+
+    private fun updateCompatibleInDb(runId: StateMachineRunId, compatible: Boolean) {
+        database.transaction {
+            checkpointStorage.updateCompatible(runId, compatible)
+        }
     }
 
     @Suppress("LongParameterList")
@@ -132,33 +153,34 @@ class FlowCreator(
         return  Flow(flowStateMachineImpl, resultFuture)
     }
 
-    private fun Checkpoint.getFiberFromCheckpoint(runId: StateMachineRunId): FlowStateMachineImpl<*>? {
-        return when (this.flowState) {
-            is FlowState.Unstarted -> {
-                val logic = tryCheckpointDeserialize(this.flowState.frozenFlowLogic, runId) ?: return null
-                FlowStateMachineImpl(runId, logic, scheduler)
+    @Suppress("TooGenericExceptionCaught")
+    private fun Checkpoint.getFiberFromCheckpoint(runId: StateMachineRunId, firstRestore: Boolean): FlowStateMachineImpl<*>? {
+        try {
+            return when(flowState) {
+                is FlowState.Unstarted -> {
+                    val logic = deserializeFlowState(flowState.frozenFlowLogic)
+                    FlowStateMachineImpl(runId, logic, scheduler)
+                }
+                is FlowState.Started -> deserializeFlowState(flowState.frozenFiber)
+                // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
+                else -> return null
             }
-            is FlowState.Started -> tryCheckpointDeserialize(this.flowState.frozenFiber, runId) ?: return null
-            // Places calling this function is rely on it to return null if the flow cannot be created from the checkpoint.
-            else -> null
+        } catch (e: Exception) {
+            logSerializationError(firstRestore, runId, e)
+            return null
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
-    private inline fun <reified T : Any> tryCheckpointDeserialize(bytes: SerializedBytes<T>, flowId: StateMachineRunId): T? {
-        return try {
-            bytes.checkpointDeserialize(context = checkpointSerializationContext)
-        } catch (e: Exception) {
-            if (reloadCheckpointAfterSuspend && currentStateMachine() != null) {
-                logger.error(
-                    "Unable to deserialize checkpoint for flow $flowId. [reloadCheckpointAfterSuspend] is turned on, throwing exception",
-                    e
-                )
-                throw ReloadFlowFromCheckpointException(e)
-            } else {
-                logger.error("Unable to deserialize checkpoint for flow $flowId. Something is very wrong and this flow will be ignored.", e)
-                null
-            }
+    private inline fun <reified T : Any> deserializeFlowState(bytes: SerializedBytes<T>): T {
+        return bytes.checkpointDeserialize(context = checkpointSerializationContext)
+    }
+
+    private fun logSerializationError(firstRestore: Boolean, flowId: StateMachineRunId, exception: Exception) {
+        if (firstRestore) {
+            logger.warn("Flow with id $flowId could not be restored from its checkpoint. Normally this means that a CorDapp has been" +
+                    " upgraded without draining the node. To run this flow restart the node after downgrading the CorDapp.", exception)
+        } else {
+            logger.error("Unable to deserialize fiber for flow $flowId. Something is very wrong and this flow will be ignored.", exception)
         }
     }
 
