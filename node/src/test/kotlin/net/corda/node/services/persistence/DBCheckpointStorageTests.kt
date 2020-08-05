@@ -799,8 +799,8 @@ class DBCheckpointStorageTests {
             val (extractedId, extractedCheckpoint)  = checkpointStorage.getPausedCheckpoints().toList().single()
             assertEquals(id, extractedId)
             //We don't extract the result or the flowstate from a paused checkpoint
-            assertEquals(null, extractedCheckpoint.serializedFlowState)
-            assertEquals(null, extractedCheckpoint.result)
+            assertNull(extractedCheckpoint.serializedFlowState)
+            assertNull(extractedCheckpoint.result)
 
             assertEquals(pausedCheckpoint.status, extractedCheckpoint.status)
             assertEquals(pausedCheckpoint.progressStep, extractedCheckpoint.progressStep)

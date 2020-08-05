@@ -58,6 +58,11 @@ sealed class Action {
     data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()
 
     /**
+     * Update only the [status] of the checkpoint with [id].
+     */
+    data class UpdateFlowStatus(val id: StateMachineRunId, val status: Checkpoint.FlowStatus): Action()
+
+    /**
      * Remove the checkpoint corresponding to [id].
      */
     data class RemoveCheckpoint(val id: StateMachineRunId) : Action()
@@ -105,6 +110,11 @@ sealed class Action {
             val removalReason: FlowRemovalReason,
             val lastState: StateMachineState
     ) : Action()
+
+    /**
+     * Move the flow corresponding to [flowId] to paused.
+     */
+    data class MoveFlowToPaused(val currentState: StateMachineState) : Action()
 
     /**
      * Schedule [event] to self.

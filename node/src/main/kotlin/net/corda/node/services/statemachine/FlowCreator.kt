@@ -29,11 +29,11 @@ import java.util.concurrent.Semaphore
 
 class Flow<A>(val fiber: FlowStateMachineImpl<A>, val resultFuture: OpenFuture<Any?>)
 
-class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint) {
-    val externalEvents = mutableListOf<Event.DeliverSessionMessage>()
+class NonResidentFlow(val runId: StateMachineRunId, val checkpoint: Checkpoint, val resultFuture: OpenFuture<Any?> = openFuture()) {
+    val events = mutableListOf<ExternalEvent>()
 
-    fun addExternalEvent(message: Event.DeliverSessionMessage) {
-        externalEvents.add(message)
+    fun addExternalEvent(message: ExternalEvent) {
+        events.add(message)
     }
 }
 
@@ -66,18 +66,18 @@ class FlowCreator(
             }
             else -> nonResidentFlow.checkpoint
         }
-        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint)
+        return createFlowFromCheckpoint(nonResidentFlow.runId, checkpoint, resultFuture = nonResidentFlow.resultFuture)
     }
 
     fun createFlowFromCheckpoint(
         runId: StateMachineRunId,
         oldCheckpoint: Checkpoint,
         reloadCheckpointAfterSuspendCount: Int? = null,
-        lock: Semaphore = Semaphore(1)
+        lock: Semaphore = Semaphore(1),
+        resultFuture: OpenFuture<Any?> = openFuture()
     ): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
-        val resultFuture = openFuture<Any?>()
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
         fiber.transientValues = createTransientValues(runId, resultFuture)
