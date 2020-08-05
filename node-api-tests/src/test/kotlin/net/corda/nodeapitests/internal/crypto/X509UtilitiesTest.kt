@@ -15,7 +15,6 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.JavaVersion
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
