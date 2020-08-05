@@ -19,7 +19,6 @@ import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.mapNotNull
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
@@ -56,7 +55,6 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
-import kotlin.streams.toList
 
 /**
  * The StateMachineManagerImpl will always invoke the flow fibers on the given [AffinityExecutor], regardless of which
@@ -169,12 +167,11 @@ internal class SingleThreadedStateMachineManager(
             flowTimeoutScheduler::resetCustomTimeout
         )
 
-        val fibers = restoreFlowsFromCheckpoints()
+        val (fibers, pausedFlows) = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { innerState.flows.size })
 
         setFlowDefaultUncaughtExceptionHandler()
 
-        val pausedFlows = restoreNonResidentFlowsFromPausedCheckpoints()
         innerState.withLock {
             this.pausedFlows.putAll(pausedFlows)
             for ((id, flow) in pausedFlows) {
@@ -367,30 +364,31 @@ internal class SingleThreadedStateMachineManager(
         liveFibers.countUp()
     }
 
-    private fun restoreFlowsFromCheckpoints(): List<Flow<*>> {
-        return checkpointStorage.getCheckpointsToRun().use {
-            it.mapNotNull { (id, serializedCheckpoint) ->
-                // If a flow is added before start() then don't attempt to restore it
-                innerState.withLock { if (id in flows) return@mapNotNull null }
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                flowCreator.createFlowFromCheckpoint(id, checkpoint)
-            }.toList()
+    private fun restoreFlowsFromCheckpoints(): Pair<MutableMap<StateMachineRunId, Flow<*>>, MutableMap<StateMachineRunId, NonResidentFlow>> {
+        val flows = mutableMapOf<StateMachineRunId, Flow<*>>()
+        val pausedFlows = mutableMapOf<StateMachineRunId, NonResidentFlow>()
+        checkpointStorage.getCheckpointsToRun().forEach Checkpoints@{(id, serializedCheckpoint) ->
+            // If a flow is added before start() then don't attempt to restore it
+            innerState.withLock { if (id in flows) return@Checkpoints }
+            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
+            val flow = flowCreator.createFlowFromCheckpoint(id, checkpoint)
+            if (flow == null) {
+                // Set the flowState to paused so we don't waste memory storing it anymore.
+                pausedFlows[id] = NonResidentFlow(id, checkpoint.copy(flowState = FlowState.Paused), resumable = false)
+            } else {
+                flows[id] = flow
+            }
         }
+        checkpointStorage.getPausedCheckpoints().forEach Checkpoints@{ (id, serializedCheckpoint) ->
+            val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@Checkpoints
+            pausedFlows[id] = NonResidentFlow(id, checkpoint)
+        }
+        return Pair(flows, pausedFlows)
     }
 
-    private fun restoreNonResidentFlowsFromPausedCheckpoints(): Map<StateMachineRunId, NonResidentFlow> {
-        return checkpointStorage.getPausedCheckpoints().use {
-            it.mapNotNull { (id, serializedCheckpoint) ->
-                // If a flow is added before start() then don't attempt to restore it
-                val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id) ?: return@mapNotNull null
-                id to NonResidentFlow(id, checkpoint)
-            }.toList().toMap()
-        }
-    }
-
-    private fun resumeRestoredFlows(flows: List<Flow<*>>) {
-        for (flow in flows) {
-            addAndStartFlow(flow.fiber.id, flow)
+    private fun resumeRestoredFlows(flows: Map<StateMachineRunId, Flow<*>>) {
+        for ((id, flow) in flows.entries) {
+            addAndStartFlow(id, flow)
         }
     }
 
@@ -426,7 +424,8 @@ internal class SingleThreadedStateMachineManager(
                 flowId,
                 checkpoint,
                 currentState.reloadCheckpointAfterSuspendCount,
-                currentState.lock
+                currentState.lock,
+                firstRestore = false
             ) ?: return
         } else {
             // Just flow initiation message

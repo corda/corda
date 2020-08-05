@@ -29,6 +29,11 @@ interface CheckpointStorage {
     fun updateStatus(runId: StateMachineRunId, flowStatus: Checkpoint.FlowStatus)
 
     /**
+     * Update an existing checkpoints compatibility flag ([Checkpoint.compatible]).
+     */
+    fun updateCompatible(runId: StateMachineRunId, compatible: Boolean)
+
+    /**
      * Update all persisted checkpoints with status [Checkpoint.FlowStatus.RUNNABLE] or [Checkpoint.FlowStatus.HOSPITALIZED],
      * changing the status to [Checkpoint.FlowStatus.PAUSED].
      */

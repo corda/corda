@@ -62,8 +62,8 @@ class TopLevelTransition(
             is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
             is Event.OvernightObservation -> overnightObservationTransition()
             is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
-            is Event.TerminateSessions -> terminateSessionsTransition(event)
             is Event.Pause -> pausedFlowTransition()
+            is Event.TerminateSessions -> terminateSessionsTransition(event)
         }
     }
 
