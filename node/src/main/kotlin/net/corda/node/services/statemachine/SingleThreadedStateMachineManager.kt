@@ -1105,6 +1105,18 @@ internal class SingleThreadedStateMachineManager(
         return false
     }
 
+    override fun finishedFlowsWithClientIds(): List<Triple<StateMachineRunId, String, Boolean>> {
+        return innerState.withLock {
+            clientIdsToFlowIds.asSequence()
+                    .filter { (_, status) -> status is FlowWithClientIdStatus.Removed }
+                    .map { (clientId, status) ->
+                        status as FlowWithClientIdStatus.Removed
+                        Triple(status.flowId, clientId, status.succeeded)
+                    }
+                    .toList()
+        }
+    }
+
     private sealed class CheckpointLoadingStatus {
         class Success(val checkpoint: Checkpoint) : CheckpointLoadingStatus()
         object NotFound : CheckpointLoadingStatus()

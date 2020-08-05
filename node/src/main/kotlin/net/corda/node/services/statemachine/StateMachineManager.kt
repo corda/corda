@@ -100,6 +100,8 @@ interface StateMachineManager {
      */
     fun snapshot(): Set<FlowStateMachineImpl<*>>
 
+    fun finishedFlowsWithClientIds(): List<Triple<StateMachineRunId, String, Boolean>>
+
     /**
      * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
      *
