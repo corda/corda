@@ -23,6 +23,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
@@ -68,6 +69,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         private val logger = contextLogger()
         private val defaultRetryInterval = 1.minutes
         private const val bulkNodeInfoFetchThreshold = 50
+        private val defaultWatchNodeInfoFilesRetryInterval = 10.seconds;
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
@@ -136,6 +138,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private fun watchForNodeInfoFiles(): Subscription {
         return nodeInfoWatcher
                 .nodeInfoUpdates()
+                .doOnError { logger.warn("Error encountered while polling directory for network map updates, " +
+                        "will retry in ${defaultWatchNodeInfoFilesRetryInterval.seconds} seconds - $it") }
+                .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryInterval.seconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
                 .subscribe {
                     for (update in it) {
                         when (update) {
@@ -163,8 +168,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 val nextScheduleDelay = try {
                     updateNetworkMapCache()
                 } catch (e: Exception) {
-                    logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", e)
-                    defaultRetryInterval
+                    logger.warn("Error encountered while updating network map, will retry in $defaultWatchHttpNetworkMapRetryInterval", e)
+                    defaultWatchHttpNetworkMapRetryInterval
                 }
                 // Schedule the next update.
                 networkMapPoller.schedule(this, nextScheduleDelay.toMillis(), TimeUnit.MILLISECONDS)
