@@ -33,8 +33,8 @@ class NodeH2SecurityTests {
     fun `h2 server on the host name requires non-default database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:my_file")
         hikaryProperties.setProperty("dataSource.password", "")
+        address = NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080)
         val node = MockNode()
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080))
 
         val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
@@ -46,8 +46,8 @@ class NodeH2SecurityTests {
     fun `h2 server on the host IP requires non-default database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:my_file")
         hikaryProperties.setProperty("dataSource.password", "")
+        address = NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080)
         val node = MockNode()
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080))
 
         val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
@@ -59,7 +59,7 @@ class NodeH2SecurityTests {
     fun `h2 server on the host name requires non-blank database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:my_file")
         hikaryProperties.setProperty("dataSource.password", " ")
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080))
+        address = NetworkHostAndPort(InetAddress.getLocalHost().hostName, 1080)
         val node = MockNode()
 
         val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
@@ -72,8 +72,8 @@ class NodeH2SecurityTests {
     fun `h2 server on the host IP requires non-blank database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:my_file")
         hikaryProperties.setProperty("dataSource.password", " ")
+        address = NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080)
         val node = MockNode()
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort(InetAddress.getLocalHost().hostAddress, 1080))
 
         val exception = assertFailsWith(CouldNotCreateDataSourceException::class) {
             node.startDb()
@@ -86,7 +86,7 @@ class NodeH2SecurityTests {
     fun `h2 server on localhost runs with the default database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:dir/file;")
         hikaryProperties.setProperty("dataSource.password", "")
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort("localhost", 80))
+        address = NetworkHostAndPort("localhost", 80)
 
         val node = MockNode()
         node.startDb()
@@ -98,7 +98,7 @@ class NodeH2SecurityTests {
     fun `h2 server to loopback IP runs with the default database password`() {
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:dir/file;")
         hikaryProperties.setProperty("dataSource.password", "")
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort("127.0.0.1", 80))
+        address = NetworkHostAndPort("127.0.0.1", 80)
 
         val node = MockNode()
         node.startDb()
@@ -111,7 +111,7 @@ class NodeH2SecurityTests {
         System.setProperty("h2.allowedClasses", "*")
         hikaryProperties.setProperty("dataSource.url", "jdbc:h2:file:dir/file;")
         hikaryProperties.setProperty("dataSource.password", "")
-        whenever(effectiveH2Settings.address).thenReturn(NetworkHostAndPort("127.0.0.1", 80))
+        address = NetworkHostAndPort("127.0.0.1", 80)
 
         val node = MockNode()
         node.startDb()
@@ -124,16 +124,16 @@ class NodeH2SecurityTests {
     }
 
     private val config = mock<NodeConfiguration>()
-    private val database = mock<DatabaseConfig>()
     private val hikaryProperties = Properties()
-    private val effectiveH2Settings = mock<NodeH2Settings>()
+    private val database = DatabaseConfig()
+    private var address: NetworkHostAndPort? = null
     val dataSource = mock<DataSource>()
 
     init {
         whenever(config.database).thenReturn(database)
         whenever(config.dataSourceProperties).thenReturn(hikaryProperties)
         whenever(config.baseDirectory).thenReturn(mock())
-        whenever(config.effectiveH2Settings).thenReturn(effectiveH2Settings)
+        whenever(config.effectiveH2Settings).thenAnswer { NodeH2Settings(address) }
     }
 
     private inner class MockNode: Node(config, VersionInfo.UNKNOWN, false) {
