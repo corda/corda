@@ -146,6 +146,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val context: InvocationContext get() = transientState.checkpoint.checkpointState.invocationContext
     override val ourIdentity: Party get() = transientState.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState.isKilled
+    override val clientId: String? get() = transientState.checkpoint.checkpointState.invocationContext.clientId
+
     /**
      * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
      * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and
@@ -155,6 +157,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     internal val softLockedStates = mutableSetOf<StateRef>()
 
+    internal inline fun <RESULT> withFlowLock(block: FlowStateMachineImpl<R>.() -> RESULT): RESULT {
+        transientState.lock.acquire()
+        return try {
+            block(this)
+        } finally {
+            transientState.lock.release()
+        }
+    }
+
+
     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
@@ -162,20 +174,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun processEvent(transitionExecutor: TransitionExecutor, event: Event): FlowContinuation {
-        setLoggingContext()
-        val stateMachine = transientValues.stateMachine
-        val oldState = transientState
-        val actionExecutor = transientValues.actionExecutor
-        val transition = stateMachine.transition(event, oldState)
-        val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
-        // Ensure that the next state that is being written to the transient state maintains the [isKilled] flag
-        // This condition can be met if a flow is killed during [TransitionExecutor.executeTransition]
-        if (oldState.isKilled && !newState.isKilled) {
-            newState.isKilled = true
+        return withFlowLock {
+            setLoggingContext()
+            val stateMachine = transientValues.stateMachine
+            val oldState = transientState
+            val actionExecutor = transientValues.actionExecutor
+            val transition = stateMachine.transition(event, oldState)
+            val (continuation, newState) = transitionExecutor.executeTransition(
+                this,
+                oldState,
+                event,
+                transition,
+                actionExecutor
+            )
+            transientState = newState
+            setLoggingContext()
+            continuation
         }
-        transientState = newState
-        setLoggingContext()
-        return continuation
     }
 
     /**

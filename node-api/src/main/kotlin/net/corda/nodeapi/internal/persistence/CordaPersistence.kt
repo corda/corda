@@ -31,24 +31,12 @@ import javax.sql.DataSource
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
-enum class SchemaInitializationType{
-    NONE,
-    VALIDATE,
-    UPDATE
-}
-
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = Defaults.initialiseSchema,
-        val initialiseAppSchema: SchemaInitializationType = Defaults.initialiseAppSchema,
-        val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
 ) {
     object Defaults {
-        val initialiseSchema = true
-        val initialiseAppSchema = SchemaInitializationType.UPDATE
-        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
     }
@@ -67,6 +55,10 @@ enum class TransactionIsolationLevel {
      */
     val jdbcString = "TRANSACTION_$name"
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
+
+    companion object{
+        val default = READ_COMMITTED
+    }
 }
 
 internal val _prohibitDatabaseAccess = ThreadLocal.withInitial { false }
@@ -96,27 +88,28 @@ fun <T> withoutDatabaseAccess(block: () -> T): T {
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
-        databaseConfig: DatabaseConfig,
+        exportHibernateJMXStatistics: Boolean,
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
         customClassLoader: ClassLoader? = null,
         val closeConnection: Boolean = true,
-        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {}
+        val errorHandler: DatabaseTransaction.(e: Exception) -> Unit = {},
+        allowHibernateToManageAppSchema: Boolean = false
 ) : Closeable {
     companion object {
         private val log = contextLogger()
     }
 
-    private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
+    private val defaultIsolationLevel = TransactionIsolationLevel.default
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
             try {
-                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+                HibernateConfiguration(schemas, exportHibernateJMXStatistics, attributeConverters, jdbcUrl, cacheFactory, customClassLoader, allowHibernateToManageAppSchema)
             } catch (e: Exception) {
                 when (e) {
-                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
+                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run schema migration scripts (node with sub-command run-migration-scripts). Reason: ${e.message}", e)
                     else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
                 }
             }

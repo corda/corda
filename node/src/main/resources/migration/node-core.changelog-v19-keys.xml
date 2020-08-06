@@ -12,10 +12,16 @@
         <addPrimaryKey columnNames="flow_id" constraintName="node_checkpoints_pk" tableName="node_checkpoints"/>
     </changeSet>
 
-    <!-- TODO: add indexes for the rest of the tables as well (Results + Exceptions)   -->
+    <!-- TODO: add indexes for Exceptions table as well -->
     <!-- TODO: the following only add indexes so maybe also align name of file?   -->
     <changeSet author="R3.Corda" id="add_new_checkpoint_schema_indexes">
         <createIndex indexName="node_checkpoint_blobs_idx" tableName="node_checkpoint_blobs" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+        <createIndex indexName="node_flow_results_idx" tableName="node_flow_results" clustered="false" unique="true">
+            <column name="flow_id"/>
+        </createIndex>
+        <createIndex indexName="node_flow_exceptions_idx" tableName="node_flow_exceptions" clustered="false" unique="true">
             <column name="flow_id"/>
         </createIndex>
         <createIndex indexName="node_flow_metadata_idx" tableName="node_flow_metadata" clustered="false" unique="true">

@@ -61,9 +61,15 @@ class ErrorFlowTransition(
             if (!currentState.isRemoved) {
                 val newCheckpoint = startingState.checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
 
+                val removeOrPersistCheckpoint = if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                    Action.RemoveCheckpoint(context.id)
+                } else {
+                    Action.PersistCheckpoint(context.id, newCheckpoint.copy(flowState = FlowState.Finished), isCheckpointUpdate = currentState.isAnyCheckpointPersisted)
+                }
+
                 actions.addAll(arrayOf(
                         Action.CreateTransaction,
-                        Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
+                        removeOrPersistCheckpoint,
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,

@@ -104,6 +104,16 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging,
      */
     private val flowsInHospital = ConcurrentHashMap<StateMachineRunId, FlowFiber>()
 
+    /**
+     * Returns true if the flow is currently being treated in the hospital.
+     * The differs to flows with a medical history (which can accessed via [StaffedFlowHospital.contains]).
+     */
+    @VisibleForTesting
+    internal fun flowInHospital(runId: StateMachineRunId): Boolean {
+        // The .keys avoids https://youtrack.jetbrains.com/issue/KT-18053
+        return runId in flowsInHospital.keys
+    }
+
     private val mutex = ThreadBox(object {
         /**
          * Contains medical history of every flow (a patient) that has entered the hospital. A flow can leave the hospital,

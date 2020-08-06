@@ -13,6 +13,12 @@ internal fun InvocationContext.pushToLoggingContext() {
     origin.pushToLoggingContext()
     externalTrace?.pushToLoggingContext("external_")
     impersonatedActor?.pushToLoggingContext("impersonating_")
+
+    clientId?.let {
+        MDC.getMDCAdapter().apply {
+            put("client_id", it)
+        }
+    }
 }
 
 internal fun Trace.pushToLoggingContext(prefix: String = "") {
