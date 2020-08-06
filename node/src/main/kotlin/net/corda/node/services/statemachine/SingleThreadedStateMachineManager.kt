@@ -19,6 +19,7 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.mapNotNull
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
@@ -72,6 +73,14 @@ internal class SingleThreadedStateMachineManager(
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
+
+        private val VALID_KILL_FLOW_STATUSES = setOf(
+            Checkpoint.FlowStatus.RUNNABLE,
+            Checkpoint.FlowStatus.FAILED,
+            Checkpoint.FlowStatus.COMPLETED,
+            Checkpoint.FlowStatus.HOSPITALIZED,
+            Checkpoint.FlowStatus.PAUSED
+        )
     }
 
     private val innerState = StateMachineInnerStateImpl()
@@ -101,6 +110,26 @@ internal class SingleThreadedStateMachineManager(
 
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
+
+    private inline fun <R> Flow<R>.withFlowLock(
+        validStatuses: Set<Checkpoint.FlowStatus>,
+        block: FlowStateMachineImpl<R>.() -> Boolean
+    ): Boolean {
+        if (!fiber.hasValidStatus(validStatuses)) return false
+        return fiber.withFlowLock {
+            // Get the flow again, in case another thread removed it from the map
+            innerState.withLock {
+                flows[id]?.run {
+                    if (!fiber.hasValidStatus(validStatuses)) return false
+                    block(uncheckedCast(this.fiber))
+                }
+            } ?: false
+        }
+    }
+
+    private fun FlowStateMachineImpl<*>.hasValidStatus(validStatuses: Set<Checkpoint.FlowStatus>): Boolean {
+        return transientState.checkpoint.status in validStatuses
+    }
 
     /**
      * An observable that emits triples of the changing flow, the type of change, and a process-specific ID number
@@ -239,9 +268,9 @@ internal class SingleThreadedStateMachineManager(
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-        val killFlowResult = innerState.withLock {
-            val flow = flows[id]
-            if (flow != null) {
+        val flow = innerState.withLock { flows[id] }
+        val killFlowResult = if (flow != null) {
+            flow.withFlowLock(VALID_KILL_FLOW_STATUSES) {
                 logger.info("Killing flow $id known to this node.")
                 // The checkpoint and soft locks are removed here instead of relying on the processing of the next event after setting
                 // the killed flag. This is to ensure a flow can be removed from the database, even if it is stuck in a infinite loop.
@@ -249,24 +278,19 @@ internal class SingleThreadedStateMachineManager(
                     checkpointStorage.removeCheckpoint(id)
                     serviceHub.vaultService.softLockRelease(id.uuid)
                 }
-                // the same code is NOT done in remove flow when an error occurs
-                // what is the point of this latch?
+
                 unfinishedFibers.countDown()
 
-                val state = flow.fiber.transientState
-                state.isKilled = true
-                flow.fiber.scheduleEvent(Event.DoRemainingWork)
+                flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
+                scheduleEvent(Event.DoRemainingWork)
                 true
-            } else {
-                // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                database.transaction { checkpointStorage.removeCheckpoint(id) }
             }
-        }
-        return if (killFlowResult) {
-            true
         } else {
-            flowHospital.dropSessionInit(id)
+            // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+            database.transaction { checkpointStorage.removeCheckpoint(id) }
         }
+
+        return killFlowResult || flowHospital.dropSessionInit(id)
     }
 
     private fun markAllFlowsAsPaused() {
@@ -390,7 +414,12 @@ internal class SingleThreadedStateMachineManager(
 
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, flowId) ?: return
             // Resurrect flow
-            flowCreator.createFlowFromCheckpoint(flowId, checkpoint, currentState.reloadCheckpointAfterSuspendCount) ?: return
+            flowCreator.createFlowFromCheckpoint(
+                flowId,
+                checkpoint,
+                currentState.reloadCheckpointAfterSuspendCount,
+                currentState.lock
+            ) ?: return
         } else {
             // Just flow initiation message
             null
