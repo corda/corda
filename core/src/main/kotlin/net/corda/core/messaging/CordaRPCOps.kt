@@ -265,11 +265,20 @@ interface CordaRPCOps : RPCOps {
     fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
-     * Start the given flow with the given arguments and a [clientId]. [logicType] must be annotated
-     * with [net.corda.core.flows.StartableByRPC]. The flow's result/ exception will be available for the client to
-     * re-connect and retrieve them even after the flow's lifetime, by re-calling [startFlowDynamicWithClientId] with the same
-     * [clientId]. Upon calling [removeClientId], the node's resources holding the result/ exception will be freed
-     * and the result/ exception will no longer be available.
+     * Start the given flow with the given arguments and a [clientId].
+     *
+     * The flow's result/ exception will be available for the client to re-connect and retrieve even after the flow's lifetime,
+     * by re-calling [startFlowDynamicWithClientId] with the same [clientId]. The [logicType] and [args] will be ignored if the
+     * [clientId] matches an existing flow. If you don't have the original values, consider using [reattachFlowWithClientId].
+     *
+     * Upon calling [removeClientId], the node's resources holding the result/ exception will be freed and the result/ exception will
+     * no longer be available.
+     *
+     * [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
+     *
+     * @param clientId The client id to relate the flow to (or is already related to if the flow already exists)
+     * @param logicType The [FlowLogic] to start
+     * @param args The arguments to pass to the flow
      */
     @RPCReturnsObservables
     fun <T> startFlowDynamicWithClientId(clientId: String, logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandleWithClientId<T>
@@ -287,6 +296,21 @@ interface CordaRPCOps : RPCOps {
      * @return whether the flow existed and was killed.
      */
     fun killFlow(id: StateMachineRunId): Boolean
+
+    /**
+     * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
+     *
+     * If there is a flow matching the [clientId] then its result or exception is returned.
+     *
+     * When there is no flow matching the [clientId] then [null] is returned directly (not a future/[FlowHandleWithClientId]).
+     *
+     * Calling [reattachFlowWithClientId] after [removeClientId] with the same [clientId] will cause the function to return [null] as
+     * the result/exception of the flow will no longer be available.
+     *
+     * @param clientId The client id relating to an existing flow
+     */
+    @RPCReturnsObservables
+    fun <T> reattachFlowWithClientId(clientId: String): FlowHandleWithClientId<T>?
 
     /**
      * Removes a flow's [clientId] to result/ exception mapping. If the mapping is of a running flow, then the mapping will not get removed.

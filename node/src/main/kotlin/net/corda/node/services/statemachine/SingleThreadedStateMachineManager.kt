@@ -926,7 +926,7 @@ internal class SingleThreadedStateMachineManager(
         id: StateMachineRunId,
         resultFuture: CordaFuture<Any?>,
         clientId: String
-    ): CordaFuture<FlowStateMachineHandle<Any?>> =
+    ): CordaFuture<FlowStateMachineHandle<out Any?>> =
         doneFuture(object : FlowStateMachineHandle<Any?> {
             override val logic: Nothing? = null
             override val id: StateMachineRunId = id
@@ -934,6 +934,47 @@ internal class SingleThreadedStateMachineManager(
             override val clientId: String? = clientId
         }
         )
+
+    override fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>? {
+        return innerState.withLock {
+            clientIdsToFlowIds[clientId]?.let {
+                val existingFuture = activeOrRemovedClientIdFutureForReattach(it, clientId)
+                existingFuture?.let { uncheckedCast(existingFuture.get()) }
+            }
+        }
+    }
+
+    @Suppress("NestedBlockDepth")
+    private fun activeOrRemovedClientIdFutureForReattach(
+        existingStatus: FlowWithClientIdStatus,
+        clientId: String
+    ): CordaFuture<out FlowStateMachineHandle<out Any?>>? {
+        return when (existingStatus) {
+            is FlowWithClientIdStatus.Active -> existingStatus.flowStateMachineFuture
+            is FlowWithClientIdStatus.Removed -> {
+                val flowId = existingStatus.flowId
+                val resultFuture = if (existingStatus.succeeded) {
+                    try {
+                        val flowResult =
+                            database.transaction { checkpointStorage.getFlowResult(existingStatus.flowId, throwIfMissing = true) }
+                        doneFuture(flowResult)
+                    } catch (e: IllegalStateException) {
+                        null
+                    }
+                } else {
+                    try {
+                        val flowException =
+                            database.transaction { checkpointStorage.getFlowException(existingStatus.flowId, throwIfMissing = true) }
+                        openFuture<Any?>().apply { setException(flowException as Throwable) }
+                    } catch (e: IllegalStateException) {
+                        null
+                    }
+                }
+
+                resultFuture?.let { doneClientIdFuture(flowId, it, clientId) }
+            }
+        }
+    }
 
     override fun removeClientId(clientId: String): Boolean {
         var removedFlowId: StateMachineRunId? = null

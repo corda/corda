@@ -7,6 +7,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandleWithClientId
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
@@ -98,6 +99,20 @@ interface StateMachineManager {
      * Returns a snapshot of all [FlowStateMachineImpl]s currently managed.
      */
     fun snapshot(): Set<FlowStateMachineImpl<*>>
+
+    /**
+     * Reattach to an existing flow that was started with [startFlowDynamicWithClientId] and has a [clientId].
+     *
+     * If there is a flow matching the [clientId] then its result or exception is returned.
+     *
+     * When there is no flow matching the [clientId] then [null] is returned directly (not a future/[FlowHandleWithClientId]).
+     *
+     * Calling [reattachFlowWithClientId] after [removeClientId] with the same [clientId] will cause the function to return [null] as
+     * the result/exception of the flow will no longer be available.
+     *
+     * @param clientId The client id relating to an existing flow
+     */
+    fun <T> reattachFlowWithClientId(clientId: String): FlowStateMachineHandle<T>?
 
     /**
      * Removes a flow's [clientId] to result/ exception mapping.
