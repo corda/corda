@@ -944,6 +944,7 @@ internal class SingleThreadedStateMachineManager(
         }
     }
 
+    @Suppress("NestedBlockDepth")
     private fun activeOrRemovedClientIdFutureForReattach(
         existingStatus: FlowWithClientIdStatus,
         clientId: String
