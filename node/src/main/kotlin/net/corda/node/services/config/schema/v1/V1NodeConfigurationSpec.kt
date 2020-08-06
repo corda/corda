@@ -81,7 +81,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val database = config[database] ?: Defaults.database(config[devMode])
         val baseDirectoryPath = config[baseDirectory]
         val cordappDirectories = config[cordappDirectories]?.map { baseDirectoryPath.resolve(it) } ?: Defaults.cordappsDirectories(baseDirectoryPath)
-        val networkParametersPath = config[networkParametersPath] ?: baseDirectoryPath
+        val networkParametersPath = if (config[networkParametersPath] != null) baseDirectoryPath.resolve(config[networkParametersPath]) else baseDirectoryPath
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                     baseDirectory = baseDirectoryPath,
