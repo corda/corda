@@ -15,6 +15,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -23,7 +24,7 @@ class CordappScanningDriverTest {
 	fun `sub-classed initiated flow pointing to the same initiating flow as its super-class`() {
         val user = User("u", "p", setOf(startFlow<ReceiveFlow>()))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(enclosedCordapp()))) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
                     startNode(providedName = BOB_NAME)).transpose().getOrThrow()

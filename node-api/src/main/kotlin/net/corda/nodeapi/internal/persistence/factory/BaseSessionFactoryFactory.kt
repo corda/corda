@@ -3,9 +3,8 @@ package net.corda.nodeapi.internal.persistence.factory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.SchemaInitializationType
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.hibernate.SessionFactory
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataBuilder
@@ -26,22 +25,19 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
         private val logger = contextLogger()
     }
 
-    open fun buildHibernateConfig(databaseConfig: DatabaseConfig, metadataSources: MetadataSources): Configuration {
+    open fun buildHibernateConfig(metadataSources: MetadataSources, allowHibernateToManageAppSchema: Boolean): Configuration {
         val hbm2dll: String =
-                if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                if (allowHibernateToManageAppSchema) {
                     "update"
-                } else if ((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
-                        || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                } else  {
                     "validate"
-                } else {
-                    "none"
                 }
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         return Configuration(metadataSources).setProperty("hibernate.connection.provider_class", HibernateConfiguration.NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("javax.persistence.validation.mode", "none")
-                .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("hibernate.connection.isolation", TransactionIsolationLevel.default.jdbcValue.toString())
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.jdbc.time_zone", "UTC")
     }
@@ -85,15 +81,15 @@ abstract class BaseSessionFactoryFactory : CordaSessionFactoryFactory {
     }
 
     final override fun makeSessionFactoryForSchemas(
-            databaseConfig: DatabaseConfig,
             schemas: Set<MappedSchema>,
             customClassLoader: ClassLoader?,
-            attributeConverters: Collection<AttributeConverter<*, *>>): SessionFactory {
+            attributeConverters: Collection<AttributeConverter<*, *>>,
+            allowHibernateToMananageAppSchema: Boolean): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val config = buildHibernateConfig(databaseConfig, metadataSources)
+        val config = buildHibernateConfig(metadataSources, allowHibernateToMananageAppSchema)
         schemas.forEach { schema ->
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }

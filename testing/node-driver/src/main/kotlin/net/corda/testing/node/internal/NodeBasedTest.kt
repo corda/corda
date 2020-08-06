@@ -157,7 +157,12 @@ abstract class NodeBasedTest @JvmOverloads constructor(
     }
 }
 
-class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : Node(configuration, versionInfo, false, flowManager = flowManager) {
+class InProcessNode(
+        configuration: NodeConfiguration,
+        versionInfo: VersionInfo,
+        flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
+        allowHibernateToManageAppSchema: Boolean = true) : Node(configuration, versionInfo, false, flowManager = flowManager, allowHibernateToManageAppSchema = allowHibernateToManageAppSchema) {
+    override val runMigrationScripts: Boolean = true
     override fun start(): NodeInfo {
         assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
         return super.start()

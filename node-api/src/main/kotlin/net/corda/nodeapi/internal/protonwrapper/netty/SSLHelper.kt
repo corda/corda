@@ -200,10 +200,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
                                    expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
-    val sslContext = SSLContext.getInstance("TLS")
-    val keyManagers = keyManagerFactory.keyManagers
-    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
-    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    val sslContext = createAndInitSslContext(keyManagerFactory, trustManagerFactory)
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
@@ -239,10 +236,7 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
 internal fun createServerSslHandler(keyStore: CertificateStore,
                                     keyManagerFactory: KeyManagerFactory,
                                     trustManagerFactory: TrustManagerFactory): SslHandler {
-    val sslContext = SSLContext.getInstance("TLS")
-    val keyManagers = keyManagerFactory.keyManagers
-    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
-    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    val sslContext = createAndInitSslContext(keyManagerFactory, trustManagerFactory)
     val sslEngine = sslContext.createSSLEngine()
     sslEngine.useClientMode = false
     sslEngine.needClientAuth = true
@@ -254,6 +248,15 @@ internal fun createServerSslHandler(keyStore: CertificateStore,
     sslEngine.sslParameters = sslParameters
     @Suppress("DEPRECATION")
     return SslHandler(sslEngine, false, LoggingImmediateExecutor)
+}
+
+fun createAndInitSslContext(keyManagerFactory: KeyManagerFactory, trustManagerFactory: TrustManagerFactory): SSLContext {
+    val sslContext = SSLContext.getInstance("TLS")
+    val keyManagers = keyManagerFactory.keyManagers
+    val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java)
+            .map { LoggingTrustManagerWrapper(it) }.toTypedArray()
+    sslContext.init(keyManagers, trustManagers, newSecureRandom())
+    return sslContext
 }
 
 @VisibleForTesting

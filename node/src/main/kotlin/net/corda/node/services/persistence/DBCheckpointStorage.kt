@@ -599,6 +599,11 @@ class DBCheckpointStorage(
         currentDBSession().createNativeQuery(update).executeUpdate()
     }
 
+    override fun updateCompatible(runId: StateMachineRunId, compatible: Boolean) {
+        val update = "Update ${NODE_DATABASE_PREFIX}checkpoints set compatible = $compatible where flow_id = '${runId.uuid}'"
+        currentDBSession().createNativeQuery(update).executeUpdate()
+    }
+
     private fun createDBFlowMetadata(flowId: String, checkpoint: Checkpoint, now: Instant): DBFlowMetadata {
         val context = checkpoint.checkpointState.invocationContext
         val flowInfo = checkpoint.checkpointState.subFlowStack.first()

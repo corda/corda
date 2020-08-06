@@ -14,7 +14,7 @@ class HibernateConfigurationFactoryLoadingTest {
             val cacheFactory = mock<NamedCacheFactory>()
             HibernateConfiguration(
                     emptySet(),
-                    DatabaseConfig(),
+                    false,
                     emptyList(),
                     jdbcUrl,
                     cacheFactory)
