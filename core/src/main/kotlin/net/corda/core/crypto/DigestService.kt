@@ -86,7 +86,7 @@ object BLAKE2s256DigestService : DigestService {
 
 @CordaSerializable
 object PedersenDigestService : DigestService {
-    private val pedersen = PedersenHash()
+    private val pedersen = PedersenHash.zinc()
     override val digestLength: Int by lazy { pedersen.hashLength }
     override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash = SecureHash.Pedersen(pedersen.hash(bytes, salt))
     override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
