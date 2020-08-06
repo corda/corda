@@ -9,10 +9,11 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import java.security.PublicKey
 
-typealias BatchSigningFunction = (Iterable<SecureHash>) -> BatchSignature
+typealias BatchSigningFunction = (Iterable<SecureHash>, Party?) -> BatchSignature
 
 /** Generates a signature over the bach of [txIds]. */
 fun signBatch(

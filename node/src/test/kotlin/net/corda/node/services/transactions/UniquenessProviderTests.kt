@@ -637,11 +637,12 @@ class RaftUniquenessProviderFactory : UniquenessProviderFactory {
     }
 }
 
-fun signBatch(it: Iterable<SecureHash>): BatchSignature {
+fun signBatch(it: Iterable<SecureHash>, notary: Party?): BatchSignature {
     val root = MerkleTree.getMerkleTree(it.map { it.sha256() })
+    val key = notary?.owningKey ?: pubKey
 
-    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)
-    val signature = keyService.sign(SignableData(root.hash, signableMetadata), pubKey)
+    val signableMetadata = SignatureMetadata(4, Crypto.findSignatureScheme(key).schemeNumberID)
+    val signature = keyService.sign(SignableData(root.hash, signableMetadata), key)
     return BatchSignature(signature, root)
 }
 

@@ -424,7 +424,7 @@ class NodeRegistrationHelper(
 
     override fun onSuccess(publicKey: PublicKey, contentSigner: ContentSigner, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {
         createSSLKeystore(publicKey, contentSigner, certificates, tlsCrlCertificateIssuer)
-        createTruststore(certificates.last())
+        createTruststore()
     }
 
     private fun createSSLKeystore(nodeCaPublicKey: PublicKey, nodeCaContentSigner: ContentSigner, nodeCaCertificateChain: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
@@ -456,17 +456,15 @@ class NodeRegistrationHelper(
         logProgress("SSL private key and certificate chain stored in ${keyStore.path}.")
     }
 
-    private fun createTruststore(rootCertificate: X509Certificate) {
+    private fun createTruststore() {
         // Save root certificates to trust store.
         config.p2pSslOptions.trustStore.get(createNew = true).update {
             if (this.aliases().hasNext()) {
                 logger.warn("The node's trust store already exists. The following certificates will be overridden: ${this.aliases().asSequence()}")
             }
             logProgress("Generating trust store for corda node.")
-            // Assumes certificate chain always starts with client certificate and end with root certificate.
-            setCertificate(CORDA_ROOT_CA, rootCertificate)
-            // Copy remaining certificates from the network-trust-store
-            rootTrustStore.aliases().asSequence().filter { it != CORDA_ROOT_CA }.forEach {
+            // Copy root certificates from the network-trust-store.
+            rootTrustStore.aliases().forEach {
                 val certificate = rootTrustStore.getCertificate(it)
                 logger.info("Copying trusted certificate to the node's trust store: Alias: $it, Certificate: $certificate")
                 setCertificate(it, certificate)

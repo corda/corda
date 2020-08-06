@@ -2,6 +2,7 @@ package net.corda.notary.jpa
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.Party
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.utilities.seconds
@@ -37,8 +38,8 @@ class JPANotaryService(
         )
     }
 
-    private fun signTransactionBatch(txIds: Iterable<SecureHash>)
-            = signBatch(txIds, notaryIdentityKey, services)
+    private fun signTransactionBatch(txIds: Iterable<SecureHash>, notary: Party?)
+            = signBatch(txIds, notary?.owningKey ?: notaryIdentityKey, services)
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
