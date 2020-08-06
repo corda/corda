@@ -33,7 +33,8 @@ public class CordaCaplet extends Capsule {
 
     private Config parseConfigFile(List<String> args) {
         this.baseDir = getBaseDirectory(args);
-        String config = getOption(args, "--config-file");
+        String config = getOptionMultiple(args, Arrays.asList("--config-file", "-f"));
+
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
