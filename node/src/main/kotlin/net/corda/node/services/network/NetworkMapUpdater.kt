@@ -67,7 +67,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 ) : AutoCloseable, NetworkParameterUpdateListener {
     companion object {
         private val logger = contextLogger()
-        private val defaultRetryInterval = 1.minutes
+        private val defaultWatchHttpNetworkMapRetryInterval = 1.minutes
         private const val bulkNodeInfoFetchThreshold = 50
         private val defaultWatchNodeInfoFilesRetryInterval = 10.seconds;
     }
