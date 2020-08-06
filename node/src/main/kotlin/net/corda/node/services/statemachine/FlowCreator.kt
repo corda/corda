@@ -25,6 +25,7 @@ import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.apache.activemq.artemis.utils.ReusableLatch
 import java.security.SecureRandom
+import java.util.concurrent.Semaphore
 
 class Flow<A>(val fiber: FlowStateMachineImpl<A>, val resultFuture: OpenFuture<Any?>)
 
@@ -71,22 +72,23 @@ class FlowCreator(
     fun createFlowFromCheckpoint(
         runId: StateMachineRunId,
         oldCheckpoint: Checkpoint,
-        reloadCheckpointAfterSuspendCount: Int? = null
+        reloadCheckpointAfterSuspendCount: Int? = null,
+        lock: Semaphore = Semaphore(1)
     ): Flow<*>? {
         val checkpoint = oldCheckpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
         val fiber = checkpoint.getFiberFromCheckpoint(runId) ?: return null
         val resultFuture = openFuture<Any?>()
         fiber.logic.stateMachine = fiber
         verifyFlowLogicIsSuspendable(fiber.logic)
-        val state = createStateMachineState(
+        fiber.transientValues = createTransientValues(runId, resultFuture)
+        fiber.transientState = createStateMachineState(
             checkpoint = checkpoint,
             fiber = fiber,
             anyCheckpointPersisted = true,
             reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
-                ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null
+                ?: if (reloadCheckpointAfterSuspend) checkpoint.checkpointState.numberOfSuspends else null,
+            lock = lock
         )
-        fiber.transientValues = createTransientValues(runId, resultFuture)
-        fiber.transientState = state
         return Flow(fiber, resultFuture)
     }
 
@@ -125,6 +127,7 @@ class FlowCreator(
             fiber = flowStateMachineImpl,
             anyCheckpointPersisted = existingCheckpoint != null,
             reloadCheckpointAfterSuspendCount = if (reloadCheckpointAfterSuspend) 0 else null,
+            lock = Semaphore(1),
             deduplicationHandler = deduplicationHandler,
             senderUUID = senderUUID
         )
@@ -196,6 +199,7 @@ class FlowCreator(
         fiber: FlowStateMachineImpl<*>,
         anyCheckpointPersisted: Boolean,
         reloadCheckpointAfterSuspendCount: Int?,
+        lock: Semaphore,
         deduplicationHandler: DeduplicationHandler? = null,
         senderUUID: String? = null
     ): StateMachineState {
@@ -211,7 +215,8 @@ class FlowCreator(
             isKilled = false,
             flowLogic = fiber.logic,
             senderUUID = senderUUID,
-            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount
+            reloadCheckpointAfterSuspendCount = reloadCheckpointAfterSuspendCount,
+            lock = lock
         )
     }
 }
