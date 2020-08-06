@@ -29,15 +29,6 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         override fun hashConcat(other: SecureHash) = BLAKE2s256DigestService.hash(this.bytes + other.bytes)
     }
 
-    /** BLAKE2b256  Generated hash is fixed size, 256-bits (32-bytes). */
-    class BLAKE2b256(bytes: ByteArray) : SecureHash(bytes) {
-        init {
-            require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
-        }
-
-        override fun hashConcat(other: SecureHash) = BLAKE2b256DigestService.hash(this.bytes + other.bytes)
-    }
-
     /** Pedersen hash.  Generated hash is fixed size, 256-bits (32-bytes). */
     class Pedersen(bytes: ByteArray) : SecureHash(bytes) {
         init {

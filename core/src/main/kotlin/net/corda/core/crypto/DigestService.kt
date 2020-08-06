@@ -110,9 +110,6 @@ object PedersenDigestService : DigestService {
 fun SHA256dDigestService.random() = SecureHash.randomSHA256()
 
 @DeleteForDJVM
-fun BLAKE2b256DigestService.random() = SecureHash.BLAKE2b256(secureRandomBytes(32))
-
-@DeleteForDJVM
 fun BLAKE2s256DigestService.random() = SecureHash.BLAKE2s256(secureRandomBytes(32))
 
 
