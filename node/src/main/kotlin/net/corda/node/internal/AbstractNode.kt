@@ -480,7 +480,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         logVendorString(database, log)
         if (allowHibernateToManageAppSchema) {
             Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
-            val trustRoot = initKeyStores()
+            val trustRoot = configuration.initKeyStores(cryptoService)
             networkMapClient?.start(trustRoot)
             val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
             log.info("Loaded network parameters: $netParams")
