@@ -39,7 +39,9 @@ import org.junit.Test
 import rx.Observable
 import java.time.Duration
 import java.time.LocalDate
+import org.junit.Ignore
 
+@Ignore
 class IRSDemoTest {
     companion object {
         private val log = contextLogger()
@@ -51,7 +53,7 @@ class IRSDemoTest {
     private val maxWaitTime: Duration = 150.seconds
 
     @Test(timeout=300_000)
-	fun `runs IRS demo`() {
+    fun `runs IRS demo`() {
         springDriver(DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
