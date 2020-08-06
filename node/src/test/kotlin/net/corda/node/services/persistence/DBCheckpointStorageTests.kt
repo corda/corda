@@ -516,10 +516,10 @@ class DBCheckpointStorageTests {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = checkpoint.copy(status = Checkpoint.FlowStatus.RUNNABLE)
-        val hospitalized = checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED)
+        val hospitalized = checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
         // not runnables
         val completed = checkpoint.copy(status = Checkpoint.FlowStatus.COMPLETED)
-        val failed = checkpoint.copy(status = Checkpoint.FlowStatus.FAILED)
+        val failed = checkpoint.addError(IllegalStateException("bla bla"),status = Checkpoint.FlowStatus.FAILED)
         val killed = checkpoint.copy(status = Checkpoint.FlowStatus.KILLED)
         // paused
         val paused = checkpoint.copy(status = Checkpoint.FlowStatus.PAUSED)
@@ -663,10 +663,16 @@ class DBCheckpointStorageTests {
         val (_, checkpoint) = newCheckpoint(1)
         // runnables
         val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
-        val hospitalized = changeStatus(checkpoint, Checkpoint.FlowStatus.HOSPITALIZED)
+        val hospitalized = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
+        )
         // not runnables
         val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
-        val failed = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED)
+        val failed = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.FAILED)
+        )
         val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
         // paused
         val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
@@ -758,9 +764,15 @@ class DBCheckpointStorageTests {
     fun `'getFinishedFlowsResultsMetadata' fetches flows results metadata for finished flows only`() {
         val (_, checkpoint) = newCheckpoint(1)
         val runnable = changeStatus(checkpoint, Checkpoint.FlowStatus.RUNNABLE)
-        val hospitalized = changeStatus(checkpoint, Checkpoint.FlowStatus.HOSPITALIZED)
+        val hospitalized = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.HOSPITALIZED)
+        )
         val completed = changeStatus(checkpoint, Checkpoint.FlowStatus.COMPLETED)
-        val failed = changeStatus(checkpoint, Checkpoint.FlowStatus.FAILED)
+        val failed = IdAndCheckpoint(
+            StateMachineRunId.createRandom(),
+            checkpoint.addError(IllegalStateException("bla bla"), status = Checkpoint.FlowStatus.FAILED)
+        )
         val killed = changeStatus(checkpoint, Checkpoint.FlowStatus.KILLED)
         val paused = changeStatus(checkpoint, Checkpoint.FlowStatus.PAUSED)
 
@@ -844,7 +856,7 @@ class DBCheckpointStorageTests {
         return deserialize(CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
-    private fun Checkpoint.addError(exception: Exception): Checkpoint {
+    private fun Checkpoint.addError(exception: Exception, status: Checkpoint.FlowStatus = Checkpoint.FlowStatus.FAILED): Checkpoint {
         return copy(
             errorState = ErrorState.Errored(
                 listOf(
@@ -854,7 +866,7 @@ class DBCheckpointStorageTests {
                     )
                 ), 0, false
             ),
-            status = Checkpoint.FlowStatus.FAILED
+            status = status
         )
     }
 
