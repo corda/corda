@@ -20,6 +20,19 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 */
 def nexusIqStage = "build"
 
+/**
+ * make sure calculated default value of NexusIQ stage is first in the list
+ * thus making it default for the `choice` parameter
+ */
+def nexusIqStageChoices = [nexusDefaultIqStage].plus(
+                [
+                        'develop',
+                        'build',
+                        'stage-release',
+                        'release',
+                        'operate'
+                ].minus([nexusDefaultIqStage]))
+
 pipeline {
     agent { label 'standard' }
 
@@ -59,7 +72,7 @@ pipeline {
                         failBuildOnNetworkError: false,
                         iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                        iqStage: nexusIqStage
+                        iqStage: params.nexusIqStage
                 )
             }
         }
