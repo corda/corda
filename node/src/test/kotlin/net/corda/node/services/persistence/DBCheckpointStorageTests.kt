@@ -799,8 +799,8 @@ class DBCheckpointStorageTests {
             val (extractedId, extractedCheckpoint)  = checkpointStorage.getPausedCheckpoints().toList().single()
             assertEquals(id, extractedId)
             //We don't extract the result or the flowstate from a paused checkpoint
-            assertEquals(null, extractedCheckpoint.serializedFlowState)
-            assertEquals(null, extractedCheckpoint.result)
+            assertNull(extractedCheckpoint.serializedFlowState)
+            assertNull(extractedCheckpoint.result)
 
             assertEquals(pausedCheckpoint.status, extractedCheckpoint.status)
             assertEquals(pausedCheckpoint.progressStep, extractedCheckpoint.progressStep)
@@ -885,6 +885,24 @@ class DBCheckpointStorageTests {
         database.transaction {
             assertEquals(
                 checkpoint.copy(status = Checkpoint.FlowStatus.HOSPITALIZED),
+                checkpointStorage.checkpoints().single().deserialize()
+            )
+        }
+    }
+
+    @Test(timeout = 300_000)
+    fun `update only compatible`() {
+        val (id, checkpoint) = newCheckpoint()
+        val serializedFlowState = checkpoint.serializeFlowState()
+        database.transaction {
+            checkpointStorage.addCheckpoint(id, checkpoint, serializedFlowState, checkpoint.serializeCheckpointState())
+        }
+        database.transaction {
+            checkpointStorage.updateCompatible(id, !checkpoint.compatible)
+        }
+        database.transaction {
+            assertEquals(
+                checkpoint.copy(compatible = !checkpoint.compatible),
                 checkpointStorage.checkpoints().single().deserialize()
             )
         }
