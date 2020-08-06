@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import com.ing.dlt.zkkrypto.ecc.pedersenhash.PedersenHash
+import com.ing.dlt.zkkrypto.util.BitArray
 import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.crypto.digests.Blake2sDigest
@@ -88,7 +89,10 @@ object BLAKE2s256DigestService : DigestService {
 object PedersenDigestService : DigestService {
     private val pedersen = PedersenHash.zinc()
     override val digestLength: Int by lazy { pedersen.hashLength }
-    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash = SecureHash.Pedersen(pedersen.hash(bytes, salt))
+    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash {
+        val saltBits = if (salt != null) BitArray(salt) else null
+        return SecureHash.Pedersen(pedersen.hash(bytes, saltBits))
+    }
     override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
     override val allOnesHash = SecureHash.Pedersen(ByteArray(digestLength) { 255.toByte() })
     override val zeroHash = SecureHash.Pedersen(ByteArray(digestLength) { 0.toByte() })
