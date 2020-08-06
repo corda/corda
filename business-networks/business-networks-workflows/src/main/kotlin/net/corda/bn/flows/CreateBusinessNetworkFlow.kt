@@ -105,7 +105,7 @@ class CreateBusinessNetworkFlow(
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
                 .addOutputState(membership.state.data.copy(roles = setOf(BNORole()), modified = serviceHub.clock.instant()))
-                .addCommand(MembershipContract.Commands.ModifyRoles(listOf(ourIdentity.owningKey), true), ourIdentity.owningKey)
+                .addCommand(MembershipContract.Commands.ModifyRoles(listOf(ourIdentity.owningKey), ourIdentity), ourIdentity.owningKey)
         builder.verify(serviceHub)
 
         val stx = serviceHub.signInitialTransaction(builder)

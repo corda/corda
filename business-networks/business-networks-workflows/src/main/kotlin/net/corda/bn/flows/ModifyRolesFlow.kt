@@ -44,7 +44,14 @@ class ModifyRolesFlow(private val membershipId: UniqueIdentifier, private val ro
 
         // fetch signers
         val authorisedMemberships = databaseService.getMembersAuthorisedToModifyMembership(networkId).toSet()
-        val signers = authorisedMemberships.filter { it.state.data.isActive() }.map { it.state.data.identity.cordaIdentity } - membership.state.data.identity.cordaIdentity
+        val signers = authorisedMemberships.filter {
+            it.state.data.isActive()
+        }.map {
+            it.state.data.identity.cordaIdentity
+        }.filterNot {
+            // remove modified member from signers only if it is not the flow initiator (since initiator must sign the transaction)
+            it == membership.state.data.identity.cordaIdentity && it != ourIdentity
+        }
 
         // building transaction
         val outputMembership = membership.state.data.copy(roles = roles, modified = serviceHub.clock.instant())
@@ -52,7 +59,7 @@ class ModifyRolesFlow(private val membershipId: UniqueIdentifier, private val ro
         val builder = TransactionBuilder(notary ?: serviceHub.networkMapCache.notaryIdentities.first())
                 .addInputState(membership)
                 .addOutputState(outputMembership)
-                .addCommand(MembershipContract.Commands.ModifyRoles(requiredSigners), requiredSigners)
+                .addCommand(MembershipContract.Commands.ModifyRoles(requiredSigners, ourIdentity), requiredSigners)
         builder.verify(serviceHub)
 
         // collect signatures and finalise transactions

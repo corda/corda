@@ -297,43 +297,49 @@ class MembershipContractTest {
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.SUSPENDED))
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 this `fails with` "Input and output state of membership roles modification transaction should have same status"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING))
                 output(MembershipContract.CONTRACT_NAME, input.copy(status = MembershipStatus.PENDING, roles = setOf(BNORole())))
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 this `fails with` "Membership roles modification transaction can only be performed on active or suspended state"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input)
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 this `fails with` "Input and output state of membership roles modification transaction should have different set of roles"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole()), identity = input.identity.copy(businessIdentity = DummyIdentity("dummy-identity"))))
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 this `fails with` "Input and output state of membership roles modification transaction should have same business identity"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole()), participants = listOf(bnoIdentity)))
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 this `fails with` "Input and output state of membership roles modification transaction should have same participants"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
-                command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey, memberIdentity.owningKey)))
-                this `fails with` "Input membership owner shouldn't be required signer of membership roles modification transaction"
+                command(listOf(bnoIdentity.owningKey), MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), memberIdentity))
+                this `fails with` "Input membership owner should be required signer of membership business identity modification transaction if it initiated it"
             }
             transaction {
                 input(MembershipContract.CONTRACT_NAME, input)
                 output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
-                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey)))
+                command(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey, memberIdentity.owningKey), bnoIdentity))
+                this `fails with` "Input membership owner shouldn't be required signer of membership business identity modification transaction if it didn't initiate it"
+            }
+            transaction {
+                input(MembershipContract.CONTRACT_NAME, input)
+                output(MembershipContract.CONTRACT_NAME, input.copy(roles = setOf(BNORole())))
+                command(bnoIdentity.owningKey, MembershipContract.Commands.ModifyRoles(listOf(bnoIdentity.owningKey), bnoIdentity))
                 verifies()
             }
         }
