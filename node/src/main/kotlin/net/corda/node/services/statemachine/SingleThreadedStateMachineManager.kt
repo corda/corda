@@ -447,7 +447,7 @@ internal class SingleThreadedStateMachineManager(
         liveFibers.countUp()
     }
 
-    @Suppress("restoreFlowsFromCheckpoints")
+    @Suppress("ComplexMethod")
     private fun restoreFlowsFromCheckpoints(): Pair<MutableMap<StateMachineRunId, Flow<*>>, MutableMap<StateMachineRunId, NonResidentFlow>> {
         val flows = mutableMapOf<StateMachineRunId, Flow<*>>()
         val pausedFlows = mutableMapOf<StateMachineRunId, NonResidentFlow>()
