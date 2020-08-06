@@ -59,6 +59,7 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import kotlin.streams.toList
 
 /**
  * The StateMachineManagerImpl will always invoke the flow fibers on the given [AffinityExecutor], regardless of which
@@ -196,9 +197,8 @@ internal class SingleThreadedStateMachineManager(
             }
         }
 
-        // at the moment we have RUNNABLE, HOSPITALIZED and PAUSED flows
         // - Incompatible checkpoints need to be handled upon implementing CORDA-3897
-        for (flow in fibers) {
+        for (flow in fibers.values) {
             flow.fiber.clientId?.let {
                 innerState.clientIdsToFlowIds[it] = FlowWithClientIdStatus.Active(doneFuture(flow.fiber))
             }
@@ -365,10 +365,10 @@ internal class SingleThreadedStateMachineManager(
                 flow.fiber.transientState = flow.fiber.transientState.copy(isKilled = true)
                 scheduleEvent(Event.DoRemainingWork)
                 true
-            } else {
-                // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
-                database.transaction { checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true) }
             }
+        } else {
+            // It may be that the id refers to a checkpoint that couldn't be deserialised into a flow, so we delete it if it exists.
+            database.transaction { checkpointStorage.removeCheckpoint(id, mayHavePersistentResults = true) }
         }
 
         return killFlowResult || flowHospital.dropSessionInit(id)
