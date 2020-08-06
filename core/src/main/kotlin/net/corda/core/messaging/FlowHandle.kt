@@ -28,6 +28,14 @@ interface FlowHandle<A> : AutoCloseable {
     override fun close()
 }
 
+interface FlowHandleWithClientId<A> : FlowHandle<A> {
+
+    /**
+     * The [clientId] with which the client has started the flow.
+     */
+    val clientId: String
+}
+
 /**
  * [FlowProgressHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
  */
@@ -59,6 +67,18 @@ interface FlowProgressHandle<A> : FlowHandle<A> {
 data class FlowHandleImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>) : FlowHandle<A> {
+
+    // Remember to add @Throws to FlowHandle.close() if this throws an exception.
+    override fun close() {
+        returnValue.cancel(false)
+    }
+}
+
+@CordaSerializable
+data class FlowHandleWithClientIdImpl<A>(
+        override val id: StateMachineRunId,
+        override val returnValue: CordaFuture<A>,
+        override val clientId: String) : FlowHandleWithClientId<A> {
 
     // Remember to add @Throws to FlowHandle.close() if this throws an exception.
     override fun close() {

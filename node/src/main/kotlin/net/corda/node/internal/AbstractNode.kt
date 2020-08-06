@@ -28,7 +28,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AttachmentTrustCalculator
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
@@ -351,7 +351,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
-    val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+    val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory, DBCheckpointStorage.MAX_CLIENT_ID_LENGTH)
     private val schedulerService = NodeSchedulerService(
             platformClock,
             database,
@@ -1374,13 +1374,22 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 // TODO Move this into its own file
-class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>> {
-        smm.deliverExternalEvent(event)
+class FlowStarterImpl(
+    private val smm: StateMachineManager,
+    private val flowLogicRefFactory: FlowLogicRefFactory,
+    private val maxClientIdLength: Int
+) : FlowStarter {
+    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineHandle<T>> {
+        val clientId = event.context.clientId
+        if (clientId != null && clientId.length > maxClientIdLength) {
+            throw IllegalArgumentException("clientId cannot be longer than $maxClientIdLength characters")
+        } else {
+            smm.deliverExternalEvent(event)
+        }
         return event.future
     }
 
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<out FlowStateMachineHandle<T>> {
         val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
             override fun insideDatabaseTransaction() {}
 
@@ -1397,12 +1406,12 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val context: InvocationContext
                 get() = context
 
-            override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>) {
+            override fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<T>>) {
                 _future.captureLater(flowFuture)
             }
 
-            private val _future = openFuture<FlowStateMachine<T>>()
-            override val future: CordaFuture<FlowStateMachine<T>>
+            private val _future = openFuture<FlowStateMachineHandle<T>>()
+            override val future: CordaFuture<FlowStateMachineHandle<T>>
                 get() = _future
         }
         return startFlow(startFlowEvent)
@@ -1411,7 +1420,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
     override fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
+            vararg args: Any?): CordaFuture<out FlowStateMachineHandle<T>> {
         val logicRef = flowLogicRefFactory.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(flowLogicRefFactory.toFlowLogic(logicRef))
         return startFlow(logic, context)

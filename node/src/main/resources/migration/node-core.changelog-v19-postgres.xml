@@ -49,14 +49,13 @@
         </createTable>
     </changeSet>
 
-
     <changeSet author="R3.Corda" id="add_new_flow_result_table-postgres" dbms="postgresql">
         <createTable tableName="node_flow_results">
             <column name="flow_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="result_value" type="varbinary(33554432)">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="timestamp" type="java.sql.Types.TIMESTAMP">
                 <constraints nullable="false"/>

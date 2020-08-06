@@ -85,7 +85,7 @@ internal class ActionExecutorImpl(
         val checkpoint = action.checkpoint
         val flowState = checkpoint.flowState
         val serializedFlowState = when(flowState) {
-            FlowState.Completed -> null
+            FlowState.Finished -> null
             // upon implementing CORDA-3816: If we have errored or hospitalized then we don't need to serialize the flowState as it will not get saved in the DB
             else -> flowState.checkpointSerialize(checkpointSerializationContext)
         }
@@ -94,8 +94,8 @@ internal class ActionExecutorImpl(
         if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpoint, serializedFlowState, serializedCheckpointState)
         } else {
-            if (flowState is FlowState.Completed) {
-                throw IllegalStateException("A new checkpoint cannot be created with a Completed FlowState.")
+            if (flowState is FlowState.Finished) {
+                throw IllegalStateException("A new checkpoint cannot be created with a finished flow state.")
             }
             checkpointStorage.addCheckpoint(action.id, checkpoint, serializedFlowState!!, serializedCheckpointState)
         }
@@ -158,7 +158,7 @@ internal class ActionExecutorImpl(
 
     @Suspendable
     private fun executeRemoveCheckpoint(action: Action.RemoveCheckpoint) {
-        checkpointStorage.removeCheckpoint(action.id)
+        checkpointStorage.removeCheckpoint(action.id, action.mayHavePersistentResults)
     }
 
     @Suspendable

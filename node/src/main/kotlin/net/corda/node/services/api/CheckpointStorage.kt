@@ -4,6 +4,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.CheckpointState
+import net.corda.node.services.statemachine.FlowResultMetadata
 import net.corda.node.services.statemachine.FlowState
 import java.util.stream.Stream
 
@@ -41,9 +42,12 @@ interface CheckpointStorage {
 
     /**
      * Remove existing checkpoint from the store.
+     *
+     * [mayHavePersistentResults] is used for optimization. If set to [false] it will not attempt to delete the database result or the database exception.
+     * Please note that if there is a doubt on whether a flow could be finished or not [mayHavePersistentResults] should be set to [true].
      * @return whether the id matched a checkpoint that was removed.
      */
-    fun removeCheckpoint(id: StateMachineRunId): Boolean
+    fun removeCheckpoint(id: StateMachineRunId, mayHavePersistentResults: Boolean = true): Boolean
 
     /**
      * Load an existing checkpoint from the store.
@@ -75,4 +79,20 @@ interface CheckpointStorage {
      * This method does not fetch [Checkpoint.Serialized.serializedFlowState] to save memory.
      */
     fun getPausedCheckpoints(): Stream<Pair<StateMachineRunId, Checkpoint.Serialized>>
+
+    fun getFinishedFlowsResultsMetadata(): Stream<Pair<StateMachineRunId, FlowResultMetadata>>
+
+    /**
+     * Load a flow result from the store. If [throwIfMissing] is true then it throws an [IllegalStateException]
+     * if the flow result is missing in the database.
+     */
+    fun getFlowResult(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
+
+    /**
+     * Load a flow exception from the store. If [throwIfMissing] is true then it throws an [IllegalStateException]
+     * if the flow exception is missing in the database.
+     */
+    fun getFlowException(id: StateMachineRunId, throwIfMissing: Boolean = false): Any?
+
+    fun removeFlowException(id: StateMachineRunId): Boolean
 }

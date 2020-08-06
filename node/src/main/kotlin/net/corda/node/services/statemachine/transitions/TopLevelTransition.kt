@@ -180,7 +180,7 @@ class TopLevelTransition(
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
         return builder {
             val newCheckpoint = currentState.checkpoint.run {
-                val newCheckpointState = if (checkpointState.invocationContext.arguments.isNotEmpty()) {
+                val newCheckpointState = if (checkpointState.invocationContext.arguments!!.isNotEmpty()) {
                     checkpointState.copy(
                         invocationContext = checkpointState.invocationContext.copy(arguments = emptyList()),
                         numberOfSuspends = checkpointState.numberOfSuspends + 1
@@ -234,7 +234,7 @@ class TopLevelTransition(
                                 checkpointState = checkpoint.checkpointState.copy(
                                         numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
                                 ),
-                                flowState = FlowState.Completed,
+                                flowState = FlowState.Finished,
                                 result = event.returnValue,
                                 status = Checkpoint.FlowStatus.COMPLETED
                             ),
@@ -242,10 +242,22 @@ class TopLevelTransition(
                             isFlowResumed = false,
                             isRemoved = true
                     )
-                    val allSourceSessionIds = checkpoint.checkpointState.sessions.keys
+
                     if (currentState.isAnyCheckpointPersisted) {
-                        actions.add(Action.RemoveCheckpoint(context.id))
+                        if (currentState.checkpoint.checkpointState.invocationContext.clientId == null) {
+                            actions.add(Action.RemoveCheckpoint(context.id))
+                        } else {
+                            actions.add(
+                                Action.PersistCheckpoint(
+                                    context.id,
+                                    currentState.checkpoint,
+                                    isCheckpointUpdate = currentState.isAnyCheckpointPersisted
+                                )
+                            )
+                        }
                     }
+
+                    val allSourceSessionIds = currentState.checkpoint.checkpointState.sessions.keys
                     actions.addAll(arrayOf(
                         Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.ReleaseSoftLocks(event.softLocksId),

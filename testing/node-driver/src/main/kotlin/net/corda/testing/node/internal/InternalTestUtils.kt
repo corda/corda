@@ -7,7 +7,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
@@ -269,7 +269,10 @@ class NodeListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenPro
         """.trimIndent()
     )
 
-fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, newContext()).getOrThrow()
+fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachineHandle<T> = startFlow(logic, newContext()).getOrThrow()
+
+fun <T> StartedNodeServices.startFlowWithClientId(clientId: String, logic: FlowLogic<T>): FlowStateMachineHandle<T> =
+    startFlow(logic, newContext().copy(clientId = clientId)).getOrThrow()
 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 

@@ -146,6 +146,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override val context: InvocationContext get() = transientState.checkpoint.checkpointState.invocationContext
     override val ourIdentity: Party get() = transientState.checkpoint.checkpointState.ourIdentity
     override val isKilled: Boolean get() = transientState.isKilled
+    override val clientId: String? get() = transientState.checkpoint.checkpointState.invocationContext.clientId
+
     /**
      * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
      * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and
