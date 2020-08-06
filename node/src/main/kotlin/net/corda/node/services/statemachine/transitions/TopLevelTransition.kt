@@ -232,7 +232,7 @@ class TopLevelTransition(
                                 checkpointState = checkpoint.checkpointState.copy(
                                         numberOfSuspends = checkpoint.checkpointState.numberOfSuspends + 1
                                 ),
-                                flowState = FlowState.Completed,
+                                flowState = FlowState.Finished,
                                 result = event.returnValue,
                                 status = Checkpoint.FlowStatus.COMPLETED
                             ),

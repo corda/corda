@@ -206,7 +206,7 @@ data class Checkpoint(
         fun deserialize(checkpointSerializationContext: CheckpointSerializationContext): Checkpoint {
             val flowState = when(status) {
                 FlowStatus.PAUSED -> FlowState.Paused
-                FlowStatus.COMPLETED -> FlowState.Completed
+                FlowStatus.COMPLETED, FlowStatus.FAILED -> FlowState.Finished
                 else -> serializedFlowState!!.checkpointDeserialize(checkpointSerializationContext)
             }
             return Checkpoint(
@@ -349,9 +349,9 @@ sealed class FlowState {
     object Paused: FlowState()
 
     /**
-     * The flow has completed. It does not have a running fiber that needs to be serialized and checkpointed.
+     * The flow has finished. It does not have a running fiber that needs to be serialized and checkpointed.
      */
-    object Completed : FlowState()
+    object Finished : FlowState()
 
 }
 
