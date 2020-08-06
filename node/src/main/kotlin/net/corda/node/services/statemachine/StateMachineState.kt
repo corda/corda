@@ -25,6 +25,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.concurrent.Future
+import java.util.concurrent.Semaphore
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -44,9 +45,12 @@ import java.util.concurrent.Future
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
  * @param isKilled true if the flow has been marked as killed. This is used to cause a flow to move to a killed flow transition no matter
- * what event it is set to process next. [isKilled] is a `var` and set as [Volatile] to prevent concurrency errors that can occur if a flow
- * is killed during the middle of a state transition.
+ * what event it is set to process next.
  * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
+ * @param reloadCheckpointAfterSuspendCount The number of times a flow has been reloaded (not retried). This is [null] when
+ * [NodeConfiguration.reloadCheckpointAfterSuspendCount] is not enabled.
+ * @param lock The flow's lock, used to prevent the flow performing a transition while being interacted with from external threads, and
+ * vise-versa.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
@@ -60,10 +64,10 @@ data class StateMachineState(
     val isAnyCheckpointPersisted: Boolean,
     val isStartIdempotent: Boolean,
     val isRemoved: Boolean,
-    @Volatile
-    var isKilled: Boolean,
+    val isKilled: Boolean,
     val senderUUID: String?,
-    val reloadCheckpointAfterSuspendCount: Int?
+    val reloadCheckpointAfterSuspendCount: Int?,
+    val lock: Semaphore
 ) : KryoSerializable {
     override fun write(kryo: Kryo?, output: Output?) {
         throw IllegalStateException("${StateMachineState::class.qualifiedName} should never be serialized")

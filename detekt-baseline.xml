@@ -618,7 +618,6 @@
     <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
     <ID>LongParameterList:ArtemisRpcBroker.kt$ArtemisRpcBroker.Companion$(configuration: MutualSslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, journalBufferTimeout: Int?, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean)</ID>
     <ID>LongParameterList:ArtemisRpcTests.kt$ArtemisRpcTests$(nodeSSlconfig: MutualSslConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(), adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = tempFolder.root.toPath() )</ID>
-    <ID>LongParameterList:AttachmentsClassLoader.kt$AttachmentsClassLoaderBuilder$(attachments: List&lt;Attachment&gt;, params: NetworkParameters, txId: SecureHash, isAttachmentTrusted: (Attachment) -&gt; Boolean, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -&gt; T)</ID>
     <ID>LongParameterList:BFTSmart.kt$BFTSmart.Replica$( states: List&lt;StateRef&gt;, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List&lt;StateRef&gt; = emptyList() )</ID>
     <ID>LongParameterList:BusinessCalendar.kt$BusinessCalendar.Companion$(startDate: LocalDate, period: Frequency, calendar: BusinessCalendar = EMPTY, dateRollConvention: DateRollConvention = DateRollConvention.Following, noOfAdditionalPeriods: Int = Integer.MAX_VALUE, endDate: LocalDate? = null, periodOffset: Int? = null)</ID>
     <ID>LongParameterList:Cash.kt$Cash$(inputs: List&lt;State&gt;, outputs: List&lt;State&gt;, tx: LedgerTransaction, issueCommand: CommandWithParties&lt;Commands.Issue&gt;, currency: Currency, issuer: PartyAndReference)</ID>
@@ -719,7 +718,6 @@
     <ID>LongParameterList:X509Utilities.kt$X509Utilities$(certificateType: CertificateType, issuer: X500Principal, issuerPublicKey: PublicKey, issuerSigner: ContentSigner, subject: X500Principal, subjectPublicKey: PublicKey, validityWindow: Pair&lt;Date, Date&gt;, nameConstraints: NameConstraints? = null, crlDistPoint: String? = null, crlIssuer: X500Name? = null)</ID>
     <ID>LongParameterList:X509Utilities.kt$X509Utilities$(certificateType: CertificateType, issuer: X500Principal, issuerPublicKey: PublicKey, subject: X500Principal, subjectPublicKey: PublicKey, validityWindow: Pair&lt;Date, Date&gt;, nameConstraints: NameConstraints? = null, crlDistPoint: String? = null, crlIssuer: X500Name? = null)</ID>
     <ID>LongParameterList:X509Utilities.kt$X509Utilities$(certificateType: CertificateType, issuerCertificate: X509Certificate, issuerKeyPair: KeyPair, subject: X500Principal, subjectPublicKey: PublicKey, validityWindow: Pair&lt;Duration, Duration&gt; = DEFAULT_VALIDITY_WINDOW, nameConstraints: NameConstraints? = null, crlDistPoint: String? = null, crlIssuer: X500Name? = null)</ID>
-    <ID>LongParameterList:internalAccessTestHelpers.kt$( inputs: List&lt;StateAndRef&lt;ContractState&gt;&gt;, outputs: List&lt;TransactionState&lt;ContractState&gt;&gt;, commands: List&lt;CommandWithParties&lt;CommandData&gt;&gt;, attachments: List&lt;Attachment&gt;, id: SecureHash, notary: Party?, timeWindow: TimeWindow?, privacySalt: PrivacySalt, networkParameters: NetworkParameters, references: List&lt;StateAndRef&lt;ContractState&gt;&gt;, componentGroups: List&lt;ComponentGroup&gt;? = null, serializedInputs: List&lt;SerializedStateAndRef&gt;? = null, serializedReferences: List&lt;SerializedStateAndRef&gt;? = null, isAttachmentTrusted: (Attachment) -&gt; Boolean )</ID>
     <ID>MagicNumber:AMQPClientSerializationScheme.kt$AMQPClientSerializationScheme.Companion$128</ID>
     <ID>MagicNumber:AMQPSerializationScheme.kt$AbstractAMQPSerializationScheme$128</ID>
     <ID>MagicNumber:AMQPServer.kt$AMQPServer$100</ID>
@@ -1284,7 +1282,6 @@
     <ID>SpreadOperator:FlowFrameworkTripartyTests.kt$FlowFrameworkTripartyTests$(*expected)</ID>
     <ID>SpreadOperator:FlowLogicRefFactoryImpl.kt$FlowLogicRefFactoryImpl$(flowClass, *args)</ID>
     <ID>SpreadOperator:FlowOverrideTests.kt$FlowOverrideTests$(*nodeAClasses.toTypedArray())</ID>
-    <ID>SpreadOperator:FlowOverrideTests.kt$FlowOverrideTests$(*nodeBClasses.toTypedArray())</ID>
     <ID>SpreadOperator:FlowTestsUtils.kt$(*allSessions)</ID>
     <ID>SpreadOperator:FlowTestsUtils.kt$(session, *sessions)</ID>
     <ID>SpreadOperator:HTTPNetworkRegistrationService.kt$HTTPNetworkRegistrationService$(OpaqueBytes(request.encoded), "Platform-Version" to "${versionInfo.platformVersion}", "Client-Version" to versionInfo.releaseVersion, "Private-Network-Map" to (config.pnm?.toString() ?: ""), *(config.csrToken?.let { arrayOf(CENM_SUBMISSION_TOKEN to it) } ?: arrayOf()))</ID>
@@ -1416,7 +1413,6 @@
     <ID>ThrowsCount:StructuresTests.kt$AttachmentTest$@Test(timeout=300_000) fun `openAsJAR does not leak file handle if attachment has corrupted manifest`()</ID>
     <ID>ThrowsCount:TransactionVerifierServiceInternal.kt$Verifier$ private fun getUniqueContractAttachmentsByContract(): Map&lt;ContractClassName, ContractAttachment&gt;</ID>
     <ID>ThrowsCount:TransactionVerifierServiceInternal.kt$Verifier$// Using basic graph theory, a full cycle of encumbered (co-dependent) states should exist to achieve bi-directional // encumbrances. This property is important to ensure that no states involved in an encumbrance-relationship // can be spent on their own. Briefly, if any of the states is having more than one encumbrance references by // other states, a full cycle detection will fail. As a result, all of the encumbered states must be present // as "from" and "to" only once (or zero times if no encumbrance takes place). For instance, // a -&gt; b // c -&gt; b and a -&gt; b // b -&gt; a b -&gt; c // do not satisfy the bi-directionality (full cycle) property. // // In the first example "b" appears twice in encumbrance ("to") list and "c" exists in the encumbered ("from") list only. // Due the above, one could consume "a" and "b" in the same transaction and then, because "b" is already consumed, "c" cannot be spent. // // Similarly, the second example does not form a full cycle because "a" and "c" exist in one of the lists only. // As a result, one can consume "b" and "c" in the same transactions, which will make "a" impossible to be spent. // // On other hand the following are valid constructions: // a -&gt; b a -&gt; c // b -&gt; c and c -&gt; b // c -&gt; a b -&gt; a // and form a full cycle, meaning that the bi-directionality property is satisfied. private fun checkBidirectionalOutputEncumbrances(statesAndEncumbrance: List&lt;Pair&lt;Int, Int&gt;&gt;)</ID>
-    <ID>ThrowsCount:WireTransaction.kt$WireTransaction$private fun toLedgerTransactionInternal( resolveIdentity: (PublicKey) -&gt; Party?, resolveAttachment: (SecureHash) -&gt; Attachment?, resolveStateRefAsSerialized: (StateRef) -&gt; SerializedBytes&lt;TransactionState&lt;ContractState&gt;&gt;?, resolveParameters: (SecureHash?) -&gt; NetworkParameters?, isAttachmentTrusted: (Attachment) -&gt; Boolean ): LedgerTransaction</ID>
     <ID>ThrowsCount:WireTransaction.kt$WireTransaction.Companion$ @CordaInternal fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes&lt;TransactionState&lt;ContractState&gt;&gt;?</ID>
     <ID>TooGenericExceptionCaught:AMQPChannelHandler.kt$AMQPChannelHandler$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:AMQPExceptions.kt$th: Throwable</ID>
@@ -1465,7 +1461,6 @@
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$DriverDSLImpl.Companion$th: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverDSLImpl.kt$exception: Throwable</ID>
     <ID>TooGenericExceptionCaught:DriverTests.kt$DriverTests$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ErrorCodeLoggingTests.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ErrorHandling.kt$ErrorHandling.CheckpointAfterErrorFlow$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:EventProcessor.kt$EventProcessor$ex: Exception</ID>
     <ID>TooGenericExceptionCaught:Eventually.kt$e: Exception</ID>
@@ -1677,6 +1672,7 @@
     <ID>TooManyFunctions:RPCApi.kt$net.corda.nodeapi.RPCApi.kt</ID>
     <ID>TooManyFunctions:RPCClientProxyHandler.kt$RPCClientProxyHandler : InvocationHandler</ID>
     <ID>TooManyFunctions:RPCServer.kt$RPCServer</ID>
+    <ID>TooManyFunctions:SSLHelper.kt$net.corda.nodeapi.internal.protonwrapper.netty.SSLHelper.kt</ID>
     <ID>TooManyFunctions:SerializationHelper.kt$net.corda.serialization.internal.amqp.SerializationHelper.kt</ID>
     <ID>TooManyFunctions:ServiceHub.kt$ServiceHub : ServicesForResolution</ID>
     <ID>TooManyFunctions:SignedTransaction.kt$SignedTransaction : TransactionWithSignatures</ID>

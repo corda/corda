@@ -36,6 +36,7 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Duration
 import java.util.concurrent.Semaphore
@@ -198,6 +199,7 @@ class KillFlowTest {
         }
     }
 
+    @Ignore("CORDA-3948: Disabled pending availability of engineers to diagnose")
     @Test(timeout = 300_000)
     fun `a killed flow will propagate the killed error to counter parties if it was suspended`() {
         driver(DriverParameters(notarySpecs = emptyList(), startNodesInProcess = true)) {

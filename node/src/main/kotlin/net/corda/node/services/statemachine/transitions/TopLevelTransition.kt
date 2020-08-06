@@ -62,6 +62,8 @@ class TopLevelTransition(
             is Event.ReloadFlowFromCheckpointAfterSuspend -> reloadFlowFromCheckpointAfterSuspendTransition()
             is Event.OvernightObservation -> overnightObservationTransition()
             is Event.WakeUpFromSleep -> wakeUpFromSleepTransition()
+            is Event.Pause -> pausedFlowTransition()
+            is Event.TerminateSessions -> terminateSessionsTransition(event)
         }
     }
 
@@ -376,6 +378,34 @@ class TopLevelTransition(
     private fun wakeUpFromSleepTransition(): TransitionResult {
         return builder {
             resumeFlowLogic(Unit)
+        }
+    }
+
+    private fun pausedFlowTransition(): TransitionResult {
+        return builder {
+            if (!startingState.isFlowResumed) {
+                actions.add(Action.CreateTransaction)
+            }
+            actions.addAll(
+                arrayOf(
+                    Action.UpdateFlowStatus(context.id, Checkpoint.FlowStatus.PAUSED),
+                    Action.CommitTransaction,
+                    Action.MoveFlowToPaused(currentState)
+                )
+            )
+            FlowContinuation.Abort
+        }
+    }
+
+    private fun terminateSessionsTransition(event: Event.TerminateSessions): TransitionResult {
+        return builder {
+            val sessions = event.sessions
+            val newCheckpoint = currentState.checkpoint
+                .removeSessions(sessions)
+                .removeSessionsToBeClosed(sessions)
+            currentState = currentState.copy(checkpoint = newCheckpoint)
+            actions.add(Action.RemoveSessionBindings(sessions))
+            FlowContinuation.ProcessEvents
         }
     }
 }
