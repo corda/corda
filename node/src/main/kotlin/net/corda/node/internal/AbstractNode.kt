@@ -28,7 +28,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AttachmentTrustCalculator
-import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.FlowStateMachineHandle
 import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.NetworkParametersStorage
@@ -94,7 +94,6 @@ import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.attachments.NodeAttachmentTrustCalculator
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.determineUnsafeUsers
 import net.corda.node.services.config.shell.toShellConfig
@@ -149,8 +148,6 @@ import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_COMPOSITE_KEY_ALIAS
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_KEY_ALIAS
@@ -176,10 +173,8 @@ import org.jolokia.jvmagent.JolokiaServer
 import org.jolokia.jvmagent.JolokiaServerConfig
 import org.slf4j.Logger
 import rx.Scheduler
-import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPair
-import java.security.KeyStoreException
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.sql.Savepoint
@@ -340,7 +335,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val checkpointStorage = DBCheckpointStorage(DBCheckpointPerformanceRecorder(services.monitoringService.metrics), platformClock)
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
-    val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+    val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory, DBCheckpointStorage.MAX_CLIENT_ID_LENGTH)
     private val schedulerService = makeNodeSchedulerService()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
@@ -414,18 +409,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
-    private fun initKeyStores(): X509Certificate {
-        if (configuration.devMode) {
-            configuration.configureWithDevSSLCertificate(cryptoService)
-            // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
-            // we should re-synchronise BCCryptoService with the updated keystore file.
-            if (cryptoService is BCCryptoService) {
-                cryptoService.resyncKeystore()
-            }
-        }
-        return validateKeyStores()
-    }
-
     private fun quasarExcludePackages(nodeConfiguration: NodeConfiguration) {
         val quasarInstrumentor = Retransform.getInstrumentor()
 
@@ -437,7 +420,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = initKeyStores()
+        val trustRoot = configuration.initKeyStores(cryptoService)
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
@@ -477,7 +460,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         logVendorString(database, log)
         if (allowHibernateToManageAppSchema) {
             Node.printBasicNodeInfo("Initialising CorDapps to get schemas created by hibernate")
-            val trustRoot = initKeyStores()
+            val trustRoot = configuration.initKeyStores(cryptoService)
             networkMapClient?.start(trustRoot)
             val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
             log.info("Loaded network parameters: $netParams")
@@ -516,7 +499,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         nodeLifecycleEventsDistributor.distributeEvent(NodeLifecycleEvent.BeforeNodeStart(nodeServicesContext))
         log.info("Node starting up ...")
 
-        val trustRoot = initKeyStores()
+        val trustRoot = configuration.initKeyStores(cryptoService)
         initialiseJolokia()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -813,7 +796,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             flowLogicRefFactory,
             nodeProperties,
             configuration.drainingModePollPeriod,
-    unfinishedSchedules = busyNodeLatch
+            unfinishedSchedules = busyNodeLatch
     ).tokenize().closeOnStop()
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
@@ -984,57 +967,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
-
-    private fun getCertificateStores(): AllCertificateStores? {
-        return try {
-            // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
-            val signingCertificateStore = configuration.signingCertificateStore.get()
-            val trustStore = configuration.p2pSslOptions.trustStore.get()
-            AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
-        } catch (e: IOException) {
-            log.error("IO exception while trying to validate keystores and truststore", e)
-            null
-        }
-    }
-
-    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
-
-    private fun validateKeyStores(): X509Certificate {
-        // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
-        val certStores = try {
-            requireNotNull(getCertificateStores()) {
-                "One or more keyStores (identity or TLS) or trustStore not found. " +
-                        "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration."
-            }
-        } catch (e: KeyStoreException) {
-            throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
-        }
-        // Step 2. Check that trustStore contains the correct key-alias entry.
-        require(CORDA_ROOT_CA in certStores.trustStore) {
-            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
-        }
-        // Step 3. Check that tls keyStore contains the correct key-alias entry.
-        require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
-            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
-        }
-
-        // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
-        require(CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
-            "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
-        }
-
-        // Step 5. Check all cert paths chain to the trusted root.
-        val trustRoot = certStores.trustStore[CORDA_ROOT_CA]
-        val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
-        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
-
-        require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
-        require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
-
-        return trustRoot
-    }
 
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(message: String) : CordaException(message)
@@ -1381,13 +1313,22 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 // TODO Move this into its own file
-class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>> {
-        smm.deliverExternalEvent(event)
+class FlowStarterImpl(
+    private val smm: StateMachineManager,
+    private val flowLogicRefFactory: FlowLogicRefFactory,
+    private val maxClientIdLength: Int
+) : FlowStarter {
+    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<out FlowStateMachineHandle<T>> {
+        val clientId = event.context.clientId
+        if (clientId != null && clientId.length > maxClientIdLength) {
+            throw IllegalArgumentException("clientId cannot be longer than $maxClientIdLength characters")
+        } else {
+            smm.deliverExternalEvent(event)
+        }
         return event.future
     }
 
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<out FlowStateMachineHandle<T>> {
         val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
             override fun insideDatabaseTransaction() {}
 
@@ -1404,12 +1345,12 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             override val context: InvocationContext
                 get() = context
 
-            override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>) {
+            override fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<T>>) {
                 _future.captureLater(flowFuture)
             }
 
-            private val _future = openFuture<FlowStateMachine<T>>()
-            override val future: CordaFuture<FlowStateMachine<T>>
+            private val _future = openFuture<FlowStateMachineHandle<T>>()
+            override val future: CordaFuture<FlowStateMachineHandle<T>>
                 get() = _future
         }
         return startFlow(startFlowEvent)
@@ -1418,7 +1359,7 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
     override fun <T> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             context: InvocationContext,
-            vararg args: Any?): CordaFuture<FlowStateMachine<T>> {
+            vararg args: Any?): CordaFuture<out FlowStateMachineHandle<T>> {
         val logicRef = flowLogicRefFactory.createForRPC(logicType, *args)
         val logic: FlowLogic<T> = uncheckedCast(flowLogicRefFactory.toFlowLogic(logicRef))
         return startFlow(logic, context)

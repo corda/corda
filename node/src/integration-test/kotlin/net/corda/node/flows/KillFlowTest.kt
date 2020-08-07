@@ -26,7 +26,6 @@ import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.services.statemachine.Checkpoint
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -62,7 +61,8 @@ class KillFlowTest {
                 assertFailsWith<KilledFlowException> {
                     handle.returnValue.getOrThrow(1.minutes)
                 }
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
             }
         }
     }
@@ -89,11 +89,12 @@ class KillFlowTest {
                 AFlowThatGetsMurderedWhenItTriesToSuspendAndSomehowKillsItsFriendsResponder.locks.forEach { it.value.acquire() }
                 assertTrue(AFlowThatGetsMurderedWhenItTriesToSuspendAndSomehowKillsItsFriendsResponder.receivedKilledExceptions[BOB_NAME]!!)
                 assertTrue(AFlowThatGetsMurderedWhenItTriesToSuspendAndSomehowKillsItsFriendsResponder.receivedKilledExceptions[CHARLIE_NAME]!!)
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(2, bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(1, bob.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(2, charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(1, charlie.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val aliceCheckpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, aliceCheckpoints)
+                val bobCheckpoints = bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, bobCheckpoints)
+                val charlieCheckpoints = charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, charlieCheckpoints)
             }
         }
     }
@@ -113,7 +114,8 @@ class KillFlowTest {
                 }
                 assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
                 assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
             }
         }
     }
@@ -151,7 +153,8 @@ class KillFlowTest {
         }
         assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
         assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
-        assertEquals(1, startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+        val checkpoints = startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+        assertEquals(1, checkpoints)
     }
 
     @Test(timeout = 300_000)
@@ -169,7 +172,8 @@ class KillFlowTest {
                 }
                 assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
                 assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
             }
         }
     }
@@ -189,7 +193,8 @@ class KillFlowTest {
                 }
                 assertTrue(time < 1.minutes.toMillis(), "It should at a minimum, take less than a minute to kill this flow")
                 assertTrue(time < 5.seconds.toMillis(), "Really, it should take less than a few seconds to kill a flow")
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val checkpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, checkpoints)
             }
         }
     }
@@ -219,11 +224,12 @@ class KillFlowTest {
                 }
                 assertTrue(AFlowThatGetsMurderedAndSomehowKillsItsFriendsResponder.receivedKilledExceptions[BOB_NAME]!!)
                 assertTrue(AFlowThatGetsMurderedAndSomehowKillsItsFriendsResponder.receivedKilledExceptions[CHARLIE_NAME]!!)
-                assertEquals(1, rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(2, bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(1, bob.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(2, charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-                assertEquals(1, charlie.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+                val aliceCheckpoints = rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, aliceCheckpoints)
+                val bobCheckpoints = bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, bobCheckpoints)
+                val charlieCheckpoints = charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+                assertEquals(1, charlieCheckpoints)
             }
         }
     }
@@ -253,11 +259,12 @@ class KillFlowTest {
             assertTrue(AFlowThatGetsMurderedByItsFriend.receivedKilledException)
             assertFalse(AFlowThatGetsMurderedByItsFriendResponder.receivedKilledExceptions[BOB_NAME]!!)
             assertTrue(AFlowThatGetsMurderedByItsFriendResponder.receivedKilledExceptions[CHARLIE_NAME]!!)
-            assertEquals(2, alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-            assertEquals(1, alice.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-            assertEquals(1, bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-            assertEquals(2, charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds))
-            assertEquals(1, charlie.rpc.startFlow(::GetNumberOfFailedCheckpointsFlow).returnValue.getOrThrow(20.seconds))
+            val aliceCheckpoints = alice.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+            assertEquals(1, aliceCheckpoints)
+            val bobCheckpoints = bob.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+            assertEquals(1, bobCheckpoints)
+            val charlieCheckpoints = charlie.rpc.startFlow(::GetNumberOfCheckpointsFlow).returnValue.getOrThrow(20.seconds)
+            assertEquals(1, charlieCheckpoints)
         }
     }
 
@@ -588,20 +595,6 @@ class KillFlowTest {
                     rs.getLong(1)
                 }
             }
-        }
-    }
-
-    @StartableByRPC
-    class GetNumberOfFailedCheckpointsFlow : FlowLogic<Long>() {
-        override fun call(): Long {
-            return serviceHub.jdbcSession()
-                .prepareStatement("select count(*) from node_checkpoints where status = ${Checkpoint.FlowStatus.FAILED.ordinal}")
-                .use { ps ->
-                    ps.executeQuery().use { rs ->
-                        rs.next()
-                        rs.getLong(1)
-                    }
-                }
         }
     }
 }

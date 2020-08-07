@@ -180,6 +180,13 @@ sealed class Event {
     }
 
     /**
+     * Pause the flow.
+     */
+    object Pause: Event() {
+        override fun toString() = "Pause"
+    }
+
+    /**
      * Terminate the specified [sessions], removing them from in-memory datastructures.
      *
      * @param sessions The sessions to terminate

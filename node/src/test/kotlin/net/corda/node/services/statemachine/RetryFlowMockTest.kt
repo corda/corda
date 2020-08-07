@@ -12,7 +12,6 @@ import net.corda.core.flows.KilledFlowException
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.UntrustworthyData
@@ -156,7 +155,7 @@ class RetryFlowMockTest {
         // Make sure we have seen an update from the hospital, and thus the flow went there.
         val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
-        val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
+        val flow = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
             override val destination: Destination get() = alice
             override val counterparty: Party get() = alice
 

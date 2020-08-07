@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.CordaRuntimeException
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
@@ -47,12 +48,14 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.function.Supplier
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -90,9 +93,11 @@ class FlowMetadataRecordingTest {
                     metadata = metadataFromHook
                 }
 
+            val clientId = UUID.randomUUID().toString()
             CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(
-                    ::MyFlow,
+                it.proxy.startFlowDynamicWithClientId(
+                    clientId,
+                    MyFlow::class.java,
                     nodeBHandle.nodeInfo.singleIdentity(),
                     string,
                     someObject
@@ -104,7 +109,7 @@ class FlowMetadataRecordingTest {
                 assertEquals(flowId!!.uuid.toString(), it.flowId)
                 assertEquals(MyFlow::class.java.name, it.flowName)
                 // Should be changed when [userSuppliedIdentifier] gets filled in future changes
-                assertNull(it.userSuppliedIdentifier)
+                assertEquals(clientId, it.userSuppliedIdentifier)
                 assertEquals(DBCheckpointStorage.StartReason.RPC, it.startType)
                 assertEquals(
                     listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
@@ -197,7 +202,7 @@ class FlowMetadataRecordingTest {
 
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
-                uncheckedCast<Any?, Array<Any?>>(context!!.arguments[1]).toList()
+                uncheckedCast<Any?, Array<Any?>>(context!!.arguments!![1]).toList()
             )
             assertEquals(
                 listOf(nodeBHandle.nodeInfo.singleIdentity(), string, someObject),
@@ -406,6 +411,19 @@ class FlowMetadataRecordingTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `assert that flow started with longer client id than MAX_CLIENT_ID_LENGTH fails`() {
+        val clientId = "1".repeat(513) // DBCheckpointStorage.MAX_CLIENT_ID_LENGTH == 512
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val rpc = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).proxy
+
+            assertFailsWith<CordaRuntimeException>("clientId cannot be longer than ${DBCheckpointStorage.MAX_CLIENT_ID_LENGTH} characters") {
+                rpc.startFlowDynamicWithClientId(clientId, EmptyFlow::class.java).returnValue.getOrThrow()
+            }
+        }
+    }
+
     @InitiatingFlow
     @StartableByRPC
     @StartableByService
@@ -564,6 +582,13 @@ class FlowMetadataRecordingTest {
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val logicRef = flowLogicRefFactory.create(MyFlow::class.jvmName, party, string, someObject)
             return ScheduledActivity(logicRef, Instant.now())
+        }
+    }
+
+    @StartableByRPC
+    class EmptyFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
         }
     }
 }

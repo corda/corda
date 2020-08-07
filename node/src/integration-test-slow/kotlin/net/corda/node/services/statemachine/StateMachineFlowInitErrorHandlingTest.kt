@@ -115,7 +115,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
                 ).returnValue.getOrThrow(30.seconds)
             }
 
-            alice.rpc.assertNumberOfCheckpoints(failed = 1)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(propagated = 1)
             assertEquals(0, alice.rpc.stateMachinesSnapshot().size)
         }
@@ -235,7 +235,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * Each time the flow retries, it starts from the beginning of the flow (due to being in an unstarted state).
      */
-    @Test(timeout = 300_000)
+    @Test(timeout = 450_000)
     fun `error during transition with CommitTransaction action that occurs during flow initialisation will retry and be kept for observation if error persists`() {
         startDriver {
             val (charlie, alice, port) = createNodeAndBytemanNode(CHARLIE_NAME, ALICE_NAME)
@@ -390,7 +390,7 @@ class StateMachineFlowInitErrorHandlingTest : StateMachineErrorHandlingTest() {
      *
      * Each time the flow retries, it starts from the beginning of the flow (due to being in an unstarted state).
      */
-    @Test(timeout = 300_000)
+    @Test(timeout = 450_000)
     fun `responding flow - error during transition with CommitTransaction action that occurs during flow initialisation will retry and be kept for observation if error persists`() {
         startDriver {
             val (alice, charlie, port) = createNodeAndBytemanNode(ALICE_NAME, CHARLIE_NAME)

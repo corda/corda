@@ -258,7 +258,7 @@ class NodeSchedulerService(private val clock: CordaClock,
             return "${javaClass.simpleName}($scheduledState)"
         }
 
-        override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<Any?>>) {
+        override fun wireUpFuture(flowFuture: CordaFuture<out FlowStateMachineHandle<Any?>>) {
             _future.captureLater(flowFuture)
             val future = _future.flatMap { it.resultFuture }
             future.then {
@@ -266,8 +266,8 @@ class NodeSchedulerService(private val clock: CordaClock,
             }
         }
 
-        private val _future = openFuture<FlowStateMachine<Any?>>()
-        override val future: CordaFuture<FlowStateMachine<Any?>>
+        private val _future = openFuture<FlowStateMachineHandle<Any?>>()
+        override val future: CordaFuture<FlowStateMachineHandle<Any?>>
             get() = _future
     }
 
