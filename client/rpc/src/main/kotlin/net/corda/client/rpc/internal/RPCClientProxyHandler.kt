@@ -10,6 +10,7 @@ import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
+import net.corda.client.rpc.internal.RPCUtils.isShutdownCmd
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -342,7 +343,7 @@ internal class RPCClientProxyHandler(
                 "Generated several RPC requests with same ID $replyId"
             }
 
-            if (request.methodName.equals("terminate", true)){
+            if (request.isShutdownCmd()){
                 terminating = true
             }
 
