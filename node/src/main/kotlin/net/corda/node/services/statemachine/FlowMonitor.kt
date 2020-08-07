@@ -62,7 +62,7 @@ internal class FlowMonitor(
     @VisibleForTesting
     fun waitingFlowDurations(suspensionLoggingThreshold: Duration): Sequence<Pair<FlowStateMachineImpl<*>, Duration>> {
         val now = Instant.now()
-        return flowOperator.getWaitingFlows()
+        return flowOperator.getAllWaitingFlows()
                 .map { flow -> flow to flow.ongoingDuration(now) }
                 .filter { (_, suspensionDuration) -> suspensionDuration >= suspensionLoggingThreshold }
     }
