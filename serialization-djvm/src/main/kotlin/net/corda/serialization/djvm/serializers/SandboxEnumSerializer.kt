@@ -86,6 +86,7 @@ private class ConcreteEnumSerializer(
                 declaredType,
                 TypeIdentifier.forGenericType(declaredType),
                 memberNames,
+                emptyMap(),
                 emptyList(),
                 EnumTransforms.empty
             )

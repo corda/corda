@@ -120,6 +120,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     type,
                     typeIdentifier,
                     enumConstants,
+                    /**
+                     * Calculate "fallbacks" for any [Enum] incorrectly serialised
+                     * as its [Enum.toString] value. We are only interested in the
+                     * cases where these are different from [Enum.name].
+                     * These fallbacks DO NOT contribute to this type's fingerprint.
+                     */
+                    baseTypes.enumConstants.apply(type).map(Any::toString).mapIndexed { ord, fallback ->
+                        fallback to enumConstants[ord]
+                    }.filterNot { it.first == it.second }.toMap(),
                     buildInterfaceInformation(type),
                     getEnumTransforms(type, enumConstants)
                 )
