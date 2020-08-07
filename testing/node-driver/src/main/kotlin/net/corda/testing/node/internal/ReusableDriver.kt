@@ -160,18 +160,6 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
     }
 
 
-    private fun cleanUpOldNodes()  = state.locked{
-        val allNodes = reusableNodes.flatMap {pair ->
-            pair.value.map {node->
-                node to pair.key } }.
-        sortedBy {
-            it.first.lastAccessTime }
-        allNodes.take(maxOf(0,allNodes.size - MAX_NUMBER_OF_NODES_TO_REUSE)).forEach { pair ->
-            if(reusableNodes.getOrDefault(pair.second, mutableListOf()).remove(pair.first)) {
-                pair.first.node.stop()
-            }
-        }
-    }
 
     private data class ReusableNodeInfo(val node: NodeHandleInternal, val lastAccessTime: Long = System.currentTimeMillis())
 
@@ -180,6 +168,20 @@ class ReusableDriver private constructor(private val driver: InternalDriverDSL) 
         val reusableNodes = mutableMapOf<NodeKey, MutableList<ReusableNodeInfo>>()
         val runningNamedDriver = mutableMapOf<CordaX500Name, NodeKey>()
         val recoveries = mutableListOf<() -> Unit>()
+
+        fun cleanUpOldNodes()  = {
+            val allNodes = reusableNodes.flatMap {pair ->
+                pair.value.map {node->
+                    node to pair.key } }.
+            sortedBy {
+                it.first.lastAccessTime }
+            allNodes.take(maxOf(0,allNodes.size - MAX_NUMBER_OF_NODES_TO_REUSE)).forEach { pair ->
+                if(reusableNodes.getOrDefault(pair.second, mutableListOf()).remove(pair.first)) {
+                    pair.first.node.stop()
+                }
+            }
+        }
+
     }
     private val state = ThreadBox(ThreadSafeState())
 

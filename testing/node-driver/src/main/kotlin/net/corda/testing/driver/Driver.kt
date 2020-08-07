@@ -170,10 +170,36 @@ constructor(
         fun defaultEnabled(): JmxPolicy = JmxPolicy(true)
     }
 }
+
+/**
+ * An extension of the [DriverDSL] that allow the driver to be reused.
+ *
+ * @see reusableDriver
+ */
 interface ReusableDriverDsl: DriverDSL {
+
+    /**
+     * Add a function to recover the driver. Use this to free any resources that the driver might create
+     * to allow the driver to be used again in another test.
+     *
+     * @param recovery The code to run before the driver is reused. If the recovery throws
+     * an exception, the driver will be closed and a new one will be created.
+     */
     fun recoverBy(recovery: () -> Unit);
 }
 
+/**
+ * An alternative to [driver] that will try to reuse an existing (that was created
+ * by [reusableDriver] with the same [parameters]) instead of creating a new one. It will also try to
+ * reuse preexisting nodes during the execution of the [dsl]. Use [ReusableDriver.recoverBy] to add any
+ * recovery code that will be called before the driver can be re-use.
+ *
+ * @see  ReusableDriver.recoverBy
+ *
+ * @param parameters The driver parameters. This will be the key for reusing the driver, so leave
+ * the default values as much as possible.
+ * @param dsl The test code to run with the existing driver.
+ */
 fun <A> reusableDriver (parameters: DriverParameters = DriverParameters(), dsl: ReusableDriverDsl.() -> A): A {
     return ReusableDriver(parameters)
             .use(dsl)
