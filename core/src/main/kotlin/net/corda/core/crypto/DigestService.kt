@@ -19,7 +19,7 @@ interface DigestService {
      * @param bytes The [ByteArray] to hash.
      * @param salt The [ByteArray] to use as salt.
      */
-    fun hash(bytes: ByteArray, salt: ByteArray? = null): SecureHash
+    fun hash(bytes: ByteArray): SecureHash
 
     /**
      * Computes the digest of the [String]'s UTF-8 byte contents.
@@ -27,7 +27,7 @@ interface DigestService {
      * @param str [String] whose UTF-8 contents will be hashed.
      * @param salt The [String] to use as salt.
      */
-    fun hash(str: String, salt: String? = null): SecureHash
+    fun hash(str: String): SecureHash
 
     /**
      * A digest value consisting of [digestLength] 0xFF bytes.
@@ -49,8 +49,8 @@ interface DigestService {
 @CordaSerializable
 object SHA256DigestService : DigestService {
     override val digestLength = 32
-    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash = SecureHash.sha256(salted(bytes, salt))
-    override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
+    override fun hash(bytes: ByteArray): SecureHash = SecureHash.sha256(bytes)
+    override fun hash(str: String): SecureHash = hash(str.toByteArray())
     override val allOnesHash = SecureHash.allOnesHash
     override val zeroHash = SecureHash.zeroHash
 }
@@ -58,8 +58,8 @@ object SHA256DigestService : DigestService {
 @CordaSerializable
 object SHA256dDigestService : DigestService {
     override val digestLength = 32
-    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash = SecureHash.sha256Twice(salted(bytes, salt))
-    override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
+    override fun hash(bytes: ByteArray): SecureHash = SecureHash.sha256Twice(bytes)
+    override fun hash(str: String): SecureHash = hash(str.toByteArray())
     override val allOnesHash = SecureHash.allOnesHash
     override val zeroHash = SecureHash.zeroHash
 }
@@ -71,8 +71,8 @@ object BLAKE2s256DigestService : DigestService {
     /**
      * BLAKE2s256 is resistant to length extension attack, so no double hashing needed.
      */
-    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash {
-        val blake2s256 = Blake2sDigest(null, digestLength, salt, "12345678".toByteArray())
+    override fun hash(bytes: ByteArray): SecureHash {
+        val blake2s256 = Blake2sDigest(null, digestLength, null, "12345678".toByteArray())
         blake2s256.reset()
         blake2s256.update(bytes, 0, bytes.size)
         val hash = ByteArray(digestLength)
@@ -80,7 +80,7 @@ object BLAKE2s256DigestService : DigestService {
         return SecureHash.BLAKE2s256(hash)
     }
 
-    override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
+    override fun hash(str: String): SecureHash = hash(str.toByteArray())
     override val allOnesHash = SecureHash.BLAKE2s256(ByteArray(digestLength) { 255.toByte() })
     override val zeroHash = SecureHash.BLAKE2s256(ByteArray(digestLength) { 0.toByte() })
 }
@@ -89,11 +89,8 @@ object BLAKE2s256DigestService : DigestService {
 object PedersenDigestService : DigestService {
     private val pedersen = PedersenHash.zinc()
     override val digestLength: Int by lazy { pedersen.hashLength }
-    override fun hash(bytes: ByteArray, salt: ByteArray?): SecureHash {
-        val saltBits = if (salt != null) BitArray(salt) else null
-        return SecureHash.Pedersen(pedersen.hash(bytes, saltBits))
-    }
-    override fun hash(str: String, salt: String?): SecureHash = hash(str.toByteArray(), salt?.toByteArray())
+    override fun hash(bytes: ByteArray): SecureHash = SecureHash.Pedersen(pedersen.hash(bytes))
+    override fun hash(str: String): SecureHash = hash(str.toByteArray())
     override val allOnesHash = SecureHash.Pedersen(ByteArray(digestLength) { 255.toByte() })
     override val zeroHash = SecureHash.Pedersen(ByteArray(digestLength) { 0.toByte() })
 }
