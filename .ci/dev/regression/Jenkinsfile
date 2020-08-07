@@ -25,7 +25,6 @@ boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 **  * stage-release:  for release candidates and for health checks
 **  * operate: for final release
 */
-
 def nexusDefaultIqStage = "build"
 if (isReleaseTag) {
     switch (env.TAG_NAME) {

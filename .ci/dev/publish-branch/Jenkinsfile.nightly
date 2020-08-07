@@ -18,7 +18,7 @@ killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 ** calculate the stage for NexusIQ evaluation
 **  * build for snapshots
 */
-def nexusIqStage = "build"
+def nexusDefaultIqStage = "build"
 
 /**
  * make sure calculated default value of NexusIQ stage is first in the list
@@ -42,6 +42,10 @@ pipeline {
         overrideIndexTriggers(false)
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+    }
+
+    parameters {
+        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
     triggers {
