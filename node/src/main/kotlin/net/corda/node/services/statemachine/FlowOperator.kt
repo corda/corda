@@ -54,11 +54,16 @@ data class WaitingFlowInfo(
  * Defines criteria to get waiting flows
  */
 data class WaitingFlowQuery(
-        val ids: List<StateMachineRunId> = listOf(),
+        val ids: MutableList<StateMachineRunId> = mutableListOf(),
         val onlyIfSuspendedLongerThan: Duration = Duration.ZERO,
-        val waitingSource: List<WaitingSource> = listOf(),
-        val counterParties: List<Party> = listOf()
-)
+        val waitingSource: MutableList<WaitingSource> = mutableListOf(),
+        val counterParties: MutableList<Party> = mutableListOf()
+) {
+    fun isDefined() = ids.isNotEmpty()
+            || waitingSource.isNotEmpty()
+            || counterParties.isNotEmpty()
+            || onlyIfSuspendedLongerThan > Duration.ZERO
+}
 
 /**
  * Read operations that extract information about the flows running in the node.

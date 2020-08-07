@@ -104,7 +104,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(2, result.size)
@@ -139,7 +139,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(daveParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(daveParty)
                     ))
 
             assertEquals(1, result.size)
@@ -159,7 +159,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(1, result.size)
@@ -190,7 +190,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(bobParty, daveParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(bobParty, daveParty)
                     ))
 
             assertEquals(1, result.size)
@@ -213,7 +213,7 @@ class FlowOperatorTests {
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
                     WaitingFlowQuery(
-                            counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty),
+                            counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty),
                             onlyIfSuspendedLongerThan = 4.seconds
                     ))
             assertEquals(1, result.size)
@@ -241,8 +241,8 @@ class FlowOperatorTests {
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
                     WaitingFlowQuery(
-                            counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty),
-                            waitingSource = listOf(WaitingSource.EXTERNAL_OPERATION, WaitingSource.RECEIVE, WaitingSource.GET_FLOW_INFO)
+                            counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty),
+                            waitingSource = mutableListOf(WaitingSource.EXTERNAL_OPERATION, WaitingSource.RECEIVE, WaitingSource.GET_FLOW_INFO)
                     ))
 
             assertEquals(2, result.size)
@@ -279,7 +279,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryFlowsCurrentlyWaitingForPartiesGrouped(WaitingFlowQuery(
-                    waitingSource = listOf(WaitingSource.EXTERNAL_OPERATION, WaitingSource.RECEIVE)
+                    waitingSource = mutableListOf(WaitingSource.EXTERNAL_OPERATION, WaitingSource.RECEIVE)
             ))
 
             assertEquals(2, result.size)
@@ -324,7 +324,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(ids = listOf(charlieStart.id, eugeneStart.id)
+                    WaitingFlowQuery(ids = mutableListOf(charlieStart.id, eugeneStart.id)
                     ))
 
             assertEquals(1, result.size)
@@ -344,7 +344,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(1, result.size)
@@ -364,7 +364,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(1, result.size)
@@ -387,7 +387,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds, { future.complete(Unit) }) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(1, result.size)
@@ -408,7 +408,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds, { future.complete("Hello") }) {
             val result = cut.queryWaitingFlows(WaitingFlowQuery(
-                    waitingSource = listOf(WaitingSource.EXTERNAL_OPERATION)
+                    waitingSource = mutableListOf(WaitingSource.EXTERNAL_OPERATION)
             )) // the list of counter parties must be empty to get any external operation
 
             assertEquals(1, result.size)
@@ -465,7 +465,7 @@ class FlowOperatorTests {
 
         executeTest(5.seconds, { future.complete(Unit) }) {
             val result = cut.queryWaitingFlows(
-                    WaitingFlowQuery(counterParties = listOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
+                    WaitingFlowQuery(counterParties = mutableListOf(aliceParty, bobParty, charlieParty, daveParty, eugeneParty)
                     ))
 
             assertEquals(1, result.size)
