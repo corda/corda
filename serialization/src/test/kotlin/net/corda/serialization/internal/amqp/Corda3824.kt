@@ -66,7 +66,7 @@ class Corda3824
         Assertions.assertThat(deserializedException.cordappVersion).isEqualTo(cordappVersionTestValue)
         Assertions.assertThat(deserializedException.data).isEqualTo(dataTestValue)
 //        Assertions.assertThat(deserializedException.x).isEqualTo(xTestValue)
-        Assertions.assertThat(deserializedException.y).isEqualTo(xTestValue)
+        Assertions.assertThat(deserializedException.y).isEqualTo(xTestValue.toString())
         Assertions.assertThat(deserializedException).isInstanceOf(TemplateState::class.java)
     }
 
