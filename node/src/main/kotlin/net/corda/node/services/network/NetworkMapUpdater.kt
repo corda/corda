@@ -21,7 +21,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
@@ -66,7 +65,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     companion object {
         private val logger = contextLogger()
         private val defaultWatchHttpNetworkMapRetryInterval = 1.minutes
-        private val defaultWatchNodeInfoFilesRetryInterval = 10.seconds;
+        private const val defaultWatchNodeInfoFilesRetryIntervalSeconds = 10L
     }
 
     private val parametersUpdatesTrack = PublishSubject.create<ParametersUpdateInfo>()
@@ -129,8 +128,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         return nodeInfoWatcher
                 .nodeInfoUpdates()
                 .doOnError { logger.warn("Error encountered while polling directory for network map updates, " +
-                        "will retry in ${defaultWatchNodeInfoFilesRetryInterval.seconds} seconds - $it") }
-                .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryInterval.seconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
+                        "will retry in $defaultWatchNodeInfoFilesRetryIntervalSeconds seconds - $it") }
+                .retryWhen { t -> t.delay(defaultWatchNodeInfoFilesRetryIntervalSeconds, TimeUnit.SECONDS, nodeInfoWatcher.scheduler) }
                 .subscribe {
                     for (update in it) {
                         when (update) {
