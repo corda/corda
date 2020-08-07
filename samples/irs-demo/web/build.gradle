@@ -13,7 +13,6 @@ buildscript {
 
 plugins {
     id 'com.craigburke.client-dependencies' version '1.4.0'
-    id 'io.spring.dependency-management'
     id 'org.springframework.boot'
 }
 

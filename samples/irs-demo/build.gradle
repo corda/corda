@@ -1,6 +1,5 @@
 plugins {
     id "org.springframework.boot" version "1.5.21.RELEASE"
-    id 'io.spring.dependency-management' version '1.0.9.RELEASE' apply false
 }
 
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
