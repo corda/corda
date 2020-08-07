@@ -25,14 +25,27 @@ boolean isInternalRelease = (env.TAG_NAME =~ /^internal-release-.*$/)
 **  * stage-release:  for release candidates and for health checks
 **  * operate: for final release
 */
-def nexusIqStage = "build"
+def nexusDefaultIqStage = "build"
 if (isReleaseTag) {
     switch (env.TAG_NAME) {
-        case ~/.*-RC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        case ~/.*-HC\d+(-.*)?/: nexusIqStage = "stage-release"; break;
-        default: nexusIqStage = "release"
+        case ~/.*-RC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        case ~/.*-HC\d+(-.*)?/: nexusDefaultIqStage = "stage-release"; break;
+        default: nexusDefaultIqStage = "release"
     }
 }
+
+/**
+ * make sure calculated default value of NexusIQ stage is first in the list
+ * thus making it default for the `choice` parameter
+ */
+def nexusIqStageChoices = [nexusDefaultIqStage].plus(
+                [
+                        'develop',
+                        'build',
+                        'stage-release',
+                        'release',
+                        'operate'
+                ].minus([nexusDefaultIqStage]))
 
 pipeline {
     agent { label 'k8s' }
@@ -41,6 +54,10 @@ pipeline {
         disableConcurrentBuilds()
         timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+    }
+
+    parameters {
+        choice choices: nexusIqStageChoices, description: 'NexusIQ stage for code evaluation', name: 'nexusIqStage'
     }
 
     environment {
@@ -70,13 +87,13 @@ pipeline {
                     def version = sh (returnStdout: true, script: "grep ^version: version-properties | sed -e 's/^version: \\([0-9]\\+\\.[0-9]\\+\\).*\$/\\1/'").trim()
                     def groupId = sh (returnStdout: true, script: "grep ^group: version-properties | sed -e 's/^group: //'").trim()
                     def artifactId = 'corda'
-                    nexusAppId = "jenkins-${groupId}-${artifactId}-${version}"
+                    nexusAppId = "${groupId}-${artifactId}-${version}"
                 }
                 nexusPolicyEvaluation (
                         failBuildOnNetworkError: false,
                         iqApplication: selectedApplication(nexusAppId), // application *has* to exist before a build starts!
                         iqScanPatterns: [[scanPattern: 'node/capsule/build/libs/corda*.jar']],
-                        iqStage: nexusIqStage
+                        iqStage: params.nexusIqStage
                 )
             }
         }
