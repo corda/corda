@@ -9,6 +9,7 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CLOSED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.CONNECTING
@@ -211,7 +212,7 @@ class ReconnectingCordaRPCOps private constructor(
          * Establishes a connection by automatically retrying if the attempt to establish a connection fails.
          *
          * @param retryInterval the interval between retries.
-         * @param roundRobinIndex index of the address that will be used for the connection.
+         * @param roundRobinIndex the index of the address that will be used for the connection.
          * @param retries the number of retries remaining. A negative value implies infinite retries.
          */
         private tailrec fun establishConnectionWithRetry(
@@ -240,7 +241,7 @@ class ReconnectingCordaRPCOps private constructor(
                 }
             } catch (ex: Exception) {
                 when (ex) {
-                    is ActiveMQSecurityException -> {
+                    is UnrecoverableRPCException, is ActiveMQSecurityException -> {
                         log.error("Failed to login to node.", ex)
                         throw ex
                     }
