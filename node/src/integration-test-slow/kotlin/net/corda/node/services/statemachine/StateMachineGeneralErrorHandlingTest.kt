@@ -204,7 +204,7 @@ class StateMachineGeneralErrorHandlingTest : StateMachineErrorHandlingTest() {
                 alice.rpc.startFlow(StateMachineErrorHandlingTest::ThrowAnErrorFlow).returnValue.getOrThrow(60.seconds)
             }
 
-            alice.rpc.assertNumberOfCheckpoints(failed = 1)
+            alice.rpc.assertNumberOfCheckpointsAllZero()
             alice.rpc.assertHospitalCounts(
                 propagated = 1,
                 propagatedRetry = 3

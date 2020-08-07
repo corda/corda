@@ -390,12 +390,20 @@ class DBCheckpointStorage(
 
         val metadata = createDBFlowMetadata(flowId, checkpoint, now)
 
+        val dbFlowException = if (checkpoint.status == FlowStatus.FAILED || checkpoint.status == FlowStatus.HOSPITALIZED) {
+            val errored = checkpoint.errorState as? ErrorState.Errored
+            errored?.let { createDBFlowException(flowId, it, now) }
+                ?: throw IllegalStateException("Found '${checkpoint.status}' checkpoint whose error state is not ${ErrorState.Errored::class.java.simpleName}")
+        } else {
+            null
+        }
+
         // Most fields are null as they cannot have been set when creating the initial checkpoint
         val dbFlowCheckpoint = DBFlowCheckpoint(
             flowId = flowId,
             blob = blob,
             result = null,
-            exceptionDetails = null,
+            exceptionDetails = dbFlowException,
             flowMetadata = metadata,
             status = checkpoint.status,
             compatible = checkpoint.compatible,
@@ -407,6 +415,7 @@ class DBCheckpointStorage(
         currentDBSession().save(dbFlowCheckpoint)
         currentDBSession().save(blob)
         currentDBSession().save(metadata)
+        dbFlowException?.let { currentDBSession().save(it) }
     }
 
     @Suppress("ComplexMethod")

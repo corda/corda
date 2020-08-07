@@ -447,6 +447,7 @@ internal class SingleThreadedStateMachineManager(
         liveFibers.countUp()
     }
 
+    @Suppress("ComplexMethod")
     private fun restoreFlowsFromCheckpoints(): Pair<MutableMap<StateMachineRunId, Flow<*>>, MutableMap<StateMachineRunId, NonResidentFlow>> {
         val flows = mutableMapOf<StateMachineRunId, Flow<*>>()
         val pausedFlows = mutableMapOf<StateMachineRunId, NonResidentFlow>()
@@ -455,8 +456,9 @@ internal class SingleThreadedStateMachineManager(
             innerState.withLock { if (id in flows) return@Checkpoints }
             val checkpoint = tryDeserializeCheckpoint(serializedCheckpoint, id)?.also {
                 if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                    checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
-                    if (!checkpointStorage.removeFlowException(id)) {
+                    if (checkpointStorage.removeFlowException(id)) {
+                        checkpointStorage.updateStatus(id, Checkpoint.FlowStatus.RUNNABLE)
+                    } else {
                         logger.error("Unable to remove database exception for flow $id. Something is very wrong. The flow will not be loaded and run.")
                         return@Checkpoints
                     }
@@ -505,9 +507,10 @@ internal class SingleThreadedStateMachineManager(
 
                 tryDeserializeCheckpoint(serializedCheckpoint, flowId)?.also {
                     if (it.status == Checkpoint.FlowStatus.HOSPITALIZED) {
-                        checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
-                        if (!checkpointStorage.removeFlowException(flowId)) {
-                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not retry.")
+                        if (checkpointStorage.removeFlowException(flowId)) {
+                            checkpointStorage.updateStatus(flowId, Checkpoint.FlowStatus.RUNNABLE)
+                        } else {
+                            logger.error("Unable to remove database exception for flow $flowId. Something is very wrong. The flow will not be loaded and run.")
                             return@transaction null
                         }
                     }
