@@ -198,12 +198,14 @@ abstract class BaseBNFreighterTest : RemoteMachineBasedTest() {
             run {
                 ({ indexGen: AtomicInteger, deploymentContext: DeploymentContext, db: DeploymentMachineProvider.DatabaseType ->
                     {
+                        val requestDatabase = machineProvider.requestDatabase(db)
                         SingleNodeDeployment(
                                 NodeBuilder().withX500("O=Party${indexGen.getAndIncrement()}, C=IE, L=DUBLIN CN=Corda")
                                         .withCordapp(bnoContracts)
                                         .withCordapp(bnoWorkflows)
                                         .withCordapp(freighterHelperCordapp)
                                         .withCordapp(bnoTesting)
+                                        .withDatabase(requestDatabase)
                         ).withVersion("4.5")
                                 .withDistribution(OPEN_SOURCE)
                                 .deploy(deploymentContext)
