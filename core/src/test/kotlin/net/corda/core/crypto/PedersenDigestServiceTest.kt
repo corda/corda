@@ -12,15 +12,14 @@ class PedersenDigestServiceTest {
     fun testHashBytes() {
         val m = 48058
         val hash = service.hash(m.toBigInteger().toByteArray())
-        assertEquals(32, hash.bytes[0])
         assertEquals(32, hash.size)
-        assertEquals("20318970dc0db96855ce8e8ac6c358b304c1565b6207b447bf1be66557d89c09", BigInteger(hash.bytes).toString(16))
+        assertEquals("1442d41699e4206a8b5da70c2211925d25cad29f5b2709399fed5db14a11d401", BigInteger(hash.bytes).toString(16))
     }
 
     @Test(timeout = 300_000)
     fun testHashString() {
         val hash = service.hash("test")
-        Assert.assertEquals("1EF7E9FCD0878D27F78DE9E583475649685B9F881D9C5544D5CF150E6BC47649", hash.toString())
+        Assert.assertEquals("09A5A5D1BD4878CD0D0D2376155A6EE51AA29FB8F74D7110C25053CA207F5F4E", hash.toString())
     }
 
     @Test(timeout = 300_000)
