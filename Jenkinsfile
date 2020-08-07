@@ -26,7 +26,6 @@ pipeline {
     stages {
         stage('Corda Pull Request - Generate Build Image') {
             steps {
-                sh 'printenv | sort'
                 withCredentials([string(credentialsId: 'container_reg_passwd', variable: 'DOCKER_PUSH_PWD')]) {
                     sh "./gradlew --no-daemon " +
                             "-Dkubenetize=true " +
