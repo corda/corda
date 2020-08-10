@@ -8,7 +8,7 @@ import org.crsh.cli.Usage;
 import static net.corda.tools.shell.InteractiveShell.runAttachmentTrustInfoView;
 
 @Named("attachments")
-public class AttachmentShellCommand extends InteractiveShellCommand {
+public class AttachmentShellCommand extends CordaRpcOpsShellCommand {
 
     @Command
     @Man("Displays the trusted CorDapp attachments that have been manually installed or received over the network")

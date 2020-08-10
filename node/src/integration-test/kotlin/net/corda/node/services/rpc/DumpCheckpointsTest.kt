@@ -21,6 +21,7 @@ import net.corda.node.services.statemachine.CountUpDownLatch
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.checkpoint.CheckpointRpcHelper.checkpointsRpc
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
@@ -52,7 +53,7 @@ class DumpCheckpointsTest {
                 val logDirPath = nodeAHandle.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
                 logDirPath.createDirectories()
                 dumpCheckPointLatch.await()
-                proxy.dumpCheckpoints()
+                nodeAHandle.checkpointsRpc.use { checkpointRPCOps -> checkpointRPCOps.dumpCheckpoints() }
 
                 flowProceedLatch.countDown()
                 assertEquals(1, checkPointCountFuture.get())

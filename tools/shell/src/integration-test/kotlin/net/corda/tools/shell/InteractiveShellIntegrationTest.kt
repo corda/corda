@@ -11,7 +11,6 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.valueAs
 import net.corda.client.rpc.RPCException
-import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
@@ -22,7 +21,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.list
-import net.corda.core.internal.messaging.CheckpointRPCOps
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -50,6 +48,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.internal.checkpoint.CheckpointRpcHelper.checkpointsRpc
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.enclosedCordapp
@@ -575,20 +574,4 @@ class InteractiveShellIntegrationTest {
             waitForStateConsumption(stateRefs)
         }
     }
-
-    private interface CloseableCheckpointRPCOps : CheckpointRPCOps, AutoCloseable
-
-    private val NodeHandle.checkpointsRpc: CloseableCheckpointRPCOps
-        get() {
-            val user = rpcUsers.first()
-
-            val rpcConnection = RPCClient<CheckpointRPCOps>(rpcAddress).start(CheckpointRPCOps::class.java, user.username, user.password)
-            val proxy = rpcConnection.proxy
-
-            return object : CloseableCheckpointRPCOps, CheckpointRPCOps by proxy {
-                override fun close() {
-                    rpcConnection.close()
-                }
-            }
-        }
 }

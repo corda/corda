@@ -1,14 +1,22 @@
 package net.corda.tools.shell;
 
+import net.corda.core.internal.messaging.CheckpointRPCOps;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
 import org.crsh.cli.Named;
 import org.crsh.cli.Usage;
+import org.jetbrains.annotations.NotNull;
 
 import static net.corda.tools.shell.InteractiveShell.*;
 
 @Named("checkpoints")
-public class CheckpointShellCommand extends InteractiveShellCommand {
+public class CheckpointShellCommand extends InteractiveShellCommand<CheckpointRPCOps> {
+
+    @NotNull
+    @Override
+    public Class<CheckpointRPCOps> getRpcOpsClass()  {
+        return CheckpointRPCOps.class;
+    }
 
     @Command
     @Man("Outputs the contents of all checkpoints as json to be manually reviewed")
