@@ -1,5 +1,6 @@
 package net.corda.client.rpcreconnect
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCClientTest
@@ -8,10 +9,14 @@ import net.corda.client.rpc.MaxRpcRetryException
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.UnrecoverableRPCException
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.messaging.startFlowWithClientId
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
@@ -24,6 +29,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.rpcDriver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -31,9 +37,11 @@ import org.junit.Test
 import java.lang.RuntimeException
 import java.lang.Thread.sleep
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -371,6 +379,50 @@ class CordaRPCClientReconnectionTest {
                 // If we get here we know we're not stuck in a reconnect cycle with a node that's been shut down
                 assertThat(rpcOps.reconnectingRPCConnection.isClosed())
             }
+        }
+    }
+
+    @Test
+    fun `rpc returned flow result future continue working when the server crashes and restarts`() {
+        driver(DriverParameters(cordappsForAllNodes = listOf(this.enclosedCordapp()))) {
+            val address = NetworkHostAndPort("localhost", portAllocator.nextPort())
+            fun startNode(): NodeHandle {
+                return startNode(
+                    providedName = CHARLIE_NAME,
+                    rpcUsers = listOf(CordaRPCClientTest.rpcUser),
+                    customOverrides = mapOf("rpcSettings.address" to address.toString())
+                ).getOrThrow()
+            }
+
+            val node = startNode()
+            val client = CordaRPCClient(node.rpcAddress, config)
+            (client.start(rpcUser.username, rpcUser.password, gracefulReconnect = gracefulReconnect)).use {
+                val rpcOps = it.proxy as ReconnectingCordaRPCOps
+                val clientId = UUID.randomUUID().toString()
+                val flowHandle = rpcOps.startFlowWithClientId(clientId, ::SimpleFlow)
+
+                node.stop()
+                thread {
+                    Thread.sleep(35000)
+                    startNode()
+                }
+
+                val result = flowHandle.returnValue.get()
+
+                assertEquals(5, result!!)
+
+                assertThat(rpcOps.reconnectingRPCConnection.isClosed())
+            }
+        }
+    }
+
+    @StartableByRPC
+    class SimpleFlow : FlowLogic<Int>() {
+
+        @Suspendable
+        override fun call(): Int {
+            sleep(10.seconds)
+            return 5
         }
     }
 }

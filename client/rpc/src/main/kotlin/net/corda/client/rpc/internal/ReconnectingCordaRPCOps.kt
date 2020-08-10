@@ -18,7 +18,12 @@ import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConn
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.DIED
 import net.corda.client.rpc.internal.ReconnectingCordaRPCOps.ReconnectingRPCConnection.CurrentState.UNCONNECTED
 import net.corda.client.rpc.reconnect.CouldNotStartFlowException
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.concurrent.ValueOrException
+import net.corda.core.internal.concurrent.doOnError
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.messaging.InternalCordaRPCOps
 import net.corda.core.internal.min
 import net.corda.core.internal.times
@@ -27,9 +32,12 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleWithClientId
+import net.corda.core.messaging.FlowHandleWithClientIdImpl
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
@@ -294,8 +302,12 @@ class ReconnectingCordaRPCOps private constructor(
         fun isClosed(): Boolean = currentState == CLOSED
     }
     private class ErrorInterceptingHandler(val reconnectingRPCConnection: ReconnectingRPCConnection) : InvocationHandler {
+        private fun Method.isStartFlow() = name.startsWith("startFlow") || name.startsWith("startTrackedFlow")
+        private fun Method.isStartFlowWithClientId() = name == "startFlowWithClientId" || name == "startFlowDynamicWithClientId"
+        private fun Method.isShutdown() = name == "shutdown" || name == "gracefulShutdown" || name == "terminate"
+
         private fun checkIfIsStartFlow(method: Method, e: InvocationTargetException) {
-            if (method.isStartFlow()) {
+            if (method.isStartFlow() && !method.isStartFlowWithClientId()) {
                 // Don't retry flows
                 throw CouldNotStartFlowException(e.targetException)
             }
@@ -383,6 +395,36 @@ class ReconnectingCordaRPCOps private constructor(
                     }
                     initialFeed.copy(updates = observable)
                 }
+                FlowHandleWithClientId::class.java -> {
+                    val initialHandle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args,
+                            reconnectingRPCConnection.gracefulReconnect.maxAttempts))
+
+                    val initialFuture = initialHandle.returnValue
+                    val retFuture = openFuture<Any?>()
+                    initialFuture.thenMatch(
+                            success = {
+                                retFuture.set(it)
+                            } ,
+                            failure = {
+                                if (it is ConnectionFailureException) {
+                                    val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, 1000))
+                                    val reconnectedFuture = handle.returnValue
+                                    reconnectedFuture.then {
+                                        retFuture.set(it.get())
+                                    }
+                                } else {
+                                    retFuture.setException(it)
+                                }
+                            }
+                    )
+
+//                    val retFuture = ReconnectingCordaFuture(initialHandle.returnValue) {
+//                        val handle: FlowHandleWithClientId<Any?> = uncheckedCast(doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts))
+//                        handle.returnValue
+//                    }
+
+                    return (initialHandle as FlowHandleWithClientIdImpl<Any?>).copy(returnValue = retFuture)
+                }
                 // TODO - add handlers for Observable return types.
                 else -> doInvoke(method, args, reconnectingRPCConnection.gracefulReconnect.maxAttempts)
             }
@@ -393,4 +435,18 @@ class ReconnectingCordaRPCOps private constructor(
         retryFlowsPool.shutdown()
         reconnectingRPCConnection.forceClose()
     }
+
+    class ReconnectingCordaFuture<T>(@Volatile private var currentFuture: CordaFuture<T>, val callback: () -> CordaFuture<T>) : CordaFuture<T> by currentFuture {
+
+        override fun get(): T {
+            return try {
+                currentFuture.getOrThrow()
+            } catch (e: ConnectionFailureException) {
+                currentFuture = callback()
+                currentFuture.getOrThrow()
+                //throw e
+            }
+        }
+    }
 }
+
