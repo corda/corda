@@ -136,8 +136,7 @@ interface TestStartedNode {
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
-    @Deprecated("Deprecated in favour of `rpcOpsList`", ReplaceWith("rpcOpsList"))
-    val rpcOps: CordaRPCOps
+    val cordaRPCOps: CordaRPCOps
         get() = rpcOpsList.mapNotNull { it as? CordaRPCOps }.single()
 }
 
