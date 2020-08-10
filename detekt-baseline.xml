@@ -766,6 +766,7 @@
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClient$128</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$3</ID>
     <ID>MagicNumber:CordaRPCClient.kt$CordaRPCClientConfiguration$5</ID>
+    <ID>MagicNumber:CordaSSHAuthInfo.kt$CordaSSHAuthInfo$10</ID>
     <ID>MagicNumber:CordaSecurityProvider.kt$CordaSecurityProvider$0.1</ID>
     <ID>MagicNumber:Crypto.kt$Crypto$2048</ID>
     <ID>MagicNumber:Crypto.kt$Crypto$256</ID>
