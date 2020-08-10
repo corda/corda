@@ -3,7 +3,7 @@ package net.corda.node.internal.rpc.proxies
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.messaging.InternalCordaRPCOps
+import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -12,9 +12,9 @@ class ThreadContextAdjustingRpcOpsProxyTest {
 
     private val coreOps = mock<InstrumentedCordaRPCOps>()
     private val mockClassloader = mock<ClassLoader>()
-    private val proxy = ThreadContextAdjustingRpcOpsProxy(coreOps, mockClassloader)
+    private val proxy = ThreadContextAdjustingRpcOpsProxy.proxy(coreOps, CordaRPCOps::class.java, mockClassloader)
 
-    private interface InstrumentedCordaRPCOps : InternalCordaRPCOps {
+    private interface InstrumentedCordaRPCOps : CordaRPCOps {
         fun getThreadContextClassLoader(): ClassLoader = Thread.currentThread().contextClassLoader
     }
 

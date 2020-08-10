@@ -414,7 +414,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val proxies = mutableListOf<(InternalCordaRPCOps) -> InternalCordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy
-        proxies += { ThreadContextAdjustingRpcOpsProxy(it, cordappLoader.appClassLoader) }
+        proxies += { ThreadContextAdjustingRpcOpsProxy.proxy(it, InternalCordaRPCOps::class.java, cordappLoader.appClassLoader) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
