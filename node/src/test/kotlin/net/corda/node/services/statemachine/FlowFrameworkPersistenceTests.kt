@@ -12,14 +12,18 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.flows.registerCordappFlowFactory
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MockNodeFlowManager
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -31,14 +35,9 @@ class FlowFrameworkPersistenceTests {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private val receivedSessionMessages = ArrayList<SessionTransfer>()
+    private var receivedSessionMessages: List<SessionTransfer>? = null
     private lateinit var aliceNode: TestStartedNode
     private lateinit var bobNode: TestStartedNode
-    private lateinit var notaryIdentity: Party
-    private lateinit var alice: Party
-    private lateinit var bob: Party
-    private lateinit var aliceFlowManager: MockNodeFlowManager
-    private lateinit var bobFlowManager: MockNodeFlowManager
 
     @Before
     fun start() {
@@ -46,24 +45,22 @@ class FlowFrameworkPersistenceTests {
                 cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()
         )
-        aliceFlowManager = MockNodeFlowManager()
-        bobFlowManager = MockNodeFlowManager()
 
-        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, flowManager = aliceFlowManager))
-        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, flowManager = bobFlowManager))
+        aliceNode = MockNodeFlowManager().let { aliceFlowManager ->
+            mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, flowManager = aliceFlowManager))
+        }
+        bobNode = MockNodeFlowManager().let { bobFlowManager ->
+            mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, flowManager = bobFlowManager))
+        }
 
-        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-
-        // Extract identities
-        alice = aliceNode.info.singleIdentity()
-        bob = bobNode.info.singleIdentity()
-        notaryIdentity = mockNet.defaultNotaryIdentity
+        receivedSessionMessages = mutableListOf<SessionTransfer>().also { messages ->
+            receivedSessionMessagesObservable().forEach { messages += it }
+        }
     }
 
     @After
     fun cleanUp() {
-        mockNet.stopNodes()
-        receivedSessionMessages.clear()
+        mockNet.close()
     }
 
     @Test(timeout=300_000)
@@ -76,6 +73,7 @@ class FlowFrameworkPersistenceTests {
 
     @Test(timeout=300_000)
 	fun `flow restarted just after receiving payload`() {
+        val bob = bobNode.info.singleIdentity()
         bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it)
                 .nonTerminating() }
         aliceNode.services.startFlow(SendFlow("Hello", bob))
@@ -88,10 +86,12 @@ class FlowFrameworkPersistenceTests {
         mockNet.runNetwork()
         val restoredFlow = bobNode.restartAndGetRestoredFlow<InitiatedReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
+        bobNode.internals.manuallyCloseDB()
     }
 
     @Test(timeout=300_000)
 	fun `flow loaded from checkpoint will respond to messages from before start`() {
+        val alice = aliceNode.info.singleIdentity()
         aliceNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
@@ -131,7 +131,7 @@ class FlowFrameworkPersistenceTests {
         mockNet.runNetwork()
         fut1.getOrThrow()
 
-        val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer }
+        val receivedCount = receivedSessionMessages?.count { it.isPayloadTransfer } ?: 0
         // Check flows completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
